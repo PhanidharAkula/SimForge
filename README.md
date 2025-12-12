@@ -41,8 +41,8 @@ The framework is organized into five main pieces:
    - `network.xml` — nodes, links, geometry, capacities
    - `demand.csv` — trip-level demand (origins, destinations, departure times, modes)
    - `signals.xml` — signal controllers, phases, timings
-   - `config.xml` — global scenario settings (horizon, time step, seeds, CRS)
-   - `manifest.xml` — file hashes, roles, and provenance
+   - `config.json` — global scenario settings (horizon, time step, seeds, CRS)
+   - `manifest.json` — file hashes, roles, and provenance
 
 2. **Validation Pipeline**
 
@@ -111,3 +111,50 @@ docs/
 TODO.md             # Project milestones and task checklist
 README.md           # This file
 ```
+
+---
+
+## Getting Started
+
+### Requirements (early stage)
+
+This will change as the project hardens, but baseline requirements are:
+
+- Python 3.10+
+- SUMO (for the first adapter)
+- Git
+- (Later) Docker / Apptainer for containers
+- (Later) Access to an HPC cluster (e.g., OSC) for full experiment runs
+
+### Setup
+
+Clone the repo:
+
+```bash
+git clone https://github.com/<phanidharakula>/simforge.git
+cd simforge
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+---
+
+### License
+
+TBD.
+
+For now, assume “all rights reserved” while the thesis is in progress.
+You can switch to an open license (e.g., MIT/BSD) when you finalize what you’re comfortable publishing.
+
+---
+
+### Contact
+
+**Author**: Phanidhar Akula
+**Program**: MSCS, Miami University
+
+If you want to extend SIMFORGE (for example, adding a new simulator), the starting point is:
+
+- canonical/schema/\*
+- adapters/<your-engine>/MAPPING.md
