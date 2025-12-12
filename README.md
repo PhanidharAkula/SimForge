@@ -152,7 +152,6 @@ You can switch to an open license (e.g., MIT/BSD) when you finalize what you’r
 ### Contact
 
 **Author**: Phanidhar Akula
-**Program**: MSCS, Miami University
 
 If you want to extend SIMFORGE (for example, adding a new simulator), the starting point is:
 
