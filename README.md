@@ -144,9 +144,6 @@ pip install -r requirements.txt
 
 TBD.
 
-For now, assume “all rights reserved” while the thesis is in progress.
-You can switch to an open license (e.g., MIT/BSD) when you finalize what you’re comfortable publishing.
-
 ---
 
 ### Contact
