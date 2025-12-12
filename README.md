@@ -131,7 +131,7 @@ This will change as the project hardens, but baseline requirements are:
 Clone the repo:
 
 ```bash
-git clone https://github.com/<phanidharakula>/simforge.git
+git clone https://github.com/phanidharakula/simforge.git
 cd simforge
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
