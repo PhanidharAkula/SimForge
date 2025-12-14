@@ -1,156 +1,247 @@
-# SIMFORGE
+# 🌉 SimForge
 
-**SIMFORGE** is a reproducible cross-simulator testing framework for **urban commute simulation**.
+SimForge is a reproducible, cross-simulator testing framework for urban traffic simulation.
 
-It does **not** implement a new traffic simulator.  
-Instead, it provides a standardized way to:
+The goal is to standardize **scenario representation, validation, execution, and measurement** so that different traffic simulators can be compared under identical conditions.
 
-- Define **canonical scenarios** (network, demand, signals, config, manifest)
-- Convert them into **engine-native inputs** via deterministic adapters
-- Run engines on **CPU, GPU, and HPC** under controlled conditions
-- Evaluate **fidelity, scalability, and reproducibility** with consistent metrics
-
-This repository contains the code and artifacts for my MS thesis.
+This repository currently implements a complete **v0 pipeline** from canonical inputs to runnable SUMO artifacts.
 
 ---
 
-## Goals
+## 🛠️ What Exists Right Now (No Hype)
 
-SIMFORGE aims to:
+This repo is not a plan anymore. It contains working code:
 
-1. **Standardize inputs**  
-   A canonical bundle (XML/CSV/JSON) that all supported simulators can consume.
+- **Canonical schema v0** (documented in Markdown)
+- **Canonical toy scenario** (`toy_2x2_grid`)
+- **Validator** enforcing cross-file consistency
+- **SUMO adapter v0** that generates real:
+  - `net.net.xml`
+  - `routes.rou.xml`
+  - `toy.sumocfg`
+- **End-to-end pipeline runner** (validate → adapter)
+- **Pytest test suite** for validator and adapter
 
-2. **Enforce reproducibility**  
-   Deterministic adapters, pinned containers, and a validation pipeline that catches broken scenarios before they run.
-
-3. **Enable fair comparison**  
-   Same city, same demand, same signals, same environment → differences come from the **engines**, not from experiment noise.
-
-4. **Provide reusable benchmarks**  
-   Scenarios and pipelines that others can extend with new simulators, cities, or hardware.
-
----
-
-## High-Level Architecture
-
-The framework is organized into five main pieces:
-
-1. **Canonical Schema & Bundles**
-
-   - `network.xml` — nodes, links, geometry, capacities
-   - `demand.csv` — trip-level demand (origins, destinations, departure times, modes)
-   - `signals.xml` — signal controllers, phases, timings
-   - `config.json` — global scenario settings (horizon, time step, seeds, CRS)
-   - `manifest.json` — file hashes, roles, and provenance
-
-2. **Validation Pipeline**
-
-   - Checks ID consistency, CRS and units, and referential integrity
-   - Verifies file hashes against the manifest
-   - Rejects broken scenarios before any simulator runs
-
-3. **Deterministic Adapters**
-
-   - Engine-specific scripts that map the canonical bundle → engine-native inputs
-   - Same canonical input → same native files (byte-for-byte)
-   - Per-engine mapping rules documented in `MAPPING.md` files
-
-4. **Execution Harness**
-
-   - Reads a run specification (scenario, engine, environment, seed)
-   - Validates the bundle, runs the adapter, launches the simulator
-   - Stores outputs in a structured directory layout for analysis
-
-5. **Metrics & Evaluation**
-   - Fidelity: RMSE, GEH, KS
-   - Scalability: runtime, throughput (vehicles/sec, per core, per watt when available)
-   - Reproducibility: stability score \( R = 1 - \sigma / \mu \) across repeated runs
+Everything below actually runs.
 
 ---
 
-## Repository Structure
+## 💻 Requirements
 
-Planned structure (will evolve as the project matures):
+- Python **3.10+**
+- macOS or Linux
+- SUMO **optional** (only needed if you want to actually execute simulations)
 
-```text
-canonical/
-  schema/           # Markdown docs describing v0 schema for each file type
-  examples/         # Small example bundles or schema snippets
-
-scenarios/
-  toy_2x2_grid/     # Toy scenario for end-to-end testing
-  city1_tier50k/    # Real city scenarios (later: multiple cities, tiers)
-  ...
-
-pipeline/
-  validation/       # validate_bundle.py and helpers
-  network/          # OSM → canonical network
-  demand/           # OD/synthetic demand → canonical demand.csv
-  signals/          # DOT or defaults → canonical signals.xml
-  scenariobuilder/  # Orchestrate building complete canonical bundles
-
-adapters/
-  sumo/             # SUMO adapter + MAPPING.md
-  qarsumo/          # QarSUMO adapter (GPU/parallel)
-  matsim/           # MATSim adapter
-  ...
-
-execution/
-  runspecs/         # JSON/CSV run definitions
-  run_benchmark.py  # Orchestration entrypoint
-
-evaluation/
-  metrics/          # Fidelity, scalability, reproducibility metrics
-  plots/            # Plotting scripts / notebooks for results
-
-docs/
-  thesis_notes/     # Notes that map implementation → thesis text
-  diagrams/         # Architecture diagrams, figures for the thesis
-
-TODO.md             # Project milestones and task checklist
-README.md           # This file
-```
+> This project uses a local virtual environment (`.venv`).
+> Do **not** install dependencies into system Python.
 
 ---
 
-## Getting Started
+## ⚙️ Setup
 
-### Requirements (early stage)
+From the repository root:
 
-This will change as the project hardens, but baseline requirements are:
-
-- Python 3.10+
-- SUMO (for the first adapter)
-- Git
-- (Later) Docker / Apptainer for containers
-- (Later) Access to an HPC cluster (e.g., OSC) for full experiment runs
-
-### Setup
-
-Clone the repo:
+### 1\. Create and activate a virtual environment
 
 ```bash
-git clone https://github.com/phanidharakula/simforge.git
-cd simforge
-python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+You should see `(.venv)` in your shell prompt.
+
+### 2\. Install dependencies
+
+```bash
 pip install -r requirements.txt
 ```
 
 ---
 
-### License
+## 🗺️ Canonical Scenario Bundle
 
-TBD.
+The canonical toy scenario lives at:
+
+```text
+scenarios/toy_2x2_grid/
+├── network.xml
+├── demand.csv
+├── signals.xml
+├── config.xml
+└── manifest.xml
+```
+
+This bundle is **fully self-contained** and is used for:
+
+- Validator testing
+- SUMO adapter testing
+- Pipeline demonstrations
 
 ---
 
-### Contact
+## ✅ Validator
 
-**Author**: Phanidhar Akula
+The validator enforces:
 
-If you want to extend SIMFORGE (for example, adding a new simulator), the starting point is:
+- `manifest.xml` structure
+- Required canonical files (`network`, `demand`, `config`)
+- Scenario ID consistency (`manifest` $\leftrightarrow$ `config`)
+- Unit consistency (`network` $\leftrightarrow$ `config`)
+- Node references (`network.xml` $\leftrightarrow$ `demand.csv`)
+- Basic demand sanity checks
 
-- canonical/schema/\*
-- adapters/<your-engine>/MAPPING.md
+### Run the validator
+
+```bash
+python -m pipeline.validation.validate_bundle scenarios/toy_2x2_grid
+```
+
+**Expected output:**
+
+```text
+[VALID] Scenario bundle at: .../scenarios/toy_2x2_grid
+```
+
+If you intentionally corrupt the scenario (e.g., invalid node IDs), the validator will fail with explicit errors.
+
+---
+
+## ➡️ SUMO Adapter (v0)
+
+The SUMO adapter converts a canonical bundle into runnable SUMO inputs.
+
+For the toy scenario it generates:
+
+```text
+out/<run_name>/
+├── net.net.xml      # SUMO network
+├── routes.rou.xml   # SUMO routes
+└── toy.sumocfg      # SUMO configuration
+```
+
+Internally, the adapter:
+
+- Parses the canonical network into a directed graph
+- Uses BFS to compute routes for each trip
+- Maps canonical links directly to SUMO edges
+- Preserves the scenario time horizon
+
+### Run the adapter directly
+
+```bash
+python -m adapters.sumo.cli scenarios/toy_2x2_grid out/sumo_toy
+```
+
+**Expected output:**
+
+```text
+[SUMO ADAPTER] Prepared SUMO inputs at: .../out/sumo_toy
+  Scenario ID : toy_2x2_grid
+  Nodes       : 4
+  Links       : 8
+  Trips       : 6
+  Has signals : True
+  Time horizon: 0 -> 3600 seconds
+```
+
+---
+
+## 🏃 End-to-End Pipeline Runner
+
+The pipeline runner chains:
+
+1.  Canonical bundle validation
+2.  SUMO input generation
+
+### Run the full pipeline
+
+```bash
+python -m execution.run_sumo_scenario scenarios/toy_2x2_grid out/sumo_pipeline
+```
+
+If validation fails, the pipeline aborts before adapter execution.
+
+---
+
+## 🧪 Tests
+
+Tests are written using `pytest` and cover:
+
+- Validator correctness
+- SUMO adapter output structure and summaries
+
+**Test files:**
+
+```text
+tests/
+├── test_validator_toy.py
+└── test_sumo_adapter_toy.py
+```
+
+### Run tests
+
+```bash
+pytest
+```
+
+**Expected result:**
+
+```text
+3 passed in <time>s
+```
+
+---
+
+## 📂 Repository Structure
+
+```text
+SimForge/
+├── adapters/
+│   └── sumo/
+│       ├── sumo_adapter.py
+│       └── cli.py
+├── canonical/
+│   └── schema/
+│       ├── network_v0.md
+│       ├── demand_v0.md
+│       ├── signals_v0.md
+│       ├── config_v0.md
+│       └── manifest_v0.md
+├── execution/
+│   └── run_sumo_scenario.py
+├── pipeline/
+│   └── validation/
+│       └── validate_bundle.py
+├── scenarios/
+│   └── toy_2x2_grid/
+├── tests/
+├── out/                # generated (gitignored)
+├── .venv/              # virtual environment (gitignored)
+├── requirements.txt
+├── README.md
+└── TODO.md
+```
+
+---
+
+## 📝 Current Status
+
+| Feature                 | Status                      |
+| :---------------------- | :-------------------------- |
+| Canonical schema v0     | **implemented**             |
+| Validator               | **implemented + tested**    |
+| SUMO adapter            | **implemented** (toy scale) |
+| Pipeline runner         | **implemented**             |
+| Evaluation / metrics    | not yet implemented         |
+| Multi-simulator support | future work                 |
+
+This repository represents the **implementation baseline** for the SimForge thesis work.
+
+---
+
+## 🚀 Next Steps (Planned)
+
+- Add standardized **output metrics** (e.g., travel time, throughput).
+- Execute real SUMO runs and parse outputs.
+- Introduce additional simulators using the same canonical schema.
+- Scale beyond toy scenarios.

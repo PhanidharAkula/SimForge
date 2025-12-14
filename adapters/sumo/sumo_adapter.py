@@ -461,6 +461,9 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
     <begin value="{summary.start_time_s}" />
     <end value="{summary.end_time_s}" />
   </time>
+  <output>
+    <tripinfo-output value="tripinfo.xml" />
+  </output>
 </configuration>
 """
     cfg_path = output_dir / "toy.sumocfg"
