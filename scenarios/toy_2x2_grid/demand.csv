@@ -1,0 +1,7 @@
+trip_id,origin_node_id,destination_node_id,departure_time_s,mode
+t1,n1,n4,0,car
+t2,n2,n3,60,car
+t3,n3,n1,120,car
+t4,n4,n2,180,car
+t5,n1,n3,240,car
+t6,n2,n4,300,car

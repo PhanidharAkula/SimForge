@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <scenario id="toy_2x2_grid" name="Toy 2x2 Grid">
+    <description>
+      Toy canonical scenario used for validating schema v0 and testing the SUMO adapter.
+    </description>
+  </scenario>
+
+  <canonical_files>
+    <file type="network" path="network.xml" required="true" />
+    <file type="demand" path="demand.csv" required="true" />
+    <file type="signals" path="signals.xml" required="false" />
+    <file type="config" path="config.xml" required="true" />
+  </canonical_files>
+</manifest>

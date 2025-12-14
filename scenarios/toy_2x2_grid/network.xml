@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<network>
+  <metadata
+    crs="EPSG:4326"
+    units_length="meters"
+    units_speed="m/s"
+    source="synthetic" />
+
+  <nodes>
+    <!-- 2x2 grid of intersections -->
+    <node id="n1" x="0.0"   y="0.0"   type="intersection" />
+    <node id="n2" x="100.0" y="0.0"   type="intersection" />
+    <node id="n3" x="0.0"   y="100.0" type="intersection" />
+    <node id="n4" x="100.0" y="100.0" type="intersection" />
+  </nodes>
+
+  <links>
+    <!-- Horizontal links -->
+    <link id="l1" from="n1" to="n2" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+    <link id="l2" from="n2" to="n1" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+
+    <link id="l3" from="n3" to="n4" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+    <link id="l4" from="n4" to="n3" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+
+    <!-- Vertical links -->
+    <link id="l5" from="n1" to="n3" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+    <link id="l6" from="n3" to="n1" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+
+    <link id="l7" from="n2" to="n4" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+    <link id="l8" from="n4" to="n2" length="100.0" lanes="1"
+          speed_limit="13.9" capacity_veh_per_hour="900" road_type="urban" />
+  </links>
+</network>

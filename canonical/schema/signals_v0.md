@@ -1,0 +1,125 @@
+# 🚦 Canonical Signals Schema v0
+
+## Purpose
+
+Defines signalized intersections and their timing plans for a scenario in `signals.xml`.
+
+This schema is intentionally simple for v0: it supports **fixed-time control** at junctions and is designed to be mappable into SUMO, MATSim, and other engines later.
+
+---
+
+## File
+
+- `signals.xml` (UTF-8 encoded XML)
+
+---
+
+## Top-Level Structure
+
+```xml
+<signals>
+  <junction>
+    <phase />
+  </junction>
+</signals>
+```
+
+---
+
+## Elements
+
+### `<signals>`
+
+Root element.
+
+- Contains one or more `<junction>` elements.
+- May be omitted entirely if the scenario has no signals (some engines will treat all intersections as unsignalized).
+
+### `<junction>`
+
+Represents a signalized intersection (usually associated with a node in `network.xml`).
+
+| Attribute            | Type     | Requirement  | Description                                                                                                      |
+| :------------------- | :------- | :----------- | :--------------------------------------------------------------------------------------------------------------- |
+| **`id`**             | `string` | **required** | Unique identifier for the junction. For v0, this should usually match a `node.id` in `network.xml` (e.g., `n2`). |
+| **`cycle_length_s`** | `int`    | **required** | Total cycle length in seconds. Must equal the sum of all `duration_s` values for its `<phase>` elements.         |
+
+**Children:**
+
+- One or more `<phase>` elements defining the cycle.
+
+**Example:**
+
+```xml
+<junction id="n2" cycle_length_s="60">
+  <phase id="p1" duration_s="30" state="GGrr" />
+  <phase id="p2" duration_s="30" state="rrGG" />
+</junction>
+```
+
+### `<phase>`
+
+Represents a single phase within the junction’s signal cycle.
+
+| Attribute        | Type     | Requirement  | Description                                                   |
+| :--------------- | :------- | :----------- | :------------------------------------------------------------ |
+| **`id`**         | `string` | **required** | Unique within the parent `<junction>`.                        |
+| **`duration_s`** | `int`    | **required** | Phase duration in seconds. Must be greater than 0.            |
+| **`state`**      | `string` | **required** | Encoded signal state for each "signal group" at the junction. |
+
+> **Note on `state`:**
+> For v0, the exact mapping from characters in `state` to movements is defined at the **scenario level**, but a SUMO-like convention is assumed:
+>
+> - **`G`** – green
+> - **`g`** – permissive/low-priority green
+> - **`y`** – yellow/amber
+> - **`r`** – red
+
+**Example:**
+
+```xml
+<phase id="p1" duration_s="30" state="GGrr" />
+```
+
+In this example, there are 4 signal groups at the junction; the first two are green, the last two are red.
+
+---
+
+## Minimal Example
+
+A simple two-phase signal controlling a single junction:
+
+```xml
+<signals>
+  <junction id="n2" cycle_length_s="60">
+    <phase id="p1" duration_s="30" state="GGrr" />
+    <phase id="p2" duration_s="30" state="rrGG" />
+  </junction>
+</signals>
+```
+
+---
+
+## Constraints
+
+- At most one `<signals>` root element per file.
+- Each `<junction>` must have:
+  - a unique `id` within the file,
+  - `cycle_length_s` $> 0$,
+  - at least one `<phase>` child.
+- For each `<junction>`:
+  - The sum of all `duration_s` values for its `<phase>` elements **must equal** `cycle_length_s`.
+  - Each `duration_s` must be greater than 0.
+  - `id` should correspond to a meaningful location in `network.xml` (e.g., a `node.id`), especially for small toy networks.
+  - `state` strings must have a consistent length across phases for the same junction (same number of signal groups).
+- For v0, the framework **does not** enforce any particular number of signal groups or a global mapping; it only requires internal consistency per junction.
+
+---
+
+## Versioning
+
+- This document defines **v0** of the canonical signals schema.
+- Future versions may:
+  - explicitly map signal groups to incoming links or movements,
+  - support actuated or adaptive control,
+  - while keeping v0 fixed-time fields valid.

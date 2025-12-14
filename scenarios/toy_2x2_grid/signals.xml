@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<signals>
+  <!-- Single signalized junction at node n2 with a simple 2-phase fixed-time plan -->
+  <junction id="n2" cycle_length_s="60">
+    <!-- Phase 1: main movement green -->
+    <phase id="p1" duration_s="30" state="GGrr" />
+    <!-- Phase 2: cross movement green -->
+    <phase id="p2" duration_s="30" state="rrGG" />
+  </junction>
+</signals>
