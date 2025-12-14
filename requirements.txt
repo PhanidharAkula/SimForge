@@ -1,0 +1,12 @@
+# Core parsing / XML / data
+lxml
+pydantic
+pandas
+pyyaml
+
+# Testing
+pytest
+
+# Optional utilities (safe to keep)
+# These aren't used yet but often needed for CLI, misc
+# click

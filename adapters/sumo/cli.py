@@ -35,7 +35,7 @@ def main() -> None:
 
     summary = prepare_sumo_inputs(scenario_root, output_dir)
 
-    print(f"[SUMO ADAPTER] Prepared placeholder SUMO inputs at: {output_dir.resolve()}")
+    print(f"[SUMO ADAPTER] Prepared SUMO inputs at: {output_dir.resolve()}")
     print(f"  Scenario ID : {summary.scenario_id}")
     print(f"  Nodes       : {summary.node_count}")
     print(f"  Links       : {summary.link_count}")

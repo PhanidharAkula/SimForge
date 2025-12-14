@@ -1,0 +1,56 @@
+# -----------------------------
+# Python
+# -----------------------------
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+
+# VS Code
+.vscode/
+.history/
+
+# macOS system files
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# iCloud Drive conflict copies
+*.icloud
+* (Autosaved).*
+* (conflicted copy)*
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+
+# Output directories from SUMO pipeline
+out/
+output/
+results/
+
+# Possible SUMO generated files
+*.sumocfg
+*.net.xml
+*.rou.xml
+*.tripinfo.xml
+*.fcd.xml
+
+# Tmp
+tmp/
+temp/
