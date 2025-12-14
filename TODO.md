@@ -37,17 +37,17 @@ Define the first version of the canonical schema and build a validated toy scena
 - [ ] `scenarios/toy_2x2_grid/network.xml` — small 2×2-style network (3–5 nodes, a few links)
 - [ ] `scenarios/toy_2x2_grid/demand.csv` — 10–20 trips with basic fields
 - [ ] `scenarios/toy_2x2_grid/signals.xml` — 1 signal controller with 2 phases
-- [ ] `scenarios/toy_2x2_grid/config.json` — simple horizon, time step, seed
-- [ ] `scenarios/toy_2x2_grid/manifest.json` — list files and placeholder or real `sha256` hashes
+- [ ] `scenarios/toy_2x2_grid/config.xml` — simple horizon, time step, seed
+- [ ] `scenarios/toy_2x2_grid/manifest.xml` — list files and placeholder or real `sha256` hashes
 
 #### 4. Validator v0
 
 - [ ] Implement `pipeline/validation/validate_bundle.py`:
-  - [ ] Load `network.xml`, `demand.csv`, `signals.xml`, `config.json`, `manifest.json`
+  - [ ] Load `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml`
   - [ ] Check: `origin_node_id` and `destination_node_id` exist in `network.xml`
-  - [ ] Check: CRS present in `network.xml` or `config.json`
+  - [ ] Check: CRS present in `network.xml` or `config.xml`
   - [ ] Check: basic unit strings (e.g., `"meters"`, `"seconds"`) are present
-  - [ ] Check: each file listed in `manifest.json` actually exists
+  - [ ] Check: each file listed in `manifest.xml` actually exists
 - [ ] Add SHA256 hash computation for files and compare to manifest if hashes are present
 - [ ] CLI: `python pipeline/validation/validate_bundle.py scenarios/toy_2x2_grid` should print `VALID` or clear error messages
 
@@ -80,7 +80,7 @@ Convert the toy canonical bundle into SUMO inputs deterministically and run SUMO
   - [ ] How `network.xml` maps to SUMO network (nodes, edges, lanes, speeds).
   - [ ] How `demand.csv` maps to `.rou.xml` (trips or flows).
   - [ ] How `signals.xml` maps to SUMO traffic lights.
-  - [ ] How `config.json` maps to `.sumocfg` (horizon, time step, seed).
+  - [ ] How `config.xml` maps to `.sumocfg` (horizon, time step, seed).
 
 #### 3. SUMO adapter implementation
 
@@ -122,14 +122,14 @@ Produce a validated canonical bundle for City 1 at the smallest demand tier (e.g
 - [ ] Implement `pipeline/network/build_network_from_osm.py` to:
   - [ ] Clip AOI and extract nodes/links.
   - [ ] Convert to canonical `network.xml` using schema v0.
-- [ ] Run the validator to check `network.xml` + corresponding `config.json`.
+- [ ] Run the validator to check `network.xml` + corresponding `config.xml`.
 
 #### 2. Synthetic demand v0 (City 1, lowest tier)
 
 - [ ] Implement `pipeline/demand/generate_synthetic_demand.py`:
   - [ ] Start from simple OD zones or distributions.
   - [ ] Generate ~50k trips following the canonical demand schema.
-  - [ ] Use a fixed seed and record it in `config.json` and `manifest.json`.
+  - [ ] Use a fixed seed and record it in `config.xml` and `manifest.xml`.
 - [ ] Validate:
   - [ ] All origin/destination node IDs exist in `network.xml`.
   - [ ] Row count roughly matches planned tier size.
@@ -145,8 +145,8 @@ Produce a validated canonical bundle for City 1 at the smallest demand tier (e.g
 #### 4. Bundle builder
 
 - [ ] Implement `pipeline/scenariobuilder/build_bundle.py` to:
-  - [ ] Assemble `network.xml`, `demand.csv`, `signals.xml`, `config.json`, `manifest.json` into `scenarios/city1_tier50k/`.
-  - [ ] Populate `manifest.json` with file hashes and basic metadata.
+  - [ ] Assemble `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml` into `scenarios/city1_tier50k/`.
+  - [ ] Populate `manifest.xml` with file hashes and basic metadata.
 - [ ] Run `validate_bundle.py` on the full City 1 bundle.
 
 ### Definition of Done
@@ -167,7 +167,7 @@ Have a script that can run a scenario with a given engine and a metrics module t
 
 #### 1. Run specification
 
-- [ ] Define `runspecs/runspec_city1_toy.json` (or `.csv`) with fields like:
+- [ ] Define `runspecs/runspec_city1_toy.xml` (or `.csv`) with fields like:
   - [ ] `scenario_id`
   - [ ] `engine` (e.g., `sumo`)
   - [ ] `environment` (e.g., `local_cpu`)
@@ -225,7 +225,7 @@ Add QarSUMO and MATSim adapters (at least for toy + City 1) and prepare for the 
 - [ ] Design mapping in `adapters/matsim/MAPPING.md`:
   - [ ] Canonical network → MATSim network.
   - [ ] `demand.csv` → MATSim `plans.xml`.
-  - [ ] `config.json` → MATSim config (iterations, replanning, etc.).
+  - [ ] `config.xml` → MATSim config (iterations, replanning, etc.).
 - [ ] Implement `adapters/matsim/build_matsim_inputs.py`.
 - [ ] Validate toy + City 1 with MATSim and ensure runs complete.
 
