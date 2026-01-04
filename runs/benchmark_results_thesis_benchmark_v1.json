@@ -1,0 +1,70 @@
+{
+  "runspec_name": "thesis_benchmark_v1",
+  "started_at": "2026-01-03T07:23:48.293921+00:00",
+  "completed_at": "2026-01-03T07:25:05.820376+00:00",
+  "total_runs": 5,
+  "successful_runs": 0,
+  "failed_runs": 5,
+  "results": [
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 100,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 1.043198823928833,
+      "output_dir": "runs/sioux_falls_tier50k/sumo/seed_100",
+      "tripinfo_path": null,
+      "error_message": "Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Ids of internal routes are ignored (vehicle 'veh_t0').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t1').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t2').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t3').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t4').\nWarning: Ids of internal routes are ignored (vehicle ",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 101,
+      "repeat_index": 1,
+      "status": "failed",
+      "runtime_s": 1.1100199222564697,
+      "output_dir": "runs/sioux_falls_tier50k/sumo/seed_101",
+      "tripinfo_path": null,
+      "error_message": "Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Ids of internal routes are ignored (vehicle 'veh_t0').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t1').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t2').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t3').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t4').\nWarning: Ids of internal routes are ignored (vehicle ",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 102,
+      "repeat_index": 2,
+      "status": "failed",
+      "runtime_s": 1.1238861083984375,
+      "output_dir": "runs/sioux_falls_tier50k/sumo/seed_102",
+      "tripinfo_path": null,
+      "error_message": "Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Ids of internal routes are ignored (vehicle 'veh_t0').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t1').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t2').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t3').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t4').\nWarning: Ids of internal routes are ignored (vehicle ",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 103,
+      "repeat_index": 3,
+      "status": "failed",
+      "runtime_s": 1.1734421253204346,
+      "output_dir": "runs/sioux_falls_tier50k/sumo/seed_103",
+      "tripinfo_path": null,
+      "error_message": "Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Ids of internal routes are ignored (vehicle 'veh_t0').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t1').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t2').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t3').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t4').\nWarning: Ids of internal routes are ignored (vehicle ",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 104,
+      "repeat_index": 4,
+      "status": "failed",
+      "runtime_s": 1.0832269191741943,
+      "output_dir": "runs/sioux_falls_tier50k/sumo/seed_104",
+      "tripinfo_path": null,
+      "error_message": "Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Ids of internal routes are ignored (vehicle 'veh_t0').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t1').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t2').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t3').\nWarning: Ids of internal routes are ignored (vehicle 'veh_t4').\nWarning: Ids of internal routes are ignored (vehicle ",
+      "metrics": {}
+    }
+  ]
+}

@@ -21,35 +21,35 @@ Define the first version of the canonical schema and build a validated toy scena
 
 #### 1. Repo & structure
 
-- [ ] Create base folders: `canonical/`, `adapters/`, `pipeline/`, `execution/`, `evaluation/`, `scenarios/`
-- [ ] Add `README.md` with a short project description
+- [x] Create base folders: `canonical/`, `adapters/`, `pipeline/`, `execution/`, `evaluation/`, `scenarios/`
+- [x] Add `README.md` with a short project description
 
 #### 2. Canonical schema v0 docs
 
-- [ ] `canonical/schema/network_v0.md` — nodes, links, CRS, units, required attributes
-- [ ] `canonical/schema/demand_v0.md` — `trip_id`, `origin_node_id`, `destination_node_id`, `departure_time_s`, `mode`
-- [ ] `canonical/schema/signals_v0.md` — `signal_controller`, phases, link references
-- [ ] `canonical/schema/config_v0.md` — `scenario_id`, `city`, `tier`, `horizon_start_s`, `horizon_end_s`, `time_step_s`, `random_seed`, `crs`, `schema_version`
-- [ ] `canonical/schema/manifest_v0.md` — file list, `sha256`, roles, generator metadata
+- [x] `canonical/schema/network_v0.md` — nodes, links, CRS, units, required attributes
+- [x] `canonical/schema/demand_v0.md` — `trip_id`, `origin_node_id`, `destination_node_id`, `departure_time_s`, `mode`
+- [x] `canonical/schema/signals_v0.md` — `signal_controller`, phases, link references
+- [x] `canonical/schema/config_v0.md` — `scenario_id`, `city`, `tier`, `horizon_start_s`, `horizon_end_s`, `time_step_s`, `random_seed`, `crs`, `schema_version`
+- [x] `canonical/schema/manifest_v0.md` — file list, `sha256`, roles, generator metadata
 
 #### 3. Toy scenario bundle (`toy_2x2_grid`)
 
-- [ ] `scenarios/toy_2x2_grid/network.xml` — small 2×2-style network (3–5 nodes, a few links)
-- [ ] `scenarios/toy_2x2_grid/demand.csv` — 10–20 trips with basic fields
-- [ ] `scenarios/toy_2x2_grid/signals.xml` — 1 signal controller with 2 phases
-- [ ] `scenarios/toy_2x2_grid/config.xml` — simple horizon, time step, seed
-- [ ] `scenarios/toy_2x2_grid/manifest.xml` — list files and placeholder or real `sha256` hashes
+- [x] `scenarios/toy_2x2_grid/network.xml` — small 2×2-style network (3–5 nodes, a few links)
+- [x] `scenarios/toy_2x2_grid/demand.csv` — 10–20 trips with basic fields
+- [x] `scenarios/toy_2x2_grid/signals.xml` — 1 signal controller with 2 phases
+- [x] `scenarios/toy_2x2_grid/config.xml` — simple horizon, time step, seed
+- [x] `scenarios/toy_2x2_grid/manifest.xml` — list files and placeholder or real `sha256` hashes
 
 #### 4. Validator v0
 
-- [ ] Implement `pipeline/validation/validate_bundle.py`:
-  - [ ] Load `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml`
-  - [ ] Check: `origin_node_id` and `destination_node_id` exist in `network.xml`
-  - [ ] Check: CRS present in `network.xml` or `config.xml`
-  - [ ] Check: basic unit strings (e.g., `"meters"`, `"seconds"`) are present
-  - [ ] Check: each file listed in `manifest.xml` actually exists
-- [ ] Add SHA256 hash computation for files and compare to manifest if hashes are present
-- [ ] CLI: `python pipeline/validation/validate_bundle.py scenarios/toy_2x2_grid` should print `VALID` or clear error messages
+- [x] Implement `pipeline/validation/validate_bundle.py`:
+  - [x] Load `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml`
+  - [x] Check: `origin_node_id` and `destination_node_id` exist in `network.xml`
+  - [x] Check: CRS present in `network.xml` or `config.xml`
+  - [x] Check: basic unit strings (e.g., `"meters"`, `"seconds"`) are present
+  - [x] Check: each file listed in `manifest.xml` actually exists
+- [x] Add SHA256 hash computation for files and compare to manifest if hashes are present
+- [x] CLI: `python pipeline/validation/validate_bundle.py scenarios/toy_2x2_grid` should print `VALID` or clear error messages
 
 ### Definition of Done
 
@@ -71,33 +71,33 @@ Convert the toy canonical bundle into SUMO inputs deterministically and run SUMO
 
 #### 1. SUMO environment
 
-- [ ] Install SUMO locally or define a SUMO Docker image.
-- [ ] Manually run a tiny SUMO example to confirm the install works.
+- [x] Install SUMO locally or define a SUMO Docker image.
+- [x] Manually run a tiny SUMO example to confirm the install works.
 
 #### 2. Mapping design: canonical → SUMO
 
-- [ ] Create `adapters/sumo/MAPPING.md` describing:
-  - [ ] How `network.xml` maps to SUMO network (nodes, edges, lanes, speeds).
-  - [ ] How `demand.csv` maps to `.rou.xml` (trips or flows).
-  - [ ] How `signals.xml` maps to SUMO traffic lights.
-  - [ ] How `config.xml` maps to `.sumocfg` (horizon, time step, seed).
+- [x] Create `adapters/sumo/MAPPING.md` describing:
+  - [x] How `network.xml` maps to SUMO network (nodes, edges, lanes, speeds).
+  - [x] How `demand.csv` maps to `.rou.xml` (trips or flows).
+  - [x] How `signals.xml` maps to SUMO traffic lights.
+  - [x] How `config.xml` maps to `.sumocfg` (horizon, time step, seed).
 
 #### 3. SUMO adapter implementation
 
-- [ ] Implement `adapters/sumo/build_sumo_inputs.py`:
-  - [ ] Read canonical bundle path.
-  - [ ] Generate SUMO network, route, and config files in a deterministic way.
-  - [ ] Log key mapping decisions (default lane count, signal mapping, etc.).
-- [ ] Add a simple test or script to compare hashes of outputs across two runs to confirm determinism.
+- [x] Implement `adapters/sumo/sumo_adapter.py`:
+  - [x] Read canonical bundle path.
+  - [x] Generate SUMO network (via netconvert), route, and config files in a deterministic way.
+  - [x] Log key mapping decisions (default lane count, signal mapping, etc.).
+- [x] Add a simple test or script to compare hashes of outputs across two runs to confirm determinism.
 
 #### 4. End-to-end SUMO run (toy)
 
-- [ ] Validate bundle:
-  - [ ] `python pipeline/validation/validate_bundle.py scenarios/toy_2x2_grid`
-- [ ] Generate SUMO inputs:
-  - [ ] `python adapters/sumo/build_sumo_inputs.py scenarios/toy_2x2_grid`
-- [ ] Run SUMO on the generated config (e.g., `sumo -c toy.sumocfg` or equivalent).
-- [ ] Confirm simulation completes and produces some outputs (even simple summary).
+- [x] Validate bundle:
+  - [x] `python pipeline/validation/validate_bundle.py scenarios/toy_2x2_grid`
+- [x] Generate SUMO inputs:
+  - [x] `python -m adapters.sumo.cli scenarios/toy_2x2_grid out/`
+- [x] Run SUMO on the generated config (e.g., `sumo -c toy.sumocfg` or equivalent).
+- [x] Confirm simulation completes and produces some outputs (even simple summary).
 
 ### Definition of Done
 
@@ -117,37 +117,37 @@ Produce a validated canonical bundle for City 1 at the smallest demand tier (e.g
 
 #### 1. Network from OSM
 
-- [ ] Choose City 1 and define a clear AOI.
-- [ ] Download OSM extract for the AOI.
-- [ ] Implement `pipeline/network/build_network_from_osm.py` to:
-  - [ ] Clip AOI and extract nodes/links.
-  - [ ] Convert to canonical `network.xml` using schema v0.
-- [ ] Run the validator to check `network.xml` + corresponding `config.xml`.
+- [x] Choose City 1 and define a clear AOI.
+- [x] Download OSM extract for the AOI.
+- [x] Implement `pipeline/network/build_network_from_osm.py` to:
+  - [x] Clip AOI and extract nodes/links.
+  - [x] Convert to canonical `network.xml` using schema v0.
+- [x] Run the validator to check `network.xml` + corresponding `config.xml`.
 
 #### 2. Synthetic demand v0 (City 1, lowest tier)
 
-- [ ] Implement `pipeline/demand/generate_synthetic_demand.py`:
-  - [ ] Start from simple OD zones or distributions.
-  - [ ] Generate ~50k trips following the canonical demand schema.
-  - [ ] Use a fixed seed and record it in `config.xml` and `manifest.xml`.
-- [ ] Validate:
-  - [ ] All origin/destination node IDs exist in `network.xml`.
-  - [ ] Row count roughly matches planned tier size.
+- [x] Implement `pipeline/demand/generate_synthetic_demand.py`:
+  - [x] Start from simple OD zones or distributions.
+  - [x] Generate ~50k trips following the canonical demand schema.
+  - [x] Use a fixed seed and record it in `config.xml` and `manifest.xml`.
+- [x] Validate:
+  - [x] All origin/destination node IDs exist in `network.xml`.
+  - [x] Row count roughly matches planned tier size.
 
 #### 3. Signals v0 (City 1)
 
-- [ ] Implement `pipeline/signals/build_signals_default.py`:
-  - [ ] Either parse existing signals (if available) or apply a consistent default template.
-- [ ] Validate:
-  - [ ] Signal controller node IDs exist in `network.xml`.
-  - [ ] Link references exist for each phase.
+- [x] Implement `pipeline/signals/build_signals_default.py`:
+  - [x] Either parse existing signals (if available) or apply a consistent default template.
+- [x] Validate:
+  - [x] Signal controller node IDs exist in `network.xml`.
+  - [x] Link references exist for each phase.
 
 #### 4. Bundle builder
 
-- [ ] Implement `pipeline/scenariobuilder/build_bundle.py` to:
-  - [ ] Assemble `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml` into `scenarios/city1_tier50k/`.
-  - [ ] Populate `manifest.xml` with file hashes and basic metadata.
-- [ ] Run `validate_bundle.py` on the full City 1 bundle.
+- [x] Implement `pipeline/scenariobuilder/build_bundle.py` to:
+  - [x] Assemble `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml` into `scenarios/sioux_falls_tier50k/`.
+  - [x] Populate `manifest.xml` with file hashes and basic metadata.
+- [x] Run `validate_bundle.py` on the full City 1 bundle.
 
 ### Definition of Done
 
@@ -186,16 +186,16 @@ Have a script that can run a scenario with a given engine and a metrics module t
 
 #### 3. Metrics library (v0)
 
-- [ ] Fidelity metrics in `evaluation/metrics/fidelity.py`:
-  - [ ] Implement RMSE helper.
-  - [ ] Implement GEH helper.
-  - [ ] Implement KS statistic helper.
-- [ ] Scalability metrics in `evaluation/metrics/scalability.py`:
-  - [ ] Compute runtime, vehicles/sec.
-  - [ ] Add hooks for per-core/per-watt when hardware info is available.
-- [ ] Reproducibility metrics in `evaluation/metrics/reproducibility.py`:
-  - [ ] Implement `R = 1 − σ/μ` for repeated runs.
-- [ ] Write small tests using toy or synthetic outputs to confirm functions work.
+- [x] Fidelity metrics in `evaluation/metrics/fidelity.py`:
+  - [x] Implement RMSE helper.
+  - [x] Implement GEH helper.
+  - [x] Implement KS statistic helper.
+- [x] Scalability metrics in `evaluation/metrics/scalability.py`:
+  - [x] Compute runtime, vehicles/sec.
+  - [x] Add hooks for per-core/per-watt when hardware info is available.
+- [x] Reproducibility metrics in `evaluation/metrics/reproducibility.py`:
+  - [x] Implement `R = 1 − σ/μ` for repeated runs.
+- [x] Write small tests using toy or synthetic outputs to confirm functions work.
 
 ### Definition of Done
 

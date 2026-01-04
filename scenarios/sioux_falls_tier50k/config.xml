@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<config>
+  <metadata scenario_id="sioux_falls_tier50k" created_by="SimForge Pipeline" created_at="2026-01-03T07:17:08.787630Z">
+    <description>Canonical scenario for Sioux Falls, tier 50k</description>
+  </metadata>
+  <time start_time_s="0" end_time_s="3600" time_step_s="1"/>
+  <random seed="42" engine_seed_mode="fixed"/>
+  <units length="meters" speed="m/s" time="seconds"/>
+  <simulation warmup_time_s="0" aggregation_interval_s="300"/>
+</config>

@@ -17,6 +17,7 @@ reflect the actual canonical content of the toy scenario.
 from __future__ import annotations
 
 import csv
+import subprocess
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -160,17 +161,25 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
 # ---------------------------------------------------------------------------
 
 @dataclass
+class CanonicalNode:
+    id: str
+    x: float
+    y: float
+
+
+@dataclass
 class CanonicalLink:
     id: str
     from_node: str
     to_node: str
     length: float
     speed: float
+    lanes: int = 1
 
 
 @dataclass
 class NetworkGraph:
-    nodes: Set[str]
+    nodes: Dict[str, CanonicalNode]
     links: List[CanonicalLink]
     adjacency: Dict[str, List[str]]
     edge_lookup: Dict[Tuple[str, str], CanonicalLink]
@@ -188,12 +197,20 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
     nodes_elem = root.find("nodes")
     links_elem = root.find("links")
 
-    node_ids: Set[str] = set()
+    nodes: Dict[str, CanonicalNode] = {}
     if nodes_elem is not None:
         for node_elem in nodes_elem.findall("node"):
             node_id = node_elem.get("id")
-            if node_id:
-                node_ids.add(node_id)
+            if not node_id:
+                continue
+            x_raw = node_elem.get("x") or "0"
+            y_raw = node_elem.get("y") or "0"
+            try:
+                x = float(x_raw)
+                y = float(y_raw)
+            except ValueError:
+                x, y = 0.0, 0.0
+            nodes[node_id] = CanonicalNode(id=node_id, x=x, y=y)
 
     links: List[CanonicalLink] = []
     adjacency: Dict[str, List[str]] = {}
@@ -209,6 +226,7 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
 
             length_raw = link_elem.get("length") or "0"
             speed_raw = link_elem.get("speed_limit") or "13.9"
+            lanes_raw = link_elem.get("lanes") or "1"
 
             try:
                 length = float(length_raw)
@@ -218,6 +236,10 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
                 speed = float(speed_raw)
             except ValueError:
                 speed = 13.9
+            try:
+                lanes = int(lanes_raw)
+            except ValueError:
+                lanes = 1
 
             link = CanonicalLink(
                 id=link_id,
@@ -225,6 +247,7 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
                 to_node=to_id,
                 length=length,
                 speed=speed,
+                lanes=lanes,
             )
             links.append(link)
 
@@ -232,7 +255,7 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
             edge_lookup[(from_id, to_id)] = link
 
     return NetworkGraph(
-        nodes=node_ids,
+        nodes=nodes,
         links=links,
         adjacency=adjacency,
         edge_lookup=edge_lookup,
@@ -289,49 +312,33 @@ def shortest_path_nodes(
 # SUMO XML generation helpers
 # ---------------------------------------------------------------------------
 
-def build_sumo_net_xml(summary: ScenarioSummary, graph: NetworkGraph) -> str:
+def build_sumo_nodes_xml(graph: NetworkGraph) -> str:
     """
-    Build a minimal SUMO network net.xml as a string based on the canonical network.
-
-    For v0, we:
-      - Map each canonical node -> SUMO node with same id.
-      - Map each canonical link -> SUMO edge with one lane.
+    Build a SUMO nodes XML file (input for netconvert).
     """
     lines: List[str] = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
-    lines.append(f"<!-- SUMO net generated from canonical network.xml -->")
-    lines.append(f"<!-- Scenario: {summary.scenario_id} -->")
-    lines.append('<net>')
+    lines.append('<nodes>')
+    for node_id in sorted(graph.nodes.keys()):
+        node = graph.nodes[node_id]
+        lines.append(f'    <node id="{node.id}" x="{node.x}" y="{node.y}" type="priority"/>')
+    lines.append('</nodes>')
+    return "\n".join(lines)
 
-    # Nodes
-    lines.append('  <nodes>')
-    for node_id in sorted(graph.nodes):
-        # We do not propagate coordinates here; for real runs, geometry should be included.
-        lines.append(f'    <node id="{node_id}" />')
-    lines.append('  </nodes>')
 
-    # Edges + lanes
-    lines.append('  <edges>')
+def build_sumo_edges_xml(graph: NetworkGraph) -> str:
+    """
+    Build a SUMO edges XML file (input for netconvert).
+    """
+    lines: List[str] = []
+    lines.append('<?xml version="1.0" encoding="UTF-8"?>')
+    lines.append('<edges>')
     for link in graph.links:
-        edge_id = link.id
-        from_id = link.from_node
-        to_id = link.to_node
-        priority = 1  # simple default
-        lane_id = f"{edge_id}_0"
-        lane_index = 0
-        lane_speed = link.speed if link.speed > 0 else 13.9
-        lane_length = link.length if link.length > 0 else 1.0
-
         lines.append(
-            f'    <edge id="{edge_id}" from="{from_id}" to="{to_id}" priority="{priority}">'
+            f'    <edge id="{link.id}" from="{link.from_node}" to="{link.to_node}" '
+            f'numLanes="{link.lanes}" speed="{link.speed}"/>'
         )
-        lines.append(
-            f'      <lane id="{lane_id}" index="{lane_index}" speed="{lane_speed}" length="{lane_length}"/>'
-        )
-        lines.append('    </edge>')
-    lines.append('  </edges>')
-
-    lines.append('</net>')
+    lines.append('</edges>')
     return "\n".join(lines)
 
 
@@ -420,7 +427,9 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
       - Compute a ScenarioSummary.
       - Parse canonical network into a simple graph.
       - Generate:
-          - net.net.xml   (nodes + edges + lanes)
+          - nodes.nod.xml (SUMO nodes input for netconvert)
+          - edges.edg.xml (SUMO edges input for netconvert)
+          - net.net.xml   (generated by netconvert)
           - routes.rou.xml (vehicles + routes for each trip with a valid path)
           - toy.sumocfg   (linking net + routes with correct time horizon)
     """
@@ -439,10 +448,36 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
     # Network graph for routing + edge mapping
     graph = parse_canonical_network(network_path)
 
-    # Build SUMO net.xml
-    net_content = build_sumo_net_xml(summary, graph)
+    # Build SUMO nodes and edges XML (input for netconvert)
+    nodes_content = build_sumo_nodes_xml(graph)
+    nodes_path = output_dir / "nodes.nod.xml"
+    nodes_path.write_text(nodes_content, encoding="utf-8")
+
+    edges_content = build_sumo_edges_xml(graph)
+    edges_path = output_dir / "edges.edg.xml"
+    edges_path.write_text(edges_content, encoding="utf-8")
+
+    # Run netconvert to generate proper net.net.xml
     net_path = output_dir / "net.net.xml"
-    net_path.write_text(net_content, encoding="utf-8")
+    try:
+        subprocess.run(
+            [
+                "netconvert",
+                "--node-files", str(nodes_path),
+                "--edge-files", str(edges_path),
+                "--output-file", str(net_path),
+                "--no-turnarounds",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        raise RuntimeError(
+            "netconvert not found. Please install SUMO and ensure 'netconvert' is on your PATH."
+        )
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"netconvert failed: {e.stderr}")
 
     # Build SUMO routes
     routes_content = build_sumo_routes_xml(summary, graph, demand_path)
