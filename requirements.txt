@@ -1,12 +1,48 @@
+# ==============================================
+# SimForge Python Dependencies
+# ==============================================
+
 # Core parsing / XML / data
 lxml
 pydantic
 pandas
 pyyaml
 
+# Network extraction from OSM
+osmnx
+networkx
+geopandas
+shapely
+
 # Testing
 pytest
 
-# Optional utilities (safe to keep)
-# These aren't used yet but often needed for CLI, misc
-# click
+# CLI
+click
+
+# Optional: Jupyter notebooks
+# jupyter
+# matplotlib
+# seaborn
+
+# ==============================================
+# EXTERNAL DEPENDENCIES (NOT PIP PACKAGES)
+# ==============================================
+# These are installed separately - NOT via pip:
+#
+# SUMO (Simulation of Urban MObility)
+#   - macOS: brew install sumo
+#   - Linux: apt install sumo sumo-tools
+#   - Download: https://sumo.dlr.de/docs/Downloads.php
+#
+# MATSim (Multi-Agent Transport Simulation)
+#   - Java JAR file, not a pip package
+#   - Download: https://github.com/matsim-org/matsim-libs/releases
+#   - Install to: lib/matsim-15.0/matsim-15.0.jar
+#   - Requires: Java 17+ (brew install openjdk@17)
+#
+# QarSUMO (GPU-accelerated SUMO)
+#   - Requires NVIDIA CUDA GPU
+#   - Build from source with CUDA support
+#   - Falls back to SUMO on CPU-only systems
+# ==============================================

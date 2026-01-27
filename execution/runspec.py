@@ -10,6 +10,7 @@ Supported formats:
 """
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Optional
 import json
@@ -17,6 +18,23 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+class SimulationMode(str, Enum):
+    """Simulation fidelity mode."""
+    MICROSCOPIC = "microscopic"  # Full car-following, lane-changing (accurate, slow)
+    MESOSCOPIC = "mesoscopic"    # Queue-based, edge-travel-time (fast, ~100x speedup)
+    
+    @classmethod
+    def from_string(cls, s: str) -> "SimulationMode":
+        """Parse mode from string (case-insensitive)."""
+        s_lower = s.lower().strip()
+        if s_lower in ("micro", "microscopic"):
+            return cls.MICROSCOPIC
+        elif s_lower in ("meso", "mesoscopic"):
+            return cls.MESOSCOPIC
+        else:
+            raise ValueError(f"Unknown simulation mode: {s}. Use 'microscopic' or 'mesoscopic'")
 
 
 @dataclass
@@ -32,14 +50,26 @@ class RunConfig:
     timeout_s: int = 3600  # Max runtime per run
     output_dir: Optional[str] = None
     engine_options: dict = field(default_factory=dict)
-    # SUMO-specific options
-    mesoscopic: bool = False  # Use mesoscopic simulation (10-100x faster)
+    # Simulation mode (applies to SUMO; other engines may interpret differently)
+    mode: SimulationMode = SimulationMode.MICROSCOPIC
+    # Legacy field - use 'mode' instead
+    mesoscopic: bool = False  # Deprecated: use mode=mesoscopic
     
     def __post_init__(self):
         if self.repeats < 1:
             raise ValueError(f"repeats must be >= 1, got {self.repeats}")
         if self.timeout_s < 1:
             raise ValueError(f"timeout_s must be >= 1, got {self.timeout_s}")
+        # Sync mode and mesoscopic fields (mode takes precedence)
+        if self.mode == SimulationMode.MESOSCOPIC:
+            self.mesoscopic = True
+        elif self.mesoscopic:  # Legacy: mesoscopic=True but mode not set
+            self.mode = SimulationMode.MESOSCOPIC
+    
+    @property
+    def is_mesoscopic(self) -> bool:
+        """Check if using mesoscopic mode."""
+        return self.mode == SimulationMode.MESOSCOPIC
     
     def get_seeds(self) -> list[int]:
         """Generate list of seeds for all repeats."""
@@ -86,6 +116,13 @@ class RunSpec:
         """Parse runspec from dictionary."""
         runs = []
         for run_data in data.get("runs", []):
+            # Parse mode field (supports both 'mode' and legacy 'mesoscopic')
+            mode = SimulationMode.MICROSCOPIC
+            if "mode" in run_data:
+                mode = SimulationMode.from_string(run_data["mode"])
+            elif run_data.get("mesoscopic", False):
+                mode = SimulationMode.MESOSCOPIC
+            
             runs.append(RunConfig(
                 scenario_id=run_data["scenario_id"],
                 scenario_path=run_data["scenario_path"],
@@ -96,7 +133,9 @@ class RunSpec:
                 seed_increment=run_data.get("seed_increment", True),
                 timeout_s=run_data.get("timeout_s", 3600),
                 output_dir=run_data.get("output_dir"),
-                engine_options=run_data.get("engine_options", {})
+                engine_options=run_data.get("engine_options", {}),
+                mode=mode,
+                mesoscopic=(mode == SimulationMode.MESOSCOPIC)
             ))
         
         return cls(
@@ -146,6 +185,7 @@ class RunSpec:
                     "scenario_path": r.scenario_path,
                     "engine": r.engine,
                     "environment": r.environment,
+                    "mode": r.mode.value,  # microscopic or mesoscopic
                     "repeats": r.repeats,
                     "seed": r.seed,
                     "seed_increment": r.seed_increment,

@@ -37,8 +37,71 @@ class NetworkStats:
     node_coords: dict[str, tuple[float, float]]  # id -> (x, y)
     node_degrees: dict[str, int]  # id -> degree (in + out)
     adjacency: dict[str, list[str]]  # id -> list of neighbor ids
+    reverse_adjacency: dict[str, list[str]]  # id -> list of nodes that can reach this node
     total_nodes: int
     total_links: int
+    reachable_from: dict[str, set[str]]  # id -> set of nodes reachable from this node
+    strongly_connected_nodes: set[str]  # nodes in the main strongly connected component
+
+
+def compute_strongly_connected_component(adjacency: dict[str, list[str]], 
+                                         reverse_adjacency: dict[str, list[str]],
+                                         node_ids: list[str]) -> set[str]:
+    """
+    Find the largest strongly connected component of the network.
+    Returns the set of nodes in that component.
+    """
+    from collections import deque
+    
+    if not node_ids:
+        return set()
+    
+    def bfs_reachable(start: str, adj: dict) -> set[str]:
+        visited = set()
+        queue = deque([start])
+        visited.add(start)
+        while queue:
+            node = queue.popleft()
+            for neighbor in adj.get(node, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+        return visited
+    
+    # Find a good starting node (highest degree)
+    degrees = {n: len(adjacency.get(n, [])) + len(reverse_adjacency.get(n, [])) 
+               for n in node_ids}
+    start_node = max(degrees, key=degrees.get) if degrees else node_ids[0]
+    
+    # Forward and backward reachability
+    forward = bfs_reachable(start_node, adjacency)
+    backward = bfs_reachable(start_node, reverse_adjacency)
+    
+    # Strongly connected = intersection
+    scc = forward & backward
+    return scc
+
+
+def compute_reachability(adjacency: dict[str, list[str]], node_ids: list[str]) -> dict[str, set[str]]:
+    """
+    Compute which nodes are reachable from each node using BFS.
+    This ensures we only generate routable OD pairs.
+    """
+    from collections import deque
+    
+    reachable = {}
+    for start in node_ids:
+        visited = set()
+        queue = deque([start])
+        visited.add(start)
+        while queue:
+            node = queue.popleft()
+            for neighbor in adjacency.get(node, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+        reachable[start] = visited - {start}  # Exclude self
+    return reachable
 
 
 def load_network_for_demand(network_path: Path) -> NetworkStats:
@@ -68,12 +131,15 @@ def load_network_for_demand(network_path: Path) -> NetworkStats:
         node_coords[nid] = (x, y)
     
     # Parse links to build adjacency and degrees
+    # Skip self-loops (from == to) as they cause issues in routing
     link_count = 0
+    reverse_adjacency = defaultdict(list)
     for link in root.findall(".//link"):
         from_node = link.get("from")
         to_node = link.get("to")
-        if from_node and to_node:
+        if from_node and to_node and from_node != to_node:  # Skip self-loops
             adjacency[from_node].append(to_node)
+            reverse_adjacency[to_node].append(from_node)
             node_degrees[from_node] += 1
             node_degrees[to_node] += 1
             link_count += 1
@@ -83,13 +149,32 @@ def load_network_for_demand(network_path: Path) -> NetworkStats:
         if nid not in node_degrees:
             node_degrees[nid] = 0
     
+    # Compute strongly connected component
+    logger.info("Computing strongly connected component...")
+    scc = compute_strongly_connected_component(
+        dict(adjacency), dict(reverse_adjacency), node_ids
+    )
+    logger.info(f"Strongly connected component: {len(scc)} of {len(node_ids)} nodes")
+    
+    # Compute reachability only within the SCC for routable OD pairs
+    logger.info("Computing node reachability for routable OD pairs...")
+    scc_list = list(scc)
+    # Filter adjacency to only include SCC nodes
+    scc_adjacency = {n: [dest for dest in adjacency.get(n, []) if dest in scc] 
+                     for n in scc}
+    reachable_from = compute_reachability(scc_adjacency, scc_list)
+    logger.info(f"Reachability computed for {len(scc_list)} strongly connected nodes")
+    
     return NetworkStats(
         node_ids=sorted(node_ids),
         node_coords=node_coords,
         node_degrees=dict(node_degrees),
         adjacency=dict(adjacency),
+        reverse_adjacency=dict(reverse_adjacency),
         total_nodes=len(node_ids),
-        total_links=link_count
+        total_links=link_count,
+        reachable_from=reachable_from,
+        strongly_connected_nodes=scc
     )
 
 
@@ -192,9 +277,23 @@ class UniformRandomGenerator(DemandGenerator):
     """Generate trips with uniform random OD pairs and departure times."""
     
     def generate_od_pair(self) -> tuple[str, str]:
-        """Pick random origin and destination."""
-        origin = self.rng.choice(self.network.node_ids)
-        destination = self.rng.choice(self.network.node_ids)
+        """Pick random origin and destination from strongly connected component."""
+        # Use only nodes in the strongly connected component
+        scc_nodes = list(self.network.strongly_connected_nodes)
+        if not scc_nodes:
+            # Fallback if SCC not computed
+            origin = self.rng.choice(self.network.node_ids)
+            destination = self.rng.choice(self.network.node_ids)
+            return origin, destination
+        
+        origin = self.rng.choice(scc_nodes)
+        # Pick destination from reachable nodes (within SCC)
+        reachable = list(self.network.reachable_from.get(origin, set()))
+        if reachable:
+            destination = self.rng.choice(reachable)
+        else:
+            # Fallback to any SCC node
+            destination = self.rng.choice(scc_nodes)
         return origin, destination
 
 
@@ -221,52 +320,64 @@ class GravityModelGenerator(DemandGenerator):
         self.min_distance_km = min_distance_km
         self.max_distance_km = max_distance_km
         
-        # Precompute node weights based on degree
-        total_degree = sum(network.node_degrees.values()) or 1
+        # Use only nodes in strongly connected component
+        scc_nodes = list(network.strongly_connected_nodes)
+        
+        # Precompute node weights based on degree (only for SCC nodes)
+        total_degree = sum(network.node_degrees.get(n, 0) for n in scc_nodes) or 1
         self.node_weights = {
             nid: (network.node_degrees.get(nid, 1) + 1) / total_degree
-            for nid in network.node_ids
+            for nid in scc_nodes
         }
         
-        # Build weighted choice list
+        # Build weighted choice list (only SCC nodes)
         self.weighted_nodes = list(self.node_weights.keys())
         self.weights = [self.node_weights[n] for n in self.weighted_nodes]
     
     def generate_od_pair(self) -> tuple[str, str]:
-        """Generate OD pair using gravity model."""
-        # Select origin weighted by degree
+        """Generate OD pair using gravity model, ensuring routability."""
+        if not self.weighted_nodes:
+            # Fallback if no SCC
+            origin = self.rng.choice(self.network.node_ids)
+            destination = self.rng.choice(self.network.node_ids)
+            return origin, destination
+        
+        # Select origin weighted by degree (from SCC)
         origin = self.rng.choices(self.weighted_nodes, weights=self.weights, k=1)[0]
         
-        # Select destination weighted by degree and distance
+        # Get reachable destinations from this origin (all in SCC)
+        reachable = self.network.reachable_from.get(origin, set())
+        if not reachable:
+            # Fallback to random SCC node
+            return origin, self.rng.choice(self.weighted_nodes)
+        
+        # Select destination weighted by degree and distance, but only from reachable nodes
         origin_coord = self.network.node_coords[origin]
         
-        # Compute destination weights
+        # Compute destination weights only for reachable nodes
+        reachable_list = list(reachable)
         dest_weights = []
-        for dest in self.network.node_ids:
-            if dest == origin:
-                dest_weights.append(0)
-                continue
-            
+        for dest in reachable_list:
             dest_coord = self.network.node_coords[dest]
             dist_km = haversine_distance_km(origin_coord, dest_coord)
             
             # Apply distance constraints
             if dist_km < self.min_distance_km or dist_km > self.max_distance_km:
-                dest_weights.append(0)
+                dest_weights.append(0.01)  # Small weight instead of 0 to allow some selection
                 continue
             
             # Gravity weight: degree / distance^decay
-            degree_weight = self.node_weights[dest]
+            degree_weight = self.node_weights.get(dest, 0.01)
             distance_weight = 1 / (dist_km ** self.distance_decay + 0.1)
             dest_weights.append(degree_weight * distance_weight)
         
         # Normalize and select
         total_weight = sum(dest_weights)
         if total_weight == 0:
-            # Fallback to random
-            destination = self.rng.choice(self.network.node_ids)
+            # Fallback to random reachable
+            destination = self.rng.choice(reachable_list)
         else:
-            destination = self.rng.choices(self.network.node_ids, weights=dest_weights, k=1)[0]
+            destination = self.rng.choices(reachable_list, weights=dest_weights, k=1)[0]
         
         return origin, destination
 
@@ -292,9 +403,20 @@ class PeakHourGenerator(DemandGenerator):
         self.peak_fraction = peak_fraction
     
     def generate_od_pair(self) -> tuple[str, str]:
-        """Pick random OD pair (can be combined with gravity)."""
-        origin = self.rng.choice(self.network.node_ids)
-        destination = self.rng.choice(self.network.node_ids)
+        """Pick random routable OD pair from strongly connected component."""
+        # Use only nodes in the strongly connected component
+        scc_nodes = list(self.network.strongly_connected_nodes)
+        if not scc_nodes:
+            origin = self.rng.choice(self.network.node_ids)
+            destination = self.rng.choice(self.network.node_ids)
+            return origin, destination
+        
+        origin = self.rng.choice(scc_nodes)
+        reachable = list(self.network.reachable_from.get(origin, set()))
+        if reachable:
+            destination = self.rng.choice(reachable)
+        else:
+            destination = self.rng.choice(scc_nodes)
         return origin, destination
     
     def generate_departure_time(self, horizon_start: int, horizon_end: int) -> float:

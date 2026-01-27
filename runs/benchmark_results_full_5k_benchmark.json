@@ -1,0 +1,478 @@
+{
+  "runspec_name": "full_5k_benchmark",
+  "started_at": "2026-01-06T04:35:57.709511+00:00",
+  "completed_at": "2026-01-06T04:37:58.521205+00:00",
+  "total_runs": 27,
+  "successful_runs": 24,
+  "failed_runs": 3,
+  "results": [
+    {
+      "scenario_id": "sioux_falls_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.6375551223754883,
+      "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.564112822564513,
+          "p95": 5.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_sumo_meso",
+      "engine": "sumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.6247999668121338,
+      "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_123",
+      "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.5647129425885178,
+          "p95": 5.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_sumo_meso",
+      "engine": "sumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.6257622241973877,
+      "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_456",
+      "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.5669133826765353,
+          "p95": 5.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.6375470161437988,
+      "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.564112822564513,
+          "p95": 5.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.6875593662261963,
+      "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_123",
+      "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.5647129425885178,
+          "p95": 5.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.646806001663208,
+      "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_456",
+      "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.5669133826765353,
+          "p95": 5.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 11.148672819137573,
+      "output_dir": "runs/sioux_falls_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 359.8478,
+          "p95": 688,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_matsim",
+      "engine": "matsim",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 12.836459875106812,
+      "output_dir": "runs/sioux_falls_matsim/matsim/seed_123",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 359.8468,
+          "p95": 688,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_matsim",
+      "engine": "matsim",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 10.483494997024536,
+      "output_dir": "runs/sioux_falls_matsim/matsim/seed_456",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 359.8472,
+          "p95": 688,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4382491111755371,
+      "output_dir": "runs/austin_downtown_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/austin_downtown_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2766553310662134,
+          "p95": 13.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.42589616775512695,
+      "output_dir": "runs/austin_downtown_sumo_meso/sumo/seed_123",
+      "tripinfo_path": "runs/austin_downtown_sumo_meso/sumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2588517703540707,
+          "p95": 12.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.43771815299987793,
+      "output_dir": "runs/austin_downtown_sumo_meso/sumo/seed_456",
+      "tripinfo_path": "runs/austin_downtown_sumo_meso/sumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2438487697539506,
+          "p95": 12.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4391050338745117,
+      "output_dir": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2766553310662134,
+          "p95": 13.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4370880126953125,
+      "output_dir": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_123",
+      "tripinfo_path": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2588517703540707,
+          "p95": 12.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.43935298919677734,
+      "output_dir": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_456",
+      "tripinfo_path": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2438487697539506,
+          "p95": 12.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_downtown_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 6.318846940994263,
+      "output_dir": "runs/austin_downtown_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T23:37:00,681  WARN OutputDirectoryHierarchy:267 ### full path: /Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/runs/austin_downtown_matsim/matsim/seed_42/./output\n2026-01-05T23:37:01,158  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T23:37:01,378  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility req",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "austin_downtown_matsim",
+      "engine": "matsim",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 6.200602054595947,
+      "output_dir": "runs/austin_downtown_matsim/matsim/seed_123",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T23:37:07,397  WARN OutputDirectoryHierarchy:267 ### full path: /Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/runs/austin_downtown_matsim/matsim/seed_123/./output\n2026-01-05T23:37:07,868  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T23:37:08,066  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility re",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "austin_downtown_matsim",
+      "engine": "matsim",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 5.413615942001343,
+      "output_dir": "runs/austin_downtown_matsim/matsim/seed_456",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T23:37:13,346  WARN OutputDirectoryHierarchy:267 ### full path: /Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/runs/austin_downtown_matsim/matsim/seed_456/./output\n2026-01-05T23:37:13,789  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T23:37:13,977  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility re",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sf_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.3948700428009033,
+      "output_dir": "runs/sf_downtown_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/sf_downtown_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.2822,
+          "p95": 2.0,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.39572691917419434,
+      "output_dir": "runs/sf_downtown_sumo_meso/sumo/seed_123",
+      "tripinfo_path": "runs/sf_downtown_sumo_meso/sumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.2794,
+          "p95": 2.0,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4187040328979492,
+      "output_dir": "runs/sf_downtown_sumo_meso/sumo/seed_456",
+      "tripinfo_path": "runs/sf_downtown_sumo_meso/sumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.2838,
+          "p95": 2.0,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.3998289108276367,
+      "output_dir": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.2822,
+          "p95": 2.0,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.39452433586120605,
+      "output_dir": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_123",
+      "tripinfo_path": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.2794,
+          "p95": 2.0,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.3957340717315674,
+      "output_dir": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_456",
+      "tripinfo_path": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 1.2838,
+          "p95": 2.0,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 12.401166200637817,
+      "output_dir": "runs/sf_downtown_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 126.3374,
+          "p95": 293,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_matsim",
+      "engine": "matsim",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 10.910072088241577,
+      "output_dir": "runs/sf_downtown_matsim/matsim/seed_123",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 126.3376,
+          "p95": 293,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "sf_downtown_matsim",
+      "engine": "matsim",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 13.556323051452637,
+      "output_dir": "runs/sf_downtown_matsim/matsim/seed_456",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 126.3378,
+          "p95": 293,
+          "trip_count": 5000
+        }
+      }
+    }
+  ]
+}

@@ -17,9 +17,10 @@ Usage:
 import json
 import shutil
 import subprocess
+import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional
 import logging
@@ -31,6 +32,136 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s"
 )
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Progress Tracking
+# =============================================================================
+
+class ProgressTracker:
+    """Track benchmark progress with ETA and status display."""
+    
+    def __init__(self, total_runs: int, bar_width: int = 40):
+        self.total_runs = total_runs
+        self.completed_runs = 0
+        self.successful_runs = 0
+        self.failed_runs = 0
+        self.bar_width = bar_width
+        self.start_time = time.time()
+        self.run_times: list[float] = []
+        self.current_scenario = ""
+        self.current_engine = ""
+        self.current_seed = 0
+        
+    def start_run(self, scenario_id: str, engine: str, seed: int, repeat_idx: int, total_repeats: int):
+        """Called when starting a new run."""
+        self.current_scenario = scenario_id
+        self.current_engine = engine
+        self.current_seed = seed
+        self._print_status(
+            f"▶ Starting: {scenario_id} | {engine} | seed={seed} ({repeat_idx+1}/{total_repeats})"
+        )
+    
+    def complete_run(self, success: bool, runtime_s: float):
+        """Called when a run completes."""
+        self.completed_runs += 1
+        self.run_times.append(runtime_s)
+        if success:
+            self.successful_runs += 1
+        else:
+            self.failed_runs += 1
+        self._display_progress()
+    
+    def _format_time(self, seconds: float) -> str:
+        """Format seconds as human-readable string."""
+        if seconds < 60:
+            return f"{seconds:.0f}s"
+        elif seconds < 3600:
+            mins = seconds / 60
+            return f"{mins:.1f}m"
+        else:
+            hours = seconds / 3600
+            return f"{hours:.1f}h"
+    
+    def _estimate_remaining(self) -> str:
+        """Estimate remaining time based on average run time."""
+        if not self.run_times:
+            return "calculating..."
+        
+        avg_time = sum(self.run_times) / len(self.run_times)
+        remaining_runs = self.total_runs - self.completed_runs
+        eta_seconds = avg_time * remaining_runs
+        
+        return self._format_time(eta_seconds)
+    
+    def _print_status(self, message: str):
+        """Print a status message."""
+        print(f"\n{message}")
+    
+    def _display_progress(self):
+        """Display progress bar with statistics."""
+        if self.total_runs == 0:
+            return
+            
+        # Calculate progress
+        progress = self.completed_runs / self.total_runs
+        filled = int(self.bar_width * progress)
+        empty = self.bar_width - filled
+        
+        # Build progress bar
+        bar = "█" * filled + "░" * empty
+        percentage = progress * 100
+        
+        # Calculate elapsed and ETA
+        elapsed = time.time() - self.start_time
+        eta = self._estimate_remaining()
+        
+        # Status indicators
+        success_icon = "✓" if self.failed_runs == 0 else "⚠"
+        
+        # Print progress line
+        status_line = (
+            f"\r[{bar}] {percentage:5.1f}% | "
+            f"{self.completed_runs}/{self.total_runs} runs | "
+            f"✓{self.successful_runs} ✗{self.failed_runs} | "
+            f"Elapsed: {self._format_time(elapsed)} | "
+            f"ETA: {eta}"
+        )
+        
+        # Use sys.stdout for better terminal handling
+        sys.stdout.write(status_line)
+        sys.stdout.flush()
+    
+    def print_summary(self):
+        """Print final summary."""
+        elapsed = time.time() - self.start_time
+        avg_time = sum(self.run_times) / len(self.run_times) if self.run_times else 0
+        
+        print(f"\n\n{'='*60}")
+        print(f"📊 BENCHMARK COMPLETE")
+        print(f"{'='*60}")
+        print(f"  Total runs:      {self.total_runs}")
+        print(f"  Successful:      {self.successful_runs} ✓")
+        print(f"  Failed:          {self.failed_runs} ✗")
+        print(f"  Success rate:    {(self.successful_runs/self.total_runs*100):.1f}%")
+        print(f"{'─'*60}")
+        print(f"  Total time:      {self._format_time(elapsed)}")
+        print(f"  Avg per run:     {self._format_time(avg_time)}")
+        print(f"{'='*60}")
+
+
+def print_banner(runspec_name: str, total_runs: int, scenarios: int, configs: int, engines: list[str]):
+    """Print startup banner with benchmark info."""
+    print(f"\n{'═'*60}")
+    print(f"🚀 SimForge Benchmark Runner")
+    print(f"{'═'*60}")
+    print(f"  Runspec:      {runspec_name}")
+    print(f"  Scenarios:    {scenarios} bundles")
+    print(f"  Configs:      {configs} (scenario × engine)")
+    print(f"  Engines:      {', '.join(sorted(set(engines)))}")
+    print(f"  Total runs:   {total_runs} (configs × seeds)")
+    print(f"  Started:      {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"{'═'*60}\n")
 
 
 @dataclass
@@ -230,8 +361,9 @@ class BenchmarkHarness:
         mode_str = " (mesoscopic)" if mesoscopic else ""
         logger.info(f"Starting run: {scenario_id} / {engine} / seed={seed}{mode_str}")
         
-        # Currently only SUMO is supported
-        if engine != "sumo":
+        # Handle different engines
+        supported_engines = ["sumo", "qarsumo", "matsim"]
+        if engine not in supported_engines:
             return RunResult(
                 scenario_id=scenario_id,
                 engine=engine,
@@ -240,12 +372,32 @@ class BenchmarkHarness:
                 status="failed",
                 runtime_s=0,
                 output_dir=run_dir,
-                error_message=f"Unsupported engine: {engine}"
+                error_message=f"Unsupported engine: {engine}. Supported: {supported_engines}"
             )
         
-        # Prepare SUMO inputs
+        # Prepare inputs based on engine
         try:
-            self.prepare_sumo_inputs(scenario_path, run_dir, seed)
+            if engine == "qarsumo":
+                # QarSUMO uses same input format as SUMO
+                from adapters.qarsumo import prepare_qarsumo_inputs, QarSUMOConfig
+                gpu_opts = engine_options.get("gpu", {}) if engine_options else {}
+                qarsumo_config = QarSUMOConfig(
+                    gpu_device=gpu_opts.get("device", 0),
+                    batch_size=gpu_opts.get("batch_size", 10000),
+                )
+                prepare_qarsumo_inputs(scenario_path, run_dir, qarsumo_config)
+            elif engine == "matsim":
+                # MATSim activity-based simulator
+                from adapters.matsim import prepare_matsim_inputs, MATSimConfig
+                matsim_opts = engine_options or {}
+                matsim_config = MATSimConfig(
+                    iterations=matsim_opts.get("iterations", 0),
+                    java_heap_gb=matsim_opts.get("heap_gb", 4),
+                )
+                prepare_matsim_inputs(scenario_path, run_dir, matsim_config, random_seed=seed)
+            else:
+                # SUMO
+                self.prepare_sumo_inputs(scenario_path, run_dir, seed)
         except Exception as e:
             return RunResult(
                 scenario_id=scenario_id,
@@ -258,36 +410,86 @@ class BenchmarkHarness:
                 error_message=f"Adapter failed: {e}"
             )
         
-        # Find config file
-        config_files = list(run_dir.glob("*.sumocfg"))
-        if not config_files:
-            return RunResult(
-                scenario_id=scenario_id,
-                engine=engine,
-                seed=seed,
-                repeat_index=repeat_index,
-                status="failed",
-                runtime_s=0,
-                output_dir=run_dir,
-                error_message="No .sumocfg file generated"
+        # Find config file and run simulation based on engine
+        if engine == "matsim":
+            # MATSim uses config.xml
+            config_path = run_dir / "config.xml"
+            if not config_path.exists():
+                return RunResult(
+                    scenario_id=scenario_id,
+                    engine=engine,
+                    seed=seed,
+                    repeat_index=repeat_index,
+                    status="failed",
+                    runtime_s=0,
+                    output_dir=run_dir,
+                    error_message="No config.xml file generated for MATSim"
+                )
+            
+            from adapters.matsim import run_matsim, parse_matsim_output
+            matsim_opts = engine_options or {}
+            success, runtime, error = run_matsim(
+                config_path,
+                timeout_s=timeout_s,
+                java_heap_gb=matsim_opts.get("heap_gb", 4)
             )
-        
-        config_path = config_files[0]
-        
-        # Run SUMO
-        success, runtime, error = self.run_sumo(config_path, timeout_s, seed, mesoscopic=mesoscopic)
-        
-        status = "success" if success else ("timeout" if "Timeout" in (error or "") else "failed")
-        
-        # Compute metrics if successful
-        metrics = {}
-        tripinfo_path = None
-        if success:
-            tripinfo_path = run_dir / "tripinfo.xml"
-            if tripinfo_path.exists():
-                metrics = self.compute_metrics(run_dir)
+            
+            # Parse MATSim-specific metrics
+            metrics = {}
+            tripinfo_path = None
+            if success:
+                output_subdir = run_dir / "output"
+                stats = parse_matsim_output(output_subdir)
+                if stats:
+                    metrics["travel_time"] = {
+                        "mean": stats.get("mean_travel_time_s", 0),
+                        "p95": stats.get("p95_travel_time_s", 0),
+                        "trip_count": stats.get("trip_count", 0)
+                    }
+        else:
+            # SUMO/QarSUMO use .sumocfg
+            config_files = list(run_dir.glob("*.sumocfg"))
+            if not config_files:
+                return RunResult(
+                    scenario_id=scenario_id,
+                    engine=engine,
+                    seed=seed,
+                    repeat_index=repeat_index,
+                    status="failed",
+                    runtime_s=0,
+                    output_dir=run_dir,
+                    error_message="No .sumocfg file generated"
+                )
+            
+            config_path = config_files[0]
+            
+            # Run simulation based on engine
+            if engine == "qarsumo":
+                from adapters.qarsumo import run_qarsumo
+                gpu_opts = engine_options.get("gpu", {}) if engine_options else {}
+                success, runtime, error = run_qarsumo(
+                    config_path, 
+                    timeout_s=timeout_s, 
+                    seed=seed,
+                    gpu_device=gpu_opts.get("device", 0),
+                    mesoscopic=mesoscopic
+                )
             else:
-                tripinfo_path = None
+                # SUMO
+                success, runtime, error = self.run_sumo(config_path, timeout_s, seed, mesoscopic=mesoscopic)
+            
+            # Compute metrics if successful
+            metrics = {}
+            tripinfo_path = None
+            if success:
+                tripinfo_path = run_dir / "tripinfo.xml"
+                if tripinfo_path.exists():
+                    metrics = self.compute_metrics(run_dir)
+                else:
+                    tripinfo_path = None
+        
+        # Determine status
+        status = "success" if success else ("timeout" if "Timeout" in (error or "") else "failed")
         
         return RunResult(
             scenario_id=scenario_id,
@@ -297,7 +499,7 @@ class BenchmarkHarness:
             status=status,
             runtime_s=runtime,
             output_dir=run_dir,
-            tripinfo_path=tripinfo_path,
+            tripinfo_path=tripinfo_path if 'tripinfo_path' in dir() else None,
             error_message=error,
             metrics=metrics
         )
@@ -325,10 +527,6 @@ class BenchmarkHarness:
         
         # Load runspec
         runspec = RunSpec.from_file(runspec_path)
-        logger.info(f"Loaded runspec: {runspec.name}")
-        logger.info(f"Description: {runspec.description}")
-        if force_mesoscopic:
-            logger.info("MESOSCOPIC MODE FORCED for all runs")
         
         # Set output base from runspec
         self.output_base = Path(runspec.global_output_dir)
@@ -341,25 +539,37 @@ class BenchmarkHarness:
         runs_to_execute = runspec.runs
         if scenario_filter:
             runs_to_execute = [r for r in runs_to_execute if r.scenario_id == scenario_filter]
-            logger.info(f"Filtered to {len(runs_to_execute)} runs matching '{scenario_filter}'")
         
-        # Count total runs
+        # Count total runs and collect info
         total_runs = sum(r.repeats for r in runs_to_execute)
-        logger.info(f"Total runs to execute: {total_runs}")
+        engines = [r.engine for r in runs_to_execute]
+        scenario_count = len(set(r.scenario_path for r in runs_to_execute))  # Unique scenario bundles
+        config_count = len(runs_to_execute)  # Run configurations (scenario × engine combos)
+        
+        # Print startup banner
+        print_banner(runspec.name, total_runs, scenario_count, config_count, engines)
+        
+        if force_mesoscopic:
+            print("⚡ MESOSCOPIC MODE ENABLED (faster simulation)")
+        
+        if scenario_filter:
+            print(f"🔍 Filtered to scenarios matching: '{scenario_filter}'")
         
         if dry_run:
-            logger.info("DRY RUN - no simulations will be executed")
+            print("\n🔍 DRY RUN MODE - No simulations will be executed\n")
             for run_config in runs_to_execute:
                 scenario_path = Path(run_config.scenario_path)
-                logger.info(f"\nWould run: {run_config.scenario_id}")
-                logger.info(f"  Path: {scenario_path}")
-                logger.info(f"  Engine: {run_config.engine}")
-                logger.info(f"  Repeats: {run_config.repeats}")
-                logger.info(f"  Seeds: {run_config.get_seeds()}")
+                mode = "meso" if run_config.is_mesoscopic or force_mesoscopic else "micro"
+                print(f"  Would run: {run_config.scenario_id}")
+                print(f"    Path:    {scenario_path}")
+                print(f"    Engine:  {run_config.engine} ({mode})")
+                print(f"    Repeats: {run_config.repeats}")
+                print(f"    Seeds:   {run_config.get_seeds()}")
                 
                 # Validate bundle
                 valid = self.validate_bundle(scenario_path)
-                logger.info(f"  Bundle valid: {valid}")
+                status = "✓ valid" if valid else "✗ INVALID"
+                print(f"    Bundle:  {status}\n")
             
             return BenchmarkResult(
                 runspec_name=runspec.name,
@@ -371,16 +581,30 @@ class BenchmarkHarness:
                 results=[]
             )
         
-        # Execute runs
-        successful = 0
-        failed = 0
+        # Initialize progress tracker
+        progress = ProgressTracker(total_runs)
         
+        # Pre-validate all bundles
+        print("📋 Validating scenario bundles...")
+        validation_status = {}
+        for run_config in runs_to_execute:
+            scenario_path = Path(run_config.scenario_path)
+            if str(scenario_path) not in validation_status:
+                valid = self.validate_bundle(scenario_path)
+                validation_status[str(scenario_path)] = valid
+                status = "✓" if valid else "✗"
+                print(f"  {status} {run_config.scenario_id}")
+        
+        print(f"\n🏃 Starting benchmark runs...\n")
+        
+        # Execute runs
+        run_index = 0
         for run_config in runs_to_execute:
             scenario_path = Path(run_config.scenario_path)
             
-            # Validate bundle
-            if not self.validate_bundle(scenario_path):
-                logger.error(f"Skipping {run_config.scenario_id} - validation failed")
+            # Check pre-validation result
+            if not validation_status.get(str(scenario_path), False):
+                print(f"\n⚠️  Skipping {run_config.scenario_id} - validation failed")
                 for i, seed in enumerate(run_config.get_seeds()):
                     results.append(RunResult(
                         scenario_id=run_config.scenario_id,
@@ -392,13 +616,25 @@ class BenchmarkHarness:
                         output_dir=self.output_base / run_config.scenario_id,
                         error_message="Bundle validation failed"
                     ))
-                    failed += 1
+                    progress.complete_run(False, 0)
                 continue
             
             # Run each repeat
             seeds = run_config.get_seeds()
-            mesoscopic = force_mesoscopic or getattr(run_config, 'mesoscopic', False)
+            mesoscopic = force_mesoscopic or run_config.is_mesoscopic
+            
             for i, seed in enumerate(seeds):
+                run_index += 1
+                
+                # Update progress with current run info
+                progress.start_run(
+                    run_config.scenario_id, 
+                    run_config.engine, 
+                    seed,
+                    i,
+                    len(seeds)
+                )
+                
                 result = self.run_single(
                     scenario_id=run_config.scenario_id,
                     scenario_path=scenario_path,
@@ -411,12 +647,19 @@ class BenchmarkHarness:
                 )
                 results.append(result)
                 
-                if result.status == "success":
-                    successful += 1
-                    logger.info(f"✓ {run_config.scenario_id} seed={seed}: {result.runtime_s:.2f}s")
+                # Update progress
+                success = result.status == "success"
+                progress.complete_run(success, result.runtime_s)
+                
+                # Print result
+                if success:
+                    metrics_str = ""
+                    if result.metrics.get("travel_time"):
+                        tt = result.metrics["travel_time"]
+                        metrics_str = f" | trips={tt.get('trip_count', 0)}, avg_tt={tt.get('mean', 0):.1f}s"
+                    print(f"\n  ✓ {result.runtime_s:.2f}s{metrics_str}")
                 else:
-                    failed += 1
-                    logger.error(f"✗ {run_config.scenario_id} seed={seed}: {result.error_message}")
+                    print(f"\n  ✗ FAILED: {result.error_message[:60]}...")
         
         completed_at = datetime.now(timezone.utc).isoformat()
         
@@ -425,15 +668,18 @@ class BenchmarkHarness:
             started_at=started_at,
             completed_at=completed_at,
             total_runs=total_runs,
-            successful_runs=successful,
-            failed_runs=failed,
+            successful_runs=progress.successful_runs,
+            failed_runs=progress.failed_runs,
             results=results
         )
         
         # Save results
         results_path = self.output_base / f"benchmark_results_{runspec.name}.json"
         benchmark_result.save(results_path)
-        logger.info(f"Results saved to: {results_path}")
+        
+        # Print summary
+        progress.print_summary()
+        print(f"📁 Results saved to: {results_path}")
         
         return benchmark_result
 
@@ -516,27 +762,25 @@ def main():
         force_mesoscopic=args.mesoscopic
     )
     
-    # Print summary
-    print(f"\n{'='*60}")
-    print(f"Benchmark Complete: {result.runspec_name}")
-    print(f"{'='*60}")
-    print(f"Total runs: {result.total_runs}")
-    print(f"Successful: {result.successful_runs}")
-    print(f"Failed: {result.failed_runs}")
-    
+    # Print reproducibility analysis if we have successful runs
     if result.successful_runs > 0:
-        # Compute reproducibility
         repro = compute_reproducibility_from_results(result.results)
         if repro:
-            print(f"\nReproducibility Analysis:")
+            print(f"\n📈 Reproducibility Analysis:")
             for scenario_id, metrics in repro.items():
-                print(f"  {scenario_id}: R={metrics['R_index']:.4f} ({metrics['interpretation']})")
+                r_val = metrics['R_index']
+                interp = metrics['interpretation']
+                icon = "🟢" if r_val > 0.95 else "🟡" if r_val > 0.8 else "🔴"
+                print(f"  {icon} {scenario_id}: R={r_val:.4f} ({interp})")
     
     if result.failed_runs > 0:
-        print(f"\nFailed runs:")
+        print(f"\n❌ Failed runs:")
         for r in result.results:
             if r.status != "success":
-                print(f"  - {r.scenario_id} seed={r.seed}: {r.error_message}")
+                print(f"  • {r.scenario_id} seed={r.seed}: {r.error_message[:70]}...")
+    
+    # Exit with error code if any failures
+    sys.exit(0 if result.failed_runs == 0 else 1)
 
 
 if __name__ == "__main__":

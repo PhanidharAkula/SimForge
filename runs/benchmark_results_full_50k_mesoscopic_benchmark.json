@@ -1,0 +1,406 @@
+{
+  "runspec_name": "full_50k_mesoscopic_benchmark",
+  "started_at": "2026-01-06T03:28:03.518590+00:00",
+  "completed_at": "2026-01-06T03:51:51.593633+00:00",
+  "total_runs": 27,
+  "successful_runs": 12,
+  "failed_runs": 15,
+  "results": [
+    {
+      "scenario_id": "sioux_falls_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 4.260393857955933,
+      "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 168.25815906656896,
+          "p95": 895.0,
+          "trip_count": 35482
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_sumo_meso",
+      "engine": "sumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 4.4117467403411865,
+      "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_43",
+      "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_43/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 191.43392527347635,
+          "p95": 949.0,
+          "trip_count": 35195
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_sumo_meso",
+      "engine": "sumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 4.429729223251343,
+      "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_44",
+      "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_44/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 193.9645116450597,
+          "p95": 963.0,
+          "trip_count": 35251
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 4.263915061950684,
+      "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 168.25815906656896,
+          "p95": 895.0,
+          "trip_count": 35482
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 4.8392229080200195,
+      "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_43",
+      "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_43/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 191.43392527347635,
+          "p95": 949.0,
+          "trip_count": 35195
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 4.684160947799683,
+      "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_44",
+      "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_44/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 193.9696170212766,
+          "p95": 963.0,
+          "trip_count": 35250
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 7.0311689376831055,
+      "output_dir": "runs/sioux_falls_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:30:16,466  WARN LinkImpl:128 length=0.0 of link id l10646 may cause problems\n2026-01-05T22:30:16,467  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:30:18,634  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T22:30:19,091  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the travel",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sioux_falls_matsim",
+      "engine": "matsim",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "failed",
+      "runtime_s": 6.532943964004517,
+      "output_dir": "runs/sioux_falls_matsim/matsim/seed_43",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:30:32,693  WARN LinkImpl:128 length=0.0 of link id l10646 may cause problems\n2026-01-05T22:30:32,693  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:30:35,074  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T22:30:35,530  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the travel",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "sioux_falls_matsim",
+      "engine": "matsim",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "failed",
+      "runtime_s": 6.3804850578308105,
+      "output_dir": "runs/sioux_falls_matsim/matsim/seed_44",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:30:49,258  WARN LinkImpl:128 length=0.0 of link id l10646 may cause problems\n2026-01-05T22:30:49,259  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:30:51,502  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T22:30:51,968  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the travel",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "austin_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 8.954408168792725,
+      "output_dir": "runs/austin_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/austin_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5773493396396576,
+          "p95": 15.0,
+          "trip_count": 49897
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_sumo_meso",
+      "engine": "sumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 8.897893905639648,
+      "output_dir": "runs/austin_sumo_meso/sumo/seed_43",
+      "tripinfo_path": "runs/austin_sumo_meso/sumo/seed_43/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.574723931298475,
+          "p95": 15.0,
+          "trip_count": 49897
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_sumo_meso",
+      "engine": "sumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 9.07359790802002,
+      "output_dir": "runs/austin_sumo_meso/sumo/seed_44",
+      "tripinfo_path": "runs/austin_sumo_meso/sumo/seed_44/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5752049221396076,
+          "p95": 15.0,
+          "trip_count": 49897
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 8.915516138076782,
+      "output_dir": "runs/austin_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/austin_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5773493396396576,
+          "p95": 15.0,
+          "trip_count": 49897
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 8.874269008636475,
+      "output_dir": "runs/austin_qarsumo_meso/qarsumo/seed_43",
+      "tripinfo_path": "runs/austin_qarsumo_meso/qarsumo/seed_43/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.574723931298475,
+          "p95": 15.0,
+          "trip_count": 49897
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 8.973132848739624,
+      "output_dir": "runs/austin_qarsumo_meso/qarsumo/seed_44",
+      "tripinfo_path": "runs/austin_qarsumo_meso/qarsumo/seed_44/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5752049221396076,
+          "p95": 15.0,
+          "trip_count": 49897
+        }
+      }
+    },
+    {
+      "scenario_id": "austin_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 9.203129053115845,
+      "output_dir": "runs/austin_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:41:49,657  WARN LinkImpl:128 length=0.0 of link id l100574 may cause problems\n2026-01-05T22:41:49,657  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:41:52,512  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T22:41:53,582  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the trave",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "austin_matsim",
+      "engine": "matsim",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "failed",
+      "runtime_s": 9.144964933395386,
+      "output_dir": "runs/austin_matsim/matsim/seed_43",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:43:52,548  WARN LinkImpl:128 length=0.0 of link id l100574 may cause problems\n2026-01-05T22:43:52,548  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:43:55,366  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T22:43:56,474  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the trave",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "austin_matsim",
+      "engine": "matsim",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "failed",
+      "runtime_s": 9.022426128387451,
+      "output_dir": "runs/austin_matsim/matsim/seed_44",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:45:57,165  WARN LinkImpl:128 length=0.0 of link id l100574 may cause problems\n2026-01-05T22:45:57,166  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:46:00,165  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T22:46:01,168  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility requires the trave",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 0,
+      "output_dir": "runs/berlin_sumo_meso/sumo/seed_42",
+      "tripinfo_path": null,
+      "error_message": "Adapter failed: netconvert failed: Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Environment variable SUMO_HOME is not set, using built in type maps.\nWarning: Ignoring self-looped edge 'l100064' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100065' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100067' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100068' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100189' at junction 'n38313'\nError: Edge 'l43281' needs at least one lane.\nWarning: 136 total messages of type: Ignoring self-looped edge '%' at junction '%'\nQuitting (on error).\n",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_sumo_meso",
+      "engine": "sumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "failed",
+      "runtime_s": 0,
+      "output_dir": "runs/berlin_sumo_meso/sumo/seed_43",
+      "tripinfo_path": null,
+      "error_message": "Adapter failed: netconvert failed: Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Environment variable SUMO_HOME is not set, using built in type maps.\nWarning: Ignoring self-looped edge 'l100064' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100065' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100067' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100068' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100189' at junction 'n38313'\nError: Edge 'l43281' needs at least one lane.\nWarning: 136 total messages of type: Ignoring self-looped edge '%' at junction '%'\nQuitting (on error).\n",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_sumo_meso",
+      "engine": "sumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "failed",
+      "runtime_s": 0,
+      "output_dir": "runs/berlin_sumo_meso/sumo/seed_44",
+      "tripinfo_path": null,
+      "error_message": "Adapter failed: netconvert failed: Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Environment variable SUMO_HOME is not set, using built in type maps.\nWarning: Ignoring self-looped edge 'l100064' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100065' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100067' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100068' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100189' at junction 'n38313'\nError: Edge 'l43281' needs at least one lane.\nWarning: 136 total messages of type: Ignoring self-looped edge '%' at junction '%'\nQuitting (on error).\n",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 0,
+      "output_dir": "runs/berlin_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": null,
+      "error_message": "Adapter failed: netconvert failed: Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Environment variable SUMO_HOME is not set, using built in type maps.\nWarning: Ignoring self-looped edge 'l100064' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100065' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100067' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100068' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100189' at junction 'n38313'\nError: Edge 'l43281' needs at least one lane.\nWarning: 136 total messages of type: Ignoring self-looped edge '%' at junction '%'\nQuitting (on error).\n",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "failed",
+      "runtime_s": 0,
+      "output_dir": "runs/berlin_qarsumo_meso/qarsumo/seed_43",
+      "tripinfo_path": null,
+      "error_message": "Adapter failed: netconvert failed: Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Environment variable SUMO_HOME is not set, using built in type maps.\nWarning: Ignoring self-looped edge 'l100064' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100065' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100067' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100068' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100189' at junction 'n38313'\nError: Edge 'l43281' needs at least one lane.\nWarning: 136 total messages of type: Ignoring self-looped edge '%' at junction '%'\nQuitting (on error).\n",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "failed",
+      "runtime_s": 0,
+      "output_dir": "runs/berlin_qarsumo_meso/qarsumo/seed_44",
+      "tripinfo_path": null,
+      "error_message": "Adapter failed: netconvert failed: Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.\nWarning: Environment variable SUMO_HOME is not set, using built in type maps.\nWarning: Ignoring self-looped edge 'l100064' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100065' at junction 'n38256'\nWarning: Ignoring self-looped edge 'l100067' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100068' at junction 'n38257'\nWarning: Ignoring self-looped edge 'l100189' at junction 'n38313'\nError: Edge 'l43281' needs at least one lane.\nWarning: 136 total messages of type: Ignoring self-looped edge '%' at junction '%'\nQuitting (on error).\n",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "failed",
+      "runtime_s": 8.574015855789185,
+      "output_dir": "runs/berlin_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:48:01,231  WARN LinkImpl:128 length=0.0 of link id l100064 may cause problems\n2026-01-05T22:48:01,232  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:48:01,556  WARN LinkImpl:100 capacity=0.0 of link id l43281 may cause problems\n2026-01-05T22:48:01,557  WARN LinkImpl:102  Future occurences of this logging statement are suppressed.\n2026-01-05T22:48:01,558  WARN LinkImpl:119 permlanes=0.0 of link id l43281 may cause problems\n2026-01-05T22",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_matsim",
+      "engine": "matsim",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "failed",
+      "runtime_s": 8.665517091751099,
+      "output_dir": "runs/berlin_matsim/matsim/seed_43",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:49:54,389  WARN LinkImpl:128 length=0.0 of link id l100064 may cause problems\n2026-01-05T22:49:54,389  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:49:54,713  WARN LinkImpl:100 capacity=0.0 of link id l43281 may cause problems\n2026-01-05T22:49:54,714  WARN LinkImpl:102  Future occurences of this logging statement are suppressed.\n2026-01-05T22:49:54,714  WARN LinkImpl:119 permlanes=0.0 of link id l43281 may cause problems\n2026-01-05T22",
+      "metrics": {}
+    },
+    {
+      "scenario_id": "berlin_matsim",
+      "engine": "matsim",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "failed",
+      "runtime_s": 8.568261861801147,
+      "output_dir": "runs/berlin_matsim/matsim/seed_44",
+      "tripinfo_path": null,
+      "error_message": "2026-01-05T22:51:46,225  WARN LinkImpl:128 length=0.0 of link id l100064 may cause problems\n2026-01-05T22:51:46,225  WARN LinkImpl:130  Future occurences of this logging statement are suppressed.\n2026-01-05T22:51:46,584  WARN LinkImpl:100 capacity=0.0 of link id l43281 may cause problems\n2026-01-05T22:51:46,585  WARN LinkImpl:102  Future occurences of this logging statement are suppressed.\n2026-01-05T22:51:46,585  WARN LinkImpl:119 permlanes=0.0 of link id l43281 may cause problems\n2026-01-05T22",
+      "metrics": {}
+    }
+  ]
+}

@@ -238,8 +238,13 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
                 speed = 13.9
             try:
                 lanes = int(lanes_raw)
+                lanes = max(1, lanes)  # Ensure at least 1 lane
             except ValueError:
                 lanes = 1
+
+            # Ensure minimum values for SUMO compatibility
+            length = max(0.1, length)  # Minimum 0.1m length
+            speed = max(0.1, speed)    # Minimum 0.1 m/s speed
 
             link = CanonicalLink(
                 id=link_id,

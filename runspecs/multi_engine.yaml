@@ -1,0 +1,42 @@
+# Multi-Engine Benchmark Runspec
+# Tests same scenarios across SUMO and QarSUMO engines
+
+name: multi_engine_benchmark
+description: Compare SUMO vs QarSUMO on same scenarios (QarSUMO falls back to SUMO without GPU)
+
+runs:
+  # Toy scenario - quick validation
+  - scenario_id: toy_2x2_grid
+    scenario_path: scenarios/toy_2x2_grid
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+
+  - scenario_id: toy_2x2_grid
+    scenario_path: scenarios/toy_2x2_grid
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    engine_options:
+      gpu:
+        device: 0
+        batch_size: 1000
+
+  # Sioux Falls 50K - city scale
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    timeout_s: 600
+
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    timeout_s: 600
+    engine_options:
+      gpu:
+        device: 0
+        batch_size: 10000

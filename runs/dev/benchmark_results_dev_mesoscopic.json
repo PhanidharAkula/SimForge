@@ -1,0 +1,64 @@
+{
+  "runspec_name": "dev_mesoscopic",
+  "started_at": "2026-01-05T23:58:44.787548+00:00",
+  "completed_at": "2026-01-05T23:59:45.003396+00:00",
+  "total_runs": 3,
+  "successful_runs": 3,
+  "failed_runs": 0,
+  "results": [
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 100,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 4.596994161605835,
+      "output_dir": "runs/dev/sioux_falls_tier50k/sumo/seed_100",
+      "tripinfo_path": "runs/dev/sioux_falls_tier50k/sumo/seed_100/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 168.75908055031934,
+          "p95": 892.0,
+          "trip_count": 35543
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 101,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 4.574514150619507,
+      "output_dir": "runs/dev/sioux_falls_tier50k/sumo/seed_101",
+      "tripinfo_path": "runs/dev/sioux_falls_tier50k/sumo/seed_101/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 177.49363636363637,
+          "p95": 913.0,
+          "trip_count": 35200
+        }
+      }
+    },
+    {
+      "scenario_id": "sioux_falls_tier50k",
+      "engine": "sumo",
+      "seed": 102,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 4.278952121734619,
+      "output_dir": "runs/dev/sioux_falls_tier50k/sumo/seed_102",
+      "tripinfo_path": "runs/dev/sioux_falls_tier50k/sumo/seed_102/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 163.56250175843346,
+          "p95": 878.0,
+          "trip_count": 35543
+        }
+      }
+    }
+  ]
+}

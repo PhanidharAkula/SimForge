@@ -1,0 +1,118 @@
+{
+  "runspec_name": "multi_engine_benchmark",
+  "started_at": "2026-01-06T00:14:39.641505+00:00",
+  "completed_at": "2026-01-06T00:14:39.970026+00:00",
+  "total_runs": 6,
+  "successful_runs": 6,
+  "failed_runs": 0,
+  "results": [
+    {
+      "scenario_id": "toy_2x2_grid",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.031150102615356445,
+      "output_dir": "runs/toy_2x2_grid/sumo/seed_42",
+      "tripinfo_path": "runs/toy_2x2_grid/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 9.5,
+          "p95": 13.0,
+          "trip_count": 6
+        }
+      }
+    },
+    {
+      "scenario_id": "toy_2x2_grid",
+      "engine": "sumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 0.04448509216308594,
+      "output_dir": "runs/toy_2x2_grid/sumo/seed_43",
+      "tripinfo_path": "runs/toy_2x2_grid/sumo/seed_43/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 10.0,
+          "p95": 14.0,
+          "trip_count": 6
+        }
+      }
+    },
+    {
+      "scenario_id": "toy_2x2_grid",
+      "engine": "sumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 0.03091716766357422,
+      "output_dir": "runs/toy_2x2_grid/sumo/seed_44",
+      "tripinfo_path": "runs/toy_2x2_grid/sumo/seed_44/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 9.333333333333334,
+          "p95": 12.0,
+          "trip_count": 6
+        }
+      }
+    },
+    {
+      "scenario_id": "toy_2x2_grid",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.03286600112915039,
+      "output_dir": "runs/toy_2x2_grid/qarsumo/seed_42",
+      "tripinfo_path": "runs/toy_2x2_grid/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 13.5,
+          "p95": 20.0,
+          "trip_count": 6
+        }
+      }
+    },
+    {
+      "scenario_id": "toy_2x2_grid",
+      "engine": "qarsumo",
+      "seed": 43,
+      "repeat_index": 1,
+      "status": "success",
+      "runtime_s": 0.03188490867614746,
+      "output_dir": "runs/toy_2x2_grid/qarsumo/seed_43",
+      "tripinfo_path": "runs/toy_2x2_grid/qarsumo/seed_43/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 13.833333333333334,
+          "p95": 20.0,
+          "trip_count": 6
+        }
+      }
+    },
+    {
+      "scenario_id": "toy_2x2_grid",
+      "engine": "qarsumo",
+      "seed": 44,
+      "repeat_index": 2,
+      "status": "success",
+      "runtime_s": 0.03227972984313965,
+      "output_dir": "runs/toy_2x2_grid/qarsumo/seed_44",
+      "tripinfo_path": "runs/toy_2x2_grid/qarsumo/seed_44/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 13.666666666666666,
+          "p95": 19.0,
+          "trip_count": 6
+        }
+      }
+    }
+  ]
+}

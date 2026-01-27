@@ -1,0 +1,2381 @@
+Contents
+Abstract . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+v
+
+Acronyms, Symbols and Notation . . . . . . . . . . . . . . . . . . . . . . . . .
+
+vi
+
+1 Introduction
+1.1
+
+1
+
+Urban Transportation Importance . . . . . . . . . . . . . . . . . . . . . . .
+
+1
+
+1.2 Approaches to Transportation Research . . . . . . . . . . . . . . . . . . . .
+
+1
+
+1.3 Why Simulation? . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+
+1.4
+
+How Simulations Are Run . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+2
+
+1.5
+
+Key Metrics for Transportation Simulations . . . . . . . . . . . . . . . .
+
+2
+
+1.6
+
+Current Challenges . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+1.7
+
+Need for a Testing Framework . . . . . . . . . . . . . . . . . . . . . . . .
+
+3
+
+1.8
+
+Motivation . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+4
+
+1.9
+
+Problem Statement . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+4
+
+1.10 Objectives . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+5
+
+1.11 Contributions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+6
+
+1.12 Research Questions . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+6
+
+1.13 Significance and Scope . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+7
+
+2 Background and Related Work
+
+8
+
+2.1
+
+Evolution of Traffic Simulation . . . . . . . . . . . . . . . . . . . . . . . .
+
+8
+
+2.2
+
+Simulation Scope and Terminology . . . . . . . . . . . . . . . . . . . . .
+
+8
+
+2.3
+
+Major Urban Mobility Simulation Systems . . . . . . . . . . . . . . . . .
+
+9
+
+2.4
+
+Incompatibilities Across Simulators . . . . . . . . . . . . . . . . . . . . .
+
+10
+
+2.5
+
+Existing Mobility Benchmarks . . . . . . . . . . . . . . . . . . . . . . . . . 11
+
+2.6
+
+Benchmarks in Other Domains . . . . . . . . . . . . . . . . . . . . . . . .
+
+12
+
+2.7
+
+Reproducibility in HPC . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+12
+
+2.8
+
+Summary of Research Gap . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+13
+
+3 Proposed Methodology
+
+14
+
+3.1
+
+Framework Overview . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+14
+
+3.2
+
+Unified Data Schema Design . . . . . . . . . . . . . . . . . . . . . . . . .
+
+15
+
+3.3
+
+Data Sources, Acquisition, and Preprocessing
+
+. . . . . . . . . . . . . . .
+
+19
+
+3.4
+
+Benchmark Process . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+22
+
+i
+
+3.5
+
+Evaluation Metrics and Analysis . . . . . . . . . . . . . . . . . . . . . . .
+
+25
+
+3.6
+
+Data Management and Ethics . . . . . . . . . . . . . . . . . . . . . . . .
+
+27
+
+3.7
+
+Schedule and Timeline . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+28
+
+4 Experimental Plan, Environment, and Risks
+
+31
+
+4.1
+
+Experimental Matrix . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 31
+
+4.2
+
+Software and Compute Environment . . . . . . . . . . . . . . . . . . . .
+
+33
+
+4.3
+
+Resources and Compute Budget . . . . . . . . . . . . . . . . . . . . . . .
+
+33
+
+4.4
+
+Risks and Mitigations . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+33
+
+4.5
+
+Limitations and Threats to Validity . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+4.6
+
+Deliverables . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+34
+
+References
+
+35
+
+A Unified Schema: Worked Examples
+
+38
+
+A.1 Bundle Overview . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+38
+
+A.2 config.xml . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+38
+
+A.3 network.xml . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+39
+
+A.4 signals.xml . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+39
+
+A.5 demand.csv . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+40
+
+A.6 manifest.xml . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+
+40
+
+A.7 Validators . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 41
+A.8 XML Schema Integration (XSD) . . . . . . . . . . . . . . . . . . . . . . .
+
+ii
+
+42
+
+List of Figures
+3.1
+
+Framework overview: standardized benchmark layer. . . . . . . . . . . .
+
+15
+
+3.2
+
+Unified schema pipeline and simulator adapters. . . . . . . . . . . . . . .
+
+17
+
+3.3
+
+End-to-end benchmark process with normalized inputs. . . . . . . . . . .
+
+25
+
+3.4
+
+Evaluation framework: fidelity, scalability and reproducibility. . . . . . .
+
+27
+
+3.5
+
+Planned research timeline from Sep 2025 to Jul 2026. . . . . . . . . . . .
+
+28
+
+iii
+
+List of Tables
+2.1
+
+Comparison of Major Urban Mobility Simulators . . . . . . . . . . . . . .
+
+2.2
+
+Comparison of inputs and configuration across major simulators. . . . . . . 11
+
+3.1
+
+Canonical schema specification with enforced validation rules. . . . . . .
+
+18
+
+3.2
+
+Data provenance, licensing, and canonical bundle composition. . . . . . .
+
+20
+
+3.3
+
+Scenario summary by metropolitan area. . . . . . . . . . . . . . . . . . .
+
+22
+
+iv
+
+10
+
+Abstract
+Urban commute simulations inform critical decisions in congestion management, transportation planning, and infrastructure policy. Although simulators such as SUMO, MATSim, and POLARIS offer realistic and scalable modeling capabilities, their heterogeneous
+data schemas, configuration styles, and execution pipelines prevent fair, reproducible crosscomparison. As a result, researchers cannot determine whether differences in outcomes
+arise from modeling assumptions, implementation details, or inconsistent experiment
+setups. High-performance variants such as LPSim and QarSUMO introduce further
+divergence, yet still lack standardized evaluation practices. This thesis presents SimForge,
+a reproducible cross-simulator testing framework that unifies input formats, execution
+pipelines, and performance metrics across CPU, GPU, and HPC environments. SimForge
+enables consistent evaluation of scalability, accuracy, and runtime efficiency, providing an
+open foundation for transparent and repeatable urban mobility research.
+
+v
+
+Acronyms, Symbols and Notation
+Acronyms
+Acronym
+
+Definition
+
+CRS
+
+Coordinate Reference System
+
+DOT
+
+Department of Transportation
+
+GEH
+
+GEH traffic count statistic (UK DfT)
+
+GTFS
+
+General Transit Feed Specification
+
+HPC
+
+High-Performance Computing
+
+KPI
+
+Key Performance Indicator
+
+KS
+
+Kolmogorov–Smirnov statistic
+
+LPSim
+
+GPU-accelerated large-scale traffic simulator
+
+MATSim
+
+Multi-Agent Transport Simulation
+
+OD
+
+Origin–Destination
+
+ODbL
+
+Open Database License
+
+OCI
+
+Open Container Initiative
+
+OSC
+
+Ohio Supercomputer Center
+
+OSM
+
+OpenStreetMap
+
+POLARIS
+
+Agent-based transportation modeling framework
+
+QarSUMO
+
+High-performance SUMO extension
+
+SLURM
+
+Simple Linux Utility for Resource Management
+
+SUMO
+
+Simulation of Urban MObility
+
+Symbols
+Symbol
+
+Definition
+
+Tsim
+
+Simulated time advanced by the engine (in seconds)
+
+Twall
+
+Wall-clock runtime (in seconds)
+
+SRT
+
+Simulated-to-real-time ratio, SRT = Tsim /Twall (dimensionless)
+
+X
+
+Scalar KPI (e.g., mean link speed, throughput)
+
+µ(X)
+
+Mean of X across repeated runs (replicates)
+
+σ(X)
+
+Standard deviation of X across repeated runs
+
+R
+
+Reproducibility index, R = 1 − σ(X)/µ(X) (dimensionless: higher is better)
+
+∆
+
+Absolute difference: %∆ = relative change (percent)
+vi
+
+∆t
+
+Discrete simulation time step (in seconds)
+
+N
+
+Number of agents (vehicles)
+
+E
+
+Number of directed edges (links)
+
+Units. Unless stated otherwise, SI units are used: length (meters, m), speed (kilometres
+per hour, km h−1 ), time (seconds, s), and power (watts, W). All times are measured from
+scenario start (t = 0).
+
+vii
+
+Chapter 1
+Introduction
+This chapter introduces the broader context needed to motivate the development of a crosssimulator testing framework for urban mobility research. It begins by outlining why urban
+transportation systems matter and how researchers study them using empirical, analytical,
+and simulation-based approaches. The chapter then explains the role of simulation, how
+modern transportation simulators operate, and the key metrics used to evaluate their
+outputs. Building on this foundation, it identifies the methodological and reproducibility
+challenges that currently limit cross-simulator comparison, establishing the need for a
+unified and reproducible testing framework.
+
+1.1
+
+Urban Transportation Importance
+
+Urban transportation systems shape economic productivity, commuter well-being, environmental quality, and long-term infrastructure investment. Congestion alone costs major
+metropolitan regions billions of dollars each year through lost time, fuel consumption,
+and reduced network efficiency. Transportation agencies therefore rely on analytical
+tools to understand network behavior, evaluate policy interventions, anticipate congestion
+patterns, and guide infrastructure planning [1]. A reliable modeling foundation is essential
+for assessing strategies such as congestion pricing, transit prioritization, traffic signal
+coordination, and multimodal integration before deployment.
+
+1.2
+
+Approaches to Transportation Research
+
+Transportation research employs several methodological approaches. Empirical studies
+analyze traffic counts, probe-vehicle data, sensor feeds, and survey-based travel diaries.
+Analytical and statistical models support demand estimation, route choice modeling, and
+macroscopic flow approximations. Simulation-based methods reproduce detailed network
+dynamics, enabling controlled experimentation under varying conditions [2, 3, 4]. Each
+approach contributes unique strengths: empirical data offers ground truth but is sparse
+or costly, analytical models provide tractability but lack behavioral richness, simulation
+allows city-scale experimentation but depends heavily on configuration and computational
+environment.
+
+1
+
+1.3
+
+Why Simulation?
+
+Simulation has become a cornerstone of transportation research because it enables scalable,
+repeatable, and counterfactual experimentation. Agent-based models can represent millions
+of travelers and vehicles interacting under diverse scenarios, allowing researchers to test
+policies, assess infrastructure changes, and study behavioral responses under controlled
+conditions. Unlike real-world experiments, simulations allow precise manipulation of
+demand, routing, and network topology. However, simulation outcomes depend on
+complex software stacks, calibration procedures, demand models, and hardware execution
+strategies. These dependencies introduce reproducibility challenges that complicate
+scientific evaluation and policy decision-making [5, 6, 7].
+
+1.4
+
+How Simulations Are Run
+
+Modern transportation simulators differ widely in design philosophy, input formats, routing
+rules, and computational architectures. Microscopic simulators such as SUMO model
+lane-level movements: mesoscopic and activity-based systems such as MATSim simulate
+aggregated or agent-based flows, large-scale multi-agent frameworks such as POLARIS
+integrate scheduling, routing, and demand generation, and high-performance platforms
+such as LPSim and QarSUMO leverage GPU or distributed execution for extreme-scale
+workloads [8, 3, 4, 9, 10]. Each simulator employs distinct configuration styles, network
+encodings, demand representations, and runtime models (fixed time steps vs. event-driven
+clocks). As a result, even nominally similar scenarios often produce diverging outputs,
+making direct comparison difficult [11, 12, 13].
+
+1.5
+
+Key Metrics for Transportation Simulations
+
+A wide range of metrics are used to evaluate traffic simulations, validate behavioral fidelity,
+and benchmark computational performance. Commonly studied quantities include:
+• Traffic counts: link-level flow volumes and turning movements.
+• Speed profiles: average link speeds, spatial congestion patterns.
+• Travel-time patterns: trip durations, OD distributions, and delay.
+• Network throughput: vehicles completed per unit time.
+• Fidelity: RMSE or GEH error against observed link counts, KS statistics for
+comparing travel-time distributions, and differences in link-level speed and flow
+profiles relative to ground truth.
+2
+
+• Scalability: runtime vs. agent count, vehicles/sec per core, memory usage, and
+compute efficiency across CPU, GPU, and HPC systems.
+• Reproducibility: run-to-run variance under fixed seeds and identical input bundles.
+These metrics are essential for validating model behavior, comparing simulation engines,
+and assessing computational performance. However, differences in metric definitions,
+measurement intervals, sampling strategies, and reporting formats across simulators
+hinder apples-to-apples comparison.
+
+1.6
+
+Current Challenges
+
+Despite major advances in modeling, urban mobility simulation faces persistent methodological challenges:
+• Heterogeneous input schemas: each simulator uses its own formats for networks,
+demand, and signals [8, 3, 4].
+• Non-uniform calibration practices: many studies rely on unpublished datasets
+or heuristic tuning procedures that cannot be reproduced [6, 5].
+• Divergent execution pipelines: simulators vary in threading models, GPU usage,
+event processing, and time-step policies, making runtime comparisons inconsistent
+[14, 15].
+• Lack of deterministic configurations: fixed seeds, version-pinned dependencies,
+and controlled environments are rarely documented [16, 17].
+• Inconsistent metric definitions: flow, speed, and travel-time metrics are computed differently across tools.
+These inconsistencies make it difficult to reproduce published results, evaluate new
+simulation engines, or compare platform behavior under standardized scenarios.
+
+1.7
+
+Need for a Testing Framework
+
+The transportation research community lacks a reproducible, simulator-neutral framework that enforces canonical inputs, deterministic execution, and standardized metric
+definitions. Without such infrastructure, differences between simulation engines cannot
+be interpreted with confidence: observed deviations may reflect modeling choices, implementation artifacts, or hardware effects rather than true behavioral differences. A unified
+testing framework would:
+3
+
+• enable transparent cross-simulator comparison,
+• provide a reproducible baseline for future studies,
+• support rigorous validation of new modeling techniques,
+• reduce duplication in dataset preparation and calibration,
+• and improve reliability for practitioners and policymakers.
+Benchmarking efforts in adjacent fields (e.g., MLPerf) illustrate how shared rules, datasets,
+and metrics accelerate scientific progress [18]. Urban mobility simulation lacks an equivalent standard, motivating the development of a unified framework. We refer to this unified,
+simulator-neutral testing framework as SimForge.
+
+1.8
+
+Motivation
+
+The reproducibility concerns widely recognized in computational science apply directly
+to large-scale mobility simulations [5, 7]. Published studies often depend on custom
+datasets, ad-hoc calibration heuristics, or hardware-specific optimizations that are difficult
+to reproduce across environments [15, 19]. Without fixed seeds, synchronized clocks,
+and version-pinned dependencies, reported performance and fidelity results cannot be
+independently verified [16, 17]. For agencies and research groups, this lack of reproducibility
+undermines trust in simulation-based decision-making. A unified framework enforcing
+canonical inputs, deterministic execution, and standardized metrics would strengthen
+methodological transparency and allow true apples-to-apples evaluation across simulation
+engines [20, 18].
+
+1.9
+
+Problem Statement
+
+Despite substantial progress in urban mobility modeling, there is currently no open,
+simulator-neutral framework that ensures methodological consistency across engines
+[21, 1]. Existing studies typically rely on customized datasets, differing parameterizations,
+and uncontrolled runtime environments, which makes results difficult to reproduce or
+compare [5, 15].
+Because each simulator uses its own input formats, calibration practices, execution
+pipeline, and metric definitions, researchers cannot determine whether observed differences
+in outputs arise from genuine modeling assumptions or from incompatible experimental
+setups [8, 3, 4, 9, 10, 11, 12, 13]. This lack of a standardized, reproducible basis for
+cross-simulator evaluation undermines the credibility of comparative studies and limits the
+ability of practitioners to select appropriate tools for large-scale urban commute analysis.
+4
+
+The central problem addressed in this thesis is the absence of a reproducible, standardized cross-simulator testing framework that:
+(a) provides a common experimental basis for multiple transportation simulators, and
+(b) enables fair, transparent comparison of fidelity, scalability, and reproducibility across
+heterogeneous software and hardware environments.
+
+1.10
+
+Objectives
+
+This research aims to design and implement SimForge, a reproducible, transparent, and
+extensible cross-simulator testing framework for evaluating large-scale urban commute
+simulators. The specific objectives are as follows:
+1. Framework Design: Develop SimForge, a reproducible cross-simulator testing
+framework integrating major agent-based engines: SUMO, MATSim, POLARIS,
+LPSim, and QarSUMO to enable consistent performance and fidelity comparisons
+[8, 3, 4, 9, 10].
+2. Data Standardization: Define a unified data schema (canonical bundle) encompassing
+network topology, demand profiles, signal control, and configuration parameters, aligned
+with established data models such as OpenStreetMap and GTFS [22, 23].
+3. Reproducible Execution: Implement deterministic converter modules and a containerized execution pipeline (OCI/Singularity, SLURM) governed by fixed random
+seeds and synchronized simulation clocks to ensure replicable runs across heterogeneous
+environments [24, 16, 19].
+4. Evaluation Metrics: Design evaluation procedures for fidelity, scalability, and reproducibility, incorporating per-core and per-watt normalization to assess efficiency across
+CPU, GPU, and HPC configurations [14, 15, 25].
+Open Test Suite Release: Publish an open test suite, including manifests, checksums,
+and automated validation scripts, to enable independent replication and communitydriven extensions [20, 21].
+These objectives collectively support the creation of a standardized, verifiable platform
+for cross-simulator performance assessment and reproducibility research in large-scale
+mobility modeling.
+
+5
+
+1.11
+
+Contributions
+
+This thesis plan makes four principal contributions toward the design and implementation of SimForge, a standardized and reproducible cross-simulator testing framework
+for large-scale urban mobility research:
+C1. Canonical Schema and Validators: Development of a mixed-format, simulatoragnostic input bundle consisting of network.xml, demand.csv, signals.xml,
+config.xml, and a manifest file. The schema enforces field-level validation rules
+and pre-run integrity checks, extending standardized data representations such as
+OpenStreetMap and GTFS [22, 23].
+C2. Deterministic Adapters: Creation of one-to-one, auditable mappings from the
+canonical schema to each simulator’s native input structure for SUMO, MATSim,
+POLARIS, LPSim, and QarSUMO, ensuring consistent parameter translation,
+unit normalization, and time-step synchronization [8, 3, 4, 9, 10].
+C3. Reproducible Execution Pipeline: Implementation of version-pinned, containerized workflows (OCI/Singularity) with fixed random seeds, consistent time-step policies,
+and hash-verified inputs and outputs. These mechanisms ensure that repeated executions yield identical results across CPU, GPU, and HPC environments [24, 16, 17, 26].
+C4. Hardware-Normalized Evaluation: Definition of key performance indicators
+(KPIs) for fidelity: RMSE, GEH, and KS statistics, scalability: runtime vs. agents,
+vehicles/sec per core, and vehicles/sec per watt, and reproducibility: quantified as
+R = 1 − σ/µ, all reported with confidence intervals and hardware normalization
+[14, 15, 25].
+Collectively, these contributions establish a transparent and extensible foundation for
+evaluating the consistency, efficiency, and reproducibility of urban commute simulators
+under standardized experimental conditions.
+
+1.12
+
+Research Questions
+
+This study is guided by four core research questions that address the fidelity, scalability, and
+reproducibility of large-scale urban mobility simulators under standardized experimental
+conditions [21, 7, 5, 19].
+RQ1. Fidelity: Under identical canonical inputs, how closely do different simulation engines
+reproduce observed traffic counts, link-level flow distributions, and trip-time patterns
+across cities and demand levels [8, 3, 4, 9, 10]?
+6
+
+RQ2. Scalability: How do runtime performance and throughput scale with agent count
+across CPU, GPU, and HPC environments once normalized per core and per watt
+[14, 15, 25]?
+RQ3. Reproducibility: When executed with fixed seeds, deterministic adapters, and
+containerized environments, what level of run-to-run variance remains, and which
+components, randomized routing, scheduling, or I/O contribute most to this deviation
+[16, 17, 26]?
+RQ4. Trade-offs: What fidelity throughput trade-offs emerge across simulators, and are
+these relationships consistent across different urban topologies, congestion regimes,
+and computational architectures [11, 12, 13]?
+Together, these questions aim to quantify not only the technical performance of each
+simulator but also the reproducibility limits inherent to current urban mobility modeling
+practices.
+
+1.13
+
+Significance and Scope
+
+This research lies at the intersection of urban mobility simulation, high-performance
+computing (HPC), and reproducible computational science. By standardizing data representation, configuration management, and execution workflows across multiple simulation
+engines, the project advances both methodological and infrastructural reproducibility
+[5, 6, 15]. The resulting SimForge framework provides a credible foundation for comparative studies, facilitates fair performance evaluation, and establishes a reusable open
+standard for the transportation modeling community [21, 18, 20].
+Scope boundaries: The study focuses on commute-scale, road-based traffic simulation
+with temporal resolution at the minute level. Behavioral micro-nuances such as rare
+driver archetypes or stochastic lane-change variations are excluded unless they significantly
+influence key performance indicators (KPIs) related to fidelity, scalability, or reproducibility.
+Experiments cover three representative metropolitan networks, Chicago, New York
+City, and Los Angeles, and three demand levels (50K, 500K, and 5M trips), enabling
+evaluation under diverse congestion and scaling conditions. Broader geographic extensions
+and multimodal integration are identified as directions for future work.
+
+7
+
+Chapter 2
+Background and Related Work
+This chapter situates the proposed SimForge testing framework within the broader
+context of transportation modeling and simulation research. It first reviews the historical
+evolution of traffic simulation paradigms, emphasizing how methodological advances have
+shaped today’s heterogeneous ecosystem of tools. It then defines the operational scope,
+terminology, and data conventions adopted in this work, clarifying how the framework
+aligns with existing practices while addressing their reproducibility gaps.
+
+2.1
+
+Evolution of Traffic Simulation
+
+Traffic simulation has undergone over six decades of evolution, progressing from coarse
+macroscopic flow models to sophisticated, agent-based systems capable of representing
+millions of individual travelers. Early macroscopic models emphasized aggregate variables
+such as traffic density, flow, and average velocity, often relying on continuum approximations of road networks. Subsequent microscopic approaches began modeling individual
+vehicle dynamics, incorporating acceleration, car-following, and lane-changing behaviors
+to capture emergent traffic phenomena with higher fidelity [8, 3, 4, 2].
+Mesoscopic and hybrid frameworks later emerged to strike a balance between behavioral
+realism and computational scalability, combining microscopic detail within local regions
+with aggregate representations elsewhere. The recent generation of simulators leverages
+advances in high-performance computing, particularly distributed-memory architectures
+and GPU acceleration to execute large-scale, city-wide scenarios in near real time [9, 10,
+11, 12, 25].
+This technological progression has enabled unprecedented spatial and temporal detail
+in urban mobility modeling while simultaneously revealing challenges in cross-simulator
+compatibility, standardization, and reproducibility.
+
+2.2
+
+Simulation Scope and Terminology
+
+This work focuses on commute-scale urban traffic simulation, where outputs include
+link-level flow and trip-time statistics at minute-level temporal resolution. The SimForge
+framework targets large metropolitan networks modeled under realistic demand and
+congestion patterns [21, 1].
+For clarity, the following terms are used throughout this thesis:
+8
+
+• Microscopic, Mesoscopic, and Agent-Based Simulation: Microscopic models
+capture individual vehicle dynamics (acceleration, car-following, and lane changing),
+mesoscopic models represent grouped vehicle packets or flow quanta and agent-based
+models extend these by assigning travel plans and behavioral attributes to individual
+travelers [3, 4, 2].
+• Key Performance Dimensions: Fidelity denotes agreement with observed link
+counts and trip-time distributions, Scalability measures runtime or throughput growth
+relative to the number of simulated agents and Reproducibility refers to run-to-run
+invariance under fixed random seeds and identical configurations [5, 6].
+• Canonical Inputs: A simulator-independent, normalized input bundle (§3.2) consisting of standardized network, demand, and configuration files, designed to support
+direct conversion into the native formats of multiple engines [22, 23].
+
+2.3
+
+Major Urban Mobility Simulation Systems
+
+Large-scale commute simulation has diversified across several major platforms, each
+reflecting distinct modeling philosophies, computational trade-offs, and architectural
+priorities. The following systems represent the state of the art in open and research-grade
+urban mobility simulation.
+SUMO (Simulation of Urban Mobility) is an open-source microscopic traffic simulator
+that models detailed vehicle interactions, lane changes, and traffic signal control. It is
+widely used for transportation research and supports a broad range of import formats,
+routing algorithms, and calibration tools [8].
+MATSim (Multi-Agent Transport Simulation) is a mesoscopic, agent-based framework
+built around iterative replanning and activity-based demand generation. It emphasizes
+individual traveler behavior and long-term equilibrium modeling [3].
+POLARIS, developed by Argonne National Laboratory, is a multithreaded agentbased simulator that integrates land-use, travel demand, and behavioral models within a
+unified architecture. It is designed for detailed policy analysis and scenario testing at the
+metropolitan scale [4, 13].
+LPSim introduces a GPU-accelerated mesoscopic design that models lane-level traffic
+flow with extremely high scalability, capable of simulating millions of vehicle movements
+per second on modern GPUs [9].
+QarSUMO extends SUMO with CUDA-based multi-GPU kernels and ghost-zone
+synchronization, enabling deterministic parallelism and faster execution on heterogeneous
+computing systems [10].
+
+9
+
+Table 2.1: Comparison of Major Urban Mobility Simulators
+Name
+
+Language Paradigm
+
+Strengths
+
+Limitations
+
+SUMO
+
+C++
+
+Flexible, open-
+
+Limited GPU
+
+source, extensive
+
+utilization
+
+Microscopic
+
+documentation
+MATSim
+
+POLARIS
+
+Java
+
+C++
+
+Mesoscopic /
+
+Realistic activity- Slow convergence
+
+Agent-based
+
+based demand
+
+under heavy
+
+modeling
+
+loads
+
+Integrates socio-
+
+Partially closed-
+
+economic and
+
+source modules
+
+Agent-based
+
+behavioral layers
+LPSim
+
+QarSUMO
+
+CUDA /
+
+GPU Meso-
+
+Extremely fast
+
+Simplified driver
+
+C++
+
+scopic
+
+and highly scal-
+
+behavior assump-
+
+able
+
+tions
+
+GPU Micro-
+
+Deterministic
+
+Early-stage devel-
+
+scopic
+
+parallel kernels,
+
+opment, limited
+
+high throughput
+
+ecosystem
+
+CUDA
+
+These frameworks collectively illustrate the field’s progression from CPU-bound microscopic models to massively parallel, GPU-enabled systems while highlighting persistent
+fragmentation in data schemas, calibration strategies, and performance evaluation standards [21, 15, 19].
+
+2.4
+
+Incompatibilities Across Simulators
+
+Although major traffic simulators share similar conceptual foundations, they diverge
+sharply in data models, configuration semantics, and runtime assumptions. These differences complicate experiment replication and make direct cross-simulator benchmarking
+infeasible without standardized data structures or conversion logic [21, 1, 22, 23].
+Key incompatibilities include the following:
+• Network representation: Some engines represent detailed lane-level attributes and
+turn permissions through edge connections, while others encode signal phases and
+intersection logic directly within link or node tables.
+• Demand modeling: SUMO and QarSUMO specify explicit trip records (origin,
+destination, departure time) in XML, whereas MATSim and POLARIS rely on daily
+10
+
+activity plans expressed in XML or database-backed formats [8, 3, 4]. LPSim adopts
+columnar CSV or Parquet inputs optimized for GPU throughput [9].
+• Signal control: SUMO and MATSim use different representations for traffic light
+systems, flat phase tables versus nested hierarchical programs, creating mismatches in
+offset and cycle-length semantics.
+• Temporal and physical units: Simulators differ in their base time units (seconds
+versus milliseconds), velocity representations (m/s versus km/h), and event scheduling
+mechanisms (iteration-driven versus event-driven clocks) [2].
+• Configuration parameters: Parameters controlling car-following behavior, route
+replanning, iteration limits, and random-number seeds differ in naming conventions,
+ranges, and internal meaning across engines [12, 13].
+These inconsistencies prevent genuine apples-to-apples evaluation of fidelity or performance. A canonical data schema and a set of audited converter modules, introduced
+in Section 3.2 are therefore required to harmonize inputs and establish a reproducible
+comparison baseline.
+Table 2.2: Comparison of inputs and configuration across major simulators.
+
+SUMO
+
+Network
+
+Demand
+
+Signals
+
+Configuration
+
+*.net.xml
+
+*.rou.xml/
+
+TLS *.add.xml
+
+*.sumocfg
+
+signalSystems/
+
+config.xml
+
+trips.xml
+MATSim
+
+network.xml
+
+plans.xml(.gz)
+
+signalGroups/
+signalControl
+POLARIS
+
+CSV / DB
+
+CSV / DB
+
+Engine-specific
+
+JSON
+
+LPSim
+
+CSV / Parquet
+
+CSV / Parquet
+
+Engine-specific
+
+JSON
+
+2.5
+
+Existing Mobility Benchmarks
+
+Previous benchmarking efforts in the transportation modeling domain have primarily
+focused on evaluating individual simulators or conducting small-scale “bake-offs” under
+limited experimental control. While informative, these studies share several methodological
+limitations that restrict reproducibility and generalizability [21, 1, 7]:
+1. They are often tied to a single simulator’s native input format, lacking a canonical,
+simulator-agnostic schema for cross-engine evaluation.
+
+11
+
+2. They typically omit seed control, version pinning, or hardware-normalized performance
+metrics, making results sensitive to environment-specific variability [5, 15, 19].
+3. They rarely include release-grade artifacts such as manifests, checksums, or container
+images, that allow other researchers to replicate reported findings [24, 16, 17].
+4. They frequently apply inconsistent or engine-specific tuning parameters, introducing
+bias in fidelity and runtime comparisons across platforms [8, 3, 4, 9, 10].
+In contrast, the testing framework proposed in this thesis, SimForge, enforces a unified
+canonical data bundle, deterministic adapters for each engine, a fixed-seed execution
+policy, and hardware-normalized performance reporting (per core and per watt). These
+design principles align with best practices in computational reproducibility and open
+benchmarking established in other scientific domains [18, 20, 6].
+
+2.6
+
+Benchmarks in Other Domains
+
+Standardized benchmarking has played a transformative role across multiple fields of computational research. Frameworks such as MLPerf for machine learning, SPEC for system
+and processor performance, and ReproZip for computational experiment packaging have
+demonstrated how controlled inputs, fixed environments, and open reporting protocols
+can accelerate progress and ensure comparability [18, 17, 24, 6]. These initiatives mandate
+dataset versioning, environment specification, and public result repositories, practices that
+have become foundational to reproducible science [5, 16].
+In contrast, the traffic simulation community lacks a standardized, cross-simulator
+benchmark with equivalent rigor. Studies are typically conducted in isolation, relying on
+bespoke datasets and heterogeneous computing setups, which hinders direct comparison
+and long-term reproducibility [21, 1].
+This thesis draws explicit inspiration from these established benchmarking ecosystems,
+particularly MLPerf’s structured reproducibility checklist and the FAIR (Findable, Accessible, Interoperable, and Reusable) data principles which collectively inform the design
+of the SimForge canonical schema, execution policies, and validation workflows [18, 20].
+
+2.7
+
+Reproducibility in HPC
+
+Reproducibility in high-performance computing (HPC) environments remains a persistent
+challenge due to factors such as non-associative floating-point arithmetic, nondeterministic
+thread scheduling, divergent random-number streams, and compiler-dependent optimizations [14, 15, 19]. Even small numerical variations can cascade into macroscopic differences
+in traffic dynamics when running agent-based or mesoscopic simulations at scale.
+12
+
+To mitigate these threats, SimForge adopts a multi-layered reproducibility strategy:
+• Containerization: All simulations execute within pinned-digest containers (OCI/Singularity), ensuring that dependencies, libraries, and compilers remain consistent across
+platforms and reruns [24, 16, 17].
+• Seed Discipline: A structured seeding scheme assigns one deterministic seed per
+unique (city, load, engine, hardware) tuple, with all random-number generator (RNG)
+paths explicitly logged for auditability and replay [26].
+• Time-Step Policy: A uniform canonical time_step is enforced across all engines,
+simulator-specific adapters perform up- or down-sampling as needed while preserving a
+documented temporal mapping.
+• Hash Verification: All inputs and outputs are cryptographically hashed (SHA-256).
+Any detected hash mismatch automatically triggers re-execution on a clean node,
+preventing silent divergence and ensuring traceable experiment lineage [6].
+This layered approach aligns with emerging best practices for deterministic replay,
+containerized workflows, and verifiable computational pipelines in large-scale scientific
+simulation [5, 26].
+
+2.8
+
+Summary of Research Gap
+
+Despite substantial progress in simulation modeling and high-performance computing,
+several gaps continue to limit the reliability and comparability of urban mobility research
+[21, 1, 5, 15]. The most critical limitations include:
+• Lack of standardized datasets and evaluation protocols: Existing studies employ
+heterogeneous input formats, city networks, and calibration procedures, preventing
+reproducible cross-study validation [22, 23].
+• Inconsistent reproducibility documentation: Few simulation experiments provide
+fixed seeds, containerized environments, or artifact manifests, making replication and
+auditability difficult [6, 16, 17].
+• Absence of a neutral, open benchmark: There is no established framework that
+allows fair, transparent comparison of major simulators under equivalent workloads
+and hardware conditions [18, 21, 20].
+Collectively, these limitations underscore the need for a reproducible, cross-simulator
+testing framework that unifies methodology, data handling, and computational infrastructure, precisely the role that SimForge is designed to fulfill.
+13
+
+Chapter 3
+Proposed Methodology
+This chapter details the methodological framework used to construct SimForge, a reproducible, cross-simulator testing framework for large-scale urban commute simulation. The
+approach formalizes how canonical input data are defined, validated, and transformed
+into simulator-specific formats, how calibration and execution policies are standardized
+across heterogeneous engines, and how experimental runs are conducted under controlled
+hardware and software environments. It further specifies the data sources, preprocessing pipelines, evaluation metrics, and reproducibility safeguards that ensure a fair and
+auditable comparison across engines. Together, these components establish a unified
+methodology that addresses both methodological and infrastructural reproducibility gaps
+identified in prior work.
+
+3.1
+
+Framework Overview
+
+The proposed benchmark framework, referred to in this thesis as SimForge, consists
+of three primary layers, (1) a standardized Benchmark Framework, (2) controlled
+Simulation Experiments across multiple engines, and (3) a unified Evaluation layer
+(Figure 3.1). Together, these layers establish a reproducible foundation for cross-simulator
+comparison in urban commute modeling.
+1. Benchmark Framework: Defines the core experimental foundation, including: (i)
+standardized input data bundles for urban networks, travel demand, and traffic signal
+control, (ii) minimal calibration parameters required to align behavioral assumptions
+across simulators, and (iii) defined evaluation metrics for fidelity, scalability, and
+reproducibility [22, 23, 21, 6].
+2. Simulation Experiments: Executes urban commute simulations using identical seeds,
+datasets, and configuration policies across SUMO, MATSim, POLARIS, LPSim,
+and QarSUMO. This layer ensures fair comparison by running each engine within
+version-pinned containers and harmonized runtime environments [8, 3, 4, 9, 10, 16].
+3. Evaluation Layer: Aggregates simulation outputs and computes key performance
+indicators (KPIs) introduced in Section 3.5, covering runtime, fidelity, scalability, and
+reproducibility. Interactive dashboards and validation scripts facilitate automated
+result verification and audit trails [18, 20].
+
+14
+
+Detailed schema specifications are presented in Section 3.2, and the full benchmark
+execution loop is described in Section 3.4.
+
+Figure 3.1: Framework overview: standardized benchmark layer.
+
+3.2
+
+Unified Data Schema Design
+
+Goal: The benchmark defines a canonical, simulator-agnostic data bundle that is validated
+once and then deterministically transformed into each simulator’s native input format
+(Figure 3.2). This unified schema serves as the backbone of reproducibility by decoupling
+scenario definition from simulator-specific syntax and execution semantics [22, 23, 21].
+
+Canonical Bundle (Unified Data Schema)
+The benchmark standardizes input data as a mixed-format package chosen for clarity,
+scalability, and compatibility with high-performance workflows. The schema is intentionally
+neutral, drawing inspiration from the separation of concerns in GTFS and the topological
+structure of OpenStreetMap, yet designed to support cross-simulator benchmarking rather
+than replication of either [22, 23].
+• network.xml - Directed graph specifying road segments, lane counts, speed limits,
+capacities, and turn permissions, includes nodes, links, and intersections with an explicit
+CRS.
+• demand.csv - Columnar trips table containing {origin, destination, departure_time_s,
+mode}, scalable to millions of rows and optionally partitioned by city/date for large
+scenarios.
+15
+
+• signals.xml - Defines signal controllers, phases, offsets, and cycle lengths at controlled
+intersections, optional when no explicit signal plans are available.
+• config.xml - Encapsulates scenario metadata and runtime parameters such as random
+seed, simulation duration, time step, iteration limits, and unit policy.
+• manifest.xml - Records dataset version, SHA-256 checksums for all canonical files,
+coordinate reference system (CRS), unit conventions, partition layout, and provenance
+notes.
+Together, these components ensure that each scenario is version-controlled, fully auditable,
+and prepared for deterministic, simulator-agnostic transformation within the benchmark
+pipeline.
+
+Deterministic Adapters
+Each simulator adapter consumes the canonical bundle and generates engine-specific
+configurations through a one-to-one, auditable mapping. All conversions are logged
+and verified through checksum comparison to guarantee deterministic reproducibility
+[24, 16, 17].
+• SUMO / QarSUMO: *.net.xml, *.rou.xml/trips.xml, signal programs, and
+*.sumocfg.
+• MATSim: network.xml, plans.xml(.gz), signalSystems/signalGroups/signalControl, and config.xml.
+• POLARIS: Network and demand tables (CSV/DB) with a JSON-based configuration
+structure.
+• LPSim: Lane and segment-level tables (CSV/Parquet) plus JSON configuration for
+GPU execution.
+
+Validation and Provenance
+Before any simulation run, a validator enforces type consistency, unit alignment, and
+referential integrity as defined in Table 3.1. The validator fixes random seeds and time
+bases, declares CRS metadata, and verifies all file checksums recorded in the manifest.xml.
+Adapters must guarantee reversible ID mapping and fully documented unit conversions.
+This process provides bit-for-bit reproducibility across simulator engines and computing
+platforms [6, 26].
+
+16
+
+Figure 3.2: Unified schema pipeline and simulator adapters.
+
+Schema Specification (Field-Level)
+Table 3.1 enumerates the canonical entities, their fields, data types, units, and constraints
+enforced by the validator. The rules listed below are applied before any adapter execution
+to ensure consistency across all engines.
+
+17
+
+Table 3.1: Canonical schema specification with enforced validation rules.
+Entity
+
+Field
+
+Type
+
+Units
+
+Constraints / Notes
+
+RoadSegment
+
+id
+
+string
+
+–
+
+Unique: referenced by
+Trips/Intersections
+
+Intersection
+
+length
+
+float
+
+meters
+
+>0
+
+lanes
+
+int
+
+–
+
+≥1
+
+speed_limit
+
+float
+
+km/h
+
+>0
+
+capacity
+
+int
+
+veh/h
+
+≥ 0 (optional)
+
+id
+
+string
+
+–
+
+Unique
+
+control_type
+
+enum
+
+–
+
+{signal,
+
+stop,
+
+yield,
+
+iff
+
+con-
+
+none}
+signal_plan
+
+JSON
+
+–
+
+Required
+
+trol_type = signal
+Trip
+
+origin
+
+string
+
+–
+
+FK → Intersection.id
+(or zone id)
+
+destination
+
+string
+
+–
+
+FK → Intersection.id
+(or zone id)
+
+departure_time_s
+
+int
+
+seconds
+
+ISO-8601 or integer seconds from t0
+
+mode
+
+enum
+
+–
+
+{car,
+
+transit,
+
+bike,
+
+walk}
+Config
+
+seed
+
+int
+
+–
+
+Fixed per experiment:
+recorded in manifest
+
+duration
+
+int
+
+seconds
+
+>0
+
+time_step
+
+float
+
+seconds
+
+> 0 (uniform across simulators)
+
+iteration_limit
+
+int
+
+–
+
+For iterative engines
+(e.g., MATSim)
+
+Signals
+
+controller_id
+
+string
+
+–
+
+Unique per controller
+
+intersection_id
+
+string
+
+–
+
+FK → Intersection.id
+
+phase_id
+
+string
+
+–
+
+Unique
+
+within
+
+troller
+start_time
+
+int
+
+seconds
+
+≥0
+
+duration
+
+int
+
+seconds
+
+>0
+
+offset
+
+18
+int
+
+seconds
+
+≥ 0 (optional)
+
+cycle_length
+
+int
+
+seconds
+
+> 0 (optional)
+
+con-
+
+Validator Rules:
+• IDs and Foreign Keys: All id fields must be unique: Trip.origin, Trip.destination,
+and Signals.intersection_id must resolve without orphan references.
+• Coordinate Reference System (CRS): All geospatial data use WGS84 (EPSG:4326)
+or a declared CRS with an explicitly recorded transformation.
+• Time Base: A single canonical clock in seconds from scenario start (t0 ), adapters
+manage conversions to simulator-specific units.
+• Units: Length in meters, speed in km/h, capacity in veh/h, all conversions are explicitly
+logged by adapters.
+• Seeds and Determinism: Config.seed is fixed per experiment, identical inputs and
+seeds must yield identical outputs (validated via hash comparison).
+• Integrity and Checksums: The manifest.xml file stores dataset version, file SHA256 hashes, and metadata alongside all outputs for traceability.
+• Range Constraints: lanes ≥ 1, speed_limit > 0, duration > 0, and time_step
+> 0, all enforced at validation time.
+• Signal Integrity: If control_type = signal, corresponding Signals entries must
+exist with consistent phase_id and timing definitions.
+
+3.3
+
+Data Sources, Acquisition, and Preprocessing
+
+Cities and Observed Baselines
+The benchmark uses three U.S. metropolitan networks that provide publicly accessible
+baselines for traffic volumes, travel times, and signal control data:
+• Chicago (CHI) - dense arterial grid network with coordinated traffic signals and
+recurring congestion.
+• New York City (NYC) - mixed grid and arterial topology featuring multi-bridge
+corridors and high saturation levels.
+• Los Angeles (LA) - freeway-dominated network with long arterial stretches and
+complex on/off-ramp dynamics.
+Observed baselines include: (i) hourly link counts, (ii) corridor-level travel times, and
+(iii) official signal control plans when publicly available. Each dataset is partitioned into
+distinct calibration and evaluation windows to prevent overfitting and ensure unbiased
+performance reporting.
+19
+
+Canonical Inputs and Provenance
+All raw datasets are transformed into the canonical bundle defined in Section 3.2. Table 3.2
+summarizes the provenance, licensing, and preprocessing transformations applied to each
+component.
+Table 3.2: Data provenance, licensing, and canonical bundle composition.
+Canonical File
+
+Source
+
+License
+
+Notes / Transform
+
+network.xml
+
+OpenStreetMap (OSM)
+
+ODbL
+
+Extract administrative AOI,
+filter drivable ways, infer lane
+count, speed, and turn permissions, generate directed
+graph topology.
+
+demand.csv
+
+Public OD matrices /
+
+Varies
+
+planning baselines
+
+Convert zone-level OD matrices into trip-level tables with
+time-of-day departure distributions, materialize as columnar demand.csv (optionally
+partitioned by city/date) and
+sample synthetic agents at
+50K/500K/5M scales using
+fixed seeds.
+
+signals.xml
+
+City DOT signal plans
+
+Public /
+
+Normalize phase definitions,
+
+(where available)
+
+FOIA
+
+offsets, and cycle lengths,
+interpolate missing values,
+validate against declared
+intersections.
+
+config.xml
+
+This work
+
+MIT
+
+Encapsulates scenario metadata (random seed, duration,
+time_step, iteration limits,
+and city identifier).
+
+manifest.xml
+
+This work
+
+MIT
+
+Records SHA-256 checksums,
+CRS definition, units, data
+sources, URLs, and access
+timestamps.
+
+Acquisition and Licensing
+Networks: OSM extracts are sourced under the Open Database License (ODbL) [22].
+The extract date and bounding box are recorded in each scenario’s manifest.xml.
+20
+
+Demand: OD matrices are obtained from public planning models or academic
+baselines, when detailed trip data are unavailable, synthetic trip tables are generated
+using calibrated departure-time profiles, ensuring statistical realism without privacy risks.
+Signals: Public signal plan data, when released by municipal DOTs, are parsed and
+normalized. In regions without available inventories, intersections default to unsignalized
+control or assume a standard cycle template, clearly annotated in the manifest.
+
+Preprocessing Pipeline (to Canonical Bundle)
+Each city dataset is processed through a deterministic, containerized preprocessing pipeline
+to ensure consistency and reproducibility across runs:
+1. AOI Cut and CRS Declaration: Clip network to the administrative area of interest
+(AOI) and record CRS metadata (WGS84 / EPSG:4326 or projected equivalent) in the
+manifest.
+2. Network Normalization: Harmonize lane counts, speed limits, and capacities: derive
+directed edge lists and turn permissions at intersections.
+3. Demand Synthesis: Convert OD matrices to the trips table format stored as columnar demand.csv (optionally partitioned by city/date) with fields {origin, destination,
+departure_time_s, mode}: use a fixed random seed for sampling.
+4. Signal Parsing: Convert signal control data to signals.xml including {controller_id,
+intersection_id, phase_id, start_time_s, duration_s, cycle_length_s, offset_s}.
+5. Validation: Enforce field types, unit consistency, and referential integrity using rules
+from Table 3.1, compute checksums and record them in manifest.xml.
+
+Calibration and Evaluation Windows
+Each metropolitan scenario is divided into two non-overlapping time windows:
+• Calibration window: Used exclusively to identify minimal per-engine tuning parameters during controlled experiments (see Section 3.4).
+• Evaluation window: Reserved for final metric computation (see Section 3.5), no
+post-hoc adjustments or retuning are permitted.
+
+Privacy and Ethics
+No personally identifiable information (PII) is processed. All demand data are either
+aggregated (zone-level OD matrices) or synthetically generated from public baselines. Any
+21
+
+raw GPS or device-based traces, if ever used in future work, must be anonymized and
+excluded from the canonical bundle. Each dataset release includes complete licensing
+information and access metadata within the manifest [20].
+
+Limitations of the Data
+Certain attributes derived from OSM may omit lane designations or turning restrictions,
+and signal inventories are incomplete for some corridors. OD matrices reflect aggregate
+travel behavior rather than individual decision-making processes. All assumptions and
+inferred parameters are explicitly documented in each scenario’s manifest and revisited
+during evaluation to assess sensitivity and potential bias.
+Table 3.3: Scenario summary by metropolitan area.
+City
+
+Edges
+
+Intersections
+
+Signals
+
+Chicago
+
+95,000
+
+43,000
+
+1,800
+
+Demand (agents)
+50K / 500K / 5M (peakbiased)
+
+New York City
+
+120,000
+
+52,000
+
+2,400
+
+50K / 500K / 5M
+(mixed bridges)
+
+Los Angeles
+
+110,000
+
+48,000
+
+1,600
+
+50K / 500K / 5M
+(freeway-heavy)
+
+3.4
+
+Benchmark Process
+
+Figure 3.3 illustrates the end-to-end workflow employed in this study. Normalized canonical
+inputs first pass through a controlled calibration phase, calibrated configurations then
+drive the simulation benchmark across engines and hardware environments, and outputs
+are aggregated in a unified evaluation layer for metric computation and reporting.
+
+Inputs and Validation
+All input datasets are first validated using the schema and integrity checks described
+in Section 3.2. Field types and units are verified, foreign keys are resolved, random
+seeds and time-step parameters are fixed, and SHA-256 checksums are recorded in the
+manifest.xml. Only validated and versioned bundles are permitted for scheduling within
+the benchmark queue, ensuring full traceability and reproducibility [6, 20].
+
+22
+
+Calibration Protocol (Deterministic)
+Calibration is intentionally designed to be minimal, transparent, and auditable to prevent
+overfitting and subjective tuning. The procedure proceeds as follows:
+1. Targets: Calibration seeks to minimize discrepancies in (i) link-level traffic volumes
+measured by GEH and RMSE metrics and (ii) trip-time distributions evaluated using
+the Kolmogorov–Smirnov (KS) statistic against observed baselines.
+2. Knobs: Each simulator exposes a limited set of behaviorally relevant parameters such
+as car-following aggressiveness, route-choice tolerance, and replanning iterations that
+are varied systematically.
+3. Search Strategy: A fixed grid search of 3–5 discrete settings per parameter is applied
+for each city. No adaptive or stochastic optimization is used, each trial is executed
+with a single deterministic random seed.
+4. Selection Criterion: The configuration yielding the lowest validation RMSE while
+satisfying throughput ≥ real-time/4 on the reference CPU is selected.
+5. Lockdown: Selected parameters, software versions, and container digests are recorded
+in config.xml, producing a frozen configuration for benchmark runs.
+
+Simulation Benchmark (Engines and Hardware)
+For each combination of city (Chicago, New York City, Los Angeles), load (50K /
+500K / 5M agents), and engine (SUMO, MATSim, POLARIS, LPSim, QarSUMO),
+the framework executes a controlled experiment matrix:
+• Execution Environments: All runs occur inside OCI/Singularity containers with
+pinned digests, eliminating host dependency [24, 16].
+• Job Scheduling: SLURM is used to manage submissions, with one job per
+(city, load, engine, hardware) tuple.
+
+CPU affinity and GPU device visibility are
+
+explicitly declared.
+• Random Seeds: Each tuple receives a fixed seed: an additional N = 10 repeated
+runs are conducted to quantify reproducibility variance.
+• Captured Artifacts: Each run logs the full configuration, adapter manifests, stdout/stderr, wall-clock runtime, core/GPU utilization, and output hashes for downstream
+verification.
+
+23
+
+Evaluation and Reporting
+All outputs are consolidated within the evaluation layer, where the benchmark computes
+and visualizes performance indicators:
+1. Fidelity: Link-flow fidelity is measured using RMSE and GEH statistics: trip-time
+accuracy is assessed via KS distance, aggregated by corridor and at the network level.
+2. Scalability: Runtime is analyzed as a function of agent count. Metrics include the
+simulation-to-real-time ratio, vehicles-per-second-per-core, and hardware efficiency
+across CPU, GPU, and HPC environments.
+3. Reproducibility: For each key performance indicator (X), reproducibility is quantified
+as R = 1 − σ(X)/µ(X) across repeated runs, any drift exceeding thresholds triggers,
+re-execution with the same configuration.
+4. Dashboards: Results are presented as reproducible tables and plots summarizing
+fidelity, scalability, and reproducibility per engine, including metadata such as environment configuration and container hashes.
+The evaluation stage returns validated outputs to the ingestion layer for metric computation
+and reproducibility verification.
+
+Failure Handling and Determinism
+If validation or post-run verification fails, such as missing identifiers, inconsistent units,
+or checksum mismatches, the job is automatically resubmitted on a fresh compute node
+using the same seed. Engines exhibiting nondeterministic behavior must document all
+sources of variance (e.g., threading, RNG divergence) and provide either a deterministic
+execution mode or reproducible RNG mapping [26, 19].
+
+24
+
+Figure 3.3: End-to-end benchmark process with normalized inputs.
+
+3.5
+
+Evaluation Metrics and Analysis
+
+Figure 3.4 illustrates the three principal dimensions along which simulators and hardware
+configurations are evaluated: (i) fidelity to observed traffic baselines, (ii) scalability as a
+function of agent population, and (iii) reproducibility across repeated, seed-controlled runs.
+These dimensions collectively assess both methodological soundness and computational
+efficiency within the proposed benchmark.
+
+Datasets and Baselines
+Evaluation is conducted across three metropolitan networks: Chicago, New York City,
+and Los Angeles, at three simulation scales: 50K, 500K, and 5M agents. Each city
+provides independently observed references, including hourly link counts, corridor-level
+travel times, and signal control timings, where publicly available. All observed datasets are
+partitioned into distinct calibration and evaluation windows to prevent information leakage
+and ensure statistically independent testing. Baseline data sources and preprocessing
+follow the provenance and validation procedures described in Section 3.3 [21, 1].
+
+Hardware Accounting
+Each experiment logs detailed system metadata to ensure traceable and hardware-aware
+comparisons. Recorded attributes include CPU/GPU model, core count, clock frequency,
+memory, and container image digest. Scalability metrics are reported both in raw form
+25
+
+(total runtime, simulation-to-real-time ratio) and in normalized form (vehicles per second
+per core and per watt). These normalizations ensure fair comparison across heterogeneous
+hardware tiers, including CPU-only nodes, GPU-accelerated systems, and HPC clusters
+[15, 19].
+
+Fairness Constraints
+To guarantee experimental neutrality and cross-engine fairness, the following methodological constraints are enforced throughout all benchmark runs:
+• Fixed calibration grids: Parameter search spaces are defined a priori and remain
+identical across engines, no adaptive or stochastic optimization is permitted.
+• Uniform execution policy: All engines share identical time_step, random seed,
+and scenario duration values. Adapters perform deterministic up or down-sampling to
+maintain alignment while recording the transformation mapping.
+• No post-hoc tuning: Once the evaluation phase begins, no manual corrections or
+parameter adjustments are allowed. Any discovered issue necessitates re-execution of
+all affected configurations to preserve reproducibility integrity.
+These constraints adhere to reproducible benchmarking best practices widely adopted in
+computational sciences [18, 6, 20].
+
+Reporting Artifacts
+For each unique (city, load, engine, hardware) configuration, the benchmark publishes a
+standardized reporting bundle containing:
+• Key performance indicators (KPIs) with 95% confidence intervals.
+• Per-corridor fidelity and error tables.
+• Runtime and energy-efficiency panels.
+• Reproducibility plots computed from repeated trials.
+• A complete manifest recording inputs, seeds, container digests, and file checksums.
+All plots and tables are generated directly from immutable, hash-verified result files to
+ensure traceable and tamper-proof analysis [17, 24, 16].
+
+26
+
+Figure 3.4: Evaluation framework: fidelity, scalability and reproducibility.
+
+3.6
+
+Data Management and Ethics
+
+This study relies exclusively on publicly available datasets: City of Chicago Traffic Counts
+(CC BY 4.0), Los Angeles Department of Transportation (LADOT) Traffic Data, and
+OpenStreetMap (ODbL). These sources provide network topology, turning-movement
+counts, corridor speeds, and aggregate traffic flow information necessary for scenario
+construction and calibration. No individual-level trajectories are used. All demand data
+are generated from Traffic Analysis Zone (TAZ)-level aggregates and expanded using fixed
+random seeds. TAZ cells with fewer than 10 trips are suppressed, and all timestamps are
+perturbed by a uniform random jitter of ±60 s to reduce residual re-identification risk.
+No direct or indirect personal identifiers are retained.
+Access Control: Raw datasets reside on secure, access-controlled university storage.
+Only validated canonical bundles and aggregated benchmark outputs are released publicly
+under appropriate open-data licenses.
+Data Retention: Raw data are retained only for the duration of the project and
+deleted no later than 12 months after project completion or according to upstream license
+requirements.
+Licensing and Attribution: All components follow open-science best practices [20, 6].
+The benchmark codebase is released under Apache-2.0, while schemas, adapters, and
+derived datasets are distributed under CC BY 4.0. OpenStreetMap-derived artifacts
+comply with ODbL share-alike and attribution requirements.
+
+27
+
+3.7
+
+Schedule and Timeline
+
+The project is planned across ten sequential phases spanning September 2025 through July
+2026. Tasks are organized to preserve key dependencies (e.g., schema design before HPC
+integration) while allowing limited parallel work where appropriate. Figure 3.5 presents
+the planned schedule.
+
+Figure 3.5: Planned research timeline from Sep 2025 to Jul 2026.
+
+Milestones
+• Background Research: November 2025. This includes literature review on multiengine simulation, benchmark reproducibility, and data schema design.
+• Data Acquisition & Curation: December 2025. All network, demand, and signal
+datasets for the selected cities will be collected, validated, and prepared for schema
+ingestion.
+• Plan Submission: December 2025. The full thesis plan will be submitted to
+the advisory committee.
+• Canonical Schema & Adapters (v1.0): January 2026. The unified XML + CSV
+schema and deterministic adapter implementations for SUMO, MATSim, POLARIS,
+LPSim, and QarSUMO will be completed.
+• Design & Validation Rules: February 2026. Cross-file validators, checksum rules,
+and calibration-window specifications will be established.
+• HPC Integration: March 2026. Containerized runtime environments will be deployed
+on OSC with SLURM support and hardware-logging instrumentation.
+28
+
+• Experiments: April 2026. Full end-to-end benchmark runs will be executed across all
+simulators, load levels, and hardware tiers.
+• Evaluation & Metrics: May 2026. Fidelity, scalability, and reproducibility KPIs will
+be computed, analyzed, and plotted.
+• Thesis Writing & Revision: May–June 2026. Complete drafting, refining, and
+preparing the final manuscript.
+• Committee Review & Defense Preparation: June–July 2026. Committee feedback
+will be incorporated, and defense materials prepared.
+
+Phase Objectives
+• Background Research (Sep–Nov 2025): Complete literature review, identify gaps in
+cross-simulator benchmarking, and define the research scope and objectives.
+• Data Acquisition & Curation (Nov–Dec 2025): Collect OSM networks, demand
+baselines, signal inventories, and institutional datasets (e.g., Cityscape), followed by
+preprocessing into schema-ready formats.
+• Plan (Dec 2025): Finalize and submit the thesis plan to the advisory committee.
+• Canonical Schema & Adapters (Dec 2025–Jan 2026): Develop the unified XML +
+CSV schema and implement deterministic adapters for SUMO, MATSim, POLARIS,
+LPSim, and QarSUMO.
+• Design & Validation Rules (Jan–Mar 2026): Establish cross-file validators, unit/CRS
+standards, checksum policies, and the deterministic transformation rules for all simulators.
+• HPC Integration (Mar–Apr 2026): Containerize all simulators, configure SLURMbased scheduling, and implement resource/accounting instrumentation on OSC.
+• Experiments (Apr–May 2026): Execute the full run matrix across cities, load levels,
+simulators, and hardware configurations, including repeated runs for reproducibility.
+• Evaluation & Metrics (May–Jun 2026): Compute fidelity, scalability, and reproducibility KPIs: generate plots, tables, and validation summaries.
+• Thesis Writing & Revision (Jun 2026): Draft complete thesis chapters, integrate
+figures, and revise based on feedback.
+• Committee Review & Defense Preparation (Jun–Jul 2026): Incorporate committee feedback, finalize defense slides, and prepare for the oral defense.
+29
+
+Dependencies and Buffers
+• Hard Dependencies: Schema Freeze → Adapter Completion → Experiment Execution. No simulation runs may begin before schema finalization.
+• Compute Buffer: A 10-14 day margin is reserved to accommodate HPC queue delays
+or automatic re-runs triggered by validation or checksum failures.
+• Data Buffer: City-level dataset revisions are managed through patch versions of the
+manifest.xml, any schema-altering change triggers a mandatory re-run for affected
+simulators.
+
+30
+
+Chapter 4
+Experimental Plan, Environment, and Risks
+This chapter outlines the experimental design, compute environment, execution schedule,
+and identified risks associated with the proposed SimForge cross-simulator testing
+framework and its benchmark experiments. The plan defines the experimental matrix,
+describes hardware and software configurations, and formalizes risk mitigation strategies
+to ensure reproducibility, scalability, and verifiable results.
+
+4.1
+
+Experimental Matrix
+
+The benchmark evaluates three metropolitan networks at three simulation load levels
+across five distinct simulator engines and two hardware tiers. This matrix design balances
+coverage and resource feasibility while maintaining methodological control.
+
+Run Count Estimate
+The total number of controlled simulation runs is estimated as:
+3 (cities) × 3 (loads) × 5 (engines) × 2 (hardware tiers) × 10 (repeats) = 900 runs.
+Runs are staged city by city to manage storage overhead and to prioritize completion
+of CPU baselines prior to GPU and HPC variants. This staging also allows incremental
+validation of adapters and pipelines before scaling up across hardware tiers.
+
+Scenarios and Loads
+• Cities: Chicago, New York City, and Los Angeles are selected for their distinct
+urban forms and congestion profiles (dense grid, mixed corridor, and freeway-dominant,
+respectively).
+• Loads: 50K, 500K, and 5M synthetic agents, representing small, medium, and largescale urban commute scenarios.
+• Periods: Each dataset is split into non-overlapping calibration and evaluation windows
+as defined in Section 3.5, ensuring unbiased KPI computation.
+
+31
+
+Engines and Hardware
+• Engines: SUMO, MATSim, POLARIS, LPSim, and QarSUMO, chosen to represent the
+major open and high-performance agent-based traffic simulators discussed in Section 2.4.
+• Hardware tiers:
+– CPU Reference Node: Standardized multicore CPU environment used for
+baseline runs and per-core normalization.
+– GPU/HPC Node: GPU-enabled or high-performance cluster node, used for
+parallel scalability and throughput analysis.
+• Repeats: N = 10 replicates per (city, load, engine, hardware) tuple to quantify reproducibility and variance across runs.
+
+Run Definition
+Each benchmark run is uniquely identified by the tuple:
+(city, load, engine, hardware, seed, time_step, container_digest)
+where:
+• city - target metropolitan scenario from the canonical bundle (see Section 3.2).
+• load - agent population scale (50K / 500K / 5M).
+• engine - simulator engine under test.
+• hardware - execution environment (CPU or GPU/HPC).
+• seed - deterministic random seed ensuring reproducible agent generation and route
+assignment.
+• time_step - global simulation time increment enforced uniformly across engines.
+• container_digest - version-pinned OCI/Singularity image hash ensuring binary reproducibility [24, 16, 17].
+All runs are conducted within containerized environments, following the reproducibility
+framework and seed discipline outlined in Section 2.7, ensuring that every experiment is
+both auditable and repeatable across computational platforms.
+
+32
+
+4.2
+
+Software and Compute Environment
+
+All simulation engines are executed within fully containerized, version-pinned environments
+to guarantee portability and bit-level reproducibility across compute platforms.
+Containers: Each simulator runs within an OCI/Singularity image identified by its
+immutable digest. Containers include all dependencies, compilers, and libraries, ensuring
+consistent behavior independent of host environment [24, 16, 17].
+Scheduler: Execution is orchestrated via SLURM with explicit CPU pinning and GPU
+device visibility. Each job corresponds to a single (city, load, engine, hardware) tuple and
+executes independently to avoid cross-interference.
+Artifacts: Every run produces a manifest capturing input file checksums, container
+digest, wall-clock runtime, resource counters, environment variables, and adapter version.
+These metadata form the foundation of reproducibility tracking and verification.
+Determinism: All runs use fixed random seeds and a uniform time_step across engines. Key outputs are validated via SHA-256 hash comparison, and any hash mismatch
+automatically triggers a re-run on a clean node, preserving experimental determinism.
+
+4.3
+
+Resources and Compute Budget
+
+Hardware: Experiments will utilize Ohio Supercomputer Center (OSC) CPU nodes,
+supplemented by one to two A100-class GPU nodes for hardware acceleration tests.
+Approximately 1–2 TB of temporary scratch storage is reserved for intermediate outputs
+and logs.
+Compute Budget: The benchmark is projected to consume approximately 2,500–3,500
+node-hours across all runs, including calibration, repeated trials, and validation re-runs.
+Execution is staged by city to manage storage overhead and ensure incremental data
+validation before scaling to the full matrix.
+Data: All inputs are derived from public or academic sources and instantiated as canonical
+bundles with per-scenario manifest.xml files (see Section 3.2).
+
+4.4
+
+Risks and Mitigations
+
+The following risks have been identified along with mitigation strategies to ensure project
+continuity and reproducibility integrity:
+Queue Delays: Potential HPC scheduling backlogs are mitigated by maintaining a
+10–14 day buffer in the timeline and performing dry-runs on low-priority queues to test
+configurations before large-scale submissions.
+
+33
+
+Adapter Regression: Mapping or translation inconsistencies between canonical and
+simulator-native inputs are prevented through golden test cases, adapter snapshotting,
+and automated CI-driven hash consistency checks.
+Non-Determinism: Variance due to random number generation or multithreading
+is controlled through fixed seeds, deterministic execution modes, and enforced re-runs
+whenever output hashes diverge [26, 19].
+Data Defects: Errors in OpenStreetMap-derived networks or signal plans are caught
+by the schema validator (Table 3.1). Any corrections result in a patch version of the
+manifest.xml, triggering mandatory re-runs for affected simulators to preserve integrity.
+
+4.5
+
+Limitations and Threats to Validity
+
+This work focuses on reproducible, large-scale commute simulations and intentionally
+abstracts away behavioral detail not essential to benchmarking fidelity or performance.
+Behavioral Scope: The analysis is restricted to commute-scale KPIs: link volumes and
+travel times rather than driver-level heterogeneity or micro-behavioral effects.
+Hardware Comparability: While per-core and per-watt normalization mitigates disparities between CPUs, GPUs, and HPC clusters, perfect hardware equivalence is inherently
+unattainable.
+Geographic Coverage: The benchmark currently includes three U.S. metropolitan
+regions, extending the framework to international networks and multimodal datasets is
+reserved for future work.
+
+4.6
+
+Deliverables
+
+The project will produce a set of open, verifiable, and reproducible artifacts for the
+community:
+• Open-Source SimForge Repository: Canonical schema, validators, deterministic
+adapters, SLURM execution scripts, and documentation released under permissive
+open licenses.
+• Run Artifacts: For each benchmark tuple, key performance indicators with confidence
+intervals, input/output manifests, checksums, per-corridor error tables, and resource
+utilization panels.
+• Reproducibility Scorecard: Comparative reports summarizing fidelity, scalability,
+and reproducibility metrics across engines and hardware configurations.
+
+34
+
+References
+[1] Transportation Research Board, “Survey of urban simulation practices.” TRB Annual
+Meeting, 2022.
+[2] K. Nagel and A. L. C. Bazzan, “Urban mobility and simulation frameworks,” Procedia
+Computer Science, 2019.
+[3] A. Horni, K. Nagel, and K. W. Axhausen, The Multi-Agent Transport Simulation
+MATSim. Ubiquity Press, 2016.
+[4] J. Auld, M. Hope, H. Ley, V. Sokolov, B. Xu, and K. Zhang, “Polaris: Agent-based
+modeling framework for transportation,” tech. rep., Argonne National Laboratory,
+2016.
+[5] S. N. Goodman, D. Fanelli, and J. P. A. Ioannidis, “What does research reproducibility
+mean?,” Science Translational Medicine, 2016.
+[6] V. Stodden, M. Seiler, and Z. Ma, “An empirical analysis of journal policy effectiveness
+for computational reproducibility,” Proceedings of the National Academy of Sciences,
+2018.
+[7] T. Studer, M. Regev, and L. Li, “Reproducibility in machine learning benchmarking,”
+Nature Machine Intelligence, 2019.
+[8] D. Krajzewicz, J. Erdmann, M. Behrisch, and L. Bieker, “Recent development
+and applications of sumo—simulation of urban mobility,” International Journal on
+Advances in Systems and Measurements, 2012.
+[9] N. Cao, X. Zhang, Y. Zhu, and D. Lin, “Lpsim: A massively parallel traffic simulator,”
+IEEE Transactions on Intelligent Transportation Systems, 2022.
+[10] A. Boulmakoul, L. Karim, A. Lbath, et al., “Qarsumo: Gpu-accelerated sumo extensions,” in Proceedings of the IEEE International Conference on High Performance
+Computing and Simulation (HPCS), IEEE, 2023.
+[11] C.-Y. Chan, B. Wang, J. Bachan, and J. Macfarlane, “Mobiliti: Scalable transportation simulation using high-performance parallel computing,” in IEEE High
+Performance Extreme Computing Conference (HPEC), IEEE, 2018.
+[12] L. Bieker, J. Erdmann, D. Krajzewicz, and M. Behrisch, “Parallel execution and
+scalability in sumo,” Simulation Modelling Practice and Theory, 2014.
+35
+
+[13] Argonne National Laboratory, “Polaris simulation framework overview,” tech. rep.,
+Argonne National Laboratory, 2021.
+[14] K. Jackson, L. Ramakrishnan, and K. Runge, “Performance and reproducibility
+in parallel scientific computations,” Concurrency and Computation: Practice and
+Experience, 2010.
+[15] A. Prasad and R. Ghosh, “Challenges in reproducibility for high performance computing,” Future Generation Computer Systems, 2020.
+[16] D. Gitman, R. Wallace, and P. Mills, “Container-based environments for scientific
+reproducibility,” Computing in Science & Engineering, 2020.
+[17] F. Chirigati, R. Rampin, D. Shasha, and J. Freire, “Reprozip: Computational reproducibility with ease,” in Proceedings of the ACM SIGMOD International Conference
+on Management of Data, ACM, 2016.
+[18] MLPerf Consortium, “Mlperf: An industry standard benchmark suite for machine
+learning performance,” 2019. Available at MLCommons; accessed 2025.
+[19] X. Zhang, L. Huang, and J. Liu, “Towards reproducible parallel simulations,” Journal
+of Parallel and Distributed Computing, 2021.
+[20] M. D. Wilkinson, M. Dumontier, I. J. Aalbersberg, et al., “The fair guiding principles
+for scientific data management and stewardship,” Scientific Data, vol. 3, p. 160018,
+2016.
+[21] J. Stark and A. Patel, “Benchmarking simulation frameworks for urban mobility,” in
+Transportation Research Procedia, 2022.
+[22] OpenStreetMap Foundation, “Openstreetmap data model,” 2024. Available at:
+openstreetmap.org; accessed 2025.
+[23] Google, “General transit feed specification (gtfs) reference,” 2025. Available at:
+developers.google.com/transit/gtfs/reference; accessed 2025.
+[24] C. Boettiger, “An introduction to docker for reproducible research,” ACM SIGOPS
+Operating Systems Review, 2015.
+[25] Ohio Supercomputer Center, “Hpc infrastructure overview,” tech. rep., Ohio Supercomputer Center, 2024.
+[26] F. Haile, T. Melesse, and D. Lakew, “Deterministic replay in parallel simulations,”
+Concurrency and Computation: Practice and Experience, 2023.
+36
+
+[27] B. Chandramouli, J. Gehrke, and A. Quamar, “Reproducibility in hpc computations,”
+Computing in Science & Engineering, 2020.
+[28] J. Barceló, Fundamentals of Traffic Simulation, vol. 145 of International Series in
+Operations Research & Management Science. Springer, 2010.
+
+37
+
+Chapter A
+Unified Schema: Worked Examples
+This appendix provides concrete, minimally complete examples for each file in the canonical
+bundle under the hybrid design: config.xml, network.xml, signals.xml, manifest.xml,
+and demand.csv (for which we show a small CSV excerpt and the corresponding column
+schema).
+
+A.1
+
+Bundle Overview
+
+The canonical bundle for a single scenario consists of:
+• config.xml: scenario metadata and policy (seed, duration, time base).
+• network.xml: compact directed network (3 nodes, 2 links), OSM-inspired.
+• signals.xml: optional controller with two balanced phases for demonstration.
+• demand.csv: trips table (columnar, scalable to millions of rows).
+• manifest.xml: checksums, CRS, unit policy, partitions, and provenance.
+
+A.2
+
+config.xml
+
+Example configuration for a 15-minute (900 s) toy scenario.
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="urn:unified:schema:1"
+scenario="toy-3node-am"
+seed="42"
+duration_s="900"
+time_step_s="1.0"
+iteration_limit="1">
+<units length="m" speed="km/h" time="s"/>
+</config>
+
+38
+
+A.3
+
+network.xml
+
+A minimal directed network with three nodes (N1–N3) and two links (L12, L23). Speeds
+are in km/h and lengths in meters.
+<?xml version="1.0" encoding="UTF-8"?>
+<network xmlns="urn:unified:schema:1" crs="EPSG:3857">
+<units length="m" speed="km/h"/>
+<nodes>
+<node id="N1" x="0.0"
+
+y="0.0"/>
+
+<node id="N2" x="100.0" y="0.0"/>
+<node id="N3" x="200.0" y="0.0"/>
+</nodes>
+<links>
+<link id="L12" from="N1" to="N2" lanes="1" length_m="100.0" speed_kmh
+="36.0"/>
+<!-- 36 km/h = 10 m/s -->
+<link id="L23" from="N2" to="N3" lanes="1" length_m="100.0" speed_kmh
+="36.0"/>
+</links>
+<intersections>
+<intersection id="I2" node="N2"/>
+</intersections>
+</network>
+
+A.4
+
+signals.xml
+
+Example of one signal controller at node N2 with two 30-second phases (A and B).
+<?xml version="1.0" encoding="UTF-8"?>
+<signals xmlns="urn:unified:schema:1" crs="EPSG:3857">
+<controller id="C_N2" intersection_id="I2" cycle_length_s="60" offset_s
+="0">
+<phase id="A" start_time_s="0"
+
+duration_s="30"/>
+
+<phase id="B" start_time_s="30" duration_s="30"/>
+</controller>
+</signals>
+
+39
+
+A.5
+
+demand.csv
+
+For readability in print, we include a tiny excerpt of the canonical demand table
+(demand.csv). All times are measured in seconds from scenario start.
+origin,destination,departure_time_s,mode
+N1,N3,0,car
+N1,N3,60,car
+N1,N3,120,car
+N1,N3,300,car
+The canonical schema for demand.csv is defined as:
+origin: string
+destination: string
+departure_time_s: integer
+mode: string
+For very large scenarios, optional directory-based partitioning may be used to organize
+multiple CSV chunks (e.g., by city, date, or demand level). An example organizational
+pattern is:
+/demand/CHI/2025-11-01/demand_part_000.csv
+/demand/CHI/2025-11-01/demand_part_001.csv
+...
+
+A.6
+
+manifest.xml
+
+Replace each digest placeholder with the actual SHA-256 for the final artifacts.
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest xmlns="urn:unified:schema:1"
+scenario="toy-3node-am"
+created_utc="2025-11-04T00:00:00Z">
+<crs value="EPSG:3857"/>
+<units length="m" speed="km/h" time="s"/>
+<sources>
+<source key="network">Derived from OSM extract (AOI toy), processed
+by this work</source>
+40
+
+<source key="demand">Synthetic toy demand generated by this work</
+source>
+<source key="signals">Synthetic (optional)</source>
+</sources>
+<artifacts>
+<artifact path="config.xml"
+
+algo="sha256" digest="REPLACE_WITH_
+
+SHA256"/>
+<artifact path="network.xml"
+
+algo="sha256" digest="REPLACE_WITH_
+
+SHA256"/>
+<artifact path="signals.xml"
+
+algo="sha256" digest="REPLACE_WITH_
+
+SHA256"/>
+<artifact path="demand.csv"
+
+algo="sha256" digest="REPLACE_WITH_
+
+SHA256"/>
+<!-- If using partitioned CSV for large scenarios, list each chunk or
+directory:
+<artifact path="demand/CHI/2025-11-01" type="csv-partitioned"
+algo="sha256-tree" digest="REPLACE_WITH_TREE_HASH"/>
+-->
+</artifacts>
+<demand-schema>
+<col name="origin"
+
+type="string"/>
+
+<col name="destination"
+
+type="string"/>
+
+<col name="departure_time_s"
+
+type="int32" units="s"/>
+
+<col name="mode"
+
+type="string"/>
+
+<!-- Optional partition keys for big scenarios -->
+<!-- <partitions><key>city</key><key>date</key></partitions> -->
+</demand-schema>
+</manifest>
+
+A.7
+
+Validators
+
+Each validator enforces structural integrity and cross-file consistency before any run is
+scheduled:
+• Network (XML): network.xml must validate, all link lengths/speeds positive, each
+link’s @from/@to match a node/@id.
+41
+
+• Demand (CSV): every origin/destination exists in the network node set:
+departure_time_s ≥ 0. For partitioned layouts, validate each CSV chunk independently.
+• Signals (XML): total cycle time equals the sum of phase durations, referenced
+intersection_id exists.
+• Manifest (XML): all digests match current files, CRS and units present and valid,
+the demand-schema columns align with the demand.csv header and types.
+
+A.8
+
+XML Schema Integration (XSD)
+
+The unified schema uses a shared XML Schema Definition (XSD) to validate config.xml,
+network.xml, signals.xml, and manifest.xml. The XSD provides a machine-checkable
+contract for required elements, attribute types, and structural constraints, ensuring that
+invalid or incomplete XML artifacts are caught before entering the SimForge pipeline.
+
+Referencing the XSD from XML Files
+Each XML file declares the unified namespace and references the XSD, ensuring schemavalidated parsing:
+<?xml version="1.0" encoding="UTF-8"?>
+<config xmlns="urn:unified:schema:1"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:schemaLocation="urn:unified:schema:1 schema/unified-schema-1.
+xsd"
+scenario="toy-3node-am"
+seed="42"
+duration_s="900"
+time_step_s="1.0"
+iteration_limit="1">
+<units length="m" speed="km/h" time="s"/>
+</config>
+
+Example XSD Fragment (config.xml)
+A minimal fragment of the unified XSD defining the config structure:
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+42
+
+targetNamespace="urn:unified:schema:1"
+xmlns="urn:unified:schema:1"
+elementFormDefault="qualified">
+<xs:element name="config">
+<xs:complexType>
+<xs:sequence>
+<xs:element name="units">
+<xs:complexType>
+<xs:attribute name="length" type="xs:string" use="required"/>
+<xs:attribute name="speed"
+
+type="xs:string" use="required"/>
+
+<xs:attribute name="time"
+
+type="xs:string" use="required"/>
+
+</xs:complexType>
+</xs:element>
+</xs:sequence>
+<xs:attribute name="scenario"
+
+type="xs:string"
+
+use="
+
+required"/>
+<xs:attribute name="seed"
+
+type="xs:integer" use="
+
+required"/>
+<xs:attribute name="duration_s"
+
+type="xs:decimal" use="
+
+required"/>
+<xs:attribute name="time_step_s"
+
+type="xs:decimal" use="
+
+required"/>
+<xs:attribute name="iteration_limit" type="xs:integer" use="
+required"/>
+</xs:complexType>
+</xs:element>
+</xs:schema>
+
+Network Keys and References
+The XSD enforces node uniqueness and link consistency using xs:key/xs:keyref:
+<xs:element name="network">
+<xs:complexType>...</xs:complexType>
+<!-- each node/@id must be unique -->
+43
+
+<xs:key name="k_node_id">
+<xs:selector xpath="nodes/node"/>
+<xs:field xpath="@id"/>
+</xs:key>
+<!-- link endpoints must reference existing nodes -->
+<xs:keyref name="r_link_from" refer="k_node_id">
+<xs:selector xpath="links/link"/>
+<xs:field xpath="@from"/>
+</xs:keyref>
+<xs:keyref name="r_link_to" refer="k_node_id">
+<xs:selector xpath="links/link"/>
+<xs:field xpath="@to"/>
+</xs:keyref>
+</xs:element>
+These constraints prevent malformed networks (e.g., dangling link endpoints) from
+entering the canonical bundle.
+
+Schema Validation Commands
+As part of preprocessing and CI, each XML artifact is validated via:
+xmllint --noout --schema schema/unified-schema-1.xsd config.xml
+xmllint --noout --schema schema/unified-schema-1.xsd network.xml
+xmllint --noout --schema schema/unified-schema-1.xsd signals.xml
+xmllint --noout --schema schema/unified-schema-1.xsd manifest.xml
+For the demand table, the pipeline verifies that the demand.csv columns and types
+match the demand-schema block in manifest.xml using a short script (e.g., pandas or
+Polars).
+
+Cross-File Validation
+While XSD validates structure within each individual file, cross-file rules (e.g., ensuring
+demand origins/destinations appear in network.xml or signal controllers reference valid
+intersections) are enforced by the validator described in Section A.7. Together, the XSD
+and cross-file validator form a complete integrity and reproducibility layer for the unified
+schema.
+
+44
+
+

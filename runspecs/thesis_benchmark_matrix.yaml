@@ -1,0 +1,154 @@
+# SimForge Thesis Benchmark - Full Run Matrix
+# 3 Cities × 3 Engines × 2 Modes × 3 Repeats = 54 runs (per tier)
+# For the 50K tier initially
+
+name: thesis_benchmark_matrix
+description: |
+  Full experimental matrix for thesis benchmark.
+  Compares SUMO, QarSUMO, and MATSim across 3 cities
+  in both microscopic and mesoscopic modes.
+
+# Global settings
+settings:
+  repeats: 3
+  output_root: "runs/thesis_matrix"
+  collect_metrics: true
+  metrics:
+    - travel_time_distribution
+    - throughput
+    - runtime
+    - memory_usage
+
+# Run configurations
+runs:
+  # ============================================
+  # City 1: Sioux Falls (50K trips)
+  # ============================================
+  
+  # SUMO - Microscopic
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: sumo
+    mode: microscopic
+    environment: local_cpu
+    description: "Sioux Falls - SUMO microscopic"
+  
+  # SUMO - Mesoscopic  
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: sumo
+    mode: mesoscopic
+    environment: local_cpu
+    description: "Sioux Falls - SUMO mesoscopic"
+  
+  # QarSUMO - Microscopic (falls back to SUMO on Mac)
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: qarsumo
+    mode: microscopic
+    environment: local_gpu
+    description: "Sioux Falls - QarSUMO microscopic"
+  
+  # QarSUMO - Mesoscopic
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: qarsumo
+    mode: mesoscopic
+    environment: local_gpu
+    description: "Sioux Falls - QarSUMO mesoscopic"
+  
+  # MATSim - Mesoscopic only (MATSim is inherently mesoscopic)
+  - scenario_id: sioux_falls_tier50k
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: matsim
+    mode: mesoscopic
+    environment: local_cpu
+    description: "Sioux Falls - MATSim mesoscopic"
+
+  # ============================================
+  # City 2: Austin (50K trips)
+  # ============================================
+  
+  # SUMO - Microscopic
+  - scenario_id: austin_tier50k
+    scenario_path: scenarios/austin_tier50k
+    engine: sumo
+    mode: microscopic
+    environment: local_cpu
+    description: "Austin - SUMO microscopic"
+  
+  # SUMO - Mesoscopic
+  - scenario_id: austin_tier50k
+    scenario_path: scenarios/austin_tier50k
+    engine: sumo
+    mode: mesoscopic
+    environment: local_cpu
+    description: "Austin - SUMO mesoscopic"
+  
+  # QarSUMO - Microscopic
+  - scenario_id: austin_tier50k
+    scenario_path: scenarios/austin_tier50k
+    engine: qarsumo
+    mode: microscopic
+    environment: local_gpu
+    description: "Austin - QarSUMO microscopic"
+  
+  # QarSUMO - Mesoscopic
+  - scenario_id: austin_tier50k
+    scenario_path: scenarios/austin_tier50k
+    engine: qarsumo
+    mode: mesoscopic
+    environment: local_gpu
+    description: "Austin - QarSUMO mesoscopic"
+  
+  # MATSim - Mesoscopic
+  - scenario_id: austin_tier50k
+    scenario_path: scenarios/austin_tier50k
+    engine: matsim
+    mode: mesoscopic
+    environment: local_cpu
+    description: "Austin - MATSim mesoscopic"
+
+  # ============================================
+  # City 3: Berlin (50K trips)
+  # ============================================
+  
+  # SUMO - Microscopic
+  - scenario_id: berlin_tier50k
+    scenario_path: scenarios/berlin_tier50k
+    engine: sumo
+    mode: microscopic
+    environment: local_cpu
+    description: "Berlin - SUMO microscopic"
+  
+  # SUMO - Mesoscopic
+  - scenario_id: berlin_tier50k
+    scenario_path: scenarios/berlin_tier50k
+    engine: sumo
+    mode: mesoscopic
+    environment: local_cpu
+    description: "Berlin - SUMO mesoscopic"
+  
+  # QarSUMO - Microscopic
+  - scenario_id: berlin_tier50k
+    scenario_path: scenarios/berlin_tier50k
+    engine: qarsumo
+    mode: microscopic
+    environment: local_gpu
+    description: "Berlin - QarSUMO microscopic"
+  
+  # QarSUMO - Mesoscopic
+  - scenario_id: berlin_tier50k
+    scenario_path: scenarios/berlin_tier50k
+    engine: qarsumo
+    mode: mesoscopic
+    environment: local_gpu
+    description: "Berlin - QarSUMO mesoscopic"
+  
+  # MATSim - Mesoscopic
+  - scenario_id: berlin_tier50k
+    scenario_path: scenarios/berlin_tier50k
+    engine: matsim
+    mode: mesoscopic
+    environment: local_cpu
+    description: "Berlin - MATSim mesoscopic"

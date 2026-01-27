@@ -1,247 +1,190 @@
 # 🌉 SimForge
 
-SimForge is a reproducible, cross-simulator testing framework for urban traffic simulation.
+**SimForge** is a reproducible, cross-simulator benchmarking framework for urban traffic simulation.
 
-The goal is to standardize **scenario representation, validation, execution, and measurement** so that different traffic simulators can be compared under identical conditions.
-
-This repository currently implements a complete **v0 pipeline** from canonical inputs to runnable SUMO artifacts.
+It provides a **canonical data schema**, **validated scenario bundles**, **deterministic adapters** for multiple simulators, and a **unified execution harness** for fair performance comparison.
 
 ---
 
-## 🛠️ What Exists Right Now (No Hype)
+## 🎯 Project Goals
 
-This repo is not a plan anymore. It contains working code:
-
-- **Canonical schema v0** (documented in Markdown)
-- **Canonical toy scenario** (`toy_2x2_grid`)
-- **Validator** enforcing cross-file consistency
-- **SUMO adapter v0** that generates real:
-  - `net.net.xml`
-  - `routes.rou.xml`
-  - `toy.sumocfg`
-- **End-to-end pipeline runner** (validate → adapter)
-- **Pytest test suite** for validator and adapter
-
-Everything below actually runs.
+1. **Standardize inputs**: One canonical format converted to any simulator
+2. **Ensure reproducibility**: Deterministic pipelines with hash verification
+3. **Enable fair comparison**: Same scenarios, same metrics, different engines
+4. **Support research**: Ready-to-use benchmarks for thesis/publication
 
 ---
 
-## 💻 Requirements
+## ✅ Current Status
 
-- Python **3.10+**
-- macOS or Linux
-- SUMO **optional** (only needed if you want to actually execute simulations)
-
-> This project uses a local virtual environment (`.venv`).
-> Do **not** install dependencies into system Python.
+| Component | Status |
+|-----------|--------|
+| Canonical Schema v0 | ✅ Complete |
+| Scenario Validator | ✅ Complete |
+| SUMO Adapter | ✅ Complete (micro + meso) |
+| QarSUMO Adapter | ✅ Complete (falls back to SUMO) |
+| MATSim Adapter | ✅ Complete |
+| Execution Harness | ✅ Complete |
+| Metrics Library | ✅ Complete |
+| Toy Scenario | ✅ Validated |
+| Sioux Falls 50k | ✅ Validated |
+| Austin 50k | ✅ Validated |
+| Berlin 50k | ✅ Validated |
 
 ---
 
-## ⚙️ Setup
+## 🛠️ Quick Start
 
-From the repository root:
+### Prerequisites
 
-### 1\. Create and activate a virtual environment
+- Python 3.10+
+- SUMO 1.18+ (optional, for simulation)
+- Java 17+ (optional, for MATSim)
 
-```bash
+### Installation
+
+\`\`\`bash
+# Clone repository
+git clone <repo-url>
+cd SimForge
+
+# Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
-```
 
-You should see `(.venv)` in your shell prompt.
-
-### 2\. Install dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
-```
+\`\`\`
 
----
+### Validate a Scenario
 
-## 🗺️ Canonical Scenario Bundle
-
-The canonical toy scenario lives at:
-
-```text
-scenarios/toy_2x2_grid/
-├── network.xml
-├── demand.csv
-├── signals.xml
-├── config.xml
-└── manifest.xml
-```
-
-This bundle is **fully self-contained** and is used for:
-
-- Validator testing
-- SUMO adapter testing
-- Pipeline demonstrations
-
----
-
-## ✅ Validator
-
-The validator enforces:
-
-- `manifest.xml` structure
-- Required canonical files (`network`, `demand`, `config`)
-- Scenario ID consistency (`manifest` $\leftrightarrow$ `config`)
-- Unit consistency (`network` $\leftrightarrow$ `config`)
-- Node references (`network.xml` $\leftrightarrow$ `demand.csv`)
-- Basic demand sanity checks
-
-### Run the validator
-
-```bash
+\`\`\`bash
 python -m pipeline.validation.validate_bundle scenarios/toy_2x2_grid
-```
+\`\`\`
 
-**Expected output:**
+### Run SUMO Simulation
 
-```text
-[VALID] Scenario bundle at: .../scenarios/toy_2x2_grid
-```
+\`\`\`bash
+python -m adapters.sumo.cli scenarios/toy_2x2_grid runs/test_sumo
+sumo -c runs/test_sumo/toy.sumocfg
+\`\`\`
 
-If you intentionally corrupt the scenario (e.g., invalid node IDs), the validator will fail with explicit errors.
+### Run MATSim Simulation
 
----
+\`\`\`bash
+python -m adapters.matsim.cli scenarios/toy_2x2_grid runs/test_matsim
+\`\`\`
 
-## ➡️ SUMO Adapter (v0)
+### Run Full Benchmark
 
-The SUMO adapter converts a canonical bundle into runnable SUMO inputs.
-
-For the toy scenario it generates:
-
-```text
-out/<run_name>/
-├── net.net.xml      # SUMO network
-├── routes.rou.xml   # SUMO routes
-└── toy.sumocfg      # SUMO configuration
-```
-
-Internally, the adapter:
-
-- Parses the canonical network into a directed graph
-- Uses BFS to compute routes for each trip
-- Maps canonical links directly to SUMO edges
-- Preserves the scenario time horizon
-
-### Run the adapter directly
-
-```bash
-python -m adapters.sumo.cli scenarios/toy_2x2_grid out/sumo_toy
-```
-
-**Expected output:**
-
-```text
-[SUMO ADAPTER] Prepared SUMO inputs at: .../out/sumo_toy
-  Scenario ID : toy_2x2_grid
-  Nodes       : 4
-  Links       : 8
-  Trips       : 6
-  Has signals : True
-  Time horizon: 0 -> 3600 seconds
-```
-
----
-
-## 🏃 End-to-End Pipeline Runner
-
-The pipeline runner chains:
-
-1.  Canonical bundle validation
-2.  SUMO input generation
-
-### Run the full pipeline
-
-```bash
-python -m execution.run_sumo_scenario scenarios/toy_2x2_grid out/sumo_pipeline
-```
-
-If validation fails, the pipeline aborts before adapter execution.
-
----
-
-## 🧪 Tests
-
-Tests are written using `pytest` and cover:
-
-- Validator correctness
-- SUMO adapter output structure and summaries
-
-**Test files:**
-
-```text
-tests/
-├── test_validator_toy.py
-└── test_sumo_adapter_toy.py
-```
-
-### Run tests
-
-```bash
-pytest
-```
-
-**Expected result:**
-
-```text
-3 passed in <time>s
-```
+\`\`\`bash
+python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml
+\`\`\`
 
 ---
 
 ## 📂 Repository Structure
 
-```text
+\`\`\`
 SimForge/
-├── adapters/
-│   └── sumo/
-│       ├── sumo_adapter.py
-│       └── cli.py
-├── canonical/
-│   └── schema/
-│       ├── network_v0.md
-│       ├── demand_v0.md
-│       ├── signals_v0.md
-│       ├── config_v0.md
-│       └── manifest_v0.md
-├── execution/
-│   └── run_sumo_scenario.py
-├── pipeline/
-│   └── validation/
-│       └── validate_bundle.py
-├── scenarios/
-│   └── toy_2x2_grid/
-├── tests/
-├── out/                # generated (gitignored)
-├── .venv/              # virtual environment (gitignored)
+├── adapters/                    # Simulator-specific converters
+│   ├── sumo/                    # SUMO adapter
+│   ├── qarsumo/                 # GPU-accelerated SUMO
+│   └── matsim/                  # Activity-based simulator
+├── canonical/schema/            # Schema documentation
+├── doc/chapters/                # Thesis documentation
+├── evaluation/metrics/          # Metrics computation
+├── execution/                   # Benchmark harness
+├── pipeline/                    # Data processing
+├── runspecs/                    # Benchmark configurations
+├── scenarios/                   # Canonical bundles
+├── lib/matsim-15.0/             # MATSim JAR + libs
+├── runs/                        # Output directory (gitignored)
+├── tests/                       # pytest test suite
 ├── requirements.txt
-├── README.md
-└── TODO.md
-```
+├── SETUP.md                     # Detailed setup guide
+└── TODO.md                      # Development roadmap
+\`\`\`
 
 ---
 
-## 📝 Current Status
+## 📊 Canonical Schema
 
-| Feature                 | Status                      |
-| :---------------------- | :-------------------------- |
-| Canonical schema v0     | **implemented**             |
-| Validator               | **implemented + tested**    |
-| SUMO adapter            | **implemented** (toy scale) |
-| Pipeline runner         | **implemented**             |
-| Evaluation / metrics    | not yet implemented         |
-| Multi-simulator support | future work                 |
-
-This repository represents the **implementation baseline** for the SimForge thesis work.
+| File | Format | Description |
+|------|--------|-------------|
+| \`network.xml\` | XML | Road network (nodes + links) |
+| \`demand.csv\` | CSV | Travel demand (OD trips) |
+| \`signals.xml\` | XML | Traffic signal timing |
+| \`config.xml\` | XML | Scenario metadata |
+| \`manifest.xml\` | XML | File inventory + SHA-256 hashes |
 
 ---
 
-## 🚀 Next Steps (Planned)
+## 🔧 Adapters
 
-- Add standardized **output metrics** (e.g., travel time, throughput).
-- Execute real SUMO runs and parse outputs.
-- Introduce additional simulators using the same canonical schema.
-- Scale beyond toy scenarios.
+| Adapter | Engine | Traffic Model | Output |
+|---------|--------|---------------|--------|
+| SUMO | SUMO 1.20 | Microscopic/Mesoscopic | net.xml, rou.xml |
+| QarSUMO | QarSUMO | GPU-accelerated | SUMO + GPU config |
+| MATSim | MATSim 15 | Activity-based meso | network.xml, plans.xml |
+
+---
+
+## 🏃 Running Benchmarks
+
+\`\`\`bash
+# Quick development test
+python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml
+
+# Full 50k benchmark
+python -m execution.run_benchmark runspecs/full_50k_mesoscopic.yaml
+
+# Filter by scenario
+python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml --scenario sioux_falls_tier50k
+\`\`\`
+
+---
+
+## 📈 Metrics
+
+- **Fidelity**: RMSE, GEH, KS statistic
+- **Scalability**: Runtime, throughput (vehicles/sec)
+- **Reproducibility**: R = 1 - σ/μ
+
+---
+
+## 🧪 Testing
+
+\`\`\`bash
+pytest                           # Run all tests
+pytest tests/test_validator_toy.py -v  # Specific test
+\`\`\`
+
+---
+
+## 📚 Documentation
+
+- [SETUP.md](SETUP.md) - Detailed installation guide
+- [canonical/schema/](canonical/schema/) - Schema specifications
+- [adapters/sumo/MAPPING.md](adapters/sumo/MAPPING.md) - SUMO mapping rules
+- [adapters/matsim/MAPPING.md](adapters/matsim/MAPPING.md) - MATSim mapping rules
+- [doc/chapters/](doc/chapters/) - Thesis chapter drafts
+
+---
+
+## 🎓 Citation
+
+\`\`\`bibtex
+@mastersthesis{simforge2026,
+  author = {Dharakula, Phani},
+  title = {SimForge: A Reproducible Cross-Simulator Benchmarking Framework},
+  school = {University of Texas at Austin},
+  year = {2026}
+}
+\`\`\`
+
+---
+
+## 📄 License
+
+MIT License

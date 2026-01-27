@@ -1,0 +1,54 @@
+# Full 50k Benchmark Matrix - Mesoscopic Mode
+# All cities × All engines × Mesoscopic only
+# 
+# Cities: sioux_falls_tier50k, austin_tier50k
+# Engines: sumo, qarsumo, matsim
+# Mode: mesoscopic only
+# Note: Berlin excluded due to SUMO netconvert crash (segfault on complex network)
+
+name: full_50k_mesoscopic_benchmark
+description: Complete 50k tier benchmark across all cities and engines (mesoscopic mode)
+created: 2026-01-05
+
+runs:
+  # ============================================
+  # SIOUX FALLS (City 1 - ~3k nodes, 50k trips)
+  # ============================================
+  - scenario_id: sioux_falls_sumo_meso
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    
+  - scenario_id: sioux_falls_qarsumo_meso
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    
+  - scenario_id: sioux_falls_matsim
+    scenario_path: scenarios/sioux_falls_tier50k
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3
+
+  # ============================================
+  # AUSTIN TX (City 2 - ~45k nodes, 50k trips)
+  # ============================================
+  - scenario_id: austin_sumo_meso
+    scenario_path: scenarios/austin_tier50k
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    
+  - scenario_id: austin_qarsumo_meso
+    scenario_path: scenarios/austin_tier50k
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    
+  - scenario_id: austin_matsim
+    scenario_path: scenarios/austin_tier50k
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3

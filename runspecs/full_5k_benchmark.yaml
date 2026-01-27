@@ -1,0 +1,187 @@
+# SimForge 5k-trip Benchmark
+# All scenarios: Sioux Falls, Austin Downtown, SF Downtown (replacing Berlin)
+# Engines: SUMO (mesoscopic), QarSUMO (mesoscopic), MATSim (mesoscopic only)
+# 3 repetitions each for reproducibility analysis
+
+name: full_5k_benchmark
+
+runs:
+  # === Sioux Falls - SUMO mesoscopic ===
+  - scenario_id: sioux_falls_sumo_meso
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: sioux_falls_sumo_meso
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: sioux_falls_sumo_meso
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Sioux Falls - QarSUMO mesoscopic ===
+  - scenario_id: sioux_falls_qarsumo_meso
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: sioux_falls_qarsumo_meso
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: sioux_falls_qarsumo_meso
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Sioux Falls - MATSim mesoscopic ===
+  - scenario_id: sioux_falls_matsim
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: sioux_falls_matsim
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: sioux_falls_matsim
+    scenario_path: scenarios/sioux_falls_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Austin Downtown - SUMO mesoscopic ===
+  - scenario_id: austin_downtown_sumo_meso
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: austin_downtown_sumo_meso
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: austin_downtown_sumo_meso
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Austin Downtown - QarSUMO mesoscopic ===
+  - scenario_id: austin_downtown_qarsumo_meso
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: austin_downtown_qarsumo_meso
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: austin_downtown_qarsumo_meso
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Austin Downtown - MATSim mesoscopic ===
+  - scenario_id: austin_downtown_matsim
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: austin_downtown_matsim
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: austin_downtown_matsim
+    scenario_path: scenarios/austin_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === SF Downtown - SUMO mesoscopic ===
+  - scenario_id: sf_downtown_sumo_meso
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: sf_downtown_sumo_meso
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: sf_downtown_sumo_meso
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === SF Downtown - QarSUMO mesoscopic ===
+  - scenario_id: sf_downtown_qarsumo_meso
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: sf_downtown_qarsumo_meso
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: sf_downtown_qarsumo_meso
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === SF Downtown - MATSim mesoscopic ===
+  - scenario_id: sf_downtown_matsim
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: sf_downtown_matsim
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: sf_downtown_matsim
+    scenario_path: scenarios/sf_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
