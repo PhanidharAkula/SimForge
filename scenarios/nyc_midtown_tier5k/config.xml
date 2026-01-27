@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<config>
+  <metadata scenario_id="nyc_midtown_tier5k" created_by="simforge_generator">
+    <description>New York City Midtown Manhattan</description>
+  </metadata>
+  <time start_time_s="0" end_time_s="3600" time_step_s="1"/>
+  <random seed="42" engine_seed_mode="fixed"/>
+  <units length="meters" speed="m/s" time="seconds"/>
+  <simulation warmup_time_s="0" aggregation_interval_s="300"/>
+</config>

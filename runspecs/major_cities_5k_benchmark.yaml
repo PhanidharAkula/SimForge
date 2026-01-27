@@ -1,0 +1,187 @@
+# SimForge Major US Cities Benchmark (5k trips)
+# Chicago Downtown, NYC Midtown, LA Downtown
+# Engines: SUMO (mesoscopic), QarSUMO (mesoscopic), MATSim (mesoscopic)
+# 3 repetitions each for reproducibility analysis
+
+name: major_cities_5k_benchmark
+
+runs:
+  # === Chicago Downtown - SUMO mesoscopic ===
+  - scenario_id: chicago_downtown_sumo_meso
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: chicago_downtown_sumo_meso
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: chicago_downtown_sumo_meso
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Chicago Downtown - QarSUMO mesoscopic ===
+  - scenario_id: chicago_downtown_qarsumo_meso
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: chicago_downtown_qarsumo_meso
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: chicago_downtown_qarsumo_meso
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === Chicago Downtown - MATSim ===
+  - scenario_id: chicago_downtown_matsim
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: chicago_downtown_matsim
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: chicago_downtown_matsim
+    scenario_path: scenarios/chicago_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === NYC Midtown - SUMO mesoscopic ===
+  - scenario_id: nyc_midtown_sumo_meso
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: nyc_midtown_sumo_meso
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: nyc_midtown_sumo_meso
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === NYC Midtown - QarSUMO mesoscopic ===
+  - scenario_id: nyc_midtown_qarsumo_meso
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: nyc_midtown_qarsumo_meso
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: nyc_midtown_qarsumo_meso
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === NYC Midtown - MATSim ===
+  - scenario_id: nyc_midtown_matsim
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: nyc_midtown_matsim
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: nyc_midtown_matsim
+    scenario_path: scenarios/nyc_midtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === LA Downtown - SUMO mesoscopic ===
+  - scenario_id: la_downtown_sumo_meso
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: la_downtown_sumo_meso
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: la_downtown_sumo_meso
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: sumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === LA Downtown - QarSUMO mesoscopic ===
+  - scenario_id: la_downtown_qarsumo_meso
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: la_downtown_qarsumo_meso
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: la_downtown_qarsumo_meso
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: qarsumo
+    mode: mesoscopic
+    seed: 456
+    repetition: 3
+
+  # === LA Downtown - MATSim ===
+  - scenario_id: la_downtown_matsim
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 42
+    repetition: 1
+  - scenario_id: la_downtown_matsim
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 123
+    repetition: 2
+  - scenario_id: la_downtown_matsim
+    scenario_path: scenarios/la_downtown_tier5k
+    engine: matsim
+    mode: mesoscopic
+    seed: 456
+    repetition: 3

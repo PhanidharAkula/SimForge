@@ -61,7 +61,7 @@
     <edge id="l105" from="n51" to="n1053" numLanes="1" speed="11.1"/>
     <edge id="l1050" from="n441" to="n384" numLanes="3" speed="13.9"/>
     <edge id="l1051" from="n441" to="n688" numLanes="2" speed="16.7"/>
-    <edge id="l1052" from="n441" to="n749" numLanes="5" speed="16.7"/>
+    <edge id="l1052" from="n441" to="n749" numLanes="2" speed="16.7"/>
     <edge id="l1053" from="n441" to="n933" numLanes="2" speed="13.9"/>
     <edge id="l1054" from="n442" to="n384" numLanes="3" speed="13.9"/>
     <edge id="l1055" from="n442" to="n454" numLanes="1" speed="11.1"/>
@@ -70,8 +70,8 @@
     <edge id="l1058" from="n443" to="n409" numLanes="2" speed="16.7"/>
     <edge id="l1059" from="n443" to="n1072" numLanes="2" speed="16.7"/>
     <edge id="l106" from="n52" to="n53" numLanes="1" speed="11.1"/>
-    <edge id="l1060" from="n444" to="n378" numLanes="5" speed="13.9"/>
-    <edge id="l1061" from="n444" to="n1082" numLanes="5" speed="13.9"/>
+    <edge id="l1060" from="n444" to="n378" numLanes="4" speed="13.9"/>
+    <edge id="l1061" from="n444" to="n1082" numLanes="4" speed="13.9"/>
     <edge id="l1062" from="n445" to="n71" numLanes="1" speed="11.1"/>
     <edge id="l1063" from="n445" to="n211" numLanes="4" speed="16.7"/>
     <edge id="l1064" from="n445" to="n446" numLanes="3" speed="16.7"/>
@@ -451,7 +451,7 @@
     <edge id="l1400" from="n576" to="n575" numLanes="1" speed="11.1"/>
     <edge id="l1401" from="n577" to="n169" numLanes="2" speed="11.2"/>
     <edge id="l1402" from="n577" to="n578" numLanes="1" speed="11.1"/>
-    <edge id="l1403" from="n578" to="n403" numLanes="5" speed="11.2"/>
+    <edge id="l1403" from="n578" to="n403" numLanes="4" speed="11.2"/>
     <edge id="l1404" from="n578" to="n518" numLanes="1" speed="11.1"/>
     <edge id="l1405" from="n579" to="n400" numLanes="2" speed="16.7"/>
     <edge id="l1406" from="n580" to="n483" numLanes="1" speed="11.1"/>
@@ -594,7 +594,7 @@
     <edge id="l153" from="n71" to="n72" numLanes="6" speed="11.2"/>
     <edge id="l1530" from="n636" to="n480" numLanes="1" speed="11.1"/>
     <edge id="l1531" from="n636" to="n808" numLanes="3" speed="11.2"/>
-    <edge id="l1532" from="n637" to="n145" numLanes="5" speed="13.9"/>
+    <edge id="l1532" from="n637" to="n145" numLanes="4" speed="13.9"/>
     <edge id="l1533" from="n637" to="n521" numLanes="4" speed="13.9"/>
     <edge id="l1534" from="n638" to="n841" numLanes="3" speed="22.2"/>
     <edge id="l1535" from="n639" to="n640" numLanes="2" speed="8.9"/>
@@ -702,7 +702,7 @@
     <edge id="l1627" from="n677" to="n727" numLanes="4" speed="11.2"/>
     <edge id="l1628" from="n677" to="n1005" numLanes="4" speed="11.2"/>
     <edge id="l1629" from="n678" to="n261" numLanes="3" speed="11.2"/>
-    <edge id="l163" from="n75" to="n76" numLanes="5" speed="11.2"/>
+    <edge id="l163" from="n75" to="n76" numLanes="6" speed="11.2"/>
     <edge id="l1630" from="n678" to="n515" numLanes="2" speed="11.1"/>
     <edge id="l1631" from="n678" to="n701" numLanes="2" speed="13.9"/>
     <edge id="l1632" from="n679" to="n670" numLanes="4" speed="11.2"/>
@@ -724,7 +724,7 @@
     <edge id="l1647" from="n685" to="n757" numLanes="1" speed="11.1"/>
     <edge id="l1648" from="n686" to="n555" numLanes="1" speed="11.1"/>
     <edge id="l1649" from="n686" to="n685" numLanes="1" speed="11.1"/>
-    <edge id="l165" from="n76" to="n75" numLanes="5" speed="11.2"/>
+    <edge id="l165" from="n76" to="n75" numLanes="6" speed="11.2"/>
     <edge id="l1650" from="n686" to="n747" numLanes="1" speed="11.1"/>
     <edge id="l1651" from="n687" to="n438" numLanes="1" speed="11.1"/>
     <edge id="l1652" from="n687" to="n1005" numLanes="4" speed="11.2"/>
@@ -735,7 +735,7 @@
     <edge id="l1657" from="n689" to="n377" numLanes="3" speed="17.9"/>
     <edge id="l1658" from="n689" to="n1072" numLanes="5" speed="16.7"/>
     <edge id="l1659" from="n690" to="n339" numLanes="4" speed="16.7"/>
-    <edge id="l166" from="n76" to="n77" numLanes="5" speed="11.2"/>
+    <edge id="l166" from="n76" to="n77" numLanes="4" speed="11.2"/>
     <edge id="l1660" from="n691" to="n447" numLanes="1" speed="11.1"/>
     <edge id="l1661" from="n691" to="n692" numLanes="4" speed="16.7"/>
     <edge id="l1662" from="n692" to="n15" numLanes="4" speed="16.7"/>
@@ -768,7 +768,7 @@
     <edge id="l1687" from="n702" to="n390" numLanes="3" speed="13.9"/>
     <edge id="l1688" from="n703" to="n85" numLanes="4" speed="16.7"/>
     <edge id="l1689" from="n703" to="n501" numLanes="2" speed="8.9"/>
-    <edge id="l169" from="n77" to="n76" numLanes="5" speed="11.2"/>
+    <edge id="l169" from="n77" to="n76" numLanes="4" speed="11.2"/>
     <edge id="l1690" from="n704" to="n87" numLanes="1" speed="11.1"/>
     <edge id="l1691" from="n704" to="n393" numLanes="1" speed="11.1"/>
     <edge id="l1692" from="n704" to="n1046" numLanes="2" speed="11.2"/>
@@ -791,7 +791,7 @@
     <edge id="l1707" from="n713" to="n74" numLanes="1" speed="11.1"/>
     <edge id="l1708" from="n713" to="n341" numLanes="1" speed="11.1"/>
     <edge id="l1709" from="n714" to="n267" numLanes="3" speed="11.2"/>
-    <edge id="l171" from="n78" to="n45" numLanes="5" speed="11.2"/>
+    <edge id="l171" from="n78" to="n45" numLanes="4" speed="11.2"/>
     <edge id="l1710" from="n714" to="n675" numLanes="2" speed="11.2"/>
     <edge id="l1711" from="n714" to="n1136" numLanes="2" speed="16.7"/>
     <edge id="l1712" from="n715" to="n33" numLanes="3" speed="8.9"/>
@@ -802,7 +802,7 @@
     <edge id="l1717" from="n717" to="n479" numLanes="1" speed="8.9"/>
     <edge id="l1718" from="n717" to="n635" numLanes="3" speed="8.9"/>
     <edge id="l1719" from="n717" to="n738" numLanes="1" speed="8.9"/>
-    <edge id="l172" from="n78" to="n314" numLanes="2" speed="16.7"/>
+    <edge id="l172" from="n78" to="n314" numLanes="4" speed="16.7"/>
     <edge id="l1720" from="n718" to="n562" numLanes="3" speed="8.9"/>
     <edge id="l1721" from="n719" to="n610" numLanes="1" speed="11.1"/>
     <edge id="l1722" from="n719" to="n622" numLanes="1" speed="11.1"/>
@@ -1051,9 +1051,9 @@
     <edge id="l1941" from="n814" to="n496" numLanes="2" speed="11.1"/>
     <edge id="l1942" from="n814" to="n813" numLanes="2" speed="13.4"/>
     <edge id="l1943" from="n814" to="n1048" numLanes="2" speed="11.1"/>
-    <edge id="l1944" from="n815" to="n816" numLanes="5" speed="13.4"/>
+    <edge id="l1944" from="n815" to="n816" numLanes="3" speed="13.4"/>
     <edge id="l1945" from="n815" to="n1056" numLanes="2" speed="16.7"/>
-    <edge id="l1946" from="n816" to="n133" numLanes="7" speed="22.2"/>
+    <edge id="l1946" from="n816" to="n133" numLanes="6" speed="22.2"/>
     <edge id="l1947" from="n816" to="n818" numLanes="4" speed="22.2"/>
     <edge id="l1948" from="n816" to="n1040" numLanes="2" speed="13.4"/>
     <edge id="l1949" from="n817" to="n722" numLanes="2" speed="13.4"/>
@@ -1475,7 +1475,7 @@
     <edge id="l2322" from="n998" to="n337" numLanes="4" speed="11.2"/>
     <edge id="l2323" from="n999" to="n957" numLanes="1" speed="22.4"/>
     <edge id="l2324" from="n999" to="n1000" numLanes="2" speed="22.4"/>
-    <edge id="l2325" from="n1000" to="n205" numLanes="5" speed="16.7"/>
+    <edge id="l2325" from="n1000" to="n205" numLanes="3" speed="16.7"/>
     <edge id="l2326" from="n1001" to="n156" numLanes="1" speed="13.9"/>
     <edge id="l2327" from="n1002" to="n183" numLanes="4" speed="11.2"/>
     <edge id="l2328" from="n1002" to="n268" numLanes="3" speed="11.2"/>
@@ -1524,7 +1524,7 @@
     <edge id="l2367" from="n1021" to="n1023" numLanes="5" speed="16.7"/>
     <edge id="l2368" from="n1022" to="n1016" numLanes="1" speed="13.9"/>
     <edge id="l2369" from="n1022" to="n1023" numLanes="1" speed="13.9"/>
-    <edge id="l237" from="n98" to="n99" numLanes="5" speed="13.9"/>
+    <edge id="l237" from="n98" to="n99" numLanes="4" speed="13.9"/>
     <edge id="l2370" from="n1023" to="n139" numLanes="5" speed="16.7"/>
     <edge id="l2371" from="n1024" to="n1017" numLanes="1" speed="13.9"/>
     <edge id="l2372" from="n1025" to="n1024" numLanes="1" speed="13.9"/>
@@ -1536,7 +1536,7 @@
     <edge id="l2378" from="n1030" to="n1018" numLanes="1" speed="13.9"/>
     <edge id="l2379" from="n1030" to="n1029" numLanes="1" speed="13.9"/>
     <edge id="l238" from="n98" to="n1064" numLanes="3" speed="11.2"/>
-    <edge id="l2380" from="n1031" to="n262" numLanes="5" speed="13.4"/>
+    <edge id="l2380" from="n1031" to="n262" numLanes="4" speed="13.4"/>
     <edge id="l2381" from="n1031" to="n497" numLanes="2" speed="8.9"/>
     <edge id="l2382" from="n1032" to="n939" numLanes="4" speed="11.2"/>
     <edge id="l2383" from="n1032" to="n1091" numLanes="1" speed="13.9"/>
@@ -1546,7 +1546,7 @@
     <edge id="l2387" from="n1035" to="n203" numLanes="2" speed="13.9"/>
     <edge id="l2388" from="n1035" to="n203" numLanes="1" speed="4.5"/>
     <edge id="l2389" from="n1036" to="n619" numLanes="1" speed="11.1"/>
-    <edge id="l239" from="n99" to="n98" numLanes="5" speed="13.9"/>
+    <edge id="l239" from="n99" to="n98" numLanes="4" speed="13.9"/>
     <edge id="l2390" from="n1036" to="n642" numLanes="1" speed="11.1"/>
     <edge id="l2391" from="n1036" to="n643" numLanes="1" speed="11.1"/>
     <edge id="l2392" from="n1037" to="n959" numLanes="2" speed="13.4"/>
@@ -1655,7 +1655,7 @@
     <edge id="l2485" from="n1081" to="n449" numLanes="2" speed="11.2"/>
     <edge id="l2486" from="n1081" to="n1145" numLanes="1" speed="11.1"/>
     <edge id="l2487" from="n1082" to="n211" numLanes="5" speed="13.9"/>
-    <edge id="l2488" from="n1082" to="n444" numLanes="5" speed="13.9"/>
+    <edge id="l2488" from="n1082" to="n444" numLanes="4" speed="13.9"/>
     <edge id="l2489" from="n1083" to="n662" numLanes="2" speed="11.1"/>
     <edge id="l249" from="n102" to="n101" numLanes="1" speed="11.1"/>
     <edge id="l2490" from="n1083" to="n792" numLanes="2" speed="11.1"/>
@@ -1779,7 +1779,7 @@
     <edge id="l2597" from="n1124" to="n925" numLanes="2" speed="13.9"/>
     <edge id="l2598" from="n1124" to="n1125" numLanes="2" speed="13.9"/>
     <edge id="l2599" from="n1125" to="n1109" numLanes="2" speed="13.9"/>
-    <edge id="l26" from="n14" to="n5" numLanes="5" speed="22.4"/>
+    <edge id="l26" from="n14" to="n5" numLanes="4" speed="22.4"/>
     <edge id="l260" from="n107" to="n108" numLanes="1" speed="11.1"/>
     <edge id="l2600" from="n1125" to="n1126" numLanes="2" speed="13.9"/>
     <edge id="l2601" from="n1126" to="n709" numLanes="3" speed="8.9"/>
@@ -1917,9 +1917,9 @@
     <edge id="l330" from="n131" to="n1117" numLanes="1" speed="11.1"/>
     <edge id="l331" from="n132" to="n953" numLanes="2" speed="13.4"/>
     <edge id="l332" from="n132" to="n1041" numLanes="1" speed="13.4"/>
-    <edge id="l333" from="n133" to="n816" numLanes="7" speed="22.2"/>
+    <edge id="l333" from="n133" to="n816" numLanes="6" speed="22.2"/>
     <edge id="l334" from="n133" to="n1041" numLanes="6" speed="22.2"/>
-    <edge id="l335" from="n134" to="n135" numLanes="5" speed="16.7"/>
+    <edge id="l335" from="n134" to="n135" numLanes="4" speed="16.7"/>
     <edge id="l336" from="n134" to="n334" numLanes="2" speed="13.9"/>
     <edge id="l337" from="n134" to="n1140" numLanes="3" speed="13.9"/>
     <edge id="l338" from="n135" to="n136" numLanes="4" speed="16.7"/>
@@ -1942,13 +1942,13 @@
     <edge id="l353" from="n141" to="n1059" numLanes="5" speed="16.7"/>
     <edge id="l354" from="n142" to="n143" numLanes="5" speed="16.7"/>
     <edge id="l355" from="n142" to="n474" numLanes="1" speed="11.1"/>
-    <edge id="l356" from="n143" to="n144" numLanes="5" speed="16.7"/>
+    <edge id="l356" from="n143" to="n144" numLanes="4" speed="16.7"/>
     <edge id="l357" from="n143" to="n210" numLanes="4" speed="11.2"/>
     <edge id="l358" from="n144" to="n145" numLanes="6" speed="16.7"/>
     <edge id="l359" from="n144" to="n386" numLanes="1" speed="11.1"/>
     <edge id="l36" from="n18" to="n1008" numLanes="1" speed="11.1"/>
     <edge id="l360" from="n145" to="n146" numLanes="4" speed="16.7"/>
-    <edge id="l361" from="n145" to="n637" numLanes="5" speed="13.9"/>
+    <edge id="l361" from="n145" to="n637" numLanes="4" speed="13.9"/>
     <edge id="l362" from="n145" to="n689" numLanes="2" speed="16.7"/>
     <edge id="l363" from="n146" to="n147" numLanes="4" speed="16.7"/>
     <edge id="l364" from="n146" to="n230" numLanes="1" speed="11.1"/>
@@ -1971,7 +1971,7 @@
     <edge id="l38" from="n19" to="n847" numLanes="4" speed="11.2"/>
     <edge id="l380" from="n152" to="n153" numLanes="2" speed="13.9"/>
     <edge id="l381" from="n152" to="n263" numLanes="3" speed="13.9"/>
-    <edge id="l382" from="n152" to="n520" numLanes="2" speed="13.9"/>
+    <edge id="l382" from="n152" to="n520" numLanes="4" speed="13.9"/>
     <edge id="l383" from="n152" to="n935" numLanes="2" speed="13.9"/>
     <edge id="l384" from="n153" to="n154" numLanes="2" speed="13.9"/>
     <edge id="l385" from="n153" to="n202" numLanes="3" speed="11.2"/>
@@ -1992,7 +1992,7 @@
     <edge id="l399" from="n159" to="n920" numLanes="2" speed="11.1"/>
     <edge id="l4" from="n3" to="n4" numLanes="1" speed="11.1"/>
     <edge id="l40" from="n20" to="n434" numLanes="1" speed="11.1"/>
-    <edge id="l400" from="n159" to="n1062" numLanes="5" speed="13.9"/>
+    <edge id="l400" from="n159" to="n1062" numLanes="3" speed="13.9"/>
     <edge id="l401" from="n160" to="n161" numLanes="2" speed="13.9"/>
     <edge id="l402" from="n160" to="n919" numLanes="2" speed="8.9"/>
     <edge id="l403" from="n161" to="n162" numLanes="4" speed="13.9"/>
@@ -2099,11 +2099,11 @@
     <edge id="l495" from="n202" to="n264" numLanes="1" speed="11.1"/>
     <edge id="l496" from="n202" to="n819" numLanes="4" speed="11.2"/>
     <edge id="l497" from="n203" to="n153" numLanes="4" speed="11.2"/>
-    <edge id="l498" from="n203" to="n204" numLanes="5" speed="11.2"/>
+    <edge id="l498" from="n203" to="n204" numLanes="4" speed="11.2"/>
     <edge id="l499" from="n203" to="n520" numLanes="3" speed="13.9"/>
     <edge id="l5" from="n5" to="n16" numLanes="2" speed="22.4"/>
     <edge id="l50" from="n27" to="n8" numLanes="2" speed="16.7"/>
-    <edge id="l500" from="n204" to="n203" numLanes="5" speed="11.2"/>
+    <edge id="l500" from="n204" to="n203" numLanes="4" speed="11.2"/>
     <edge id="l501" from="n204" to="n1034" numLanes="2" speed="13.9"/>
     <edge id="l502" from="n204" to="n1034" numLanes="1" speed="13.9"/>
     <edge id="l503" from="n204" to="n1139" numLanes="3" speed="11.2"/>
@@ -2187,7 +2187,7 @@
     <edge id="l574" from="n240" to="n241" numLanes="2" speed="13.9"/>
     <edge id="l575" from="n241" to="n242" numLanes="2" speed="13.9"/>
     <edge id="l576" from="n241" to="n605" numLanes="3" speed="13.9"/>
-    <edge id="l577" from="n241" to="n1061" numLanes="2" speed="13.9"/>
+    <edge id="l577" from="n241" to="n1061" numLanes="4" speed="13.9"/>
     <edge id="l578" from="n242" to="n88" numLanes="1" speed="11.2"/>
     <edge id="l579" from="n242" to="n243" numLanes="2" speed="13.9"/>
     <edge id="l58" from="n31" to="n30" numLanes="1" speed="11.1"/>
@@ -2395,13 +2395,13 @@
     <edge id="l761" from="n313" to="n314" numLanes="2" speed="16.7"/>
     <edge id="l762" from="n313" to="n1054" numLanes="2" speed="16.7"/>
     <edge id="l763" from="n314" to="n55" numLanes="4" speed="13.9"/>
-    <edge id="l764" from="n314" to="n78" numLanes="5" speed="16.7"/>
+    <edge id="l764" from="n314" to="n78" numLanes="4" speed="16.7"/>
     <edge id="l765" from="n314" to="n313" numLanes="2" speed="16.7"/>
     <edge id="l766" from="n314" to="n434" numLanes="3" speed="13.9"/>
     <edge id="l767" from="n315" to="n46" numLanes="1" speed="11.1"/>
     <edge id="l768" from="n315" to="n78" numLanes="4" speed="16.7"/>
     <edge id="l769" from="n317" to="n130" numLanes="2" speed="8.9"/>
-    <edge id="l77" from="n39" to="n332" numLanes="5" speed="13.9"/>
+    <edge id="l77" from="n39" to="n332" numLanes="3" speed="13.9"/>
     <edge id="l770" from="n317" to="n318" numLanes="1" speed="11.1"/>
     <edge id="l771" from="n317" to="n490" numLanes="2" speed="8.9"/>
     <edge id="l772" from="n318" to="n317" numLanes="1" speed="11.1"/>
@@ -2444,7 +2444,7 @@
     <edge id="l805" from="n331" to="n332" numLanes="3" speed="13.9"/>
     <edge id="l806" from="n331" to="n353" numLanes="5" speed="11.2"/>
     <edge id="l807" from="n331" to="n1013" numLanes="5" speed="11.2"/>
-    <edge id="l808" from="n332" to="n39" numLanes="5" speed="13.9"/>
+    <edge id="l808" from="n332" to="n39" numLanes="3" speed="13.9"/>
     <edge id="l809" from="n332" to="n138" numLanes="1" speed="11.1"/>
     <edge id="l81" from="n40" to="n665" numLanes="1" speed="11.1"/>
     <edge id="l810" from="n332" to="n331" numLanes="3" speed="13.9"/>
@@ -2452,7 +2452,7 @@
     <edge id="l812" from="n333" to="n106" numLanes="2" speed="16.7"/>
     <edge id="l813" from="n333" to="n665" numLanes="1" speed="11.1"/>
     <edge id="l814" from="n334" to="n134" numLanes="2" speed="13.9"/>
-    <edge id="l815" from="n334" to="n311" numLanes="2" speed="13.9"/>
+    <edge id="l815" from="n334" to="n311" numLanes="4" speed="13.9"/>
     <edge id="l816" from="n334" to="n564" numLanes="2" speed="13.9"/>
     <edge id="l817" from="n334" to="n1039" numLanes="2" speed="13.9"/>
     <edge id="l818" from="n335" to="n336" numLanes="2" speed="11.2"/>
@@ -2504,7 +2504,7 @@
     <edge id="l86" from="n43" to="n42" numLanes="5" speed="11.2"/>
     <edge id="l860" from="n354" to="n140" numLanes="5" speed="11.2"/>
     <edge id="l861" from="n354" to="n353" numLanes="5" speed="11.2"/>
-    <edge id="l862" from="n355" to="n15" numLanes="5" speed="11.2"/>
+    <edge id="l862" from="n355" to="n15" numLanes="4" speed="11.2"/>
     <edge id="l863" from="n355" to="n532" numLanes="1" speed="11.1"/>
     <edge id="l864" from="n356" to="n172" numLanes="5" speed="11.2"/>
     <edge id="l865" from="n356" to="n695" numLanes="1" speed="11.1"/>
@@ -2523,7 +2523,7 @@
     <edge id="l877" from="n363" to="n929" numLanes="2" speed="8.9"/>
     <edge id="l878" from="n364" to="n363" numLanes="2" speed="8.9"/>
     <edge id="l879" from="n364" to="n537" numLanes="3" speed="8.9"/>
-    <edge id="l88" from="n44" to="n6" numLanes="5" speed="11.2"/>
+    <edge id="l88" from="n44" to="n6" numLanes="6" speed="11.2"/>
     <edge id="l880" from="n365" to="n364" numLanes="2" speed="8.9"/>
     <edge id="l881" from="n365" to="n718" numLanes="3" speed="8.9"/>
     <edge id="l882" from="n366" to="n365" numLanes="2" speed="8.9"/>
@@ -2549,11 +2549,11 @@
     <edge id="l90" from="n45" to="n44" numLanes="5" speed="11.2"/>
     <edge id="l900" from="n375" to="n949" numLanes="1" speed="11.1"/>
     <edge id="l901" from="n376" to="n517" numLanes="1" speed="11.1"/>
-    <edge id="l902" from="n377" to="n210" numLanes="5" speed="17.9"/>
+    <edge id="l902" from="n377" to="n210" numLanes="3" speed="17.9"/>
     <edge id="l903" from="n378" to="n68" numLanes="1" speed="11.1"/>
     <edge id="l904" from="n378" to="n377" numLanes="2" speed="11.1"/>
     <edge id="l905" from="n378" to="n443" numLanes="3" speed="13.9"/>
-    <edge id="l906" from="n378" to="n444" numLanes="5" speed="13.9"/>
+    <edge id="l906" from="n378" to="n444" numLanes="4" speed="13.9"/>
     <edge id="l907" from="n378" to="n1072" numLanes="1" speed="13.9"/>
     <edge id="l908" from="n379" to="n176" numLanes="1" speed="11.1"/>
     <edge id="l909" from="n379" to="n451" numLanes="2" speed="11.1"/>
@@ -2568,7 +2568,7 @@
     <edge id="l917" from="n383" to="n454" numLanes="4" speed="11.2"/>
     <edge id="l918" from="n384" to="n441" numLanes="3" speed="13.9"/>
     <edge id="l919" from="n384" to="n442" numLanes="3" speed="13.9"/>
-    <edge id="l92" from="n45" to="n78" numLanes="5" speed="11.2"/>
+    <edge id="l92" from="n45" to="n78" numLanes="4" speed="11.2"/>
     <edge id="l920" from="n385" to="n206" numLanes="4" speed="16.7"/>
     <edge id="l921" from="n386" to="n456" numLanes="2" speed="16.7"/>
     <edge id="l922" from="n387" to="n388" numLanes="1" speed="11.1"/>
@@ -2582,7 +2582,7 @@
     <edge id="l93" from="n46" to="n45" numLanes="4" speed="11.2"/>
     <edge id="l930" from="n390" to="n1070" numLanes="3" speed="13.4"/>
     <edge id="l931" from="n391" to="n186" numLanes="4" speed="13.4"/>
-    <edge id="l932" from="n391" to="n703" numLanes="5" speed="16.7"/>
+    <edge id="l932" from="n391" to="n703" numLanes="4" speed="16.7"/>
     <edge id="l933" from="n392" to="n159" numLanes="2" speed="11.1"/>
     <edge id="l934" from="n392" to="n391" numLanes="4" speed="13.4"/>
     <edge id="l935" from="n392" to="n501" numLanes="2" speed="11.1"/>

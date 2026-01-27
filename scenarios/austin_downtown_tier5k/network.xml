@@ -1411,12 +1411,12 @@
     <link id="l1060" from="n368" to="n367" length="91.64" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15383161" name="Butler Road"/>
     <link id="l1061" from="n368" to="n766" length="147.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1366095735, 15400011, 1462049767]" name="Jessie Street"/>
     <link id="l1062" from="n369" to="n547" length="89.33" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[15388120, 436615365, 153128279]" name="South 1st Street"/>
-    <link id="l1063" from="n369" to="n1157" length="409.42" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="[27087209, 15396293, 436615366]" name="South 1st Street"/>
+    <link id="l1063" from="n369" to="n1157" length="409.42" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[27087209, 15396293, 436615366]" name="South 1st Street"/>
     <link id="l1064" from="n370" to="n369" length="89.54" lanes="3" speed_limit="22.2" highway_type="primary" osm_way_id="[141161581, 153128278]" name="South 1st Street"/>
     <link id="l1065" from="n370" to="n547" length="102.63" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="143978649" name="West Cesar Chavez Street"/>
     <link id="l1066" from="n370" to="n1156" length="101.87" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[436614758, 51864151]" name="West Cesar Chavez Street"/>
     <link id="l1067" from="n371" to="n708" length="109.53" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="37020142" name="West 6th Street"/>
-    <link id="l1068" from="n371" to="n1175" length="109.09" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[1358681357, 130624540, 656122421, 436742886]" name="Guadalupe Street"/>
+    <link id="l1068" from="n371" to="n1175" length="109.09" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[1358681357, 130624540, 656122421, 436742886]" name="Guadalupe Street"/>
     <link id="l1069" from="n372" to="n371" length="108.02" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="201680470" name="Guadalupe Street"/>
     <link id="l107" from="n56" to="n987" length="83.67" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="25775222" name="DeLoss Dodds Way"/>
     <link id="l1070" from="n372" to="n553" length="106.57" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="655283394" name="West 7th Street"/>
@@ -1436,7 +1436,7 @@
     <link id="l1083" from="n377" to="n628" length="108.26" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15391466" name="West 13th Street"/>
     <link id="l1084" from="n378" to="n711" length="108.58" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[436609313, 436609307]" name="West 15th Street"/>
     <link id="l1085" from="n378" to="n1093" length="13.51" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="124953219" name="Guadalupe Street"/>
-    <link id="l1086" from="n379" to="n378" length="102.96" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[655283347, 1060961558]" name="Guadalupe Street"/>
+    <link id="l1086" from="n379" to="n378" length="102.96" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[655283347, 1060961558]" name="Guadalupe Street"/>
     <link id="l1087" from="n379" to="n565" length="107.61" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15396250" name="West 16th Street"/>
     <link id="l1088" from="n379" to="n712" length="109.78" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="124953230" name="West 16th Street"/>
     <link id="l1089" from="n380" to="n379" length="102.76" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[1051278520, 124953215]" name="Guadalupe Street"/>
@@ -1554,13 +1554,13 @@
     <link id="l119" from="n61" to="n425" length="55.67" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15404421" name="Cross Street"/>
     <link id="l1190" from="n419" to="n1272" length="134.93" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15383871" name="Music Lane"/>
     <link id="l1191" from="n420" to="n57" length="164.76" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="[436626561, 436626557]" name="Barton Springs Road"/>
-    <link id="l1192" from="n420" to="n137" length="609.36" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15377802, 15383995]" name="Toomey Road"/>
+    <link id="l1192" from="n420" to="n137" length="609.36" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15377802, 15383995]" name="Sterzing Street"/>
     <link id="l1193" from="n420" to="n1019" length="17.89" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15383995" name="Sterzing Street"/>
     <link id="l1194" from="n421" to="n4" length="72.15" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15384201" name="Flores Street"/>
     <link id="l1195" from="n421" to="n602" length="125.78" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15405943, 204981571, 1355952415]" name="Waller Street"/>
     <link id="l1196" from="n421" to="n841" length="100.45" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="204981571" name="Waller Street"/>
     <link id="l1197" from="n422" to="n58" length="124.09" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="15407916" name="North Interstate 35"/>
-    <link id="l1198" from="n422" to="n585" length="119.91" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1359329018, 240181068]" name="Holly Street"/>
+    <link id="l1198" from="n422" to="n585" length="119.91" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1359329018, 240181068]" name="River Street"/>
     <link id="l1199" from="n422" to="n1319" length="22.1" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="15384503" name="Holly Street"/>
     <link id="l12" from="n5" to="n4" length="42.81" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="176875328" name="North Interstate 35"/>
     <link id="l120" from="n61" to="n589" length="95.35" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15404421" name="Cross Street"/>
@@ -1653,7 +1653,7 @@
     <link id="l1279" from="n452" to="n442" length="96.35" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15408357" name="Shelley Avenue"/>
     <link id="l128" from="n64" to="n63" length="107.94" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15376722" name="Elkhart Street"/>
     <link id="l1280" from="n452" to="n453" length="86.92" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15384989" name="West 9½ Street"/>
-    <link id="l1281" from="n452" to="n902" length="90.93" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15384989, 15408359]" name="West 9½ Street"/>
+    <link id="l1281" from="n452" to="n902" length="90.93" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15384989, 15408359]" name="Shelley Avenue"/>
     <link id="l1282" from="n453" to="n452" length="86.92" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15384989" name="West 9½ Street"/>
     <link id="l1283" from="n454" to="n455" length="112.47" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1436906752, 15385193, 1353177786]" name="Campbell Street"/>
     <link id="l1284" from="n454" to="n937" length="192.72" lanes="3" speed_limit="15.6" highway_type="secondary" osm_way_id="[1095950088, 1049320759]" name="West 5th Street"/>
@@ -1715,7 +1715,7 @@
     <link id="l1334" from="n474" to="n995" length="155.64" lanes="2" speed_limit="15.6" highway_type="primary" osm_way_id="[1358659540, 656122516, 172230142, 436631367]" name="East Riverside Drive"/>
     <link id="l1335" from="n475" to="n243" length="15.33" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385819" name="Virginia Avenue"/>
     <link id="l1336" from="n475" to="n476" length="133.95" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385819" name="Virginia Avenue"/>
-    <link id="l1337" from="n475" to="n476" length="263.29" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[37548072, 15411108, 15410407]" name="Meghan Lane"/>
+    <link id="l1337" from="n475" to="n476" length="263.29" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[37548072, 15411108, 15410407]" name="Cater Drive"/>
     <link id="l1338" from="n476" to="n475" length="133.95" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385819" name="Virginia Avenue"/>
     <link id="l1339" from="n476" to="n475" length="263.29" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[37548072, 15411108, 15410407]" name="Meghan Lane"/>
     <link id="l134" from="n66" to="n516" length="109.32" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="204964767" name="West 3rd Street"/>
@@ -1730,7 +1730,7 @@
     <link id="l1348" from="n480" to="n285" length="220.31" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385935" name="Sunny Lane"/>
     <link id="l1349" from="n481" to="n478" length="95.75" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385938" name="Le Grande Avenue"/>
     <link id="l135" from="n66" to="n1225" length="111.03" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[15376856, 353040161]" name="Nueces Street"/>
-    <link id="l1350" from="n481" to="n478" length="254.45" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15385576, 15385870, 15408375]" name="Bonniview Street"/>
+    <link id="l1350" from="n481" to="n478" length="254.45" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15385576, 15385870, 15408375]" name="Hillside Avenue"/>
     <link id="l1351" from="n481" to="n482" length="52.31" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385938" name="Le Grande Avenue"/>
     <link id="l1352" from="n481" to="n807" length="116.45" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15408375" name="Hillside Avenue"/>
     <link id="l1353" from="n482" to="n481" length="52.31" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15385938" name="Le Grande Avenue"/>
@@ -1874,7 +1874,7 @@
     <link id="l1478" from="n523" to="n682" length="121.94" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="976878794" name="Brazos Street"/>
     <link id="l1479" from="n523" to="n767" length="208.41" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[150349985, 1020913091]" name="East 17th Street"/>
     <link id="l148" from="n70" to="n71" length="106.79" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[532632625, 327172652]" name="Nueces Street"/>
-    <link id="l1480" from="n523" to="n954" length="269.97" lanes="3" speed_limit="13.4" highway_type="residential" osm_way_id="[1122849200, 976878793, 977923551, 1122849199]" name="West 18th Street"/>
+    <link id="l1480" from="n523" to="n954" length="269.97" lanes="3" speed_limit="13.4" highway_type="residential" osm_way_id="[1122849200, 976878793, 977923551, 1122849199]" name="East 18th Street"/>
     <link id="l1481" from="n523" to="n1212" length="106.34" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15386846" name="East 18th Street"/>
     <link id="l1482" from="n524" to="n1212" length="109.2" lanes="3" speed_limit="13.4" highway_type="residential" osm_way_id="327170758" name="East 18th Street"/>
     <link id="l1483" from="n524" to="n1259" length="122.02" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[126405483, 436614676, 1196868509, 126405485]" name="Trinity Street"/>
@@ -1882,7 +1882,7 @@
     <link id="l1485" from="n525" to="n719" length="155.74" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15396004" name="San Bernard Street"/>
     <link id="l1486" from="n525" to="n724" length="153.23" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15396004" name="San Bernard Street"/>
     <link id="l1487" from="n525" to="n1166" length="64.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15386876" name="Hackberry Street"/>
-    <link id="l1488" from="n526" to="n682" length="269.31" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[124953704, 1378831849, 15393385, 15386921]" name="West Martin Luther King Jr Boulevard"/>
+    <link id="l1488" from="n526" to="n682" length="269.31" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[124953704, 1378831849, 15393385, 15386921]" name="East Martin Luther King Jr Boulevard"/>
     <link id="l1489" from="n526" to="n954" length="119.82" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="977923550" name="Colorado Street"/>
     <link id="l149" from="n70" to="n554" length="109.56" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="27401253" name="West 7th Street"/>
     <link id="l1490" from="n526" to="n1063" length="35.88" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="990859405" name="West Martin Luther King Jr Boulevard"/>
@@ -1895,7 +1895,7 @@
     <link id="l1497" from="n529" to="n1139" length="28.78" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[1358673130, 729333702]" name="West Martin Luther King Jr Boulevard"/>
     <link id="l1498" from="n530" to="n82" length="52.76" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="1429244109" name="West Martin Luther King Jr Boulevard"/>
     <link id="l1499" from="n530" to="n529" length="53.4" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[729333701, 1364801679]" name="West Martin Luther King Jr Boulevard"/>
-    <link id="l15" from="n7" to="n6" length="278.9" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[619453800, 164284774]" name="South Interstate 35"/>
+    <link id="l15" from="n7" to="n6" length="278.9" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[619453800, 164284774]" name="North Interstate 35"/>
     <link id="l150" from="n70" to="n555" length="106.82" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="1256341292" name="West 7th Street"/>
     <link id="l1500" from="n530" to="n579" length="198.82" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15394751" name="San Antonio Street"/>
     <link id="l1501" from="n531" to="n532" length="82.49" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="[1346318452, 1346318453, 1096737356]" name="West Martin Luther King Jr Boulevard"/>
@@ -1916,7 +1916,7 @@
     <link id="l1515" from="n535" to="n534" length="114.15" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="37020525" name="West Martin Luther King Jr Boulevard"/>
     <link id="l1516" from="n535" to="n926" length="188.31" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[15411144, 328283014]" name="Robbins Place"/>
     <link id="l1517" from="n535" to="n978" length="132.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15411666" name="Vance Circle"/>
-    <link id="l1518" from="n536" to="n483" length="153.79" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="[436614690, 37020525]" name="West Martin Luther King Jr Boulevard"/>
+    <link id="l1518" from="n536" to="n483" length="153.79" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[436614690, 37020525]" name="West Martin Luther King Jr Boulevard"/>
     <link id="l1519" from="n536" to="n537" length="50.18" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="436614692" name="West Martin Luther King Jr Boulevard"/>
     <link id="l152" from="n71" to="n72" length="109.67" lanes="4" speed_limit="13.4" highway_type="unclassified" osm_way_id="327172653" name="Nueces Street"/>
     <link id="l1520" from="n536" to="n1127" length="63.9" lanes="2" speed_limit="16.7" highway_type="primary_link" osm_way_id="166803103"/>
@@ -1954,14 +1954,14 @@
     <link id="l155" from="n72" to="n71" length="109.67" lanes="4" speed_limit="13.4" highway_type="unclassified" osm_way_id="327172653" name="Nueces Street"/>
     <link id="l1550" from="n545" to="n951" length="89.68" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="204869538" name="West Annie Street"/>
     <link id="l1551" from="n546" to="n313" length="107.79" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="204974723" name="Colorado Street"/>
-    <link id="l1552" from="n546" to="n1114" length="49.36" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[153128296, 1008898689]" name="West Cesar Chavez Street"/>
+    <link id="l1552" from="n546" to="n1114" length="49.36" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[153128296, 1008898689]" name="West Cesar Chavez Street"/>
     <link id="l1553" from="n546" to="n1239" length="70.43" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[1008898690, 968033523]" name="West Cesar Chavez Street"/>
     <link id="l1554" from="n547" to="n314" length="107.88" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="656122436" name="Lavaca Street"/>
     <link id="l1555" from="n547" to="n370" length="102.63" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="143978649" name="West Cesar Chavez Street"/>
     <link id="l1556" from="n547" to="n1114" length="66.67" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="144897554" name="West Cesar Chavez Street"/>
     <link id="l1557" from="n548" to="n316" length="107.72" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[876463369, 15394746]" name="San Antonio Street"/>
     <link id="l1558" from="n548" to="n1156" length="12.15" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="436614756" name="West Cesar Chavez Street"/>
-    <link id="l1559" from="n548" to="n1224" length="109.04" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[204964772, 436614910]" name="West Cesar Chavez Street"/>
+    <link id="l1559" from="n548" to="n1224" length="109.04" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[204964772, 436614910]" name="West Cesar Chavez Street"/>
     <link id="l156" from="n72" to="n73" length="109.38" lanes="4" speed_limit="13.4" highway_type="unclassified" osm_way_id="327172653" name="Nueces Street"/>
     <link id="l1560" from="n549" to="n595" length="146.51" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436746730, 436746731, 436746732, 172196302, 328078172]" name="B R Reynolds Drive"/>
     <link id="l1561" from="n549" to="n1128" length="19.65" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="410285380" name="West Cesar Chavez Street"/>
@@ -2005,7 +2005,7 @@
     <link id="l1596" from="n563" to="n564" length="130.21" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[1095943084, 1095943085]" name="Lavaca Street"/>
     <link id="l1597" from="n564" to="n273" length="108.59" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="204989756" name="Lavaca Street"/>
     <link id="l1598" from="n564" to="n377" length="108.22" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="1052938884" name="West 13th Street"/>
-    <link id="l1599" from="n564" to="n848" length="204.19" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[30756755, 1052938884]" name="West 13th Street"/>
+    <link id="l1599" from="n564" to="n848" length="204.19" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[30756755, 1052938884]" name="Colorado Street"/>
     <link id="l16" from="n8" to="n7" length="189.06" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[27087249, 27087250]"/>
     <link id="l160" from="n73" to="n74" length="107.76" lanes="4" speed_limit="13.4" highway_type="unclassified" osm_way_id="327172653" name="Nueces Street"/>
     <link id="l1600" from="n565" to="n379" length="107.61" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15396250" name="West 16th Street"/>
@@ -2070,7 +2070,7 @@
     <link id="l1654" from="n584" to="n113" length="94.83" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="392803158" name="River Street"/>
     <link id="l1655" from="n584" to="n1233" length="8.55" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="392803160"/>
     <link id="l1656" from="n585" to="n113" length="42.68" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="392803158" name="River Street"/>
-    <link id="l1657" from="n585" to="n422" length="119.91" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1359329018, 240181068]" name="Holly Street"/>
+    <link id="l1657" from="n585" to="n422" length="119.91" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1359329018, 240181068]" name="River Street"/>
     <link id="l1658" from="n585" to="n923" length="144.89" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="328078185" name="North Interstate 35"/>
     <link id="l1659" from="n586" to="n1001" length="63.01" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="126266028" name="Jester Circle"/>
     <link id="l166" from="n74" to="n1283" length="110.22" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="204869530" name="West 11th Street"/>
@@ -2110,7 +2110,7 @@
     <link id="l1690" from="n598" to="n695" length="128.89" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15394206" name="Garner Avenue"/>
     <link id="l1691" from="n599" to="n210" length="69.53" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15393313, 1069246525]" name="Red River Street"/>
     <link id="l1692" from="n599" to="n600" length="104.08" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15390396" name="Driskill Street"/>
-    <link id="l1693" from="n599" to="n931" length="197.07" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15393313, 15405636]" name="Davis Street"/>
+    <link id="l1693" from="n599" to="n931" length="197.07" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15393313, 15405636]" name="Red River Street"/>
     <link id="l1694" from="n600" to="n599" length="104.08" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15390396" name="Driskill Street"/>
     <link id="l1695" from="n600" to="n601" length="100.4" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15390396" name="Driskill Street"/>
     <link id="l1696" from="n600" to="n931" length="94.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="135623987" name="Rainey Street"/>
@@ -2138,7 +2138,7 @@
     <link id="l1715" from="n608" to="n818" length="209.5" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15400010" name="Jessie Street"/>
     <link id="l1716" from="n608" to="n1303" length="46.48" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="239370137" name="Treadwell Street"/>
     <link id="l1717" from="n609" to="n608" length="85.48" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="239370137" name="Treadwell Street"/>
-    <link id="l1718" from="n609" to="n818" length="306.9" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15399283, 631968150]" name="Juliet Street"/>
+    <link id="l1718" from="n609" to="n818" length="306.9" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15399283, 631968150]" name="Ethel Street"/>
     <link id="l1719" from="n609" to="n1163" length="98.97" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="239370137" name="Treadwell Street"/>
     <link id="l172" from="n76" to="n628" length="108.61" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15391466" name="West 13th Street"/>
     <link id="l1720" from="n610" to="n521" length="96.13" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15404746, 328078173, 1061358869, 328078174]" name="Baylor Street"/>
@@ -2183,7 +2183,7 @@
     <link id="l1756" from="n626" to="n748" length="91.95" lanes="1" speed_limit="11.2" highway_type="tertiary" osm_way_id="972610617" name="Bouldin Avenue"/>
     <link id="l1757" from="n626" to="n895" length="102.08" lanes="1" speed_limit="11.2" highway_type="tertiary" osm_way_id="972610617" name="Bouldin Avenue"/>
     <link id="l1758" from="n627" to="n543" length="170.0" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15391076" name="West Monroe Street"/>
-    <link id="l1759" from="n627" to="n690" length="162.37" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[33710691, 33710805]" name="Jewell Street"/>
+    <link id="l1759" from="n627" to="n690" length="162.37" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[33710691, 33710805]" name="South 7th Street"/>
     <link id="l176" from="n77" to="n276" length="109.11" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="25758412" name="West 14th Street"/>
     <link id="l1760" from="n627" to="n691" length="151.03" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[33710691, 202839206]" name="West Milton Street"/>
     <link id="l1761" from="n628" to="n76" length="108.61" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15391466" name="West 13th Street"/>
@@ -2258,9 +2258,9 @@
     <link id="l1823" from="n648" to="n847" length="59.32" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15404031" name="West 9th Street"/>
     <link id="l1824" from="n648" to="n903" length="115.81" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15404031" name="West 9th Street"/>
     <link id="l1825" from="n649" to="n594" length="280.71" lanes="2" speed_limit="15.6" highway_type="primary" osm_way_id="[150350008, 1025315927]" name="North Lamar Boulevard"/>
-    <link id="l1826" from="n649" to="n650" length="148.98" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436742887, 436625355, 436625357, 620855473, 620855474]" name="North Lamar Boulevard"/>
+    <link id="l1826" from="n649" to="n650" length="148.98" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436742887, 436625355, 436625357, 620855473, 620855474]" name="North Lamar Boulevard"/>
     <link id="l1827" from="n649" to="n929" length="14.86" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="143948212" name="West 5th Street"/>
-    <link id="l1828" from="n650" to="n649" length="148.98" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436742887, 436625355, 436625357, 620855473, 620855474]" name="North Lamar Boulevard"/>
+    <link id="l1828" from="n650" to="n649" length="148.98" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436742887, 436625355, 436625357, 620855473, 620855474]" name="North Lamar Boulevard"/>
     <link id="l1829" from="n650" to="n783" length="105.14" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="37963635" name="West 6th Street"/>
     <link id="l183" from="n79" to="n712" length="107.19" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="124953231" name="West 16th Street"/>
     <link id="l1830" from="n650" to="n1328" length="292.48" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436625351, 1040915881, 1040915884, 1040916271, 1040916272, 150350011]" name="North Lamar Boulevard"/>
@@ -2346,7 +2346,7 @@
     <link id="l1902" from="n675" to="n770" length="115.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="959569085" name="Juliet Street"/>
     <link id="l1903" from="n675" to="n818" length="91.5" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15399283" name="Juliet Street"/>
     <link id="l1904" from="n676" to="n367" length="148.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1214460844, 15392918]" name="Josephine Street"/>
-    <link id="l1905" from="n676" to="n765" length="68.27" lanes="7" speed_limit="16.7" highway_type="secondary" osm_way_id="[239369780, 436746733, 436625630]" name="Barton Springs Road"/>
+    <link id="l1905" from="n676" to="n765" length="68.27" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[239369780, 436746733, 436625630]" name="Barton Springs Road"/>
     <link id="l1906" from="n676" to="n766" length="92.99" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[620852880, 1366095732, 620852879]" name="Barton Springs Road"/>
     <link id="l1907" from="n677" to="n122" length="109.6" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[436610717, 315904413]" name="Red River Street"/>
     <link id="l1908" from="n677" to="n678" length="107.22" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1042384577" name="Red River Street"/>
@@ -2357,14 +2357,14 @@
     <link id="l1912" from="n678" to="n677" length="107.22" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1042384577" name="Red River Street"/>
     <link id="l1913" from="n679" to="n363" length="108.85" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="1040752718" name="East 10th Street"/>
     <link id="l1914" from="n679" to="n411" length="108.84" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="315821986" name="Red River Street"/>
-    <link id="l1915" from="n679" to="n499" length="108.85" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[436610719, 204989759]" name="Red River Street"/>
+    <link id="l1915" from="n679" to="n499" length="108.85" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[436610719, 204989759]" name="Red River Street"/>
     <link id="l1916" from="n680" to="n109" length="301.88" lanes="2" speed_limit="6.7" highway_type="unclassified" osm_way_id="[15404090, 1176353659]" name="Clyde Littlefield Drive"/>
-    <link id="l1917" from="n680" to="n681" length="449.36" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[128247531, 328089360, 1096751890, 1096751891, 436632378, 436632380]" name="Red River Street"/>
+    <link id="l1917" from="n680" to="n681" length="449.36" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[128247531, 328089360, 1096751890, 1096751891, 436632378, 436632380]" name="Red River Street"/>
     <link id="l1918" from="n680" to="n907" length="49.42" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="126532067" name="Clyde Littlefield Drive"/>
-    <link id="l1919" from="n681" to="n680" length="449.36" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[128247531, 328089360, 1096751890, 1096751891, 436632378, 436632380]" name="Red River Street"/>
+    <link id="l1919" from="n681" to="n680" length="449.36" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[128247531, 328089360, 1096751890, 1096751891, 436632378, 436632380]" name="Red River Street"/>
     <link id="l192" from="n81" to="n836" length="86.07" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="1256341291" name="West 18th Street"/>
     <link id="l1920" from="n682" to="n523" length="121.94" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="976878794" name="Brazos Street"/>
-    <link id="l1921" from="n682" to="n526" length="269.31" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[124953704, 15393385, 1378831849, 15386921]" name="West Martin Luther King Jr Boulevard"/>
+    <link id="l1921" from="n682" to="n526" length="269.31" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[124953704, 15393385, 1378831849, 15386921]" name="East Martin Luther King Jr Boulevard"/>
     <link id="l1922" from="n682" to="n683" length="111.17" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="15393385" name="East Martin Luther King Jr Boulevard"/>
     <link id="l1923" from="n682" to="n1001" length="144.54" lanes="3" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1203449995, 129014477]" name="Brazos Street"/>
     <link id="l1924" from="n683" to="n682" length="111.17" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="15393385" name="East Martin Luther King Jr Boulevard"/>
@@ -2391,7 +2391,7 @@
     <link id="l1943" from="n689" to="n688" length="186.84" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15393746" name="South 6th Street"/>
     <link id="l1944" from="n689" to="n690" length="180.95" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15393746" name="South 6th Street"/>
     <link id="l1945" from="n690" to="n542" length="101.64" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="33710805" name="Jewell Street"/>
-    <link id="l1946" from="n690" to="n627" length="162.37" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[33710691, 33710805]" name="Jewell Street"/>
+    <link id="l1946" from="n690" to="n627" length="162.37" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[33710691, 33710805]" name="South 7th Street"/>
     <link id="l1947" from="n690" to="n689" length="180.95" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15393746" name="South 6th Street"/>
     <link id="l1948" from="n691" to="n544" length="114.81" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="202839206" name="West Milton Street"/>
     <link id="l1949" from="n691" to="n627" length="151.03" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[33710691, 202839206]" name="West Milton Street"/>
@@ -2433,7 +2433,7 @@
     <link id="l1981" from="n702" to="n494" length="312.32" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="316536344" name="Chalmers Avenue"/>
     <link id="l1982" from="n702" to="n701" length="97.69" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15394549" name="East 8th Street"/>
     <link id="l1983" from="n702" to="n914" length="106.81" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="316536344" name="Chalmers Avenue"/>
-    <link id="l1984" from="n703" to="n0" length="222.11" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15394552, 15373468]" name="East 8th Street"/>
+    <link id="l1984" from="n703" to="n0" length="222.11" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15394552, 15373468]" name="Embassy Drive"/>
     <link id="l1985" from="n703" to="n704" length="85.28" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="150349990" name="East 8th Street"/>
     <link id="l1986" from="n703" to="n1217" length="26.88" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="655283381" name="North Interstate 35"/>
     <link id="l1987" from="n704" to="n678" length="217.43" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[37749561, 176875114, 1042384578]" name="East 8th Street"/>
@@ -2450,7 +2450,7 @@
     <link id="l1997" from="n709" to="n72" length="107.69" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="328078199" name="West 9th Street"/>
     <link id="l1998" from="n709" to="n99" length="109.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="27401243" name="San Antonio Street"/>
     <link id="l1999" from="n709" to="n373" length="110.99" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="41287629" name="West 9th Street"/>
-    <link id="l2" from="n0" to="n703" length="222.11" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15394552, 15373468]" name="East 8th Street"/>
+    <link id="l2" from="n0" to="n703" length="222.11" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15394552, 15373468]" name="Embassy Drive"/>
     <link id="l20" from="n10" to="n9" length="111.15" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="165928083" name="Newfield Lane"/>
     <link id="l200" from="n84" to="n1279" length="132.88" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="128248207" name="Nueces Street"/>
     <link id="l2000" from="n709" to="n437" length="109.48" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="27401243" name="San Antonio Street"/>
@@ -2538,17 +2538,17 @@
     <link id="l2075" from="n733" to="n641" length="132.82" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="37020524" name="West 16th Street"/>
     <link id="l2076" from="n733" to="n734" length="62.26" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="37020524" name="West 16th Street"/>
     <link id="l2077" from="n734" to="n733" length="62.26" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="37020524" name="West 16th Street"/>
-    <link id="l2078" from="n735" to="n736" length="163.21" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="[144469641, 436615277, 436615278, 436615279]" name="South 1st Street"/>
-    <link id="l2079" from="n735" to="n763" length="146.27" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631369, 263445403, 436615276]" name="East Riverside Drive"/>
+    <link id="l2078" from="n735" to="n736" length="163.21" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[144469641, 436615277, 436615278, 436615279]" name="South 1st Street"/>
+    <link id="l2079" from="n735" to="n763" length="146.27" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436631369, 263445403, 436615276]" name="East Riverside Drive"/>
     <link id="l208" from="n88" to="n89" length="120.48" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436631400, 436631402]" name="South Congress Avenue"/>
     <link id="l2080" from="n735" to="n1133" length="48.44" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="174371442" name="East Riverside Drive"/>
     <link id="l2081" from="n735" to="n1157" length="50.85" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="436615366" name="South 1st Street"/>
-    <link id="l2082" from="n736" to="n735" length="163.21" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="[144469641, 436615277, 436615278, 436615279]" name="South 1st Street"/>
-    <link id="l2083" from="n736" to="n737" length="639.51" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[775418981, 775418982, 204869512, 707626281, 707626283, 707626285, 436631385]" name="South 1st Street"/>
-    <link id="l2084" from="n736" to="n763" length="158.98" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631360, 436631362, 436631364]" name="Barton Springs Road"/>
+    <link id="l2082" from="n736" to="n735" length="163.21" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[144469641, 436615277, 436615278, 436615279]" name="South 1st Street"/>
+    <link id="l2083" from="n736" to="n737" length="639.51" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[775418981, 775418982, 204869512, 707626281, 707626283, 707626285, 436631385]" name="South 1st Street"/>
+    <link id="l2084" from="n736" to="n763" length="158.98" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436631360, 436631362, 436631364]" name="Barton Springs Road"/>
     <link id="l2085" from="n736" to="n1278" length="223.0" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="[1095232264, 970376806]" name="Barton Springs Road"/>
     <link id="l2086" from="n737" to="n48" length="92.05" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15400470" name="Copeland Street"/>
-    <link id="l2087" from="n737" to="n736" length="639.51" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[775418981, 775418982, 204869512, 707626281, 707626283, 707626285, 436631385]" name="South 1st Street"/>
+    <link id="l2087" from="n737" to="n736" length="639.51" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[775418981, 775418982, 204869512, 707626281, 707626283, 707626285, 436631385]" name="South 1st Street"/>
     <link id="l2088" from="n737" to="n738" length="225.86" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[775418984, 775418981, 775418983]" name="South 1st Street"/>
     <link id="l2089" from="n738" to="n737" length="225.86" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[775418984, 775418981, 775418983]" name="South 1st Street"/>
     <link id="l209" from="n88" to="n419" length="50.06" lanes="1" speed_limit="13.4" highway_type="residential" osm_way_id="15398989" name="Academy Drive"/>
@@ -2623,14 +2623,14 @@
     <link id="l2151" from="n762" to="n1082" length="90.52" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="130624547" name="Oakland Avenue"/>
     <link id="l2152" from="n763" to="n93" length="221.65" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436631361, 104137282, 204869452]" name="Barton Springs Road"/>
     <link id="l2153" from="n763" to="n232" length="78.52" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631371, 619360110]" name="East Riverside Drive"/>
-    <link id="l2154" from="n763" to="n735" length="146.27" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631369, 263445403, 436615276]" name="East Riverside Drive"/>
-    <link id="l2155" from="n763" to="n736" length="158.98" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631360, 436631362, 436631364]" name="Barton Springs Road"/>
-    <link id="l2156" from="n764" to="n264" length="231.11" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436615057, 436615058, 698056815, 619375215]" name="Barton Springs Road"/>
+    <link id="l2154" from="n763" to="n735" length="146.27" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436631369, 263445403, 436615276]" name="East Riverside Drive"/>
+    <link id="l2155" from="n763" to="n736" length="158.98" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436631360, 436631362, 436631364]" name="Barton Springs Road"/>
+    <link id="l2156" from="n764" to="n264" length="231.11" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436615057, 436615058, 698056815, 619375215]" name="Barton Springs Road"/>
     <link id="l2157" from="n764" to="n311" length="115.13" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="960849265" name="Bouldin Avenue"/>
-    <link id="l2158" from="n764" to="n1278" length="131.27" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436615056, 970376807]" name="Barton Springs Road"/>
-    <link id="l2159" from="n765" to="n286" length="264.99" lanes="7" speed_limit="22.2" highway_type="primary" osm_way_id="[1095013751, 150220101, 436625631]" name="South Lamar Boulevard"/>
+    <link id="l2158" from="n764" to="n1278" length="131.27" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436615056, 970376807]" name="Barton Springs Road"/>
+    <link id="l2159" from="n765" to="n286" length="264.99" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[1095013751, 150220101, 436625631]" name="South Lamar Boulevard"/>
     <link id="l216" from="n90" to="n874" length="118.53" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15402568" name="West Gibson Street"/>
-    <link id="l2160" from="n765" to="n676" length="68.27" lanes="7" speed_limit="16.7" highway_type="secondary" osm_way_id="[239369780, 436746733, 436625630]" name="Barton Springs Road"/>
+    <link id="l2160" from="n765" to="n676" length="68.27" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[239369780, 436746733, 436625630]" name="Barton Springs Road"/>
     <link id="l2161" from="n765" to="n1147" length="41.49" lanes="6" speed_limit="15.6" highway_type="primary" osm_way_id="436626267" name="Barton Springs Road"/>
     <link id="l2162" from="n765" to="n1148" length="43.54" lanes="3" speed_limit="15.6" highway_type="primary" osm_way_id="150220100" name="South Lamar Boulevard"/>
     <link id="l2163" from="n766" to="n242" length="151.89" lanes="2" speed_limit="15.6" highway_type="secondary" osm_way_id="[436626560, 422075757]" name="Barton Springs Road"/>
@@ -2648,11 +2648,11 @@
     <link id="l2174" from="n769" to="n1237" length="122.07" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[619375200, 619375198, 619375206]" name="South Lamar Boulevard"/>
     <link id="l2175" from="n770" to="n286" length="141.58" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="150220101" name="South Lamar Boulevard"/>
     <link id="l2176" from="n770" to="n675" length="115.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="959569085" name="Juliet Street"/>
-    <link id="l2177" from="n770" to="n1304" length="215.7" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436634458, 150220101]" name="South Lamar Boulevard"/>
+    <link id="l2177" from="n770" to="n1304" length="215.7" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436634458, 150220101]" name="South Lamar Boulevard"/>
     <link id="l2178" from="n771" to="n760" length="85.96" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="1025315928" name="South Lamar Boulevard"/>
     <link id="l2179" from="n771" to="n873" length="97.64" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15402567" name="West Gibson Street"/>
     <link id="l218" from="n91" to="n92" length="108.05" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436631393, 436631402]" name="South Congress Avenue"/>
-    <link id="l2180" from="n771" to="n1304" length="140.56" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[1025315928, 436634457]" name="South Lamar Boulevard"/>
+    <link id="l2180" from="n771" to="n1304" length="140.56" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[1025315928, 436634457]" name="South Lamar Boulevard"/>
     <link id="l2181" from="n772" to="n638" length="312.02" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="[327172664, 15397905, 37020145]" name="West 11th Street"/>
     <link id="l2182" from="n772" to="n639" length="147.57" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="37020523" name="West 12th Street"/>
     <link id="l2183" from="n772" to="n652" length="152.33" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[37963641, 37963642, 37020523, 436742889]" name="West 12th Street"/>
@@ -2729,7 +2729,7 @@
     <link id="l2247" from="n798" to="n674" length="131.73" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15398170" name="Newton Street"/>
     <link id="l2248" from="n798" to="n799" length="136.07" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15398170" name="Newton Street"/>
     <link id="l2249" from="n798" to="n874" length="65.26" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15402568" name="West Gibson Street"/>
-    <link id="l225" from="n93" to="n1242" length="474.55" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[27087222, 436624323, 15377301, 204869518]" name="South Congress Avenue"/>
+    <link id="l225" from="n93" to="n1242" length="474.55" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[27087222, 436624323, 15377301, 204869518]" name="Congress Avenue"/>
     <link id="l2250" from="n799" to="n798" length="136.07" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15398170" name="Newton Street"/>
     <link id="l2251" from="n799" to="n917" length="92.08" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="15404602" name="West Elizabeth Street"/>
     <link id="l2252" from="n799" to="n1149" length="15.58" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="15404602" name="West Elizabeth Street"/>
@@ -2740,7 +2740,7 @@
     <link id="l2257" from="n801" to="n802" length="227.2" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1211967855" name="Windsor Road"/>
     <link id="l2258" from="n801" to="n1322" length="42.03" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="1211967854" name="Marshall Lane"/>
     <link id="l2259" from="n801" to="n1324" length="10.25" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1211967850" name="Windsor Road"/>
-    <link id="l226" from="n94" to="n93" length="207.07" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[618799268, 436624325, 436624324, 756867597, 436631391, 263445404, 436631389, 618799263]" name="South Congress Avenue"/>
+    <link id="l226" from="n94" to="n93" length="207.07" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[618799268, 436624325, 436624324, 756867597, 436631391, 263445404, 436631389, 618799263]" name="South Congress Avenue"/>
     <link id="l2260" from="n802" to="n801" length="227.2" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1211967855" name="Windsor Road"/>
     <link id="l2261" from="n802" to="n1321" length="10.48" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1386914574" name="Windsor Road"/>
     <link id="l2262" from="n803" to="n111" length="48.58" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="1389767406" name="Enfield Road"/>
@@ -2749,7 +2749,7 @@
     <link id="l2265" from="n804" to="n803" length="304.38" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15398632" name="Wethersfield Road"/>
     <link id="l2266" from="n805" to="n39" length="109.94" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[436616713, 143948178]" name="North Interstate 35"/>
     <link id="l2267" from="n805" to="n1243" length="12.87" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="436726684" name="East 7th Street"/>
-    <link id="l2268" from="n806" to="n249" length="66.64" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[1446247800, 15404282, 436726691, 1446247799]" name="East 7th Street"/>
+    <link id="l2268" from="n806" to="n249" length="66.64" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[1446247800, 15404282, 436726691, 1446247799]" name="East 7th Street"/>
     <link id="l2269" from="n806" to="n1331" length="24.48" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="143948188" name="North Interstate 35"/>
     <link id="l227" from="n94" to="n232" length="148.23" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[201711352, 436631368, 436631372, 619360110]" name="East Riverside Drive"/>
     <link id="l2270" from="n807" to="n479" length="61.77" lanes="1" speed_limit="13.4" highway_type="residential" osm_way_id="15398989" name="Academy Drive"/>
@@ -2762,18 +2762,18 @@
     <link id="l2277" from="n810" to="n497" length="126.57" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="655283379" name="San Jacinto Boulevard"/>
     <link id="l2278" from="n810" to="n617" length="106.91" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="131544905" name="East 12th Street"/>
     <link id="l2279" from="n811" to="n618" length="108.26" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="15402461" name="East 13th Street"/>
-    <link id="l228" from="n94" to="n1023" length="423.12" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[1220952294, 655414183, 1354700936, 1220952295, 655414189, 619360111, 1354735600, 174371445, 263445402]" name="East Riverside Drive"/>
+    <link id="l228" from="n94" to="n1023" length="423.12" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[1220952294, 655414183, 1354700936, 1220952295, 655414189, 619360111, 1354735600, 174371445, 263445402]" name="East Riverside Drive"/>
     <link id="l2280" from="n811" to="n1043" length="127.6" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[764593065, 764593066]" name="San Jacinto Boulevard"/>
-    <link id="l2281" from="n811" to="n1045" length="206.9" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[327170752, 258410785]" name="East 13th Street"/>
+    <link id="l2281" from="n811" to="n1045" length="206.9" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[327170752, 258410785]" name="Brazos Street"/>
     <link id="l2282" from="n812" to="n1100" length="101.87" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="764477608" name="San Jacinto Boulevard"/>
     <link id="l2283" from="n812" to="n1317" length="209.47" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[1049211650, 1049211651, 15407372]" name="East 16th Street"/>
     <link id="l2284" from="n813" to="n238" length="222.3" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="15399066" name="San Jacinto Boulevard"/>
     <link id="l2285" from="n813" to="n620" length="107.89" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="15399066" name="San Jacinto Boulevard"/>
     <link id="l2286" from="n813" to="n1291" length="146.24" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1054317148, 15408534]" name="East 20th Street"/>
-    <link id="l2287" from="n814" to="n296" length="174.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15407267, 15399173]" name="Riverview Street"/>
+    <link id="l2287" from="n814" to="n296" length="174.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15407267, 15399173]" name="Chalmers Avenue"/>
     <link id="l2288" from="n814" to="n395" length="75.17" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15399173" name="Riverview Street"/>
     <link id="l2289" from="n814" to="n1158" length="115.59" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15407271" name="Chalmers Avenue"/>
-    <link id="l229" from="n94" to="n1266" length="231.19" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436631395, 436631399, 1096714154, 775406588, 775406586, 775406587, 201711356, 263445405, 436631390]" name="South Congress Avenue"/>
+    <link id="l229" from="n94" to="n1266" length="231.19" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436631395, 436631399, 1096714154, 775406588, 775406586, 775406587, 201711356, 263445405, 436631390]" name="South Congress Avenue"/>
     <link id="l2290" from="n815" to="n225" length="134.5" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15399173" name="Riverview Street"/>
     <link id="l2291" from="n815" to="n253" length="134.51" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15399173" name="Riverview Street"/>
     <link id="l2292" from="n815" to="n298" length="104.73" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15404989" name="Anthony Street"/>
@@ -2783,7 +2783,7 @@
     <link id="l2296" from="n817" to="n815" length="102.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15404989" name="Anthony Street"/>
     <link id="l2297" from="n817" to="n1021" length="125.95" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15399270" name="Jesse E Segovia Street"/>
     <link id="l2298" from="n818" to="n608" length="209.5" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15400010" name="Jessie Street"/>
-    <link id="l2299" from="n818" to="n609" length="306.9" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15399283, 631968150]" name="Juliet Street"/>
+    <link id="l2299" from="n818" to="n609" length="306.9" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="[15399283, 631968150]" name="Ethel Street"/>
     <link id="l23" from="n12" to="n5" length="122.43" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="328078206"/>
     <link id="l230" from="n95" to="n96" length="133.16" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1036558672, 15377309]" name="West 8th Street"/>
     <link id="l2300" from="n818" to="n675" length="91.5" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15399283" name="Juliet Street"/>
@@ -2876,7 +2876,7 @@
     <link id="l238" from="n98" to="n99" length="109.19" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="41287628" name="West 8th Street"/>
     <link id="l2380" from="n847" to="n861" length="82.77" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15404031" name="West 9th Street"/>
     <link id="l2381" from="n848" to="n563" length="65.91" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="15401009" name="West 12th Street"/>
-    <link id="l2382" from="n848" to="n564" length="204.19" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[30756755, 1052938884]" name="West 13th Street"/>
+    <link id="l2382" from="n848" to="n564" length="204.19" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="[30756755, 1052938884]" name="Colorado Street"/>
     <link id="l2383" from="n848" to="n1143" length="90.77" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="327172650" name="Colorado Street"/>
     <link id="l2384" from="n849" to="n652" length="102.96" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="620833659" name="West 12th Street"/>
     <link id="l2385" from="n849" to="n751" length="76.75" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="1095013747" name="West 12th Street"/>
@@ -2918,7 +2918,7 @@
     <link id="l2417" from="n859" to="n858" length="102.11" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15401373" name="South 3rd Street"/>
     <link id="l2418" from="n859" to="n896" length="145.04" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15404603" name="West Elizabeth Street"/>
     <link id="l2419" from="n860" to="n787" length="142.16" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="39369513" name="Pressler Street"/>
-    <link id="l242" from="n99" to="n372" length="205.81" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[27401241, 149706995]" name="West 7th Street"/>
+    <link id="l242" from="n99" to="n372" length="205.81" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[27401241, 149706995]" name="San Antonio Street"/>
     <link id="l2420" from="n860" to="n899" length="170.67" lanes="4" speed_limit="15.6" highway_type="secondary" osm_way_id="165928084" name="West 5th Street"/>
     <link id="l2421" from="n860" to="n1221" length="116.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="332353488" name="Pressler Street"/>
     <link id="l2422" from="n861" to="n787" length="332.02" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="269074931" name="Pressler Street"/>
@@ -3062,7 +3062,7 @@
     <link id="l2547" from="n909" to="n824" length="190.68" lanes="2" speed_limit="15.6" highway_type="tertiary" osm_way_id="128247523" name="Manor Road"/>
     <link id="l2548" from="n909" to="n908" length="87.53" lanes="2" speed_limit="15.6" highway_type="tertiary" osm_way_id="[1095232297, 144897565]" name="Manor Road"/>
     <link id="l2549" from="n910" to="n698" length="112.53" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="15405941" name="Waller Street"/>
-    <link id="l255" from="n104" to="n108" length="630.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15407111, 15377359]" name="Parkway"/>
+    <link id="l255" from="n104" to="n108" length="630.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15407111, 15377359]" name="Kingsbury Street"/>
     <link id="l2550" from="n910" to="n893" length="80.96" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[1343844416, 1446247802]" name="East 7th Street"/>
     <link id="l2551" from="n910" to="n911" length="22.44" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="1343844415" name="East 7th Street"/>
     <link id="l2552" from="n911" to="n127" length="109.59" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="655501627" name="Waller Street"/>
@@ -3118,7 +3118,7 @@
     <link id="l2598" from="n927" to="n855" length="351.01" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15405061" name="Pease Road"/>
     <link id="l2599" from="n927" to="n939" length="125.25" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="204989749" name="Enfield Road"/>
     <link id="l26" from="n13" to="n1075" length="30.66" lanes="1" speed_limit="16.7" highway_type="primary_link" osm_way_id="150350061"/>
-    <link id="l260" from="n106" to="n1327" length="147.17" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="[15377360, 436625358]" name="Parkway"/>
+    <link id="l260" from="n106" to="n1327" length="147.17" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[15377360, 436625358]" name="Parkway"/>
     <link id="l2600" from="n927" to="n975" length="122.62" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="204989749" name="Enfield Road"/>
     <link id="l2601" from="n928" to="n662" length="52.06" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="1314208625" name="Comal Street"/>
     <link id="l2602" from="n928" to="n864" length="58.87" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="1314208625" name="Comal Street"/>
@@ -3126,7 +3126,7 @@
     <link id="l2604" from="n929" to="n693" length="133.57" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="1132391202" name="West 5th Street"/>
     <link id="l2605" from="n930" to="n520" length="138.04" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="15405548" name="North Lamar Boulevard Service Road"/>
     <link id="l2606" from="n930" to="n649" length="17.14" lanes="6" speed_limit="13.4" highway_type="secondary" osm_way_id="1132391201" name="West 5th Street"/>
-    <link id="l2607" from="n931" to="n599" length="197.07" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15393313, 15405636]" name="Davis Street"/>
+    <link id="l2607" from="n931" to="n599" length="197.07" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15393313, 15405636]" name="Red River Street"/>
     <link id="l2608" from="n931" to="n600" length="94.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="135623987" name="Rainey Street"/>
     <link id="l2609" from="n931" to="n1233" length="258.18" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="328078190" name="Rainey Street"/>
     <link id="l261" from="n107" to="n1067" length="18.76" lanes="1" speed_limit="11.2" highway_type="secondary" osm_way_id="1324391201"/>
@@ -3151,7 +3151,7 @@
     <link id="l2627" from="n937" to="n789" length="135.48" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15406552" name="West Lynn Street"/>
     <link id="l2628" from="n938" to="n430" length="47.29" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="172660030" name="West Lynn Street"/>
     <link id="l2629" from="n938" to="n854" length="99.9" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="172660030" name="West Lynn Street"/>
-    <link id="l263" from="n108" to="n104" length="630.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15377359, 15407111]" name="Parkway"/>
+    <link id="l263" from="n108" to="n104" length="630.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15377359, 15407111]" name="Kingsbury Street"/>
     <link id="l2630" from="n938" to="n976" length="101.49" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15410421" name="West 11th Street"/>
     <link id="l2631" from="n939" to="n154" length="35.4" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="126307520" name="West Lynn Street"/>
     <link id="l2632" from="n939" to="n927" length="125.25" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="204989749" name="Enfield Road"/>
@@ -3163,7 +3163,7 @@
     <link id="l2638" from="n941" to="n1053" length="96.82" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="[327172666, 106990797]" name="West 15th Street"/>
     <link id="l2639" from="n941" to="n1056" length="238.51" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[149707779, 15406652, 172059109]" name="West 15th Street"/>
     <link id="l264" from="n108" to="n943" length="47.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15407111" name="Kingsbury Street"/>
-    <link id="l2640" from="n942" to="n273" length="211.69" lanes="2" speed_limit="13.4" highway_type="unclassified" osm_way_id="[15408346, 1051227517]" name="West 14th Street"/>
+    <link id="l2640" from="n942" to="n273" length="211.69" lanes="2" speed_limit="13.4" highway_type="unclassified" osm_way_id="[15408346, 1051227517]" name="Colorado Street"/>
     <link id="l2641" from="n942" to="n288" length="134.32" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[436609316, 15406655]" name="West 15th Street"/>
     <link id="l2642" from="n942" to="n1258" length="12.81" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="15408346" name="Colorado Street"/>
     <link id="l2643" from="n943" to="n108" length="47.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15407111" name="Kingsbury Street"/>
@@ -3196,7 +3196,7 @@
     <link id="l2668" from="n953" to="n952" length="31.11" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="240181063" name="Comal Street"/>
     <link id="l2669" from="n954" to="n458" length="102.74" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="1020913086" name="Colorado Street"/>
     <link id="l267" from="n109" to="n983" length="122.19" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="126307518" name="Robert Dedman Drive"/>
-    <link id="l2670" from="n954" to="n523" length="269.97" lanes="3" speed_limit="13.4" highway_type="residential" osm_way_id="[1122849200, 1122849199, 976878793, 977923551]" name="West 18th Street"/>
+    <link id="l2670" from="n954" to="n523" length="269.97" lanes="3" speed_limit="13.4" highway_type="residential" osm_way_id="[1122849200, 1122849199, 976878793, 977923551]" name="East 18th Street"/>
     <link id="l2671" from="n954" to="n526" length="119.82" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="977923550" name="Colorado Street"/>
     <link id="l2672" from="n954" to="n566" length="109.67" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15410885" name="West 18th Street"/>
     <link id="l2673" from="n955" to="n562" length="60.05" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436611282, 1122234587, 30756756]" name="West 11th Street"/>
@@ -3248,7 +3248,7 @@
     <link id="l2714" from="n971" to="n935" length="72.54" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="772564123" name="East 12th Street"/>
     <link id="l2715" from="n971" to="n970" length="77.2" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="960862117" name="Curve Street"/>
     <link id="l2716" from="n972" to="n87" length="64.36" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15410186" name="Nellie Street"/>
-    <link id="l2717" from="n972" to="n674" length="194.26" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15410186, 15398170]" name="Newton Street"/>
+    <link id="l2717" from="n972" to="n674" length="194.26" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15410186, 15398170]" name="Nellie Street"/>
     <link id="l2718" from="n972" to="n973" length="65.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15410185" name="Nellie Street"/>
     <link id="l2719" from="n973" to="n972" length="65.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15410185" name="Nellie Street"/>
     <link id="l272" from="n112" to="n558" length="121.58" lanes="1" speed_limit="5.6" highway_type="living_street" osm_way_id="15391578" name="Inner Campus Drive"/>
@@ -3322,8 +3322,8 @@
     <link id="l2781" from="n1001" to="n1015" length="186.33" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="126266028" name="Jester Circle"/>
     <link id="l2782" from="n1002" to="n1041" length="348.17" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[1038061842, 189139450]" name="Red River Street"/>
     <link id="l2783" from="n1002" to="n1049" length="144.61" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[436726683, 149710063]" name="East 15th Street"/>
-    <link id="l2784" from="n1002" to="n1097" length="221.08" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[436609291, 149708112, 149708116, 149710073, 149710078]" name="West 15th Street"/>
-    <link id="l2785" from="n1002" to="n1292" length="435.88" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[1038058240, 1038058241, 905896554, 385783632, 352900436]" name="Red River Street"/>
+    <link id="l2784" from="n1002" to="n1097" length="221.08" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[436609291, 149708112, 149708116, 149710073, 149710078]" name="East 15th Street"/>
+    <link id="l2785" from="n1002" to="n1292" length="435.88" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[1038058240, 1038058241, 905896554, 385783632, 352900436]" name="Red River Street"/>
     <link id="l2786" from="n1003" to="n23" length="332.31" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="131281641"/>
     <link id="l2787" from="n1003" to="n890" length="605.31" lanes="3" speed_limit="26.8" highway_type="motorway" osm_way_id="[164284770, 164284767, 131281631]" name="Purple Heart Trail"/>
     <link id="l2788" from="n1004" to="n34" length="708.97" lanes="2" speed_limit="26.8" highway_type="motorway" osm_way_id="[15375289, 655414241]" name="Purple Heart Trail"/>
@@ -3368,7 +3368,7 @@
     <link id="l2822" from="n1022" to="n106" length="145.79" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[436625348, 131544910, 131544903]" name="North Lamar Boulevard"/>
     <link id="l2823" from="n1022" to="n773" length="161.35" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1323656881, 327172665]" name="Shoal Creek Boulevard"/>
     <link id="l2824" from="n1022" to="n1112" length="86.77" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="152284875" name="North Lamar Boulevard"/>
-    <link id="l2825" from="n1023" to="n94" length="423.12" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[1220952294, 655414183, 1354700936, 1220952295, 655414189, 619360111, 1354735600, 174371445, 263445402]" name="East Riverside Drive"/>
+    <link id="l2825" from="n1023" to="n94" length="423.12" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[1220952294, 655414183, 1354700936, 1220952295, 655414189, 619360111, 1354735600, 174371445, 263445402]" name="East Riverside Drive"/>
     <link id="l2826" from="n1023" to="n1141" length="72.59" lanes="2" speed_limit="15.6" highway_type="primary" osm_way_id="[619184072, 775406403, 775406400, 775406399]" name="East Riverside Drive"/>
     <link id="l2827" from="n1024" to="n1025" length="170.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="172196303" name="Electric Drive"/>
     <link id="l2828" from="n1024" to="n1254" length="17.8" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="39368491" name="Electric Drive"/>
@@ -3472,13 +3472,13 @@
     <link id="l2916" from="n1071" to="n1072" length="4.46" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="126586909"/>
     <link id="l2917" from="n1072" to="n1024" length="19.53" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="39368490" name="Electric Drive"/>
     <link id="l2918" from="n1072" to="n1254" length="17.3" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="126586909"/>
-    <link id="l2919" from="n1073" to="n43" length="199.44" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[415672188, 1008898687]" name="West Cesar Chavez Street"/>
+    <link id="l2919" from="n1073" to="n43" length="199.44" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[415672188, 1008898687]" name="West Cesar Chavez Street"/>
     <link id="l292" from="n119" to="n118" length="107.71" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="204981554" name="East 6th Street"/>
     <link id="l2920" from="n1073" to="n1025" length="83.18" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="328901450" name="Walter Seaholm Drive"/>
-    <link id="l2921" from="n1073" to="n1235" length="118.78" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[1008898688, 152429714]" name="West Cesar Chavez Street"/>
+    <link id="l2921" from="n1073" to="n1235" length="118.78" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[1008898688, 152429714]" name="West Cesar Chavez Street"/>
     <link id="l2922" from="n1074" to="n1070" length="4.34" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="126586909"/>
     <link id="l2923" from="n1075" to="n1076" length="36.81" lanes="1" speed_limit="16.7" highway_type="primary_link" osm_way_id="150350061"/>
-    <link id="l2924" from="n1076" to="n1005" length="293.86" lanes="3" speed_limit="17.9" highway_type="primary" osm_way_id="[150350049, 272430314, 150350057]" name="West Cesar Chavez Street"/>
+    <link id="l2924" from="n1076" to="n1005" length="293.86" lanes="3" speed_limit="20.1" highway_type="primary" osm_way_id="[150350049, 272430314, 150350057]" name="West Cesar Chavez Street"/>
     <link id="l2925" from="n1077" to="n13" length="19.05" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="404264281"/>
     <link id="l2926" from="n1077" to="n1075" length="22.08" lanes="1" speed_limit="16.7" highway_type="primary_link" osm_way_id="127157748"/>
     <link id="l2927" from="n1077" to="n1238" length="506.25" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="15379377" name="Reserve Road"/>
@@ -3565,7 +3565,7 @@
     <link id="l30" from="n15" to="n18" length="89.11" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="436628011"/>
     <link id="l300" from="n122" to="n571" length="107.5" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="315821985" name="Red River Street"/>
     <link id="l3000" from="n1113" to="n1316" length="49.15" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="243096363"/>
-    <link id="l3001" from="n1114" to="n546" length="49.36" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[153128296, 1008898689]" name="West Cesar Chavez Street"/>
+    <link id="l3001" from="n1114" to="n546" length="49.36" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[153128296, 1008898689]" name="West Cesar Chavez Street"/>
     <link id="l3002" from="n1114" to="n547" length="64.14" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="153128297" name="West Cesar Chavez Street"/>
     <link id="l3003" from="n1115" to="n431" length="69.44" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15390157" name="Charlotte Street"/>
     <link id="l3004" from="n1116" to="n1333" length="195.99" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[984177715, 1136481210, 620820603, 620820604, 164271069]" name="North Interstate 35"/>
@@ -3593,14 +3593,14 @@
     <link id="l3024" from="n1126" to="n536" length="52.89" lanes="1" speed_limit="16.7" highway_type="primary_link" osm_way_id="166803102"/>
     <link id="l3025" from="n1126" to="n537" length="32.33" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="436614672" name="North Lamar Boulevard"/>
     <link id="l3026" from="n1126" to="n1008" length="96.21" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614673, 683447890]" name="North Lamar Boulevard"/>
-    <link id="l3027" from="n1127" to="n205" length="126.39" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436614675, 1022202596, 758263189]" name="North Lamar Boulevard"/>
+    <link id="l3027" from="n1127" to="n205" length="126.39" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436614675, 1022202596, 758263189]" name="North Lamar Boulevard"/>
     <link id="l3028" from="n1127" to="n537" length="31.81" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="683447889" name="North Lamar Boulevard"/>
     <link id="l3029" from="n1128" to="n43" length="151.31" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[1008898686, 899987075, 143948147, 436614911]" name="West Cesar Chavez Street"/>
     <link id="l303" from="n123" to="n746" length="109.86" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[103072755, 711070333]" name="Sabine Street"/>
     <link id="l3030" from="n1128" to="n549" length="19.65" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="410285380" name="West Cesar Chavez Street"/>
     <link id="l3031" from="n1129" to="n549" length="23.67" lanes="3" speed_limit="15.6" highway_type="primary" osm_way_id="223772629" name="West Cesar Chavez Street"/>
     <link id="l3032" from="n1129" to="n1128" length="45.29" lanes="2" speed_limit="15.6" highway_type="primary" osm_way_id="169516808" name="West Cesar Chavez Street"/>
-    <link id="l3033" from="n1129" to="n1172" length="473.0" lanes="5" speed_limit="17.9" highway_type="primary" osm_way_id="[150350040, 899987076, 968959781, 968959780]" name="West Cesar Chavez Street"/>
+    <link id="l3033" from="n1129" to="n1172" length="473.0" lanes="4" speed_limit="17.9" highway_type="primary" osm_way_id="[150350040, 899987076, 968959781, 968959780]" name="West Cesar Chavez Street"/>
     <link id="l3034" from="n1130" to="n33" length="72.94" lanes="1" speed_limit="16.7" highway_type="primary_link" osm_way_id="15375197"/>
     <link id="l3035" from="n1130" to="n685" length="75.67" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="128247520" name="East Martin Luther King Jr Boulevard"/>
     <link id="l3036" from="n1130" to="n686" length="312.13" lanes="2" speed_limit="22.2" highway_type="primary" osm_way_id="[128247520, 172172687]" name="East Martin Luther King Jr Boulevard"/>
@@ -3660,10 +3660,10 @@
     <link id="l3085" from="n1155" to="n164" length="214.81" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="204981576" name="Willow Street"/>
     <link id="l3086" from="n1155" to="n215" length="91.99" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="323482022" name="Waller Street"/>
     <link id="l3087" from="n1155" to="n1154" length="16.74" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="323482022" name="Waller Street"/>
-    <link id="l3088" from="n1156" to="n370" length="103.53" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436742892, 436614759]" name="West Cesar Chavez Street"/>
+    <link id="l3088" from="n1156" to="n370" length="103.53" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[436742892, 436614759]" name="West Cesar Chavez Street"/>
     <link id="l3089" from="n1156" to="n548" length="12.15" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="436614756" name="West Cesar Chavez Street"/>
     <link id="l309" from="n125" to="n126" length="104.09" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="204998676" name="East 6th Street"/>
-    <link id="l3090" from="n1157" to="n369" length="409.42" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="[27087209, 15396293, 436615366]" name="South 1st Street"/>
+    <link id="l3090" from="n1157" to="n369" length="409.42" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[27087209, 15396293, 436615366]" name="South 1st Street"/>
     <link id="l3091" from="n1157" to="n735" length="50.85" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="436615366" name="South 1st Street"/>
     <link id="l3092" from="n1157" to="n1270" length="44.52" lanes="1" speed_limit="16.7" highway_type="primary_link" osm_way_id="619375213"/>
     <link id="l3093" from="n1158" to="n814" length="115.59" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15407271" name="Chalmers Avenue"/>
@@ -3700,7 +3700,7 @@
     <link id="l3120" from="n1170" to="n1171" length="51.17" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="243096350" name="East 16th Street"/>
     <link id="l3121" from="n1171" to="n685" length="254.42" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[981190733, 436726695]" name="North Interstate 35"/>
     <link id="l3122" from="n1172" to="n19" length="31.3" lanes="2" speed_limit="17.9" highway_type="primary" osm_way_id="150350059" name="West Cesar Chavez Street"/>
-    <link id="l3123" from="n1172" to="n1129" length="473.0" lanes="5" speed_limit="17.9" highway_type="primary" osm_way_id="[150350040, 899987076, 968959780, 968959781]" name="West Cesar Chavez Street"/>
+    <link id="l3123" from="n1172" to="n1129" length="473.0" lanes="4" speed_limit="17.9" highway_type="primary" osm_way_id="[150350040, 899987076, 968959780, 968959781]" name="West Cesar Chavez Street"/>
     <link id="l3124" from="n1173" to="n1172" length="25.33" lanes="2" speed_limit="17.9" highway_type="primary" osm_way_id="1035078205" name="West Cesar Chavez Street"/>
     <link id="l3125" from="n1174" to="n1010" length="55.31" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="620852267"/>
     <link id="l3126" from="n1174" to="n1018" length="70.31" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="[422077768, 436626559]" name="Barton Springs Road"/>
@@ -3815,7 +3815,7 @@
     <link id="l3224" from="n1222" to="n1223" length="17.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="349700823" name="Walter Seaholm Drive"/>
     <link id="l3225" from="n1223" to="n1025" length="151.76" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="337834614" name="Walter Seaholm Drive"/>
     <link id="l3226" from="n1223" to="n1222" length="17.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="349700823" name="Walter Seaholm Drive"/>
-    <link id="l3227" from="n1224" to="n548" length="109.04" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[204964772, 436614910]" name="West Cesar Chavez Street"/>
+    <link id="l3227" from="n1224" to="n548" length="109.04" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[204964772, 436614910]" name="West Cesar Chavez Street"/>
     <link id="l3228" from="n1224" to="n1225" length="106.09" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="402523642" name="Nueces Street"/>
     <link id="l3229" from="n1224" to="n1235" length="220.07" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[206110441, 206110444, 402523645]" name="West Cesar Chavez Street"/>
     <link id="l323" from="n128" to="n143" length="109.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="204998663" name="Attayac Street"/>
@@ -3841,7 +3841,7 @@
     <link id="l3248" from="n1234" to="n1226" length="42.7" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="502997178" name="West Avenue"/>
     <link id="l3249" from="n1234" to="n1280" length="20.18" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="753567665"/>
     <link id="l325" from="n129" to="n130" length="99.49" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="764461782" name="East 6th Street"/>
-    <link id="l3250" from="n1235" to="n1073" length="118.78" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[1008898688, 152429714]" name="West Cesar Chavez Street"/>
+    <link id="l3250" from="n1235" to="n1073" length="118.78" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[1008898688, 152429714]" name="West Cesar Chavez Street"/>
     <link id="l3251" from="n1235" to="n1224" length="220.07" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[206110441, 206110444, 402523645]" name="West Cesar Chavez Street"/>
     <link id="l3252" from="n1235" to="n1226" length="91.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[400101939, 400267165]" name="West Avenue"/>
     <link id="l3253" from="n1236" to="n769" length="121.04" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[619375201, 1343932083, 619375207]" name="South Lamar Boulevard"/>
@@ -3857,13 +3857,13 @@
     <link id="l3262" from="n1240" to="n1275" length="134.53" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[711091491, 176875348]"/>
     <link id="l3263" from="n1241" to="n42" length="202.98" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[15375384, 164284784, 436616717]"/>
     <link id="l3264" from="n1241" to="n1244" length="808.93" lanes="3" speed_limit="26.8" highway_type="motorway" osm_way_id="[164284769, 160332403, 436616708, 160332405]" name="Purple Heart Trail"/>
-    <link id="l3265" from="n1242" to="n93" length="474.55" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436624323, 204869518, 15377301, 27087222]" name="South Congress Avenue"/>
+    <link id="l3265" from="n1242" to="n93" length="474.55" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436624323, 204869518, 15377301, 27087222]" name="Congress Avenue"/>
     <link id="l3266" from="n1242" to="n206" length="48.47" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="15405268" name="Congress Avenue"/>
     <link id="l3267" from="n1243" to="n806" length="71.9" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="176875113" name="East 7th Street"/>
     <link id="l3268" from="n1243" to="n1331" length="77.49" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1316950714" name="East 7th Street"/>
     <link id="l3269" from="n1244" to="n1003" length="51.09" lanes="4" speed_limit="26.8" highway_type="motorway" osm_way_id="436726693" name="Purple Heart Trail"/>
     <link id="l327" from="n129" to="n1205" length="110.07" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="759466688" name="Navasota Street"/>
-    <link id="l3270" from="n1245" to="n16" length="584.85" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[619184077, 172229930, 436631403, 968382853]" name="South Interstate 35"/>
+    <link id="l3270" from="n1245" to="n16" length="584.85" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[619184077, 172229930, 436631403, 968382853]" name="North Interstate 35"/>
     <link id="l3271" from="n1245" to="n1131" length="142.9" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="15373800"/>
     <link id="l3272" from="n1246" to="n1192" length="2.84" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="310610567"/>
     <link id="l3273" from="n1247" to="n1190" length="2.34" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="310610567"/>
@@ -3900,7 +3900,7 @@
     <link id="l3300" from="n1264" to="n612" length="54.13" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="15390761" name="Trinity Street"/>
     <link id="l3301" from="n1264" to="n1265" length="74.78" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="575797094"/>
     <link id="l3302" from="n1265" to="n1264" length="74.78" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="575797094"/>
-    <link id="l3303" from="n1266" to="n94" length="231.19" lanes="7" speed_limit="13.4" highway_type="primary" osm_way_id="[436631395, 201711356, 436631399, 1096714154, 775406586, 775406587, 775406588, 263445405, 436631390]" name="South Congress Avenue"/>
+    <link id="l3303" from="n1266" to="n94" length="231.19" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436631395, 201711356, 436631399, 1096714154, 775406586, 775406587, 775406588, 263445405, 436631390]" name="South Congress Avenue"/>
     <link id="l3304" from="n1266" to="n1260" length="75.18" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="775406585" name="South Congress Avenue"/>
     <link id="l3305" from="n1266" to="n1273" length="26.77" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="675190294"/>
     <link id="l3306" from="n1267" to="n1230" length="84.11" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="392803161" name="Bierce Street"/>
@@ -3919,12 +3919,12 @@
     <link id="l3318" from="n1275" to="n211" length="65.59" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="436616709" name="North Interstate 35"/>
     <link id="l3319" from="n1276" to="n31" length="274.73" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="729209161"/>
     <link id="l332" from="n131" to="n132" length="213.23" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="240179605" name="East 6th Street"/>
-    <link id="l3320" from="n1276" to="n113" length="285.43" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[15377610, 1025931499, 176875166]" name="East Avenue"/>
+    <link id="l3320" from="n1276" to="n113" length="285.43" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[15377610, 1025931499, 176875166]" name="East Avenue"/>
     <link id="l3321" from="n1277" to="n231" length="405.59" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[752871017, 548632574]" name="East 5th Street"/>
     <link id="l3322" from="n1277" to="n326" length="103.85" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="30149036" name="Chicon Street"/>
     <link id="l3323" from="n1277" to="n327" length="13.25" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="764467422" name="Chicon Street"/>
     <link id="l3324" from="n1278" to="n736" length="224.56" lanes="2" speed_limit="15.6" highway_type="primary" osm_way_id="[436631363, 732259238, 970376808, 619375216, 223301048]" name="Barton Springs Road"/>
-    <link id="l3325" from="n1278" to="n764" length="131.27" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436615056, 970376807]" name="Barton Springs Road"/>
+    <link id="l3325" from="n1278" to="n764" length="131.27" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436615056, 970376807]" name="Barton Springs Road"/>
     <link id="l3326" from="n1279" to="n83" length="177.76" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="128248205" name="Nueces Street"/>
     <link id="l3327" from="n1279" to="n579" length="99.18" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="124953132" name="West 21st Street"/>
     <link id="l3328" from="n1279" to="n580" length="95.86" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="128248211" name="West 21st Street"/>
@@ -3955,7 +3955,7 @@
     <link id="l3350" from="n1291" to="n813" length="146.24" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1054317148, 15408534]" name="East 20th Street"/>
     <link id="l3351" from="n1291" to="n1065" length="107.42" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1052339330, 1176353646]" name="Robert Dedman Drive"/>
     <link id="l3352" from="n1291" to="n1292" length="226.28" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1224024137, 953200130]" name="Red River Street"/>
-    <link id="l3353" from="n1292" to="n1002" length="435.88" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[1038058240, 1038058241, 905896554, 385783632, 352900436]" name="Red River Street"/>
+    <link id="l3353" from="n1292" to="n1002" length="435.88" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[1038058240, 1038058241, 905896554, 385783632, 352900436]" name="Red River Street"/>
     <link id="l3354" from="n1292" to="n1117" length="150.32" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[164271067, 436632356, 436632365, 128247519]" name="East Martin Luther King Jr Boulevard"/>
     <link id="l3355" from="n1292" to="n1259" length="202.04" lanes="5" speed_limit="13.4" highway_type="secondary" osm_way_id="[1038058273, 124953115, 1038058270, 1038058271]" name="East Martin Luther King Jr Boulevard"/>
     <link id="l3356" from="n1292" to="n1291" length="226.28" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1224024137, 953200130]" name="Red River Street"/>
@@ -3987,13 +3987,13 @@
     <link id="l338" from="n133" to="n132" length="201.6" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="240179605" name="East 6th Street"/>
     <link id="l3380" from="n1304" to="n606" length="100.39" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15390736" name="Treadwell Street"/>
     <link id="l3381" from="n1304" to="n607" length="83.65" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[239370137, 1252974309]" name="Treadwell Street"/>
-    <link id="l3382" from="n1304" to="n770" length="215.7" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436634458, 150220101]" name="South Lamar Boulevard"/>
-    <link id="l3383" from="n1304" to="n771" length="140.56" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[1025315928, 436634457]" name="South Lamar Boulevard"/>
+    <link id="l3382" from="n1304" to="n770" length="215.7" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436634458, 150220101]" name="South Lamar Boulevard"/>
+    <link id="l3383" from="n1304" to="n771" length="140.56" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[1025315928, 436634457]" name="South Lamar Boulevard"/>
     <link id="l3384" from="n1306" to="n986" length="13.11" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="25775228"/>
     <link id="l3385" from="n1306" to="n988" length="43.95" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1358630081, 656058546]" name="DeLoss Dodds Way"/>
     <link id="l3386" from="n1307" to="n1257" length="25.28" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="1040445664"/>
     <link id="l3387" from="n1308" to="n731" length="78.28" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="15396250" name="West 16th Street"/>
-    <link id="l3388" from="n1309" to="n683" length="115.51" lanes="5" speed_limit="15.6" highway_type="tertiary" osm_way_id="[181025082, 172151510]" name="San Jacinto Boulevard"/>
+    <link id="l3388" from="n1309" to="n683" length="115.51" lanes="4" speed_limit="15.6" highway_type="tertiary" osm_way_id="[181025082, 172151510]" name="San Jacinto Boulevard"/>
     <link id="l3389" from="n1310" to="n1261" length="73.17" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1094059056, 1094059057, 1094059058]"/>
     <link id="l339" from="n133" to="n134" length="406.31" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15377621" name="East 6th Street"/>
     <link id="l3390" from="n1311" to="n123" length="110.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15396565" name="Sabine Street"/>
@@ -4291,36 +4291,36 @@
     <link id="l557" from="n203" to="n130" length="109.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="129170706" name="Onion Street"/>
     <link id="l558" from="n203" to="n170" length="90.74" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="204998677" name="East 7th Street"/>
     <link id="l559" from="n203" to="n912" length="101.47" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="204998677" name="East 7th Street"/>
-    <link id="l56" from="n32" to="n264" length="207.78" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[1184895873, 204869450, 223301049, 679083608, 619375214, 1430454614, 679083607, 436626264, 436626265]" name="Barton Springs Road"/>
+    <link id="l56" from="n32" to="n264" length="207.78" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[1184895873, 204869450, 223301049, 679083608, 619375214, 1430454614, 679083607, 436626264, 436626265]" name="Barton Springs Road"/>
     <link id="l560" from="n204" to="n205" length="74.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15378710" name="Old West 19th Street"/>
     <link id="l561" from="n205" to="n204" length="74.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15378710" name="Old West 19th Street"/>
     <link id="l562" from="n205" to="n653" length="250.48" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="1022202596" name="North Lamar Boulevard"/>
-    <link id="l563" from="n205" to="n1127" length="126.39" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[436614675, 1022202596, 758263189]" name="North Lamar Boulevard"/>
+    <link id="l563" from="n205" to="n1127" length="126.39" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436614675, 1022202596, 758263189]" name="North Lamar Boulevard"/>
     <link id="l564" from="n206" to="n207" length="135.4" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[1024443344, 1446520072, 15378911]" name="East Cesar Chavez Street"/>
-    <link id="l565" from="n206" to="n312" length="107.86" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436624321, 1136660020, 1136660021]" name="Congress Avenue"/>
+    <link id="l565" from="n206" to="n312" length="107.86" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436624321, 1136660020, 1136660021]" name="Congress Avenue"/>
     <link id="l566" from="n206" to="n1239" length="62.73" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="436614757" name="West Cesar Chavez Street"/>
     <link id="l567" from="n206" to="n1242" length="48.47" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="15405268" name="Congress Avenue"/>
     <link id="l568" from="n207" to="n206" length="135.4" lanes="6" speed_limit="13.4" highway_type="primary" osm_way_id="[1446520072, 15378911, 1024443344]" name="East Cesar Chavez Street"/>
-    <link id="l569" from="n207" to="n208" length="107.3" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614752, 204964699]" name="East Cesar Chavez Street"/>
+    <link id="l569" from="n207" to="n208" length="107.3" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436614752, 204964699]" name="East Cesar Chavez Street"/>
     <link id="l57" from="n32" to="n365" length="133.72" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="968893579" name="Lee Barton Drive"/>
     <link id="l570" from="n207" to="n776" length="110.35" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15398110" name="Brazos Street"/>
     <link id="l571" from="n207" to="n777" length="107.89" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1021936034, 32065527]" name="Brazos Street"/>
-    <link id="l572" from="n208" to="n207" length="107.3" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614752, 204964699]" name="East Cesar Chavez Street"/>
-    <link id="l573" from="n208" to="n209" length="109.36" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614745, 204981556, 436614751]" name="East Cesar Chavez Street"/>
-    <link id="l574" from="n209" to="n208" length="109.36" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614745, 204981556, 436614751]" name="East Cesar Chavez Street"/>
-    <link id="l575" from="n209" to="n210" length="225.41" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[1069246523, 37749546, 204981555, 436614744, 436614747, 436614748]" name="East Cesar Chavez Street"/>
+    <link id="l572" from="n208" to="n207" length="107.3" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436614752, 204964699]" name="East Cesar Chavez Street"/>
+    <link id="l573" from="n208" to="n209" length="109.36" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436614745, 204981556, 436614751]" name="East Cesar Chavez Street"/>
+    <link id="l574" from="n209" to="n208" length="109.36" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436614745, 204981556, 436614751]" name="East Cesar Chavez Street"/>
+    <link id="l575" from="n209" to="n210" length="225.41" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[1069246523, 37749546, 204981555, 436614744, 436614747, 436614748]" name="East Cesar Chavez Street"/>
     <link id="l576" from="n209" to="n613" length="107.88" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="32065533" name="Trinity Street"/>
     <link id="l577" from="n209" to="n1264" length="55.19" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15390761, 655501671]" name="Trinity Street"/>
-    <link id="l578" from="n210" to="n209" length="225.41" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[1069246523, 37749546, 204981555, 436614744, 436614747, 436614748]" name="East Cesar Chavez Street"/>
-    <link id="l579" from="n210" to="n211" length="208.1" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614753, 713615754, 713615756, 152429713, 436614746, 436614749]" name="East Cesar Chavez Street"/>
+    <link id="l578" from="n210" to="n209" length="225.41" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[1069246523, 37749546, 204981555, 436614744, 436614747, 436614748]" name="East Cesar Chavez Street"/>
+    <link id="l579" from="n210" to="n211" length="208.1" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436614753, 713615754, 713615756, 152429713, 436614746, 436614749]" name="East Cesar Chavez Street"/>
     <link id="l58" from="n32" to="n1147" length="24.34" lanes="7" speed_limit="15.6" highway_type="primary" osm_way_id="1430454613" name="Barton Springs Road"/>
     <link id="l580" from="n210" to="n502" length="218.54" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[128928824, 37749547, 1069246524, 37749548]" name="Red River Street"/>
     <link id="l581" from="n210" to="n599" length="69.53" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[15393313, 1069246525]" name="Red River Street"/>
-    <link id="l582" from="n211" to="n210" length="208.1" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436614753, 713615754, 713615756, 152429713, 436614746, 436614749]" name="East Cesar Chavez Street"/>
-    <link id="l583" from="n211" to="n212" length="99.39" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[122981290, 122981289, 1025931498, 436742884]" name="East Cesar Chavez Street"/>
+    <link id="l582" from="n211" to="n210" length="208.1" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436614753, 713615754, 713615756, 152429713, 436614746, 436614749]" name="East Cesar Chavez Street"/>
+    <link id="l583" from="n211" to="n212" length="99.39" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[122981290, 122981289, 1025931498, 436742884]" name="East Cesar Chavez Street"/>
     <link id="l584" from="n211" to="n601" length="69.31" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="143948179" name="North Interstate 35"/>
     <link id="l585" from="n212" to="n38" length="36.15" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="143948187" name="North Interstate 35"/>
-    <link id="l586" from="n212" to="n211" length="99.39" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[122981289, 122981290, 436742884, 1025931498]" name="East Cesar Chavez Street"/>
+    <link id="l586" from="n212" to="n211" length="99.39" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[122981289, 122981290, 436742884, 1025931498]" name="East Cesar Chavez Street"/>
     <link id="l587" from="n212" to="n1162" length="20.89" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="150349993" name="East Cesar Chavez Street"/>
     <link id="l588" from="n213" to="n214" length="102.8" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="1021936386" name="East Cesar Chavez Street"/>
     <link id="l589" from="n213" to="n791" length="108.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1021936385" name="San Marcos Street"/>
@@ -4385,7 +4385,7 @@
     <link id="l641" from="n230" to="n326" length="405.5" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="30148988" name="East 4th Street"/>
     <link id="l642" from="n231" to="n134" length="117.28" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="752871018" name="Robert T Martinez Junior Street"/>
     <link id="l643" from="n231" to="n1277" length="405.59" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[752871017, 548632574]" name="East 5th Street"/>
-    <link id="l644" from="n232" to="n94" length="148.23" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631368, 436631372, 201711352, 619360110]" name="East Riverside Drive"/>
+    <link id="l644" from="n232" to="n94" length="148.23" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436631368, 436631372, 201711352, 619360110]" name="East Riverside Drive"/>
     <link id="l645" from="n232" to="n233" length="127.9" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="15379135" name="Haywood Avenue"/>
     <link id="l646" from="n232" to="n763" length="78.52" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436631371, 619360110]" name="East Riverside Drive"/>
     <link id="l647" from="n233" to="n232" length="127.9" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="15379135" name="Haywood Avenue"/>
@@ -4437,7 +4437,7 @@
     <link id="l689" from="n248" to="n574" length="105.38" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15388180" name="East 5th Street"/>
     <link id="l69" from="n39" to="n42" length="86.76" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[436612056, 436612057, 27394254]" name="East 6th Street"/>
     <link id="l690" from="n249" to="n124" length="107.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="31165985" name="Brushy Street"/>
-    <link id="l691" from="n249" to="n806" length="66.64" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="[1446247800, 15404282, 436726691, 1446247799]" name="East 7th Street"/>
+    <link id="l691" from="n249" to="n806" length="66.64" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[1446247800, 15404282, 436726691, 1446247799]" name="East 7th Street"/>
     <link id="l692" from="n249" to="n886" length="113.25" lanes="5" speed_limit="22.2" highway_type="primary" osm_way_id="1446247802" name="East 7th Street"/>
     <link id="l693" from="n250" to="n790" length="41.7" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="805230605" name="East 2nd Street"/>
     <link id="l694" from="n250" to="n791" length="102.21" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="15398166" name="East 2nd Street"/>
@@ -4490,10 +4490,10 @@
     <link id="l736" from="n263" to="n237" length="112.56" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="[532632619, 1222362983]" name="Chicon Street"/>
     <link id="l737" from="n263" to="n330" length="115.4" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="[185402186, 1222362983]" name="Chicon Street"/>
     <link id="l738" from="n263" to="n1312" length="90.7" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15380067" name="East 22nd Street"/>
-    <link id="l739" from="n264" to="n32" length="207.78" lanes="7" speed_limit="15.6" highway_type="primary" osm_way_id="[1184895873, 204869450, 223301049, 619375214, 436626264, 1430454614, 679083607, 679083608, 436626265]" name="Barton Springs Road"/>
+    <link id="l739" from="n264" to="n32" length="207.78" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[1184895873, 204869450, 223301049, 619375214, 436626264, 1430454614, 679083607, 679083608, 436626265]" name="Barton Springs Road"/>
     <link id="l74" from="n42" to="n806" length="105.24" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[176875236, 436726702]" name="North Interstate 35"/>
     <link id="l740" from="n264" to="n265" length="122.34" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="37692933" name="Dawson Road"/>
-    <link id="l741" from="n264" to="n764" length="231.11" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[436615057, 436615058, 619375215, 698056815]" name="Barton Springs Road"/>
+    <link id="l741" from="n264" to="n764" length="231.11" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[436615057, 436615058, 619375215, 698056815]" name="Barton Springs Road"/>
     <link id="l742" from="n265" to="n264" length="122.34" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="37692933" name="Dawson Road"/>
     <link id="l743" from="n265" to="n266" length="83.07" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="37692933" name="Dawson Road"/>
     <link id="l744" from="n265" to="n311" length="218.8" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15381691" name="Daniel Drive"/>
@@ -4513,7 +4513,7 @@
     <link id="l757" from="n270" to="n269" length="102.81" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15380365" name="Spence Street"/>
     <link id="l758" from="n270" to="n271" length="205.63" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15380365" name="Spence Street"/>
     <link id="l759" from="n270" to="n884" length="105.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15403603" name="San Marcos Street"/>
-    <link id="l76" from="n43" to="n1073" length="199.44" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[415672188, 1008898687]" name="West Cesar Chavez Street"/>
+    <link id="l76" from="n43" to="n1073" length="199.44" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[415672188, 1008898687]" name="West Cesar Chavez Street"/>
     <link id="l760" from="n271" to="n270" length="205.63" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15380365" name="Spence Street"/>
     <link id="l761" from="n271" to="n588" length="66.84" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="204981572" name="Waller Street"/>
     <link id="l762" from="n271" to="n934" length="26.51" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="204981572" name="Waller Street"/>
@@ -4521,10 +4521,10 @@
     <link id="l764" from="n272" to="n157" length="196.55" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15380442" name="West 14th Street"/>
     <link id="l765" from="n272" to="n635" length="23.69" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="172660031" name="West Lynn Street"/>
     <link id="l766" from="n273" to="n274" length="108.42" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="1051227517" name="West 14th Street"/>
-    <link id="l767" from="n273" to="n942" length="211.69" lanes="2" speed_limit="13.4" highway_type="unclassified" osm_way_id="[15408346, 1051227517]" name="West 14th Street"/>
+    <link id="l767" from="n273" to="n942" length="211.69" lanes="2" speed_limit="13.4" highway_type="unclassified" osm_way_id="[15408346, 1051227517]" name="Colorado Street"/>
     <link id="l768" from="n273" to="n1095" length="105.03" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[1095943083, 204989756]" name="Lavaca Street"/>
     <link id="l769" from="n274" to="n273" length="108.42" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="1051227517" name="West 14th Street"/>
-    <link id="l77" from="n43" to="n1128" length="151.31" lanes="5" speed_limit="15.6" highway_type="primary" osm_way_id="[143948147, 899987075, 1008898686, 436614911]" name="West Cesar Chavez Street"/>
+    <link id="l77" from="n43" to="n1128" length="151.31" lanes="4" speed_limit="15.6" highway_type="primary" osm_way_id="[143948147, 899987075, 1008898686, 436614911]" name="West Cesar Chavez Street"/>
     <link id="l770" from="n274" to="n275" length="109.74" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="25758412" name="West 14th Street"/>
     <link id="l771" from="n274" to="n377" length="108.88" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[800274409, 1052938885]" name="Guadalupe Street"/>
     <link id="l772" from="n275" to="n77" length="107.74" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="25758412" name="West 14th Street"/>
@@ -4539,7 +4539,7 @@
     <link id="l780" from="n277" to="n276" length="108.39" lanes="2" speed_limit="13.4" highway_type="residential" osm_way_id="25758412" name="West 14th Street"/>
     <link id="l781" from="n277" to="n640" length="60.2" lanes="2" speed_limit="13.4" highway_type="unclassified" osm_way_id="327172673" name="West Avenue"/>
     <link id="l782" from="n277" to="n1094" length="105.81" lanes="2" speed_limit="13.4" highway_type="unclassified" osm_way_id="327172673" name="West Avenue"/>
-    <link id="l783" from="n278" to="n283" length="119.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15380459, 960862119]" name="East 15th Street"/>
+    <link id="l783" from="n278" to="n283" length="119.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15380459, 960862119]" name="Olander Street"/>
     <link id="l784" from="n278" to="n293" length="73.54" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15381299" name="East 15th Street"/>
     <link id="l785" from="n278" to="n1061" length="37.87" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15380454" name="Olander Street"/>
     <link id="l786" from="n279" to="n948" length="13.41" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="981190733" name="North Interstate 35"/>
@@ -4554,7 +4554,7 @@
     <link id="l794" from="n282" to="n281" length="116.68" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15380457" name="Olander Street"/>
     <link id="l795" from="n282" to="n283" length="11.35" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="960862120" name="East 14th Street"/>
     <link id="l796" from="n282" to="n1120" length="46.26" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="960862120" name="East 14th Street"/>
-    <link id="l797" from="n283" to="n278" length="119.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15380459, 960862119]" name="East 15th Street"/>
+    <link id="l797" from="n283" to="n278" length="119.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15380459, 960862119]" name="Olander Street"/>
     <link id="l798" from="n283" to="n282" length="11.35" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="960862120" name="East 14th Street"/>
     <link id="l799" from="n283" to="n667" length="102.84" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="164284766" name="East 14th Street"/>
     <link id="l8" from="n2" to="n198" length="155.5" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15386576" name="Avondale Road"/>
@@ -4564,7 +4564,7 @@
     <link id="l802" from="n285" to="n659" length="227.75" lanes="1" speed_limit="13.4" highway_type="residential" osm_way_id="15398989" name="Academy Drive"/>
     <link id="l803" from="n285" to="n808" length="90.66" lanes="1" speed_limit="13.4" highway_type="residential" osm_way_id="15398989" name="Academy Drive"/>
     <link id="l804" from="n286" to="n287" length="134.3" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15380968" name="Bluff Street"/>
-    <link id="l805" from="n286" to="n765" length="264.99" lanes="7" speed_limit="22.2" highway_type="primary" osm_way_id="[436625631, 150220101, 1095013751]" name="South Lamar Boulevard"/>
+    <link id="l805" from="n286" to="n765" length="264.99" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="[436625631, 150220101, 1095013751]" name="South Lamar Boulevard"/>
     <link id="l806" from="n286" to="n770" length="141.58" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="150220101" name="South Lamar Boulevard"/>
     <link id="l807" from="n287" to="n286" length="134.3" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15380968" name="Bluff Street"/>
     <link id="l808" from="n287" to="n675" length="133.53" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15392917" name="Josephine Street"/>
@@ -4596,7 +4596,7 @@
     <link id="l831" from="n296" to="n295" length="210.64" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15381300" name="Haskell Street"/>
     <link id="l832" from="n296" to="n297" length="207.35" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15381300" name="Haskell Street"/>
     <link id="l833" from="n296" to="n427" length="108.51" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15407267" name="Chalmers Avenue"/>
-    <link id="l834" from="n296" to="n814" length="174.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15407267, 15399173]" name="Riverview Street"/>
+    <link id="l834" from="n296" to="n814" length="174.02" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[15407267, 15399173]" name="Chalmers Avenue"/>
     <link id="l835" from="n297" to="n254" length="134.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15381300" name="Haskell Street"/>
     <link id="l836" from="n297" to="n296" length="207.35" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15381300" name="Haskell Street"/>
     <link id="l837" from="n297" to="n319" length="108.78" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="328839146" name="Chicon Street"/>
@@ -4651,7 +4651,7 @@
     <link id="l881" from="n311" to="n265" length="218.8" lanes="1" speed_limit="11.2" highway_type="residential" osm_way_id="15381691" name="Daniel Drive"/>
     <link id="l882" from="n311" to="n764" length="115.13" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="960849265" name="Bouldin Avenue"/>
     <link id="l883" from="n311" to="n1207" length="106.66" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="960849265" name="Bouldin Avenue"/>
-    <link id="l884" from="n312" to="n206" length="107.86" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[436624321, 1136660020, 1136660021]" name="Congress Avenue"/>
+    <link id="l884" from="n312" to="n206" length="107.86" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="[436624321, 1136660020, 1136660021]" name="Congress Avenue"/>
     <link id="l885" from="n312" to="n313" length="132.98" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="15381973" name="West 2nd Street"/>
     <link id="l886" from="n312" to="n510" length="111.4" lanes="4" speed_limit="13.4" highway_type="primary" osm_way_id="143978650" name="Congress Avenue"/>
     <link id="l887" from="n312" to="n777" length="135.58" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1035976914, 1035976915, 15398167]" name="East 2nd Street"/>

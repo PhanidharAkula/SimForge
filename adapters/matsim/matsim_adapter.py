@@ -275,9 +275,12 @@ def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
     lines.append('<!DOCTYPE plans SYSTEM "http://www.matsim.org/files/dtd/plans_v4.dtd">')
     lines.append('<plans>')
     
-    # Build adjacency from links (for finding good origin links)
+    # Filter out self-loops (they're not included in MATSim network)
+    valid_links = [link for link in links if link["from"] != link["to"]]
+    
+    # Build adjacency from valid links (for finding good origin links)
     link_adjacency = {}
-    for link in links:
+    for link in valid_links:
         from_node = link["from"]
         if from_node not in link_adjacency:
             link_adjacency[from_node] = []
@@ -300,9 +303,12 @@ def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
             except ValueError:
                 depart_seconds = 0
             
-            # Find links near origin and destination
-            origin_link = find_link_for_origin(origin, links, link_adjacency)
-            dest_link = find_link_for_destination(dest, links, link_adjacency)
+            # Find links near origin and destination (using valid_links to exclude self-loops)
+            origin_link = find_link_for_origin(origin, valid_links, link_adjacency)
+            dest_link = find_link_for_destination(dest, valid_links, link_adjacency)
+            
+            if not origin_link or not dest_link:
+                continue
             
             if not origin_link or not dest_link:
                 continue

@@ -1,0 +1,496 @@
+{
+  "runspec_name": "major_cities_5k_benchmark",
+  "started_at": "2026-01-27T01:39:02.209494+00:00",
+  "completed_at": "2026-01-27T01:41:29.063344+00:00",
+  "total_runs": 27,
+  "successful_runs": 27,
+  "failed_runs": 0,
+  "results": [
+    {
+      "scenario_id": "chicago_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.5426838397979736,
+      "output_dir": "runs/chicago_downtown_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/chicago_downtown_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2676535307061414,
+          "p95": 10.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4397599697113037,
+      "output_dir": "runs/chicago_downtown_sumo_meso/sumo/seed_123",
+      "tripinfo_path": "runs/chicago_downtown_sumo_meso/sumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2396479295859173,
+          "p95": 10.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.43555188179016113,
+      "output_dir": "runs/chicago_downtown_sumo_meso/sumo/seed_456",
+      "tripinfo_path": "runs/chicago_downtown_sumo_meso/sumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2466493298659733,
+          "p95": 10.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4375901222229004,
+      "output_dir": "runs/chicago_downtown_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/chicago_downtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2676535307061414,
+          "p95": 10.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.44276881217956543,
+      "output_dir": "runs/chicago_downtown_qarsumo_meso/qarsumo/seed_123",
+      "tripinfo_path": "runs/chicago_downtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2396479295859173,
+          "p95": 10.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.43718910217285156,
+      "output_dir": "runs/chicago_downtown_qarsumo_meso/qarsumo/seed_456",
+      "tripinfo_path": "runs/chicago_downtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.2466493298659733,
+          "p95": 10.0,
+          "trip_count": 4999
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 13.487428188323975,
+      "output_dir": "runs/chicago_downtown_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 119.115,
+          "p95": 310,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_matsim",
+      "engine": "matsim",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 11.712723016738892,
+      "output_dir": "runs/chicago_downtown_matsim/matsim/seed_123",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 119.115,
+          "p95": 310,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "chicago_downtown_matsim",
+      "engine": "matsim",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 10.465373992919922,
+      "output_dir": "runs/chicago_downtown_matsim/matsim/seed_456",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 119.1146,
+          "p95": 309,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.4343831539154053,
+      "output_dir": "runs/nyc_midtown_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/nyc_midtown_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5850680544435547,
+          "p95": 16.0,
+          "trip_count": 4996
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.34277772903442383,
+      "output_dir": "runs/nyc_midtown_sumo_meso/sumo/seed_123",
+      "tripinfo_path": "runs/nyc_midtown_sumo_meso/sumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5910364145658265,
+          "p95": 17.0,
+          "trip_count": 4998
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.33539700508117676,
+      "output_dir": "runs/nyc_midtown_sumo_meso/sumo/seed_456",
+      "tripinfo_path": "runs/nyc_midtown_sumo_meso/sumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5811486892135282,
+          "p95": 16.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.337568998336792,
+      "output_dir": "runs/nyc_midtown_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/nyc_midtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5850680544435547,
+          "p95": 16.0,
+          "trip_count": 4996
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.3378157615661621,
+      "output_dir": "runs/nyc_midtown_qarsumo_meso/qarsumo/seed_123",
+      "tripinfo_path": "runs/nyc_midtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5910364145658265,
+          "p95": 17.0,
+          "trip_count": 4998
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.34029436111450195,
+      "output_dir": "runs/nyc_midtown_qarsumo_meso/qarsumo/seed_456",
+      "tripinfo_path": "runs/nyc_midtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 2.5811486892135282,
+          "p95": 16.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 11.655121088027954,
+      "output_dir": "runs/nyc_midtown_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 137.5536,
+          "p95": 342,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_matsim",
+      "engine": "matsim",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 11.516639947891235,
+      "output_dir": "runs/nyc_midtown_matsim/matsim/seed_123",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 137.5542,
+          "p95": 342,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "nyc_midtown_matsim",
+      "engine": "matsim",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 10.293213129043579,
+      "output_dir": "runs/nyc_midtown_matsim/matsim/seed_456",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 137.554,
+          "p95": 342,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 1.091355800628662,
+      "output_dir": "runs/la_downtown_sumo_meso/sumo/seed_42",
+      "tripinfo_path": "runs/la_downtown_sumo_meso/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 3.369421652991795,
+          "p95": 17.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 1.1021580696105957,
+      "output_dir": "runs/la_downtown_sumo_meso/sumo/seed_123",
+      "tripinfo_path": "runs/la_downtown_sumo_meso/sumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 3.3618170902541524,
+          "p95": 16.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_sumo_meso",
+      "engine": "sumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 1.0866076946258545,
+      "output_dir": "runs/la_downtown_sumo_meso/sumo/seed_456",
+      "tripinfo_path": "runs/la_downtown_sumo_meso/sumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 3.3432059235541325,
+          "p95": 16.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 1.071774959564209,
+      "output_dir": "runs/la_downtown_qarsumo_meso/qarsumo/seed_42",
+      "tripinfo_path": "runs/la_downtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 3.369421652991795,
+          "p95": 17.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 1.0974652767181396,
+      "output_dir": "runs/la_downtown_qarsumo_meso/qarsumo/seed_123",
+      "tripinfo_path": "runs/la_downtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 3.3618170902541524,
+          "p95": 16.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_qarsumo_meso",
+      "engine": "qarsumo",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 1.079087257385254,
+      "output_dir": "runs/la_downtown_qarsumo_meso/qarsumo/seed_456",
+      "tripinfo_path": "runs/la_downtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 3.3432059235541325,
+          "p95": 16.0,
+          "trip_count": 4997
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_matsim",
+      "engine": "matsim",
+      "seed": 42,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 12.552018880844116,
+      "output_dir": "runs/la_downtown_matsim/matsim/seed_42",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 248.5062,
+          "p95": 788,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_matsim",
+      "engine": "matsim",
+      "seed": 123,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 14.866554260253906,
+      "output_dir": "runs/la_downtown_matsim/matsim/seed_123",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 248.5058,
+          "p95": 788,
+          "trip_count": 5000
+        }
+      }
+    },
+    {
+      "scenario_id": "la_downtown_matsim",
+      "engine": "matsim",
+      "seed": 456,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 11.221364974975586,
+      "output_dir": "runs/la_downtown_matsim/matsim/seed_456",
+      "tripinfo_path": null,
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 248.5072,
+          "p95": 788,
+          "trip_count": 5000
+        }
+      }
+    }
+  ]
+}

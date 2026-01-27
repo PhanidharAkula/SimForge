@@ -1222,7 +1222,7 @@
     <link id="l105" from="n51" to="n1053" length="143.93" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1050" from="n441" to="n384" length="66.54" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1051" from="n441" to="n688" length="149.58" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l1052" from="n441" to="n749" length="181.92" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l1052" from="n441" to="n749" length="181.92" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1053" from="n441" to="n933" length="192.55" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1054" from="n442" to="n384" length="57.84" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1055" from="n442" to="n454" length="149.81" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -1231,8 +1231,8 @@
     <link id="l1058" from="n443" to="n409" length="85.71" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1059" from="n443" to="n1072" length="24.50" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l106" from="n52" to="n53" length="88.78" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l1060" from="n444" to="n378" length="59.18" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
-    <link id="l1061" from="n444" to="n1082" length="59.57" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l1060" from="n444" to="n378" length="59.18" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
+    <link id="l1061" from="n444" to="n1082" length="59.57" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1062" from="n445" to="n71" length="276.23" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1063" from="n445" to="n211" length="66.13" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1064" from="n445" to="n446" length="58.75" freespeed="16.70" capacity="5400" permlanes="3" modes="car"/>
@@ -1612,7 +1612,7 @@
     <link id="l1400" from="n576" to="n575" length="42.40" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1401" from="n577" to="n169" length="52.55" freespeed="11.20" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1402" from="n577" to="n578" length="134.47" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l1403" from="n578" to="n403" length="52.37" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l1403" from="n578" to="n403" length="52.37" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1404" from="n578" to="n518" length="146.30" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1405" from="n579" to="n400" length="52.46" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1406" from="n580" to="n483" length="135.71" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -1755,7 +1755,7 @@
     <link id="l153" from="n71" to="n72" length="58.15" freespeed="11.20" capacity="10800" permlanes="6" modes="car"/>
     <link id="l1530" from="n636" to="n480" length="137.20" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1531" from="n636" to="n808" length="52.05" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l1532" from="n637" to="n145" length="94.88" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l1532" from="n637" to="n145" length="94.88" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1533" from="n637" to="n521" length="94.23" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1534" from="n638" to="n841" length="9.67" freespeed="22.20" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1535" from="n639" to="n640" length="104.86" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
@@ -1863,7 +1863,7 @@
     <link id="l1627" from="n677" to="n727" length="137.01" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1628" from="n677" to="n1005" length="146.31" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1629" from="n678" to="n261" length="104.94" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l163" from="n75" to="n76" length="67.92" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l163" from="n75" to="n76" length="67.92" freespeed="11.20" capacity="10800" permlanes="6" modes="car"/>
     <link id="l1630" from="n678" to="n515" length="147.02" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1631" from="n678" to="n701" length="134.62" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1632" from="n679" to="n670" length="51.93" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
@@ -1885,7 +1885,7 @@
     <link id="l1647" from="n685" to="n757" length="49.61" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1648" from="n686" to="n555" length="54.65" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1649" from="n686" to="n685" length="146.57" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l165" from="n76" to="n75" length="67.92" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l165" from="n76" to="n75" length="67.92" freespeed="11.20" capacity="10800" permlanes="6" modes="car"/>
     <link id="l1650" from="n686" to="n747" length="49.61" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1651" from="n687" to="n438" length="52.44" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1652" from="n687" to="n1005" length="146.78" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
@@ -1896,7 +1896,7 @@
     <link id="l1657" from="n689" to="n377" length="64.77" freespeed="17.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1658" from="n689" to="n1072" length="251.49" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
     <link id="l1659" from="n690" to="n339" length="63.66" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
-    <link id="l166" from="n76" to="n77" length="86.47" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l166" from="n76" to="n77" length="86.47" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1660" from="n691" to="n447" length="276.26" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1661" from="n691" to="n692" length="57.86" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1662" from="n692" to="n15" length="65.58" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
@@ -1929,7 +1929,7 @@
     <link id="l1687" from="n702" to="n390" length="105.15" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1688" from="n703" to="n85" length="107.27" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1689" from="n703" to="n501" length="135.92" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l169" from="n77" to="n76" length="86.47" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l169" from="n77" to="n76" length="86.47" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1690" from="n704" to="n87" length="107.55" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1691" from="n704" to="n393" length="105.62" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1692" from="n704" to="n1046" length="141.85" freespeed="11.20" capacity="3600" permlanes="2" modes="car"/>
@@ -1952,7 +1952,7 @@
     <link id="l1707" from="n713" to="n74" length="147.68" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1708" from="n713" to="n341" length="71.13" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1709" from="n714" to="n267" length="105.53" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l171" from="n78" to="n45" length="191.70" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l171" from="n78" to="n45" length="191.70" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1710" from="n714" to="n675" length="136.74" freespeed="11.20" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1711" from="n714" to="n1136" length="6.03" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1712" from="n715" to="n33" length="102.39" freespeed="8.90" capacity="5400" permlanes="3" modes="car"/>
@@ -1963,7 +1963,7 @@
     <link id="l1717" from="n717" to="n479" length="146.32" freespeed="8.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1718" from="n717" to="n635" length="52.76" freespeed="8.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1719" from="n717" to="n738" length="146.40" freespeed="8.90" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l172" from="n78" to="n314" length="276.24" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
+    <link id="l172" from="n78" to="n314" length="276.24" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1720" from="n718" to="n562" length="52.19" freespeed="8.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1721" from="n719" to="n610" length="99.04" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l1722" from="n719" to="n622" length="98.65" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -2212,9 +2212,9 @@
     <link id="l1941" from="n814" to="n496" length="93.55" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1942" from="n814" to="n813" length="226.22" freespeed="13.40" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1943" from="n814" to="n1048" length="12.44" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l1944" from="n815" to="n816" length="264.55" freespeed="13.40" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l1944" from="n815" to="n816" length="264.55" freespeed="13.40" capacity="5400" permlanes="3" modes="car"/>
     <link id="l1945" from="n815" to="n1056" length="26.72" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l1946" from="n816" to="n133" length="69.38" freespeed="22.20" capacity="12600" permlanes="7" modes="car"/>
+    <link id="l1946" from="n816" to="n133" length="69.38" freespeed="22.20" capacity="10800" permlanes="6" modes="car"/>
     <link id="l1947" from="n816" to="n818" length="31.59" freespeed="22.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l1948" from="n816" to="n1040" length="277.85" freespeed="13.40" capacity="3600" permlanes="2" modes="car"/>
     <link id="l1949" from="n817" to="n722" length="271.47" freespeed="13.40" capacity="3600" permlanes="2" modes="car"/>
@@ -2636,7 +2636,7 @@
     <link id="l2322" from="n998" to="n337" length="71.38" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2323" from="n999" to="n957" length="28.40" freespeed="22.40" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2324" from="n999" to="n1000" length="29.29" freespeed="22.40" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l2325" from="n1000" to="n205" length="95.54" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l2325" from="n1000" to="n205" length="95.54" freespeed="16.70" capacity="5400" permlanes="3" modes="car"/>
     <link id="l2326" from="n1001" to="n156" length="13.90" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2327" from="n1002" to="n183" length="51.99" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2328" from="n1002" to="n268" length="146.31" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
@@ -2685,7 +2685,7 @@
     <link id="l2367" from="n1021" to="n1023" length="4.52" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
     <link id="l2368" from="n1022" to="n1016" length="324.91" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2369" from="n1022" to="n1023" length="19.28" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l237" from="n98" to="n99" length="146.41" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l237" from="n98" to="n99" length="146.41" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2370" from="n1023" to="n139" length="9.20" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
     <link id="l2371" from="n1024" to="n1017" length="833.88" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2372" from="n1025" to="n1024" length="45.89" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
@@ -2697,7 +2697,7 @@
     <link id="l2378" from="n1030" to="n1018" length="86.51" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2379" from="n1030" to="n1029" length="89.56" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l238" from="n98" to="n1064" length="104.87" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l2380" from="n1031" to="n262" length="212.61" freespeed="13.40" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l2380" from="n1031" to="n262" length="212.61" freespeed="13.40" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2381" from="n1031" to="n497" length="104.91" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l2382" from="n1032" to="n939" length="7.53" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2383" from="n1032" to="n1091" length="11.27" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
@@ -2707,7 +2707,7 @@
     <link id="l2387" from="n1035" to="n203" length="72.74" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l2388" from="n1035" to="n203" length="75.03" freespeed="4.50" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2389" from="n1036" to="n619" length="147.26" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l239" from="n99" to="n98" length="146.41" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l239" from="n99" to="n98" length="146.41" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2390" from="n1036" to="n642" length="98.52" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2391" from="n1036" to="n643" length="100.15" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2392" from="n1037" to="n959" length="204.04" freespeed="13.40" capacity="3600" permlanes="2" modes="car"/>
@@ -2816,7 +2816,7 @@
     <link id="l2485" from="n1081" to="n449" length="235.35" freespeed="11.20" capacity="3600" permlanes="2" modes="car"/>
     <link id="l2486" from="n1081" to="n1145" length="37.65" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2487" from="n1082" to="n211" length="8.62" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
-    <link id="l2488" from="n1082" to="n444" length="59.57" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l2488" from="n1082" to="n444" length="59.57" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l2489" from="n1083" to="n662" length="8.84" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
     <link id="l249" from="n102" to="n101" length="92.18" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2490" from="n1083" to="n792" length="8.34" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
@@ -2940,7 +2940,7 @@
     <link id="l2597" from="n1124" to="n925" length="5.63" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l2598" from="n1124" to="n1125" length="9.59" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l2599" from="n1125" to="n1109" length="7.12" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l26" from="n14" to="n5" length="289.27" freespeed="22.40" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l26" from="n14" to="n5" length="289.27" freespeed="22.40" capacity="7200" permlanes="4" modes="car"/>
     <link id="l260" from="n107" to="n108" length="93.17" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l2600" from="n1125" to="n1126" length="102.98" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l2601" from="n1126" to="n709" length="6.47" freespeed="8.90" capacity="5400" permlanes="3" modes="car"/>
@@ -3078,9 +3078,9 @@
     <link id="l330" from="n131" to="n1117" length="11.39" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l331" from="n132" to="n953" length="106.92" freespeed="13.40" capacity="3600" permlanes="2" modes="car"/>
     <link id="l332" from="n132" to="n1041" length="137.56" freespeed="13.40" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l333" from="n133" to="n816" length="69.38" freespeed="22.20" capacity="12600" permlanes="7" modes="car"/>
+    <link id="l333" from="n133" to="n816" length="69.38" freespeed="22.20" capacity="10800" permlanes="6" modes="car"/>
     <link id="l334" from="n133" to="n1041" length="30.75" freespeed="22.20" capacity="10800" permlanes="6" modes="car"/>
-    <link id="l335" from="n134" to="n135" length="192.39" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l335" from="n134" to="n135" length="192.39" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l336" from="n134" to="n334" length="276.65" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l337" from="n134" to="n1140" length="65.79" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l338" from="n135" to="n136" length="39.86" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
@@ -3103,13 +3103,13 @@
     <link id="l353" from="n141" to="n1059" length="4.01" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
     <link id="l354" from="n142" to="n143" length="124.36" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
     <link id="l355" from="n142" to="n474" length="148.15" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l356" from="n143" to="n144" length="128.34" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l356" from="n143" to="n144" length="128.34" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l357" from="n143" to="n210" length="277.31" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l358" from="n144" to="n145" length="66.80" freespeed="16.70" capacity="10800" permlanes="6" modes="car"/>
     <link id="l359" from="n144" to="n386" length="187.86" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l36" from="n18" to="n1008" length="146.49" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l360" from="n145" to="n146" length="65.93" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
-    <link id="l361" from="n145" to="n637" length="94.88" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l361" from="n145" to="n637" length="94.88" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l362" from="n145" to="n689" length="278.35" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l363" from="n146" to="n147" length="55.34" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l364" from="n146" to="n230" length="93.04" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -3132,7 +3132,7 @@
     <link id="l38" from="n19" to="n847" length="103.33" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l380" from="n152" to="n153" length="198.36" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l381" from="n152" to="n263" length="109.07" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l382" from="n152" to="n520" length="108.98" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
+    <link id="l382" from="n152" to="n520" length="108.98" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l383" from="n152" to="n935" length="196.82" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l384" from="n153" to="n154" length="189.09" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l385" from="n153" to="n202" length="108.66" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
@@ -3153,7 +3153,7 @@
     <link id="l399" from="n159" to="n920" length="104.92" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
     <link id="l4" from="n3" to="n4" length="68.86" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l40" from="n20" to="n434" length="269.85" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l400" from="n159" to="n1062" length="95.76" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l400" from="n159" to="n1062" length="95.76" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l401" from="n160" to="n161" length="145.41" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l402" from="n160" to="n919" length="105.25" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l403" from="n161" to="n162" length="146.93" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
@@ -3260,11 +3260,11 @@
     <link id="l495" from="n202" to="n264" length="50.84" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l496" from="n202" to="n819" length="53.88" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l497" from="n203" to="n153" length="109.28" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
-    <link id="l498" from="n203" to="n204" length="108.71" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l498" from="n203" to="n204" length="108.71" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l499" from="n203" to="n520" length="193.35" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l5" from="n5" to="n16" length="363.32" freespeed="22.40" capacity="3600" permlanes="2" modes="car"/>
     <link id="l50" from="n27" to="n8" length="202.35" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l500" from="n204" to="n203" length="108.71" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l500" from="n204" to="n203" length="108.71" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l501" from="n204" to="n1034" length="61.32" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l502" from="n204" to="n1034" length="63.88" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l503" from="n204" to="n1139" length="60.76" freespeed="11.20" capacity="5400" permlanes="3" modes="car"/>
@@ -3348,7 +3348,7 @@
     <link id="l574" from="n240" to="n241" length="95.53" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l575" from="n241" to="n242" length="144.94" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l576" from="n241" to="n605" length="99.11" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l577" from="n241" to="n1061" length="391.15" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
+    <link id="l577" from="n241" to="n1061" length="391.15" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l578" from="n242" to="n88" length="104.68" freespeed="11.20" capacity="1800" permlanes="1" modes="car"/>
     <link id="l579" from="n242" to="n243" length="148.03" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l58" from="n31" to="n30" length="26.95" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -3556,13 +3556,13 @@
     <link id="l761" from="n313" to="n314" length="269.62" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l762" from="n313" to="n1054" length="15.34" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l763" from="n314" to="n55" length="125.22" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
-    <link id="l764" from="n314" to="n78" length="276.24" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l764" from="n314" to="n78" length="276.24" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l765" from="n314" to="n313" length="269.62" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l766" from="n314" to="n434" length="96.67" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l767" from="n315" to="n46" length="192.04" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l768" from="n315" to="n78" length="68.64" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l769" from="n317" to="n130" length="53.13" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l77" from="n39" to="n332" length="68.03" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l77" from="n39" to="n332" length="68.03" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l770" from="n317" to="n318" length="98.27" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l771" from="n317" to="n490" length="51.77" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l772" from="n318" to="n317" length="98.27" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -3605,7 +3605,7 @@
     <link id="l805" from="n331" to="n332" length="124.81" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l806" from="n331" to="n353" length="66.50" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
     <link id="l807" from="n331" to="n1013" length="67.20" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
-    <link id="l808" from="n332" to="n39" length="68.03" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l808" from="n332" to="n39" length="68.03" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l809" from="n332" to="n138" length="277.36" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l81" from="n40" to="n665" length="39.48" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l810" from="n332" to="n331" length="124.81" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
@@ -3613,7 +3613,7 @@
     <link id="l812" from="n333" to="n106" length="54.91" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l813" from="n333" to="n665" length="140.50" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l814" from="n334" to="n134" length="276.65" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
-    <link id="l815" from="n334" to="n311" length="193.81" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
+    <link id="l815" from="n334" to="n311" length="193.81" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l816" from="n334" to="n564" length="98.35" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l817" from="n334" to="n1039" length="108.63" freespeed="13.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l818" from="n335" to="n336" length="61.49" freespeed="11.20" capacity="3600" permlanes="2" modes="car"/>
@@ -3665,7 +3665,7 @@
     <link id="l86" from="n43" to="n42" length="58.86" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
     <link id="l860" from="n354" to="n140" length="136.62" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
     <link id="l861" from="n354" to="n353" length="73.08" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
-    <link id="l862" from="n355" to="n15" length="157.76" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l862" from="n355" to="n15" length="157.76" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l863" from="n355" to="n532" length="67.94" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l864" from="n356" to="n172" length="71.57" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
     <link id="l865" from="n356" to="n695" length="150.97" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -3684,7 +3684,7 @@
     <link id="l877" from="n363" to="n929" length="146.21" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l878" from="n364" to="n363" length="146.54" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l879" from="n364" to="n537" length="105.38" freespeed="8.90" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l88" from="n44" to="n6" length="139.26" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l88" from="n44" to="n6" length="139.26" freespeed="11.20" capacity="10800" permlanes="6" modes="car"/>
     <link id="l880" from="n365" to="n364" length="146.26" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
     <link id="l881" from="n365" to="n718" length="52.41" freespeed="8.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l882" from="n366" to="n365" length="146.48" freespeed="8.90" capacity="3600" permlanes="2" modes="car"/>
@@ -3710,11 +3710,11 @@
     <link id="l90" from="n45" to="n44" length="137.32" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
     <link id="l900" from="n375" to="n949" length="105.03" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l901" from="n376" to="n517" length="292.65" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
-    <link id="l902" from="n377" to="n210" length="128.49" freespeed="17.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l902" from="n377" to="n210" length="128.49" freespeed="17.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l903" from="n378" to="n68" length="276.63" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l904" from="n378" to="n377" length="277.11" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
     <link id="l905" from="n378" to="n443" length="66.75" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l906" from="n378" to="n444" length="59.18" freespeed="13.90" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l906" from="n378" to="n444" length="59.18" freespeed="13.90" capacity="7200" permlanes="4" modes="car"/>
     <link id="l907" from="n378" to="n1072" length="78.68" freespeed="13.90" capacity="1800" permlanes="1" modes="car"/>
     <link id="l908" from="n379" to="n176" length="138.86" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
     <link id="l909" from="n379" to="n451" length="57.41" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
@@ -3729,7 +3729,7 @@
     <link id="l917" from="n383" to="n454" length="57.70" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l918" from="n384" to="n441" length="66.54" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
     <link id="l919" from="n384" to="n442" length="57.84" freespeed="13.90" capacity="5400" permlanes="3" modes="car"/>
-    <link id="l92" from="n45" to="n78" length="191.70" freespeed="11.20" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l92" from="n45" to="n78" length="191.70" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l920" from="n385" to="n206" length="126.75" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l921" from="n386" to="n456" length="59.75" freespeed="16.70" capacity="3600" permlanes="2" modes="car"/>
     <link id="l922" from="n387" to="n388" length="52.53" freespeed="11.10" capacity="1800" permlanes="1" modes="car"/>
@@ -3743,7 +3743,7 @@
     <link id="l93" from="n46" to="n45" length="68.27" freespeed="11.20" capacity="7200" permlanes="4" modes="car"/>
     <link id="l930" from="n390" to="n1070" length="54.86" freespeed="13.40" capacity="5400" permlanes="3" modes="car"/>
     <link id="l931" from="n391" to="n186" length="146.84" freespeed="13.40" capacity="7200" permlanes="4" modes="car"/>
-    <link id="l932" from="n391" to="n703" length="105.38" freespeed="16.70" capacity="9000" permlanes="5" modes="car"/>
+    <link id="l932" from="n391" to="n703" length="105.38" freespeed="16.70" capacity="7200" permlanes="4" modes="car"/>
     <link id="l933" from="n392" to="n159" length="105.17" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>
     <link id="l934" from="n392" to="n391" length="137.08" freespeed="13.40" capacity="7200" permlanes="4" modes="car"/>
     <link id="l935" from="n392" to="n501" length="105.19" freespeed="11.10" capacity="3600" permlanes="2" modes="car"/>

@@ -1,10 +1,10 @@
 {
   "runspec_name": "full_5k_benchmark",
-  "started_at": "2026-01-06T04:35:57.709511+00:00",
-  "completed_at": "2026-01-06T04:37:58.521205+00:00",
+  "started_at": "2026-01-27T01:22:46.344675+00:00",
+  "completed_at": "2026-01-27T01:24:53.423555+00:00",
   "total_runs": 27,
-  "successful_runs": 24,
-  "failed_runs": 3,
+  "successful_runs": 27,
+  "failed_runs": 0,
   "results": [
     {
       "scenario_id": "sioux_falls_sumo_meso",
@@ -12,13 +12,13 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.6375551223754883,
+      "runtime_s": 0.5897431373596191,
       "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_42",
       "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.564112822564513,
+          "mean": 1.6347269453890778,
           "p95": 5.0,
           "trip_count": 4999
         }
@@ -30,13 +30,13 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.6247999668121338,
+      "runtime_s": 0.5755558013916016,
       "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_123",
       "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_123/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.5647129425885178,
+          "mean": 1.6329265853170634,
           "p95": 5.0,
           "trip_count": 4999
         }
@@ -48,13 +48,13 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.6257622241973877,
+      "runtime_s": 0.5877048969268799,
       "output_dir": "runs/sioux_falls_sumo_meso/sumo/seed_456",
       "tripinfo_path": "runs/sioux_falls_sumo_meso/sumo/seed_456/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.5669133826765353,
+          "mean": 1.6365273054610923,
           "p95": 5.0,
           "trip_count": 4999
         }
@@ -66,13 +66,13 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.6375470161437988,
+      "runtime_s": 0.5837559700012207,
       "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_42",
       "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.564112822564513,
+          "mean": 1.6347269453890778,
           "p95": 5.0,
           "trip_count": 4999
         }
@@ -84,13 +84,13 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.6875593662261963,
+      "runtime_s": 0.5879166126251221,
       "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_123",
       "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.5647129425885178,
+          "mean": 1.6329265853170634,
           "p95": 5.0,
           "trip_count": 4999
         }
@@ -102,13 +102,13 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.646806001663208,
+      "runtime_s": 0.586561918258667,
       "output_dir": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_456",
       "tripinfo_path": "runs/sioux_falls_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.5669133826765353,
+          "mean": 1.6365273054610923,
           "p95": 5.0,
           "trip_count": 4999
         }
@@ -120,14 +120,14 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 11.148672819137573,
+      "runtime_s": 11.331024885177612,
       "output_dir": "runs/sioux_falls_matsim/matsim/seed_42",
       "tripinfo_path": null,
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 359.8478,
-          "p95": 688,
+          "mean": 361.0498,
+          "p95": 685,
           "trip_count": 5000
         }
       }
@@ -138,14 +138,14 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 12.836459875106812,
+      "runtime_s": 10.734135866165161,
       "output_dir": "runs/sioux_falls_matsim/matsim/seed_123",
       "tripinfo_path": null,
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 359.8468,
-          "p95": 688,
+          "mean": 361.048,
+          "p95": 685,
           "trip_count": 5000
         }
       }
@@ -156,14 +156,14 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 10.483494997024536,
+      "runtime_s": 11.418283939361572,
       "output_dir": "runs/sioux_falls_matsim/matsim/seed_456",
       "tripinfo_path": null,
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 359.8472,
-          "p95": 688,
+          "mean": 361.0482,
+          "p95": 685,
           "trip_count": 5000
         }
       }
@@ -174,14 +174,14 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.4382491111755371,
+      "runtime_s": 0.5285780429840088,
       "output_dir": "runs/austin_downtown_sumo_meso/sumo/seed_42",
       "tripinfo_path": "runs/austin_downtown_sumo_meso/sumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 2.2766553310662134,
-          "p95": 13.0,
+          "mean": 2.187637527505501,
+          "p95": 9.0,
           "trip_count": 4999
         }
       }
@@ -192,14 +192,14 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.42589616775512695,
+      "runtime_s": 0.4200561046600342,
       "output_dir": "runs/austin_downtown_sumo_meso/sumo/seed_123",
       "tripinfo_path": "runs/austin_downtown_sumo_meso/sumo/seed_123/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 2.2588517703540707,
-          "p95": 12.0,
+          "mean": 2.165633126625325,
+          "p95": 8.0,
           "trip_count": 4999
         }
       }
@@ -210,14 +210,14 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.43771815299987793,
+      "runtime_s": 0.4222431182861328,
       "output_dir": "runs/austin_downtown_sumo_meso/sumo/seed_456",
       "tripinfo_path": "runs/austin_downtown_sumo_meso/sumo/seed_456/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 2.2438487697539506,
-          "p95": 12.0,
+          "mean": 2.1654330866173233,
+          "p95": 9.0,
           "trip_count": 4999
         }
       }
@@ -228,14 +228,14 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.4391050338745117,
+      "runtime_s": 0.43787121772766113,
       "output_dir": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_42",
       "tripinfo_path": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 2.2766553310662134,
-          "p95": 13.0,
+          "mean": 2.187637527505501,
+          "p95": 9.0,
           "trip_count": 4999
         }
       }
@@ -246,14 +246,14 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.4370880126953125,
+      "runtime_s": 0.43883705139160156,
       "output_dir": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_123",
       "tripinfo_path": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 2.2588517703540707,
-          "p95": 12.0,
+          "mean": 2.165633126625325,
+          "p95": 8.0,
           "trip_count": 4999
         }
       }
@@ -264,14 +264,14 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.43935298919677734,
+      "runtime_s": 0.43260908126831055,
       "output_dir": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_456",
       "tripinfo_path": "runs/austin_downtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 2.2438487697539506,
-          "p95": 12.0,
+          "mean": 2.1654330866173233,
+          "p95": 9.0,
           "trip_count": 4999
         }
       }
@@ -281,36 +281,54 @@
       "engine": "matsim",
       "seed": 42,
       "repeat_index": 0,
-      "status": "failed",
-      "runtime_s": 6.318846940994263,
+      "status": "success",
+      "runtime_s": 10.23308515548706,
       "output_dir": "runs/austin_downtown_matsim/matsim/seed_42",
       "tripinfo_path": null,
-      "error_message": "2026-01-05T23:37:00,681  WARN OutputDirectoryHierarchy:267 ### full path: /Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/runs/austin_downtown_matsim/matsim/seed_42/./output\n2026-01-05T23:37:01,158  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T23:37:01,378  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility req",
-      "metrics": {}
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 151.0482,
+          "p95": 369,
+          "trip_count": 5000
+        }
+      }
     },
     {
       "scenario_id": "austin_downtown_matsim",
       "engine": "matsim",
       "seed": 123,
       "repeat_index": 0,
-      "status": "failed",
-      "runtime_s": 6.200602054595947,
+      "status": "success",
+      "runtime_s": 10.312371015548706,
       "output_dir": "runs/austin_downtown_matsim/matsim/seed_123",
       "tripinfo_path": null,
-      "error_message": "2026-01-05T23:37:07,397  WARN OutputDirectoryHierarchy:267 ### full path: /Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/runs/austin_downtown_matsim/matsim/seed_123/./output\n2026-01-05T23:37:07,868  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T23:37:08,066  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility re",
-      "metrics": {}
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 151.0486,
+          "p95": 369,
+          "trip_count": 5000
+        }
+      }
     },
     {
       "scenario_id": "austin_downtown_matsim",
       "engine": "matsim",
       "seed": 456,
       "repeat_index": 0,
-      "status": "failed",
-      "runtime_s": 5.413615942001343,
+      "status": "success",
+      "runtime_s": 10.755177021026611,
       "output_dir": "runs/austin_downtown_matsim/matsim/seed_456",
       "tripinfo_path": null,
-      "error_message": "2026-01-05T23:37:13,346  WARN OutputDirectoryHierarchy:267 ### full path: /Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/runs/austin_downtown_matsim/matsim/seed_456/./output\n2026-01-05T23:37:13,789  WARN PrepareForSimImpl:229 'usePersonIdForMissingVehicleId' is deprecated. It will be removed soon.\n2026-01-05T23:37:13,977  WARN RandomizingTimeDistanceTravelDisutilityFactory:118 There will be no routing randomness. The randomization of the travel disutility re",
-      "metrics": {}
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "mean": 151.0498,
+          "p95": 369,
+          "trip_count": 5000
+        }
+      }
     },
     {
       "scenario_id": "sf_downtown_sumo_meso",
@@ -318,13 +336,13 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.3948700428009033,
+      "runtime_s": 0.48159217834472656,
       "output_dir": "runs/sf_downtown_sumo_meso/sumo/seed_42",
       "tripinfo_path": "runs/sf_downtown_sumo_meso/sumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.2822,
+          "mean": 1.3324,
           "p95": 2.0,
           "trip_count": 5000
         }
@@ -336,13 +354,13 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.39572691917419434,
+      "runtime_s": 0.3878912925720215,
       "output_dir": "runs/sf_downtown_sumo_meso/sumo/seed_123",
       "tripinfo_path": "runs/sf_downtown_sumo_meso/sumo/seed_123/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.2794,
+          "mean": 1.338,
           "p95": 2.0,
           "trip_count": 5000
         }
@@ -354,13 +372,13 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.4187040328979492,
+      "runtime_s": 0.38469672203063965,
       "output_dir": "runs/sf_downtown_sumo_meso/sumo/seed_456",
       "tripinfo_path": "runs/sf_downtown_sumo_meso/sumo/seed_456/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.2838,
+          "mean": 1.3252,
           "p95": 2.0,
           "trip_count": 5000
         }
@@ -372,13 +390,13 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.3998289108276367,
+      "runtime_s": 0.38507986068725586,
       "output_dir": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_42",
       "tripinfo_path": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.2822,
+          "mean": 1.3324,
           "p95": 2.0,
           "trip_count": 5000
         }
@@ -390,13 +408,13 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.39452433586120605,
+      "runtime_s": 0.3853130340576172,
       "output_dir": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_123",
       "tripinfo_path": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_123/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.2794,
+          "mean": 1.338,
           "p95": 2.0,
           "trip_count": 5000
         }
@@ -408,13 +426,13 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 0.3957340717315674,
+      "runtime_s": 0.4012899398803711,
       "output_dir": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_456",
       "tripinfo_path": "runs/sf_downtown_qarsumo_meso/qarsumo/seed_456/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 1.2838,
+          "mean": 1.3252,
           "p95": 2.0,
           "trip_count": 5000
         }
@@ -426,14 +444,14 @@
       "seed": 42,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 12.401166200637817,
+      "runtime_s": 9.957905054092407,
       "output_dir": "runs/sf_downtown_matsim/matsim/seed_42",
       "tripinfo_path": null,
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 126.3374,
-          "p95": 293,
+          "mean": 125.942,
+          "p95": 290,
           "trip_count": 5000
         }
       }
@@ -444,14 +462,14 @@
       "seed": 123,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 10.910072088241577,
+      "runtime_s": 12.172747135162354,
       "output_dir": "runs/sf_downtown_matsim/matsim/seed_123",
       "tripinfo_path": null,
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 126.3376,
-          "p95": 293,
+          "mean": 125.9422,
+          "p95": 290,
           "trip_count": 5000
         }
       }
@@ -462,14 +480,14 @@
       "seed": 456,
       "repeat_index": 0,
       "status": "success",
-      "runtime_s": 13.556323051452637,
+      "runtime_s": 10.006695747375488,
       "output_dir": "runs/sf_downtown_matsim/matsim/seed_456",
       "tripinfo_path": null,
       "error_message": null,
       "metrics": {
         "travel_time": {
-          "mean": 126.3378,
-          "p95": 293,
+          "mean": 125.942,
+          "p95": 290,
           "trip_count": 5000
         }
       }

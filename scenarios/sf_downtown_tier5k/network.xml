@@ -1190,7 +1190,7 @@
     <link id="l1020" from="n427" to="n426" length="146.2" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8917692" name="Valparaiso Street"/>
     <link id="l1021" from="n427" to="n583" length="52.5" lanes="2" speed_limit="11.2" highway_type="unclassified" osm_way_id="588340574" name="Taylor Street"/>
     <link id="l1022" from="n428" to="n420" length="52.31" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="30029878" name="Jones Street"/>
-    <link id="l1023" from="n428" to="n584" length="157.92" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920457, 8917693]" name="Valparaiso Street"/>
+    <link id="l1023" from="n428" to="n584" length="157.92" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920457, 8917693]" name="Roach Street"/>
     <link id="l1024" from="n428" to="n585" length="52.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="30029878" name="Jones Street"/>
     <link id="l1025" from="n429" to="n430" length="136.37" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8917694" name="Olive Street"/>
     <link id="l1026" from="n429" to="n539" length="52.91" lanes="3" speed_limit="11.2" highway_type="trunk" osm_way_id="766798665" name="Van Ness Avenue"/>
@@ -1222,7 +1222,7 @@
     <link id="l105" from="n51" to="n1053" length="143.93" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8916183" name="Welsh Street"/>
     <link id="l1050" from="n441" to="n384" length="66.54" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[766805264, 1418592125, 417087254]" name="11th Street"/>
     <link id="l1051" from="n441" to="n688" length="149.58" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[766805262, 27029263]" name="Mission Street"/>
-    <link id="l1052" from="n441" to="n749" length="181.92" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[1030297702, 1418586055, 24335441, 766805266, 397118327]" name="Mission Street"/>
+    <link id="l1052" from="n441" to="n749" length="181.92" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1030297702, 1418586055, 24335441, 766805266, 397118327]" name="Mission Street"/>
     <link id="l1053" from="n441" to="n933" length="192.55" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[8917791, 417087260, 417087270, 766805263]" name="11th Street"/>
     <link id="l1054" from="n442" to="n384" length="57.84" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="1349027898" name="11th Street"/>
     <link id="l1055" from="n442" to="n454" length="149.81" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47170567" name="Natoma Street"/>
@@ -1231,8 +1231,8 @@
     <link id="l1058" from="n443" to="n409" length="85.71" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="88572932" name="Mission Street"/>
     <link id="l1059" from="n443" to="n1072" length="24.5" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1096926712" name="Mission Street"/>
     <link id="l106" from="n52" to="n53" length="88.78" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47172842" name="Welsh Street"/>
-    <link id="l1060" from="n444" to="n378" length="59.18" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1068493280, 1068493279]" name="5th Street"/>
-    <link id="l1061" from="n444" to="n1082" length="59.57" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1068493280, 417396816, 1081219366]" name="5th Street"/>
+    <link id="l1060" from="n444" to="n378" length="59.18" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1068493280, 1068493279]" name="5th Street"/>
+    <link id="l1061" from="n444" to="n1082" length="59.57" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1068493280, 417396816, 1081219366]" name="5th Street"/>
     <link id="l1062" from="n445" to="n71" length="276.23" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47172627" name="Tehama Street"/>
     <link id="l1063" from="n445" to="n211" length="66.13" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[397127922, 1120504934]" name="5th Street"/>
     <link id="l1064" from="n445" to="n446" length="58.75" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="1120503653" name="5th Street"/>
@@ -1306,7 +1306,7 @@
     <link id="l1125" from="n472" to="n473" length="104.67" lanes="2" speed_limit="8.9" highway_type="residential" osm_way_id="1035093273" name="Mason Street"/>
     <link id="l1126" from="n472" to="n534" length="146.51" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="27400639" name="Ellis Street"/>
     <link id="l1127" from="n473" to="n292" length="70.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="254448247" name="Eddy Street"/>
-    <link id="l1128" from="n473" to="n639" length="251.21" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="[254448250, 399138118]" name="Turk Street"/>
+    <link id="l1128" from="n473" to="n639" length="251.21" lanes="2" speed_limit="8.9" highway_type="residential" osm_way_id="[254448250, 399138118]" name="Mason Street"/>
     <link id="l1129" from="n473" to="n640" length="146.43" lanes="3" speed_limit="8.9" highway_type="residential" osm_way_id="742976231" name="Eddy Street"/>
     <link id="l113" from="n56" to="n57" length="92.48" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[215819222, 215819215]" name="Lusk Street"/>
     <link id="l1130" from="n474" to="n142" length="148.15" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8918016, 8920726]" name="Kaplan Lane"/>
@@ -1420,11 +1420,11 @@
     <link id="l1228" from="n509" to="n510" length="81.84" lanes="1" speed_limit="5.6" highway_type="living_street" osm_way_id="8918369" name="Davis Court"/>
     <link id="l1229" from="n509" to="n545" length="201.62" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8922024" name="Davis Street"/>
     <link id="l123" from="n61" to="n282" length="53.89" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="30029878" name="Jones Street"/>
-    <link id="l1230" from="n509" to="n897" length="177.0" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="[28843496, 682030990]" name="Jackson Street"/>
+    <link id="l1230" from="n509" to="n897" length="177.0" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="[28843496, 682030990]" name="Drumm Street"/>
     <link id="l1231" from="n510" to="n509" length="81.84" lanes="1" speed_limit="5.6" highway_type="living_street" osm_way_id="8918369" name="Davis Court"/>
     <link id="l1232" from="n511" to="n338" length="72.38" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8922858" name="Mabini Street"/>
-    <link id="l1233" from="n511" to="n532" length="225.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8917441, 121785555, 8918381]" name="Tandang Sora Street"/>
-    <link id="l1234" from="n511" to="n532" length="115.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920242, 8918381]" name="Bonifacio Street"/>
+    <link id="l1233" from="n511" to="n532" length="225.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8917441, 121785555, 8918381]" name="Rizal Street"/>
+    <link id="l1234" from="n511" to="n532" length="115.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920242, 8918381]" name="Lapu Lapu Street"/>
     <link id="l1235" from="n512" to="n674" length="146.31" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="32121427" name="Page Street"/>
     <link id="l1236" from="n513" to="n675" length="146.38" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="8920306" name="Fell Street"/>
     <link id="l1237" from="n513" to="n846" length="122.93" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[525545008, 26988066]" name="Fell Street"/>
@@ -1448,7 +1448,7 @@
     <link id="l1253" from="n521" to="n326" length="86.98" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="88559669" name="Mission Street"/>
     <link id="l1254" from="n521" to="n386" length="65.42" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="88572948" name="New Montgomery Street"/>
     <link id="l1255" from="n521" to="n637" length="94.23" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="1120283629" name="Mission Street"/>
-    <link id="l1256" from="n522" to="n151" length="123.64" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8916750, 8918831]" name="Allen Street"/>
+    <link id="l1256" from="n522" to="n151" length="123.64" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8916750, 8918831]" name="Eastman Place"/>
     <link id="l1257" from="n522" to="n286" length="31.37" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="1286171776" name="Hyde Street"/>
     <link id="l1258" from="n522" to="n422" length="73.87" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="1286171776" name="Hyde Street"/>
     <link id="l1259" from="n523" to="n293" length="73.76" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="377646101" name="Ellis Street"/>
@@ -1483,8 +1483,8 @@
     <link id="l1285" from="n531" to="n582" length="146.07" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="425516661" name="Greenwich Street"/>
     <link id="l1286" from="n531" to="n870" length="112.5" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="425516661" name="Greenwich Street"/>
     <link id="l1287" from="n532" to="n355" length="67.94" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920242" name="Lapu Lapu Street"/>
-    <link id="l1288" from="n532" to="n511" length="115.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920242, 8918381]" name="Bonifacio Street"/>
-    <link id="l1289" from="n532" to="n511" length="225.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8917441, 121785555, 8918381]" name="Bonifacio Street"/>
+    <link id="l1288" from="n532" to="n511" length="115.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920242, 8918381]" name="Lapu Lapu Street"/>
+    <link id="l1289" from="n532" to="n511" length="225.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8917441, 121785555, 8918381]" name="Rizal Street"/>
     <link id="l129" from="n63" to="n64" length="191.55" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8916291" name="Moss Street"/>
     <link id="l1290" from="n533" to="n323" length="112.09" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="26938293" name="Broadway"/>
     <link id="l1291" from="n533" to="n739" length="81.03" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="26938418" name="Hyde Street"/>
@@ -1522,7 +1522,7 @@
     <link id="l132" from="n65" to="n66" length="55.4" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="111547662" name="6th Street"/>
     <link id="l1320" from="n544" to="n652" length="226.13" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[417099353, 417099361, 1041093698, 417099355]" name="The Embarcadero"/>
     <link id="l1321" from="n544" to="n1049" length="14.54" lanes="2" speed_limit="11.2" highway_type="primary" osm_way_id="8918994" name="Broadway"/>
-    <link id="l1322" from="n545" to="n112" length="211.43" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1050287138, 682030989]" name="Davis Street"/>
+    <link id="l1322" from="n545" to="n112" length="211.43" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1050287138, 682030989]" name="Vallejo Street"/>
     <link id="l1323" from="n545" to="n495" length="103.03" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="399156530" name="Broadway"/>
     <link id="l1324" from="n545" to="n509" length="201.62" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8922024" name="Davis Street"/>
     <link id="l1325" from="n545" to="n813" length="89.45" lanes="4" speed_limit="11.2" highway_type="primary" osm_way_id="[417099320, 283516316, 682030988, 1041093693]" name="Broadway"/>
@@ -1592,7 +1592,7 @@
     <link id="l1383" from="n567" to="n568" length="61.48" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="91181770" name="1st Street"/>
     <link id="l1384" from="n568" to="n336" length="62.94" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="408600295" name="1st Street"/>
     <link id="l1385" from="n569" to="n847" length="123.49" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="468201423" name="1st Street"/>
-    <link id="l1386" from="n569" to="n985" length="270.46" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8915752, 8919338, 215961475]" name="Lansing Street"/>
+    <link id="l1386" from="n569" to="n985" length="270.46" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8915752, 8919338, 215961475]" name="Guy Place"/>
     <link id="l1387" from="n569" to="n987" length="34.47" lanes="3" speed_limit="13.9" highway_type="secondary_link" osm_way_id="513707467" name="1st Street"/>
     <link id="l1388" from="n570" to="n139" length="134.45" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8919053" name="Perry Street"/>
     <link id="l1389" from="n571" to="n16" length="122.16" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="375744879" name="4th Street"/>
@@ -1612,7 +1612,7 @@
     <link id="l1400" from="n576" to="n575" length="42.4" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="8919077" name="Federal Street"/>
     <link id="l1401" from="n577" to="n169" length="52.55" lanes="2" speed_limit="11.2" highway_type="trunk" osm_way_id="527829956" name="Van Ness Avenue"/>
     <link id="l1402" from="n577" to="n578" length="134.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8919093" name="Fern Street"/>
-    <link id="l1403" from="n578" to="n403" length="52.37" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[1111278016, 1111278017]" name="Franklin Street"/>
+    <link id="l1403" from="n578" to="n403" length="52.37" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[1111278016, 1111278017]" name="Franklin Street"/>
     <link id="l1404" from="n578" to="n518" length="146.3" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8919093" name="Fern Street"/>
     <link id="l1405" from="n579" to="n400" length="52.46" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="397136323" name="Larkin Street"/>
     <link id="l1406" from="n580" to="n483" length="135.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8919094" name="Fern Street"/>
@@ -1623,7 +1623,7 @@
     <link id="l1410" from="n582" to="n531" length="146.07" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="425516661" name="Greenwich Street"/>
     <link id="l1411" from="n583" to="n427" length="52.5" lanes="2" speed_limit="11.2" highway_type="unclassified" osm_way_id="588340574" name="Taylor Street"/>
     <link id="l1412" from="n583" to="n584" length="40.74" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="48211196" name="Greenwich Street"/>
-    <link id="l1413" from="n584" to="n428" length="157.92" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920457, 8917693]" name="Valparaiso Street"/>
+    <link id="l1413" from="n584" to="n428" length="157.92" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8920457, 8917693]" name="Roach Street"/>
     <link id="l1414" from="n584" to="n583" length="40.74" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="48211196" name="Greenwich Street"/>
     <link id="l1415" from="n584" to="n585" length="105.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="48211196" name="Greenwich Street"/>
     <link id="l1416" from="n585" to="n428" length="52.71" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="30029878" name="Jones Street"/>
@@ -1755,7 +1755,7 @@
     <link id="l153" from="n71" to="n72" length="58.15" lanes="6" speed_limit="11.2" highway_type="secondary" osm_way_id="264874017" name="6th Street"/>
     <link id="l1530" from="n636" to="n480" length="137.2" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47109155" name="Willow Street"/>
     <link id="l1531" from="n636" to="n808" length="52.05" lanes="3" speed_limit="11.2" highway_type="trunk" osm_way_id="527857414" name="Van Ness Avenue"/>
-    <link id="l1532" from="n637" to="n145" length="94.88" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[88572965, 1120283630]" name="Mission Street"/>
+    <link id="l1532" from="n637" to="n145" length="94.88" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[88572965, 1120283630]" name="Mission Street"/>
     <link id="l1533" from="n637" to="n521" length="94.23" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="1120283629" name="Mission Street"/>
     <link id="l1534" from="n638" to="n841" length="9.67" lanes="3" speed_limit="22.2" highway_type="primary" osm_way_id="85644954" name="Van Ness Avenue"/>
     <link id="l1535" from="n639" to="n640" length="104.86" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[1053826376, 686250326]" name="Taylor Street"/>
@@ -1863,7 +1863,7 @@
     <link id="l1627" from="n677" to="n727" length="137.01" lanes="4" speed_limit="11.2" highway_type="residential" osm_way_id="399138117" name="Grove Street"/>
     <link id="l1628" from="n677" to="n1005" length="146.31" lanes="4" speed_limit="11.2" highway_type="residential" osm_way_id="399138117" name="Grove Street"/>
     <link id="l1629" from="n678" to="n261" length="104.94" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="233201264" name="Franklin Street"/>
-    <link id="l163" from="n75" to="n76" length="67.92" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[417396848, 607903509, 1110263286]" name="6th Street"/>
+    <link id="l163" from="n75" to="n76" length="67.92" lanes="6" speed_limit="11.2" highway_type="secondary" osm_way_id="[417396848, 607903509, 1110263286]" name="6th Street"/>
     <link id="l1630" from="n678" to="n515" length="147.02" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="233201263" name="McAllister Street"/>
     <link id="l1631" from="n678" to="n701" length="134.62" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="502795549" name="McAllister Street"/>
     <link id="l1632" from="n679" to="n670" length="51.93" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="225806029" name="Franklin Street"/>
@@ -1885,7 +1885,7 @@
     <link id="l1647" from="n685" to="n757" length="49.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1266496429" name="Jones Street"/>
     <link id="l1648" from="n686" to="n555" length="54.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1453744423" name="Leavenworth Street"/>
     <link id="l1649" from="n686" to="n685" length="146.57" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920093" name="Bernard Street"/>
-    <link id="l165" from="n76" to="n75" length="67.92" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[417396848, 607903509, 1110263286]" name="6th Street"/>
+    <link id="l165" from="n76" to="n75" length="67.92" lanes="6" speed_limit="11.2" highway_type="secondary" osm_way_id="[417396848, 607903509, 1110263286]" name="6th Street"/>
     <link id="l1650" from="n686" to="n747" length="49.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1381368402" name="Leavenworth Street"/>
     <link id="l1651" from="n687" to="n438" length="52.44" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="133733591" name="Octavia Street"/>
     <link id="l1652" from="n687" to="n1005" length="146.78" lanes="4" speed_limit="11.2" highway_type="residential" osm_way_id="1339606287" name="Grove Street"/>
@@ -1896,7 +1896,7 @@
     <link id="l1657" from="n689" to="n377" length="64.77" lanes="3" speed_limit="17.9" highway_type="secondary" osm_way_id="283534317" name="4th Street"/>
     <link id="l1658" from="n689" to="n1072" length="251.49" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[771701157, 111560680, 51392400, 1292410866, 51392402]" name="Mission Street"/>
     <link id="l1659" from="n690" to="n339" length="63.66" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[934261704, 397145254]" name="4th Street"/>
-    <link id="l166" from="n76" to="n77" length="86.47" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[254305050, 1119577539]" name="6th Street"/>
+    <link id="l166" from="n76" to="n77" length="86.47" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[254305050, 1119577539]" name="6th Street"/>
     <link id="l1660" from="n691" to="n447" length="276.26" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920281" name="Shipley Street"/>
     <link id="l1661" from="n691" to="n692" length="57.86" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="1349068285" name="4th Street"/>
     <link id="l1662" from="n692" to="n15" length="65.58" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[408600296, 417396782]" name="4th Street"/>
@@ -1929,7 +1929,7 @@
     <link id="l1687" from="n702" to="n390" length="105.15" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="224316527" name="Sansome Street"/>
     <link id="l1688" from="n703" to="n85" length="107.27" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[397269730, 406944779]" name="Kearny Street"/>
     <link id="l1689" from="n703" to="n501" length="135.92" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[1041351162, 397146707]" name="Pine Street"/>
-    <link id="l169" from="n77" to="n76" length="86.47" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[254305050, 1119577539]" name="6th Street"/>
+    <link id="l169" from="n77" to="n76" length="86.47" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[254305050, 1119577539]" name="6th Street"/>
     <link id="l1690" from="n704" to="n87" length="107.55" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="28841115" name="Stockton Street"/>
     <link id="l1691" from="n704" to="n393" length="105.62" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="28841115" name="Stockton Street"/>
     <link id="l1692" from="n704" to="n1046" length="141.85" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="329596844" name="Pine Street"/>
@@ -1952,7 +1952,7 @@
     <link id="l1707" from="n713" to="n74" length="147.68" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1315259087" name="Shipley Street"/>
     <link id="l1708" from="n713" to="n341" length="71.13" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920934" name="Falmouth Street"/>
     <link id="l1709" from="n714" to="n267" length="105.53" lanes="3" speed_limit="11.2" highway_type="trunk" osm_way_id="417087664" name="Van Ness Avenue"/>
-    <link id="l171" from="n78" to="n45" length="191.7" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[254308553, 514593148]" name="6th Street"/>
+    <link id="l171" from="n78" to="n45" length="191.7" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[254308553, 514593148]" name="6th Street"/>
     <link id="l1710" from="n714" to="n675" length="136.74" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="1409359559" name="Fell Street"/>
     <link id="l1711" from="n714" to="n1136" length="6.03" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="417087334" name="Fell Street"/>
     <link id="l1712" from="n715" to="n33" length="102.39" lanes="3" speed_limit="8.9" highway_type="secondary" osm_way_id="26988030" name="Larkin Street"/>
@@ -1963,7 +1963,7 @@
     <link id="l1717" from="n717" to="n479" length="146.32" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="225847513" name="Eddy Street"/>
     <link id="l1718" from="n717" to="n635" length="52.76" lanes="3" speed_limit="8.9" highway_type="secondary" osm_way_id="398675749" name="Larkin Street"/>
     <link id="l1719" from="n717" to="n738" length="146.4" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="30832489" name="Eddy Street"/>
-    <link id="l172" from="n78" to="n314" length="276.24" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[141688972, 1120695890, 1120695891, 1120695892, 397127923, 397127924]" name="Brannan Street"/>
+    <link id="l172" from="n78" to="n314" length="276.24" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[141688972, 1120695890, 1120695891, 1120695892, 397127923, 397127924]" name="Brannan Street"/>
     <link id="l1720" from="n718" to="n562" length="52.19" lanes="3" speed_limit="8.9" highway_type="secondary" osm_way_id="980893266" name="Larkin Street"/>
     <link id="l1721" from="n719" to="n610" length="99.04" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="27167298" name="Larkin Street"/>
     <link id="l1722" from="n719" to="n622" length="98.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1459358525" name="Larkin Street"/>
@@ -2078,7 +2078,7 @@
     <link id="l1820" from="n760" to="n806" length="52.44" lanes="2" speed_limit="11.2" highway_type="trunk" osm_way_id="766798668" name="Van Ness Avenue"/>
     <link id="l1821" from="n760" to="n955" length="135.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8921655" name="Alice B. Toklas Place"/>
     <link id="l1822" from="n761" to="n523" length="147.65" lanes="2" speed_limit="11.1" highway_type="tertiary_link" osm_way_id="[425516613, 627329159, 772972818, 627706100, 377646102]" name="Ellis Street"/>
-    <link id="l1823" from="n761" to="n689" length="234.77" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[225806055, 225806056, 777343790, 934194966, 89782522, 1024537343]" name="Stockton Street"/>
+    <link id="l1823" from="n761" to="n689" length="234.77" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[225806055, 225806056, 777343790, 934194966, 89782522, 1024537343]" name="4th Street"/>
     <link id="l1824" from="n762" to="n605" length="99.31" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[397146708, 28843615]" name="Stockton Street"/>
     <link id="l1825" from="n762" to="n617" length="99.11" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="397146715" name="Stockton Street"/>
     <link id="l1826" from="n762" to="n758" length="97.14" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[258613674, 258613676]" name="Washington Street"/>
@@ -2212,9 +2212,9 @@
     <link id="l1941" from="n814" to="n496" length="93.55" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="8919608" name="Green Street"/>
     <link id="l1942" from="n814" to="n813" length="226.22" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[359898622, 359898623]" name="The Embarcadero"/>
     <link id="l1943" from="n814" to="n1048" length="12.44" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="417000954" name="Green Street"/>
-    <link id="l1944" from="n815" to="n816" length="264.55" lanes="5" speed_limit="13.4" highway_type="primary" osm_way_id="[255351721, 417400761, 396945237, 396945239]" name="King Street"/>
+    <link id="l1944" from="n815" to="n816" length="264.55" lanes="3" speed_limit="13.4" highway_type="primary" osm_way_id="[255351721, 417400761, 396945237, 396945239]" name="King Street"/>
     <link id="l1945" from="n815" to="n1056" length="26.72" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="255351748" name="4th Street"/>
-    <link id="l1946" from="n816" to="n133" length="69.38" lanes="7" speed_limit="22.2" highway_type="primary" osm_way_id="[396945233, 133755930]" name="3rd Street"/>
+    <link id="l1946" from="n816" to="n133" length="69.38" lanes="6" speed_limit="22.2" highway_type="primary" osm_way_id="[396945233, 133755930]" name="3rd Street"/>
     <link id="l1947" from="n816" to="n818" length="31.59" lanes="4" speed_limit="22.2" highway_type="primary" osm_way_id="27656675" name="3rd Street"/>
     <link id="l1948" from="n816" to="n1040" length="277.85" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[397270776, 397270779]" name="King Street"/>
     <link id="l1949" from="n817" to="n722" length="271.47" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[396945238, 255330047]" name="King Street"/>
@@ -2394,7 +2394,7 @@
     <link id="l2104" from="n896" to="n466" length="146.29" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1381354146, 588340585, 588340586]" name="Green Street"/>
     <link id="l2105" from="n896" to="n541" length="210.61" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[588340584, 133376120, 588340581, 588340583]" name="Taylor Street"/>
     <link id="l2106" from="n897" to="n440" length="27.86" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="30758839" name="Drumm Street"/>
-    <link id="l2107" from="n897" to="n509" length="177.0" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="[28843496, 682030990]" name="Jackson Street"/>
+    <link id="l2107" from="n897" to="n509" length="177.0" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="[28843496, 682030990]" name="Drumm Street"/>
     <link id="l2108" from="n898" to="n768" length="74.92" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="416878315" name="Columbus Avenue"/>
     <link id="l2109" from="n898" to="n862" length="56.78" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="30030101" name="Columbus Avenue"/>
     <link id="l211" from="n90" to="n89" length="80.19" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="91181760" name="California Street"/>
@@ -2636,7 +2636,7 @@
     <link id="l2322" from="n998" to="n337" length="71.38" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[1111974546, 617990574]" name="Folsom Street"/>
     <link id="l2323" from="n999" to="n957" length="28.4" lanes="1" speed_limit="22.4" highway_type="motorway_link" osm_way_id="397108538"/>
     <link id="l2324" from="n999" to="n1000" length="29.29" lanes="2" speed_limit="22.4" highway_type="motorway_link" osm_way_id="667824727"/>
-    <link id="l2325" from="n1000" to="n205" length="95.54" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[397148932, 513703277, 417099332]" name="Fremont Street"/>
+    <link id="l2325" from="n1000" to="n205" length="95.54" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[397148932, 513703277, 417099332]" name="Fremont Street"/>
     <link id="l2326" from="n1001" to="n156" length="13.9" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="550652206" name="Sutter Street"/>
     <link id="l2327" from="n1002" to="n183" length="51.99" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="398681181" name="Gough Street"/>
     <link id="l2328" from="n1002" to="n268" length="146.31" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="397100591" name="Oak Street"/>
@@ -2685,7 +2685,7 @@
     <link id="l2367" from="n1021" to="n1023" length="4.52" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="1378950381" name="3rd Street"/>
     <link id="l2368" from="n1022" to="n1016" length="324.91" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[617825978, 616218749, 617731167]" name="Transbay Bus Ramp"/>
     <link id="l2369" from="n1022" to="n1023" length="19.28" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="617731168"/>
-    <link id="l237" from="n98" to="n99" length="146.41" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[513971227, 619378867]" name="California Street"/>
+    <link id="l237" from="n98" to="n99" length="146.41" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[513971227, 619378867]" name="California Street"/>
     <link id="l2370" from="n1023" to="n139" length="9.2" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="935446479" name="3rd Street"/>
     <link id="l2371" from="n1024" to="n1017" length="833.88" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[616220998, 681686984, 681686985, 681686987, 681686988, 681686991, 681686994, 681686995, 681686998, 681686999, 681687001, 681687002, 681687003, 681687004, 681687006, 681687007, 681687009, 681687010, 681687011, 681687013, 681687014, 681687015, 681687016, 681687017, 681687019, 681687020, 681687021, 681687022, 681687023, 681687024, 681687026, 681687027, 681687028, 681687029, 681687031, 681687032, 681687033]"/>
     <link id="l2372" from="n1025" to="n1024" length="45.89" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="681687033"/>
@@ -2697,7 +2697,7 @@
     <link id="l2378" from="n1030" to="n1018" length="86.51" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[680402697, 619378854]"/>
     <link id="l2379" from="n1030" to="n1029" length="89.56" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[680402696, 619378861]"/>
     <link id="l238" from="n98" to="n1064" length="104.87" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="513976293" name="Franklin Street"/>
-    <link id="l2380" from="n1031" to="n262" length="212.61" lanes="5" speed_limit="13.4" highway_type="tertiary" osm_way_id="[417099304, 417099307, 1052690680, 88597563, 397150140, 619593086]" name="Beale Street"/>
+    <link id="l2380" from="n1031" to="n262" length="212.61" lanes="4" speed_limit="13.4" highway_type="tertiary" osm_way_id="[417099304, 417099307, 1052690680, 88597563, 397150140, 619593086]" name="Beale Street"/>
     <link id="l2381" from="n1031" to="n497" length="104.91" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="[737711008, 737711009, 88597553, 680243315, 737711007]" name="Pine Street"/>
     <link id="l2382" from="n1032" to="n939" length="7.53" lanes="4" speed_limit="11.2" highway_type="trunk" osm_way_id="767944816" name="Van Ness Avenue"/>
     <link id="l2383" from="n1032" to="n1091" length="11.27" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="767944815" name="Market Street"/>
@@ -2707,7 +2707,7 @@
     <link id="l2387" from="n1035" to="n203" length="72.74" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[397267323, 417099343]" name="Main Street"/>
     <link id="l2388" from="n1035" to="n203" length="75.03" lanes="1" speed_limit="4.5" highway_type="busway" osm_way_id="[684030186, 630121524]" name="Main Street"/>
     <link id="l2389" from="n1036" to="n619" length="147.26" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[769490512, 30029172]" name="Jackson Street"/>
-    <link id="l239" from="n99" to="n98" length="146.41" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[513971227, 619378867]" name="California Street"/>
+    <link id="l239" from="n99" to="n98" length="146.41" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[513971227, 619378867]" name="California Street"/>
     <link id="l2390" from="n1036" to="n642" length="98.52" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="620169745" name="Taylor Street"/>
     <link id="l2391" from="n1036" to="n643" length="100.15" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="1459358664" name="Taylor Street"/>
     <link id="l2392" from="n1037" to="n959" length="204.04" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[88466052, 397140735]" name="The Embarcadero"/>
@@ -2816,7 +2816,7 @@
     <link id="l2485" from="n1081" to="n449" length="235.35" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="[442572412, 442572413]" name="Townsend Street"/>
     <link id="l2486" from="n1081" to="n1145" length="37.65" lanes="1" speed_limit="11.1" highway_type="tertiary_link" osm_way_id="[1348383217, 1348383215]"/>
     <link id="l2487" from="n1082" to="n211" length="8.62" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="1040509547" name="5th Street"/>
-    <link id="l2488" from="n1082" to="n444" length="59.57" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417396816, 1068493280, 1081219366]" name="5th Street"/>
+    <link id="l2488" from="n1082" to="n444" length="59.57" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417396816, 1068493280, 1081219366]" name="5th Street"/>
     <link id="l2489" from="n1083" to="n662" length="8.84" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="85644946" name="Green Street"/>
     <link id="l249" from="n102" to="n101" length="92.18" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8916445" name="Russell Street"/>
     <link id="l2490" from="n1083" to="n792" length="8.34" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="85644946" name="Green Street"/>
@@ -2940,7 +2940,7 @@
     <link id="l2597" from="n1124" to="n925" length="5.63" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="86303769" name="California Street"/>
     <link id="l2598" from="n1124" to="n1125" length="9.59" lanes="2" speed_limit="13.9" highway_type="busway" osm_way_id="1054649993" name="Van Ness Bus Rapid Transit"/>
     <link id="l2599" from="n1125" to="n1109" length="7.12" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="142961025" name="California Street"/>
-    <link id="l26" from="n14" to="n5" length="289.27" lanes="5" speed_limit="22.4" highway_type="motorway" osm_way_id="[394443188, 394443190]" name="Route 80"/>
+    <link id="l26" from="n14" to="n5" length="289.27" lanes="4" speed_limit="22.4" highway_type="motorway" osm_way_id="[394443188, 394443190]" name="Route 80"/>
     <link id="l260" from="n107" to="n108" length="93.17" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47172834" name="South Park"/>
     <link id="l2600" from="n1125" to="n1126" length="102.98" lanes="2" speed_limit="13.9" highway_type="busway" osm_way_id="1054649993" name="Van Ness Bus Rapid Transit"/>
     <link id="l2601" from="n1126" to="n709" length="6.47" lanes="3" speed_limit="8.9" highway_type="secondary" osm_way_id="502795939" name="Pine Street"/>
@@ -2983,7 +2983,7 @@
     <link id="l2635" from="n1143" to="n116" length="87.44" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8916564" name="Vallejo Street"/>
     <link id="l2636" from="n1144" to="n421" length="102.49" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="48163472" name="Filbert Street"/>
     <link id="l2637" from="n1144" to="n422" length="44.1" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1301445741" name="Filbert Street"/>
-    <link id="l2638" from="n1145" to="n434" length="361.25" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[7373728, 7373736]" name="6th Street"/>
+    <link id="l2638" from="n1145" to="n434" length="361.25" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[7373728, 7373736]" name="Bluxome Street"/>
     <link id="l2639" from="n1146" to="n455" length="66.36" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="1349022982" name="Fremont Street"/>
     <link id="l264" from="n109" to="n111" length="53.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47172835" name="South Park"/>
     <link id="l2640" from="n1147" to="n207" length="7.15" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="88559691" name="2nd Street"/>
@@ -3010,7 +3010,7 @@
     <link id="l27" from="n15" to="n9" length="276.15" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[143617584, 1110242909]" name="Harrison Street"/>
     <link id="l270" from="n112" to="n495" length="107.28" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[399156532, 777349733]" name="Front Street"/>
     <link id="l271" from="n112" to="n496" length="104.67" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="399156532" name="Front Street"/>
-    <link id="l272" from="n112" to="n545" length="211.43" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1050287138, 682030989]" name="Davis Street"/>
+    <link id="l272" from="n112" to="n545" length="211.43" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1050287138, 682030989]" name="Vallejo Street"/>
     <link id="l273" from="n113" to="n112" length="104.7" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="1050287138" name="Vallejo Street"/>
     <link id="l274" from="n113" to="n114" length="104.73" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1172249576, 1172249577]" name="Vallejo Street"/>
     <link id="l275" from="n113" to="n546" length="106.95" lanes="2" speed_limit="11.2" highway_type="tertiary" osm_way_id="706545923" name="Battery Street"/>
@@ -3078,9 +3078,9 @@
     <link id="l330" from="n131" to="n1117" length="11.39" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="85644927" name="Vallejo Street"/>
     <link id="l331" from="n132" to="n953" length="106.92" lanes="2" speed_limit="13.4" highway_type="primary" osm_way_id="[1006830792, 1006830794, 1006830791]" name="3rd Street"/>
     <link id="l332" from="n132" to="n1041" length="137.56" lanes="1" speed_limit="13.4" highway_type="primary" osm_way_id="[27656674, 280398652, 834052365, 834052366]" name="3rd Street"/>
-    <link id="l333" from="n133" to="n816" length="69.38" lanes="7" speed_limit="22.2" highway_type="primary" osm_way_id="[396945233, 133755930]" name="3rd Street"/>
+    <link id="l333" from="n133" to="n816" length="69.38" lanes="6" speed_limit="22.2" highway_type="primary" osm_way_id="[396945233, 133755930]" name="3rd Street"/>
     <link id="l334" from="n133" to="n1041" length="30.75" lanes="6" speed_limit="22.2" highway_type="primary" osm_way_id="1006830796" name="3rd Street"/>
-    <link id="l335" from="n134" to="n135" length="192.39" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[513707473, 396945235]" name="3rd Street"/>
+    <link id="l335" from="n134" to="n135" length="192.39" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[513707473, 396945235]" name="3rd Street"/>
     <link id="l336" from="n134" to="n334" length="276.65" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[681699528, 682453637, 111550911]" name="Townsend Street"/>
     <link id="l337" from="n134" to="n1140" length="65.79" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="682475681" name="Townsend Street"/>
     <link id="l338" from="n135" to="n136" length="39.86" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="133735130" name="3rd Street"/>
@@ -3103,19 +3103,19 @@
     <link id="l353" from="n141" to="n1059" length="4.01" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="397104880" name="3rd Street"/>
     <link id="l354" from="n142" to="n143" length="124.36" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[397144264, 1166095110]" name="3rd Street"/>
     <link id="l355" from="n142" to="n474" length="148.15" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[8918016, 8920726]" name="Kaplan Lane"/>
-    <link id="l356" from="n143" to="n144" length="128.34" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[397144265, 1111450276]" name="3rd Street"/>
+    <link id="l356" from="n143" to="n144" length="128.34" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[397144265, 1111450276]" name="3rd Street"/>
     <link id="l357" from="n143" to="n210" length="277.31" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[406944771, 406944765, 406944774, 406944767]" name="Howard Street"/>
     <link id="l358" from="n144" to="n145" length="66.8" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[397144001, 1021093206]" name="3rd Street"/>
     <link id="l359" from="n144" to="n386" length="187.86" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8917501" name="Minna Street"/>
     <link id="l36" from="n18" to="n1008" length="146.49" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8922902" name="Elm Street"/>
     <link id="l360" from="n145" to="n146" length="65.93" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="111552058" name="3rd Street"/>
-    <link id="l361" from="n145" to="n637" length="94.88" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[88572965, 1120283630]" name="Mission Street"/>
+    <link id="l361" from="n145" to="n637" length="94.88" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[88572965, 1120283630]" name="Mission Street"/>
     <link id="l362" from="n145" to="n689" length="278.35" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="111560679" name="Mission Street"/>
     <link id="l363" from="n146" to="n147" length="55.34" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="111552058" name="3rd Street"/>
     <link id="l364" from="n146" to="n230" length="93.04" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="328876706" name="Jessie Street"/>
     <link id="l365" from="n147" to="n230" length="147.98" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[47172305, 8917454]" name="Stevenson Street"/>
     <link id="l366" from="n147" to="n373" length="111.32" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47172306" name="Stevenson Street"/>
-    <link id="l367" from="n147" to="n557" length="116.93" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[88597544, 417396858, 255330068]" name="3rd Street"/>
+    <link id="l367" from="n147" to="n557" length="116.93" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[88597544, 417396858, 255330068]" name="Kearny Street"/>
     <link id="l368" from="n148" to="n149" length="105.11" lanes="1" speed_limit="6.7" highway_type="residential" osm_way_id="8916658" name="Genoa Place"/>
     <link id="l369" from="n148" to="n273" length="28.49" lanes="2" speed_limit="11.2" highway_type="residential" osm_way_id="146155465" name="Union Street"/>
     <link id="l37" from="n19" to="n352" length="217.64" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[99231468, 35675861, 35675862]" name="Harrison Street"/>
@@ -3132,7 +3132,7 @@
     <link id="l38" from="n19" to="n847" length="103.33" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[406582226, 1436688332]" name="Harrison Street"/>
     <link id="l380" from="n152" to="n153" length="198.36" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="620728120" name="Spear Street"/>
     <link id="l381" from="n152" to="n263" length="109.07" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[27571801, 397153598]" name="Mission Street"/>
-    <link id="l382" from="n152" to="n520" length="108.98" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[680243314, 680402691, 120256349, 680402685]" name="Mission Street"/>
+    <link id="l382" from="n152" to="n520" length="108.98" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[680243314, 680402691, 120256349, 680402685]" name="Mission Street"/>
     <link id="l383" from="n152" to="n935" length="196.82" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="120256351" name="Spear Street"/>
     <link id="l384" from="n153" to="n154" length="189.09" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[120256350, 417101719]" name="Spear Street"/>
     <link id="l385" from="n153" to="n202" length="108.66" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[397148936, 681289316]" name="Howard Street"/>
@@ -3153,7 +3153,7 @@
     <link id="l399" from="n159" to="n920" length="104.92" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[721174653, 111586254]" name="Grant Avenue"/>
     <link id="l4" from="n3" to="n4" length="68.86" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="47172165" name="Berwick Place"/>
     <link id="l40" from="n20" to="n434" length="269.85" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="7373736" name="Bluxome Street"/>
-    <link id="l400" from="n159" to="n1062" length="95.76" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[28841120, 721174654]" name="Sutter Street"/>
+    <link id="l400" from="n159" to="n1062" length="95.76" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[28841120, 721174654]" name="Sutter Street"/>
     <link id="l401" from="n160" to="n161" length="145.41" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="28841121" name="Sutter Street"/>
     <link id="l402" from="n160" to="n919" length="105.25" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="[397146713, 29023785]" name="Stockton Street"/>
     <link id="l403" from="n161" to="n162" length="146.93" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417094961, 415726782]" name="Sutter Street"/>
@@ -3211,7 +3211,7 @@
     <link id="l450" from="n182" to="n268" length="51.99" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="154647382" name="Franklin Street"/>
     <link id="l451" from="n183" to="n182" length="146.17" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8916826" name="Lily Street"/>
     <link id="l452" from="n183" to="n512" length="52.56" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="398681181" name="Gough Street"/>
-    <link id="l453" from="n185" to="n372" length="108.24" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[8918656, 766116625, 133733590]" name="Montgomery Street"/>
+    <link id="l453" from="n185" to="n372" length="108.24" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[8918656, 766116625, 133733590]" name="New Montgomery Street"/>
     <link id="l454" from="n186" to="n157" length="105.38" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[513676825, 772536172, 779123575]" name="Montgomery Street"/>
     <link id="l455" from="n186" to="n390" length="145.63" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="[1052676448, 254306572, 681479565, 513676820, 779123577]" name="Bush Street"/>
     <link id="l456" from="n187" to="n186" length="104.72" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[706543479, 1112996372, 513676823]" name="Montgomery Street"/>
@@ -3260,11 +3260,11 @@
     <link id="l495" from="n202" to="n264" length="50.84" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="27397937" name="Steuart Street"/>
     <link id="l496" from="n202" to="n819" length="53.88" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="8916922" name="Howard Street"/>
     <link id="l497" from="n203" to="n153" length="109.28" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[254971064, 673997067, 673970959]" name="Howard Street"/>
-    <link id="l498" from="n203" to="n204" length="108.71" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[397148933, 397148934, 684030185, 1349027885, 99231475]" name="Howard Street"/>
+    <link id="l498" from="n203" to="n204" length="108.71" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[397148933, 397148934, 684030185, 1349027885, 99231475]" name="Howard Street"/>
     <link id="l499" from="n203" to="n520" length="193.35" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[680402688, 1349027886, 99231463]" name="Main Street"/>
     <link id="l5" from="n5" to="n16" length="363.32" lanes="2" speed_limit="22.4" highway_type="motorway_link" osm_way_id="[754401923, 754401924, 754401925, 31560837, 8915415]"/>
     <link id="l50" from="n27" to="n8" length="202.35" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1360611115, 1360611114, 329607867]" name="Essex Street"/>
-    <link id="l500" from="n204" to="n203" length="108.71" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[397148933, 397148934, 684030185, 1349027885, 99231475]" name="Howard Street"/>
+    <link id="l500" from="n204" to="n203" length="108.71" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[397148933, 397148934, 684030185, 1349027885, 99231475]" name="Howard Street"/>
     <link id="l501" from="n204" to="n1034" length="61.32" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="225432457" name="Beale Street"/>
     <link id="l502" from="n204" to="n1034" length="63.88" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[681676490, 630121526]" name="Beale Street"/>
     <link id="l503" from="n204" to="n1139" length="60.76" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="225432462" name="Howard Street"/>
@@ -3348,7 +3348,7 @@
     <link id="l574" from="n240" to="n241" length="95.53" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="734004334" name="Sacramento Street"/>
     <link id="l575" from="n241" to="n242" length="144.94" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="734004334" name="Sacramento Street"/>
     <link id="l576" from="n241" to="n605" length="99.11" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="28843615" name="Stockton Street"/>
-    <link id="l577" from="n241" to="n1061" length="391.15" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[8921866, 681183503, 417099350, 397146711, 397146712]" name="Stockton Street"/>
+    <link id="l577" from="n241" to="n1061" length="391.15" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[8921866, 681183503, 417099350, 397146711, 397146712]" name="Stockton Street"/>
     <link id="l578" from="n242" to="n88" length="104.68" lanes="1" speed_limit="11.2" highway_type="busway" osm_way_id="100400942"/>
     <link id="l579" from="n242" to="n243" length="148.03" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="425516617" name="Sacramento Street"/>
     <link id="l58" from="n31" to="n30" length="26.95" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8915759" name="Fargo Place"/>
@@ -3556,13 +3556,13 @@
     <link id="l761" from="n313" to="n314" length="269.62" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[396951397, 1120695893, 396951398]" name="Brannan Street"/>
     <link id="l762" from="n313" to="n1054" length="15.34" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="396952210" name="Brannan Street"/>
     <link id="l763" from="n314" to="n55" length="125.22" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1120887425, 162931811]" name="5th Street"/>
-    <link id="l764" from="n314" to="n78" length="276.24" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[141688972, 1120695890, 1120695891, 397127923, 397127924, 1120695892]" name="Brannan Street"/>
+    <link id="l764" from="n314" to="n78" length="276.24" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[141688972, 1120695890, 1120695891, 397127923, 397127924, 1120695892]" name="Brannan Street"/>
     <link id="l765" from="n314" to="n313" length="269.62" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1120695893, 396951397, 396951398]" name="Brannan Street"/>
     <link id="l766" from="n314" to="n434" length="96.67" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[674189179, 1124155909]" name="5th Street"/>
     <link id="l767" from="n315" to="n46" length="192.04" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="36331312" name="Harriet Street"/>
     <link id="l768" from="n315" to="n78" length="68.64" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[1120695889, 247966218, 417400699]" name="Brannan Street"/>
     <link id="l769" from="n317" to="n130" length="53.13" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="1268108631" name="Polk Street"/>
-    <link id="l77" from="n39" to="n332" length="68.03" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417396753, 397094803]" name="2nd Street"/>
+    <link id="l77" from="n39" to="n332" length="68.03" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417396753, 397094803]" name="2nd Street"/>
     <link id="l770" from="n317" to="n318" length="98.27" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8917340" name="Bonita Street"/>
     <link id="l771" from="n317" to="n490" length="51.77" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="1268108631" name="Polk Street"/>
     <link id="l772" from="n318" to="n317" length="98.27" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8917340" name="Bonita Street"/>
@@ -3605,7 +3605,7 @@
     <link id="l805" from="n331" to="n332" length="124.81" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[397094802, 88559661]" name="2nd Street"/>
     <link id="l806" from="n331" to="n353" length="66.5" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[850242477, 88559702]" name="Harrison Street"/>
     <link id="l807" from="n331" to="n1013" length="67.2" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[406944763, 397104884]" name="Harrison Street"/>
-    <link id="l808" from="n332" to="n39" length="68.03" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417396753, 397094803]" name="2nd Street"/>
+    <link id="l808" from="n332" to="n39" length="68.03" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[417396753, 397094803]" name="2nd Street"/>
     <link id="l809" from="n332" to="n138" length="277.36" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="8919405" name="Stillman Street"/>
     <link id="l81" from="n40" to="n665" length="39.48" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="8919616" name="Jack London Alley"/>
     <link id="l810" from="n332" to="n331" length="124.81" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[397094802, 88559661]" name="2nd Street"/>
@@ -3613,7 +3613,7 @@
     <link id="l812" from="n333" to="n106" length="54.91" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[88559680, 1122010074]" name="2nd Street"/>
     <link id="l813" from="n333" to="n665" length="140.5" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920077" name="Taber Place"/>
     <link id="l814" from="n334" to="n134" length="276.65" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[681699528, 682453637, 111550911]" name="Townsend Street"/>
-    <link id="l815" from="n334" to="n311" length="193.81" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1125204814, 417396747, 682515406]" name="2nd Street"/>
+    <link id="l815" from="n334" to="n311" length="193.81" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1125204814, 417396747, 682515406]" name="2nd Street"/>
     <link id="l816" from="n334" to="n564" length="98.35" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[681699529, 681699530]" name="Townsend Street"/>
     <link id="l817" from="n334" to="n1039" length="108.63" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[681699527, 224384059, 674722764, 397097607]" name="2nd Street"/>
     <link id="l818" from="n335" to="n336" length="61.49" lanes="2" speed_limit="11.2" highway_type="secondary" osm_way_id="549859218" name="Folsom Street"/>
@@ -3665,7 +3665,7 @@
     <link id="l86" from="n43" to="n42" length="58.86" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="754401940" name="Bryant Street"/>
     <link id="l860" from="n354" to="n140" length="136.62" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="850242477" name="Harrison Street"/>
     <link id="l861" from="n354" to="n353" length="73.08" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="850242477" name="Harrison Street"/>
-    <link id="l862" from="n355" to="n15" length="157.76" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[397146078, 850242478]" name="Harrison Street"/>
+    <link id="l862" from="n355" to="n15" length="157.76" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[397146078, 850242478]" name="Harrison Street"/>
     <link id="l863" from="n355" to="n532" length="67.94" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920242" name="Lapu Lapu Street"/>
     <link id="l864" from="n356" to="n172" length="71.57" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="513704345" name="Harrison Street"/>
     <link id="l865" from="n356" to="n695" length="150.97" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920154" name="Merlin Street"/>
@@ -3684,7 +3684,7 @@
     <link id="l877" from="n363" to="n929" length="146.21" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="980893267" name="O'Farrell Street"/>
     <link id="l878" from="n364" to="n363" length="146.54" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="980893267" name="O'Farrell Street"/>
     <link id="l879" from="n364" to="n537" length="105.38" lanes="3" speed_limit="8.9" highway_type="tertiary" osm_way_id="989334074" name="Hyde Street"/>
-    <link id="l88" from="n44" to="n6" length="139.26" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[706547163, 254308548, 513705407]" name="Bryant Street"/>
+    <link id="l88" from="n44" to="n6" length="139.26" lanes="6" speed_limit="11.2" highway_type="secondary" osm_way_id="[706547163, 254308548, 513705407]" name="Bryant Street"/>
     <link id="l880" from="n365" to="n364" length="146.26" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="980893267" name="O'Farrell Street"/>
     <link id="l881" from="n365" to="n718" length="52.41" lanes="3" speed_limit="8.9" highway_type="secondary" osm_way_id="980893266" name="Larkin Street"/>
     <link id="l882" from="n366" to="n365" length="146.48" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[1057808747, 766798669]" name="O'Farrell Street"/>
@@ -3710,11 +3710,11 @@
     <link id="l90" from="n45" to="n44" length="137.32" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="254308548" name="Bryant Street"/>
     <link id="l900" from="n375" to="n949" length="105.03" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="133781730" name="Laguna Street"/>
     <link id="l901" from="n376" to="n517" length="292.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="27400637" name="Ellis Street"/>
-    <link id="l902" from="n377" to="n210" length="128.49" lanes="5" speed_limit="17.9" highway_type="secondary" osm_way_id="[1053833922, 397145820]" name="4th Street"/>
+    <link id="l902" from="n377" to="n210" length="128.49" lanes="3" speed_limit="17.9" highway_type="secondary" osm_way_id="[1053833922, 397145820]" name="4th Street"/>
     <link id="l903" from="n378" to="n68" length="276.63" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[693633428, 24306388, 693633429]" name="Minna Street"/>
     <link id="l904" from="n378" to="n377" length="277.11" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1037057864, 8917499]" name="Minna Street"/>
     <link id="l905" from="n378" to="n443" length="66.75" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[964199564, 88572895]" name="5th Street"/>
-    <link id="l906" from="n378" to="n444" length="59.18" lanes="5" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1068493280, 1068493279]" name="5th Street"/>
+    <link id="l906" from="n378" to="n444" length="59.18" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1068493280, 1068493279]" name="5th Street"/>
     <link id="l907" from="n378" to="n1072" length="78.68" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[1096926713, 739662901]"/>
     <link id="l908" from="n379" to="n176" length="138.86" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="693633428" name="Minna Street"/>
     <link id="l909" from="n379" to="n451" length="57.41" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="111560681" name="Russ Street"/>
@@ -3729,7 +3729,7 @@
     <link id="l917" from="n383" to="n454" length="57.7" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="27029264" name="10th Street"/>
     <link id="l918" from="n384" to="n441" length="66.54" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[766805264, 1418592125, 417087254]" name="11th Street"/>
     <link id="l919" from="n384" to="n442" length="57.84" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="1349027898" name="11th Street"/>
-    <link id="l92" from="n45" to="n78" length="191.7" lanes="5" speed_limit="11.2" highway_type="secondary" osm_way_id="[254308553, 514593148]" name="6th Street"/>
+    <link id="l92" from="n45" to="n78" length="191.7" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="[254308553, 514593148]" name="6th Street"/>
     <link id="l920" from="n385" to="n206" length="126.75" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[417101699, 175507523, 175507524, 742702373, 1111954648]" name="1st Street"/>
     <link id="l921" from="n386" to="n456" length="59.75" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="88572948" name="New Montgomery Street"/>
     <link id="l922" from="n387" to="n388" length="52.53" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8917504" name="McCormick Street"/>
@@ -3737,13 +3737,13 @@
     <link id="l924" from="n388" to="n556" length="79.56" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="8920741" name="Morrell Street"/>
     <link id="l925" from="n388" to="n720" length="74.93" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="399142440" name="Pacific Avenue"/>
     <link id="l926" from="n388" to="n739" length="72.01" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="399142440" name="Pacific Avenue"/>
-    <link id="l927" from="n389" to="n371" length="122.91" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[8919020, 417099324, 91181774, 1076419799]" name="Bush Street"/>
+    <link id="l927" from="n389" to="n371" length="122.91" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[8919020, 417099324, 91181774, 1076419799]" name="1st Street"/>
     <link id="l928" from="n390" to="n156" length="104.87" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[945294696, 945294697, 8920734]" name="Sansome Street"/>
     <link id="l929" from="n390" to="n702" length="105.15" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="224316527" name="Sansome Street"/>
     <link id="l93" from="n46" to="n45" length="68.27" lanes="4" speed_limit="11.2" highway_type="secondary" osm_way_id="769473275" name="Bryant Street"/>
     <link id="l930" from="n390" to="n1070" length="54.86" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="737703221" name="Bush Street"/>
     <link id="l931" from="n391" to="n186" length="146.84" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[224316514, 406946351]" name="Bush Street"/>
-    <link id="l932" from="n391" to="n703" length="105.38" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[397269729, 408575054]" name="Kearny Street"/>
+    <link id="l932" from="n391" to="n703" length="105.38" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[397269729, 408575054]" name="Kearny Street"/>
     <link id="l933" from="n392" to="n159" length="105.17" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[28841122, 721174652]" name="Grant Avenue"/>
     <link id="l934" from="n392" to="n391" length="137.08" lanes="4" speed_limit="13.4" highway_type="secondary" osm_way_id="[1046480747, 1046480748, 286003244, 397146704, 513676819]" name="Bush Street"/>
     <link id="l935" from="n392" to="n501" length="105.19" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1041351160, 1041351161]" name="Grant Avenue"/>
