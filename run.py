@@ -1,291 +1,241 @@
 #!/usr/bin/env python3
 """
-SimForge Runner - Unified CLI for running traffic simulations.
-
-This script provides a simple interface for:
-  - Selecting scenarios (cities, demand tiers)
-  - Selecting engines (SUMO, QarSUMO, MATSim)
-  - Selecting simulation mode (microscopic vs mesoscopic)
-  - Running benchmarks
+SimForge Runner - Simplified CLI
 
 Usage:
-    # Interactive mode
-    python run.py
-    
-    # Quick commands
-    python run.py --scenario toy_2x2_grid --engine sumo --mode meso
-    python run.py --scenario sioux_falls_tier50k --engine sumo --mode micro
-    python run.py --runspec runspecs/dev_mesoscopic.yaml
-    
-    # List available options
-    python run.py --list
+    python run.py                                    # Run all scenarios, all engines, all modes
+    python run.py --scenario nyc_5k                 # Run specific scenario
+    python run.py --scenario nyc_5k,la_5k           # Run multiple scenarios
+    python run.py --engine sumo,matsim              # Run with specific engines
+    python run.py --mode micro                      # Run with specific mode
+    python run.py --repeats 5                       # Run with 5 repeats
+    python run.py --list                            # List available options
+
+If no parameters specified, runs ALL scenarios × ALL engines × ALL modes.
+Default repeats: 10
 """
 
 import argparse
+import json
+import shutil
 import subprocess
 import sys
+import time
+from datetime import datetime
 from pathlib import Path
+from typing import Dict
 
-# Available scenarios
-SCENARIOS = {
-    "toy": {
-        "path": "scenarios/toy_2x2_grid",
-        "id": "toy_2x2_grid",
-        "description": "Tiny 2x2 grid (6 trips) - for quick testing"
-    },
-    # City 1: Sioux Falls, SD
-    "sioux_falls_50k": {
-        "path": "scenarios/sioux_falls_tier50k", 
-        "id": "sioux_falls_tier50k",
-        "description": "Sioux Falls (~50K trips) - City 1"
-    },
-    # City 2: Austin, TX
-    "austin_50k": {
-        "path": "scenarios/austin_tier50k",
-        "id": "austin_tier50k", 
-        "description": "Austin, TX (~50K trips) - City 2"
-    },
-    # City 3: Berlin, Germany
-    "berlin_50k": {
-        "path": "scenarios/berlin_tier50k",
-        "id": "berlin_tier50k",
-        "description": "Berlin, Germany (~50K trips) - City 3"
-    },
-}
+# Suppress unused import warning - subprocess is used in multiple functions
+_ = subprocess  # noqa: F401
 
-# Available engines
-ENGINES = {
-    "sumo": {
-        "name": "SUMO",
-        "description": "CPU-based microscopic/mesoscopic simulator",
-        "installed": True,
-    },
-    "qarsumo": {
-        "name": "QarSUMO", 
-        "description": "GPU-accelerated SUMO (falls back to SUMO without GPU)",
-        "installed": False,  # Requires NVIDIA GPU + CUDA
-    },
-    "matsim": {
-        "name": "MATSim",
-        "description": "Activity-based mesoscopic simulator (requires Java + MATSim JAR)",
-        "installed": True,  # Now installed in lib/matsim-15.0/
-    },
-}
+# =============================================================================
+# AUTO-DETECTION
+# =============================================================================
 
-# Simulation modes
-MODES = {
-    "micro": {
-        "name": "microscopic",
-        "description": "High fidelity, slower (~3-4 hours for 50K trips)",
-        "flag": "",
-    },
-    "meso": {
-        "name": "mesoscopic", 
-        "description": "Faster approximation (~5 seconds for 50K trips)",
-        "flag": "--mesoscopic",
-    },
-}
-
-# Predefined runspecs
-RUNSPECS = {
-    "dev": "runspecs/dev_mesoscopic.yaml",
-    "final": "runspecs/final_microscopic.yaml",
-    "multi": "runspecs/multi_engine.yaml",
-    "hpc": "runspecs/hpc_matrix_sumo.yaml",
-}
+def get_scenarios() -> Dict[str, dict]:
+    """Auto-detect available scenarios from scenarios/ directory."""
+    scenarios_dir = Path("scenarios")
+    scenarios = {}
+    
+    if not scenarios_dir.exists():
+        return scenarios
+    
+    for scenario_path in sorted(scenarios_dir.iterdir()):
+        if scenario_path.is_dir() and (scenario_path / "manifest.xml").exists():
+            name = scenario_path.name
+            
+            # Parse trip count from name
+            if "5m" in name:
+                trips = "5M"
+            elif "500k" in name:
+                trips = "500K"
+            elif "50k" in name:
+                trips = "50K"
+            elif "5k" in name:
+                trips = "5K"
+            else:
+                trips = "?"
+            
+            scenarios[name] = {
+                "path": str(scenario_path),
+                "id": name,
+                "trips": trips,
+            }
+    
+    return scenarios
 
 
-def list_options():
-    """Print all available options."""
+def check_engine_installed(engine: str) -> bool:
+    """Check if an engine is installed."""
+    if engine == "sumo":
+        return shutil.which("sumo") is not None
+    elif engine == "matsim":
+        matsim_jar = Path("lib/matsim-15.0/matsim-15.0.jar")
+        java_ok = shutil.which("java") is not None
+        return matsim_jar.exists() and java_ok
+    elif engine == "qarsumo":
+        return shutil.which("sumo") is not None  # Falls back to SUMO
+    return False
+
+
+# Available engines and modes
+ALL_ENGINES = ["sumo", "matsim", "qarsumo"]
+ALL_MODES = ["micro", "meso"]
+
+
+# =============================================================================
+# DISPLAY FUNCTIONS
+# =============================================================================
+
+def show_list():
+    """Display all available options."""
+    scenarios = get_scenarios()
+    
     print("\n" + "=" * 60)
-    print("SimForge - Available Options")
+    print("  SimForge - Available Options")
     print("=" * 60)
     
+    # Scenarios
     print("\n📦 SCENARIOS:")
-    print("-" * 40)
-    for key, info in SCENARIOS.items():
-        print(f"  {key:20} - {info['description']}")
+    print("-" * 60)
+    if scenarios:
+        for name, info in scenarios.items():
+            print(f"  {name:<20} {info['trips']} trips")
+    else:
+        print("  (no scenarios found - run generation scripts first)")
     
+    # Engines
     print("\n🔧 ENGINES:")
-    print("-" * 40)
-    for key, info in ENGINES.items():
-        status = "✓ installed" if info["installed"] else "⚠ not installed"
-        print(f"  {key:20} - {info['description']}")
-        print(f"  {' '*20}   ({status})")
+    print("-" * 60)
+    for engine in ALL_ENGINES:
+        installed = "✅" if check_engine_installed(engine) else "❌"
+        print(f"  {engine:<12} {installed}")
     
+    # Modes
     print("\n⚙️  MODES:")
-    print("-" * 40)
-    for key, info in MODES.items():
-        print(f"  {key:20} - {info['description']}")
+    print("-" * 60)
+    for mode in ALL_MODES:
+        print(f"  {mode}")
     
-    print("\n📋 RUNSPECS (predefined configs):")
-    print("-" * 40)
-    for key, path in RUNSPECS.items():
-        print(f"  {key:20} - {path}")
+    # Thesis matrix
+    n_scenarios = len(scenarios)
+    n_engines = sum(1 for e in ALL_ENGINES if check_engine_installed(e))
+    n_modes = len(ALL_MODES)
     
-    print("\n" + "=" * 60)
+    print("\n📊 THESIS EXPERIMENTAL MATRIX:")
+    print("-" * 60)
+    print(f"  Total = {n_scenarios} scenarios × {n_engines} engines × {n_modes} modes × R repeats")
+    print(f"       = {n_scenarios * n_engines * n_modes}R total runs")
+    print()
 
 
-def run_quick(scenario: str, engine: str, mode: str, repeats: int = 1):
-    """Run a quick single scenario."""
-    if scenario not in SCENARIOS:
-        print(f"❌ Unknown scenario: {scenario}")
-        print(f"   Available: {list(SCENARIOS.keys())}")
-        return 1
+# =============================================================================
+# SIMULATION RUNNERS
+# =============================================================================
+
+def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeout: int) -> dict:
+    """Run SUMO simulation."""
+    from adapters.sumo.sumo_adapter import prepare_sumo_inputs
     
-    if engine not in ENGINES:
-        print(f"❌ Unknown engine: {engine}")
-        print(f"   Available: {list(ENGINES.keys())}")
-        return 1
+    native_dir = output_dir / "native_files"
+    native_dir.mkdir(parents=True, exist_ok=True)
     
-    if mode not in MODES:
-        print(f"❌ Unknown mode: {mode}")
-        print(f"   Available: {list(MODES.keys())}")
-        return 1
+    # Convert canonical to native SUMO format
+    try:
+        _summary = prepare_sumo_inputs(scenario_path, native_dir)
+    except (OSError, ValueError, RuntimeError) as e:
+        return {"status": "failed", "error": f"Conversion failed: {e}", "wall_time_s": 0}
     
-    scenario_info = SCENARIOS[scenario]
-    mode_info = MODES[mode]
-    engine_info = ENGINES[engine]
+    # Find the config file
+    cfg_file = native_dir / "toy.sumocfg"
+    if not cfg_file.exists():
+        return {"status": "failed", "error": "No SUMO config file generated", "wall_time_s": 0}
     
-    print("\n" + "=" * 60)
-    print("SimForge - Quick Run")
-    print("=" * 60)
-    print(f"  Scenario: {scenario_info['id']}")
-    print(f"  Engine:   {engine_info['name']}")
-    print(f"  Mode:     {mode_info['name']}")
-    print(f"  Repeats:  {repeats}")
-    print("=" * 60 + "\n")
+    # Build SUMO command
+    sumo_cmd = ["sumo"]
+    if mode == "meso":
+        sumo_cmd.extend(["--mesosim", "true"])
     
-    # Build command based on engine
-    if engine == "matsim":
-        # MATSim uses its own CLI
-        output_dir = f"out/{scenario}_{engine}"
-        cmd = [
-            sys.executable, "-m", "adapters.matsim.cli",
-            scenario_info["path"],
-            output_dir,
-        ]
-        if mode == "meso":
-            cmd.append("--mesoscopic")
-    else:
-        # SUMO and QarSUMO use the standard runner
-        cmd = [
-            sys.executable, "-m", "execution.run_sumo_scenario",
-            scenario_info["path"],
-            "--engine", engine,
-        ]
+    sumo_cmd.extend([
+        "-c", str(cfg_file.resolve()),
+        "--seed", str(seed),
+        "--tripinfo-output", str((output_dir / "tripinfo.xml").resolve()),
+        "--statistic-output", str((output_dir / "statistics.xml").resolve()),
+    ])
+    
+    # Run SUMO
+    start_time = time.time()
+    try:
+        proc_result = subprocess.run(
+            sumo_cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=False,
+        )
+        wall_time = time.time() - start_time
         
-        if mode == "meso":
-            cmd.append("--mesoscopic")
-        
-        if repeats > 1:
-            cmd.extend(["--repeats", str(repeats)])
+        if proc_result.returncode == 0:
+            return {"status": "success", "wall_time_s": round(wall_time, 2), "error": None}
+        else:
+            return {"status": "failed", "wall_time_s": round(wall_time, 2), "error": proc_result.stderr[:500]}
     
-    print(f"Running: {' '.join(cmd)}\n")
+    except subprocess.TimeoutExpired:
+        return {"status": "failed", "error": f"Timeout after {timeout}s", "wall_time_s": timeout}
+    except (OSError, subprocess.SubprocessError) as e:
+        return {"status": "failed", "error": str(e), "wall_time_s": 0}
+
+
+def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeout: int) -> dict:
+    """Run MATSim simulation."""
+    # Mark parameters as intentionally unused for now (placeholders for future implementation)
+    _ = (scenario_path, mode, seed, output_dir, timeout)
+    
+    # Check if MATSim adapter exists
+    matsim_jar = Path("lib/matsim-15.0/matsim-15.0.jar")
+    if not matsim_jar.exists():
+        return {"status": "failed", "error": "MATSim JAR not found", "wall_time_s": 0}
+    
+    # For now, return a placeholder indicating MATSim needs integration
+    # Full MATSim integration requires config file generation
+    return {"status": "failed", "error": "MATSim adapter not fully integrated yet", "wall_time_s": 0}
+
+
+def run_simulation(scenario: str, engine: str, mode: str, seed: int, 
+                   output_base: Path, timeout: int) -> dict:
+    """Run a single simulation."""
+    scenario_path = Path("scenarios") / scenario
+    output_dir = output_base / f"{scenario}_{engine}_{mode}_seed{seed}"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"  Running: {scenario} | {engine} | {mode} | seed={seed}...", end=" ", flush=True)
     
     try:
-        result = subprocess.run(cmd)
-        return result.returncode
-    except KeyboardInterrupt:
-        print("\n⚠️  Interrupted")
-        return 130
+        if engine == "sumo":
+            result = run_sumo(scenario_path, mode, seed, output_dir, timeout)
+        elif engine == "matsim":
+            result = run_matsim(scenario_path, mode, seed, output_dir, timeout)
+        elif engine == "qarsumo":
+            # QarSUMO falls back to SUMO
+            result = run_sumo(scenario_path, mode, seed, output_dir, timeout)
+        else:
+            result = {"status": "failed", "error": f"Unknown engine: {engine}"}
+        
+        if result["status"] == "success":
+            print(f"✓ ({result['wall_time_s']}s)")
+        else:
+            print(f"✗ ({result.get('error', 'unknown error')})")
+        
+        return result
+        
+    except (OSError, RuntimeError, ValueError) as e:
+        print(f"✗ (Exception: {e})")
+        return {"status": "failed", "error": str(e), "wall_time_s": 0}
 
 
-def run_runspec(runspec_key_or_path: str, scenario_filter: str = None):
-    """Run a predefined or custom runspec."""
-    # Check if it's a predefined key
-    if runspec_key_or_path in RUNSPECS:
-        runspec_path = RUNSPECS[runspec_key_or_path]
-    else:
-        runspec_path = runspec_key_or_path
-    
-    if not Path(runspec_path).exists():
-        print(f"❌ Runspec not found: {runspec_path}")
-        return 1
-    
-    print("\n" + "=" * 60)
-    print("SimForge - Runspec Execution")
-    print("=" * 60)
-    print(f"  Runspec: {runspec_path}")
-    if scenario_filter:
-        print(f"  Filter:  {scenario_filter}")
-    print("=" * 60 + "\n")
-    
-    cmd = [
-        sys.executable, "-m", "execution.run_benchmark",
-        runspec_path,
-    ]
-    
-    if scenario_filter:
-        cmd.extend(["--scenario", scenario_filter])
-    
-    print(f"Running: {' '.join(cmd)}\n")
-    
-    try:
-        result = subprocess.run(cmd)
-        return result.returncode
-    except KeyboardInterrupt:
-        print("\n⚠️  Interrupted")
-        return 130
-
-
-def interactive_mode():
-    """Interactive menu for running simulations."""
-    print("\n" + "=" * 60)
-    print("SimForge - Interactive Mode")
-    print("=" * 60)
-    
-    print("\nWhat would you like to do?")
-    print("  1. Quick run (select scenario, engine, mode)")
-    print("  2. Run predefined runspec")
-    print("  3. List all options")
-    print("  4. Exit")
-    
-    choice = input("\nChoice [1-4]: ").strip()
-    
-    if choice == "1":
-        print("\n--- Select Scenario ---")
-        for i, (key, info) in enumerate(SCENARIOS.items(), 1):
-            print(f"  {i}. {key}: {info['description']}")
-        scenario_idx = int(input("Scenario [1]: ").strip() or "1") - 1
-        scenario = list(SCENARIOS.keys())[scenario_idx]
-        
-        print("\n--- Select Engine ---")
-        for i, (key, info) in enumerate(ENGINES.items(), 1):
-            status = "✓" if info["installed"] else "⚠"
-            print(f"  {i}. {key}: {info['name']} ({status})")
-        engine_idx = int(input("Engine [1]: ").strip() or "1") - 1
-        engine = list(ENGINES.keys())[engine_idx]
-        
-        print("\n--- Select Mode ---")
-        for i, (key, info) in enumerate(MODES.items(), 1):
-            print(f"  {i}. {key}: {info['description']}")
-        mode_idx = int(input("Mode [2=meso]: ").strip() or "2") - 1
-        mode = list(MODES.keys())[mode_idx]
-        
-        repeats = int(input("\nRepeats [1]: ").strip() or "1")
-        
-        return run_quick(scenario, engine, mode, repeats)
-    
-    elif choice == "2":
-        print("\n--- Select Runspec ---")
-        for i, (key, path) in enumerate(RUNSPECS.items(), 1):
-            print(f"  {i}. {key}: {path}")
-        runspec_idx = int(input("Runspec [1]: ").strip() or "1") - 1
-        runspec = list(RUNSPECS.keys())[runspec_idx]
-        
-        filter_input = input("Scenario filter (blank for all): ").strip()
-        
-        return run_runspec(runspec, filter_input if filter_input else None)
-    
-    elif choice == "3":
-        list_options()
-        return 0
-    
-    else:
-        print("Goodbye!")
-        return 0
-
+# =============================================================================
+# MAIN EXECUTION
+# =============================================================================
 
 def main():
     parser = argparse.ArgumentParser(
@@ -293,47 +243,208 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Interactive mode
-  python run.py
-  
-  # Quick run with options
-  python run.py --scenario toy --engine sumo --mode meso
-  python run.py --scenario sioux_falls_50k --engine sumo --mode micro
-  
-  # Run predefined runspec
-  python run.py --runspec dev
-  python run.py --runspec final --filter sioux_falls
-  
-  # List options
-  python run.py --list
-"""
+  python run.py                              # Run ALL (default)
+  python run.py --scenario nyc_5k            # Run one scenario
+  python run.py --scenario nyc_5k,la_5k      # Run multiple scenarios
+  python run.py --engine sumo                # Run with one engine
+  python run.py --engine sumo,matsim         # Run with multiple engines
+  python run.py --mode meso                  # Run with one mode
+  python run.py --repeats 5                  # 5 repeats (default: 10)
+  python run.py --list                       # Show available options
+        """
     )
     
-    parser.add_argument("--scenario", "-s", help="Scenario key (toy, sioux_falls_50k)")
-    parser.add_argument("--engine", "-e", default="sumo", help="Engine (sumo, qarsumo, matsim)")
-    parser.add_argument("--mode", "-m", default="meso", help="Mode (micro, meso)")
-    parser.add_argument("--repeats", "-r", type=int, default=1, help="Number of repeats")
-    parser.add_argument("--runspec", help="Run a predefined or custom runspec")
-    parser.add_argument("--filter", help="Scenario filter for runspec")
-    parser.add_argument("--list", "-l", action="store_true", help="List available options")
+    parser.add_argument("--scenario", "-s", 
+                        help="Scenario(s) to run, comma-separated. Default: all")
+    parser.add_argument("--engine", "-e", 
+                        help="Engine(s) to use, comma-separated. Default: all installed")
+    parser.add_argument("--mode", "-m", 
+                        help="Mode(s) to run, comma-separated. Default: all")
+    parser.add_argument("--repeats", "-r", type=int, default=10,
+                        help="Number of repeats (default: 10)")
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Base random seed (default: 42)")
+    parser.add_argument("--timeout", "-t", type=int, default=3600,
+                        help="Timeout per run in seconds (default: 3600)")
+    parser.add_argument("--output", "-o", 
+                        help="Custom output directory (default: runs/)")
+    parser.add_argument("--list", "-l", action="store_true",
+                        help="List available scenarios, engines, and modes")
+    parser.add_argument("--validate-only", "-v", action="store_true",
+                        help="Only validate scenarios, don't run")
     
     args = parser.parse_args()
     
-    # List mode
+    # Handle --list
     if args.list:
-        list_options()
+        show_list()
         return 0
     
-    # Runspec mode
-    if args.runspec:
-        return run_runspec(args.runspec, args.filter)
+    # Get available scenarios
+    scenarios_available = get_scenarios()
+    if not scenarios_available:
+        print("❌ No scenarios found. Run data generation scripts first:")
+        print("   python scripts/generate_data/generate_nyc_5k.py")
+        print("   python scripts/generate_data/generate_la_5k.py")
+        print("   python scripts/generate_data/generate_chicago_5k.py")
+        return 1
     
-    # Quick mode
+    # Determine scenarios to run
     if args.scenario:
-        return run_quick(args.scenario, args.engine, args.mode, args.repeats)
+        scenarios = [s.strip() for s in args.scenario.split(",")]
+        for s in scenarios:
+            if s not in scenarios_available:
+                print(f"❌ Unknown scenario: {s}")
+                print(f"   Available: {', '.join(scenarios_available.keys())}")
+                return 1
+    else:
+        scenarios = list(scenarios_available.keys())
     
-    # Interactive mode
-    return interactive_mode()
+    # Determine engines to use
+    if args.engine:
+        engines = [e.strip() for e in args.engine.split(",")]
+        for e in engines:
+            if e not in ALL_ENGINES:
+                print(f"❌ Unknown engine: {e}")
+                print(f"   Available: {', '.join(ALL_ENGINES)}")
+                return 1
+            if not check_engine_installed(e):
+                print(f"⚠️  Warning: {e} not installed, skipping")
+        engines = [e for e in engines if check_engine_installed(e)]
+    else:
+        engines = [e for e in ALL_ENGINES if check_engine_installed(e)]
+    
+    if not engines:
+        print("❌ No engines available. Install SUMO or MATSim.")
+        return 1
+    
+    # Determine modes to run
+    if args.mode:
+        modes = [m.strip() for m in args.mode.split(",")]
+        for m in modes:
+            if m not in ALL_MODES:
+                print(f"❌ Unknown mode: {m}")
+                print(f"   Available: {', '.join(ALL_MODES)}")
+                return 1
+    else:
+        modes = ALL_MODES
+    
+    # Handle validation-only
+    if args.validate_only:
+        print("\n" + "=" * 60)
+        print("  Validating Scenarios")
+        print("=" * 60 + "\n")
+        
+        for scenario in scenarios:
+            print(f"  Validating {scenario}...", end=" ", flush=True)
+            try:
+                from pipeline.validation.validate_bundle import validate_bundle
+                validation_result = validate_bundle(scenarios_available[scenario]["path"])
+                if isinstance(validation_result, dict) and validation_result.get("valid"):
+                    print("✓")
+                elif isinstance(validation_result, dict):
+                    errors = validation_result.get('errors', [])
+                    print(f"✗ ({len(errors)} errors)")
+                    for err in errors:
+                        print(f"    - {err}")
+                else:
+                    # Handle case where validate_bundle returns bool
+                    print("✓" if validation_result else "✗")
+            except (OSError, ValueError, KeyError) as e:
+                print(f"✗ ({e})")
+        return 0
+    
+    # Calculate total runs
+    repeats = args.repeats
+    total_runs = len(scenarios) * len(engines) * len(modes) * repeats
+    
+    # Display experimental matrix
+    print("\n" + "=" * 60)
+    print("  SimForge Benchmark")
+    print("=" * 60)
+    print("\n📊 EXPERIMENTAL MATRIX:")
+    print("-" * 60)
+    print(f"  Scenarios: {len(scenarios)} ({', '.join(scenarios)})")
+    print(f"  Engines:   {len(engines)} ({', '.join(engines)})")
+    print(f"  Modes:     {len(modes)} ({', '.join(modes)})")
+    print(f"  Repeats:   {repeats}")
+    print("-" * 60)
+    print(f"  Total:     {len(scenarios)} × {len(engines)} × {len(modes)} × {repeats} = {total_runs} runs")
+    print("-" * 60)
+    
+    # Setup output directory
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_base = Path(args.output) if args.output else Path("runs") / f"benchmark_{timestamp}"
+    output_base.mkdir(parents=True, exist_ok=True)
+    
+    print(f"\n  Output: {output_base}")
+    print("\n" + "=" * 60)
+    print("  Running Simulations")
+    print("=" * 60 + "\n")
+    
+    # Run simulations
+    results = []
+    completed = 0
+    failed = 0
+    
+    for scenario in scenarios:
+        for engine in engines:
+            for mode in modes:
+                for rep in range(repeats):
+                    seed = args.seed + rep
+                    
+                    result = run_simulation(
+                        scenario=scenario,
+                        engine=engine,
+                        mode=mode,
+                        seed=seed,
+                        output_base=output_base,
+                        timeout=args.timeout,
+                    )
+                    
+                    result.update({
+                        "scenario": scenario,
+                        "engine": engine,
+                        "mode": mode,
+                        "seed": seed,
+                        "repeat": rep + 1,
+                    })
+                    results.append(result)
+                    
+                    if result["status"] == "success":
+                        completed += 1
+                    else:
+                        failed += 1
+    
+    # Save results
+    results_file = output_base / "benchmark_results.json"
+    with open(results_file, "w", encoding="utf-8") as f:
+        json.dump({
+            "timestamp": timestamp,
+            "matrix": {
+                "scenarios": scenarios,
+                "engines": engines,
+                "modes": modes,
+                "repeats": repeats,
+            },
+            "summary": {
+                "total": total_runs,
+                "completed": completed,
+                "failed": failed,
+            },
+            "results": results,
+        }, f, indent=2)
+    
+    # Final summary
+    print("\n" + "=" * 60)
+    print("  Summary")
+    print("=" * 60)
+    print(f"  ✓ Completed: {completed}/{total_runs}")
+    print(f"  ✗ Failed:    {failed}/{total_runs}")
+    print(f"  📁 Results:  {results_file}")
+    print("=" * 60 + "\n")
+    
+    return 0 if failed == 0 else 1
 
 
 if __name__ == "__main__":

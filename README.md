@@ -17,19 +17,19 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 
 ## ✅ Current Status
 
-| Component | Status |
-|-----------|--------|
-| Canonical Schema v0 | ✅ Complete |
-| Scenario Validator | ✅ Complete |
-| SUMO Adapter | ✅ Complete (micro + meso) |
-| QarSUMO Adapter | ✅ Complete (falls back to SUMO) |
-| MATSim Adapter | ✅ Complete |
-| Execution Harness | ✅ Complete |
-| Metrics Library | ✅ Complete |
-| Toy Scenario | ✅ Validated |
-| Sioux Falls 50k | ✅ Validated |
-| Austin 50k | ✅ Validated |
-| Berlin 50k | ✅ Validated |
+| Component           | Status                           |
+| ------------------- | -------------------------------- |
+| Canonical Schema v0 | ✅ Complete                      |
+| Scenario Validator  | ✅ Complete                      |
+| SUMO Adapter        | ✅ Complete (micro + meso)       |
+| QarSUMO Adapter     | ✅ Complete (falls back to SUMO) |
+| MATSim Adapter      | ✅ Complete                      |
+| Execution Harness   | ✅ Complete                      |
+| Metrics Library     | ✅ Complete                      |
+| Toy Scenario        | ✅ Validated                     |
+| Sioux Falls 50k     | ✅ Validated                     |
+| Austin 50k          | ✅ Validated                     |
+| Berlin 50k          | ✅ Validated                     |
 
 ---
 
@@ -44,15 +44,19 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 ### Installation
 
 \`\`\`bash
+
 # Clone repository
+
 git clone <repo-url>
 cd SimForge
 
 # Create virtual environment
+
 python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies
+
 pip install -r requirements.txt
 \`\`\`
 
@@ -87,59 +91,63 @@ python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml
 
 \`\`\`
 SimForge/
-├── adapters/                    # Simulator-specific converters
-│   ├── sumo/                    # SUMO adapter
-│   ├── qarsumo/                 # GPU-accelerated SUMO
-│   └── matsim/                  # Activity-based simulator
-├── canonical/schema/            # Schema documentation
-├── doc/chapters/                # Thesis documentation
-├── evaluation/metrics/          # Metrics computation
-├── execution/                   # Benchmark harness
-├── pipeline/                    # Data processing
-├── runspecs/                    # Benchmark configurations
-├── scenarios/                   # Canonical bundles
-├── lib/matsim-15.0/             # MATSim JAR + libs
-├── runs/                        # Output directory (gitignored)
-├── tests/                       # pytest test suite
+├── adapters/ # Simulator-specific converters
+│ ├── sumo/ # SUMO adapter
+│ ├── qarsumo/ # GPU-accelerated SUMO
+│ └── matsim/ # Activity-based simulator
+├── canonical/schema/ # Schema documentation
+├── doc/chapters/ # Thesis documentation
+├── evaluation/metrics/ # Metrics computation
+├── execution/ # Benchmark harness
+├── pipeline/ # Data processing
+├── runspecs/ # Benchmark configurations
+├── scenarios/ # Canonical bundles
+├── lib/matsim-15.0/ # MATSim JAR + libs
+├── runs/ # Output directory (gitignored)
+├── tests/ # pytest test suite
 ├── requirements.txt
-├── SETUP.md                     # Detailed setup guide
-└── TODO.md                      # Development roadmap
+├── SETUP.md # Detailed setup guide
+└── TODO.md # Development roadmap
 \`\`\`
 
 ---
 
 ## 📊 Canonical Schema
 
-| File | Format | Description |
-|------|--------|-------------|
-| \`network.xml\` | XML | Road network (nodes + links) |
-| \`demand.csv\` | CSV | Travel demand (OD trips) |
-| \`signals.xml\` | XML | Traffic signal timing |
-| \`config.xml\` | XML | Scenario metadata |
-| \`manifest.xml\` | XML | File inventory + SHA-256 hashes |
+| File             | Format | Description                     |
+| ---------------- | ------ | ------------------------------- |
+| \`network.xml\`  | XML    | Road network (nodes + links)    |
+| \`demand.csv\`   | CSV    | Travel demand (OD trips)        |
+| \`signals.xml\`  | XML    | Traffic signal timing           |
+| \`config.xml\`   | XML    | Scenario metadata               |
+| \`manifest.xml\` | XML    | File inventory + SHA-256 hashes |
 
 ---
 
 ## 🔧 Adapters
 
-| Adapter | Engine | Traffic Model | Output |
-|---------|--------|---------------|--------|
-| SUMO | SUMO 1.20 | Microscopic/Mesoscopic | net.xml, rou.xml |
-| QarSUMO | QarSUMO | GPU-accelerated | SUMO + GPU config |
-| MATSim | MATSim 15 | Activity-based meso | network.xml, plans.xml |
+| Adapter | Engine    | Traffic Model          | Output                 |
+| ------- | --------- | ---------------------- | ---------------------- |
+| SUMO    | SUMO 1.20 | Microscopic/Mesoscopic | net.xml, rou.xml       |
+| QarSUMO | QarSUMO   | GPU-accelerated        | SUMO + GPU config      |
+| MATSim  | MATSim 15 | Activity-based meso    | network.xml, plans.xml |
 
 ---
 
 ## 🏃 Running Benchmarks
 
 \`\`\`bash
+
 # Quick development test
+
 python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml
 
 # Full 50k benchmark
+
 python -m execution.run_benchmark runspecs/full_50k_mesoscopic.yaml
 
 # Filter by scenario
+
 python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml --scenario sioux_falls_tier50k
 \`\`\`
 
@@ -156,8 +164,8 @@ python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml --scenario sioux_
 ## 🧪 Testing
 
 \`\`\`bash
-pytest                           # Run all tests
-pytest tests/test_validator_toy.py -v  # Specific test
+pytest # Run all tests
+pytest tests/test_validator_toy.py -v # Specific test
 \`\`\`
 
 ---
@@ -176,10 +184,10 @@ pytest tests/test_validator_toy.py -v  # Specific test
 
 \`\`\`bibtex
 @mastersthesis{simforge2026,
-  author = {Dharakula, Phani},
-  title = {SimForge: A Reproducible Cross-Simulator Benchmarking Framework},
-  school = {University of Texas at Austin},
-  year = {2026}
+author = {Dharakula, Phani},
+title = {SimForge: A Reproducible Cross-Simulator Benchmarking Framework},
+school = {University of Texas at Austin},
+year = {2026}
 }
 \`\`\`
 

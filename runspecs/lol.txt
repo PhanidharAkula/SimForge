@@ -1,0 +1,3 @@
+python run.py --scenario  --engine sumo, qarsumo --mode micro --repeats 5
+
+python -m pipeline.validation.validate_bundle scenarios/la_5k

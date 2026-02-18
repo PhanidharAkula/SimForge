@@ -88,6 +88,12 @@ class CanonicalLink:
     name: Optional[str] = None
 
 
+#  {"service", 25}, {"residential", 25}, {"primary", 35},
+#         {"secondary", 35}, {"tertiary", 25}, {"motorway_link", 45},
+#         {"motorway", 65}, {"trunk", 55}, {"primary_link", 45},
+#         {"trunk_link", 45}, {"secondary_link", 25}, {"tertiary_link", 25},
+#         {"unclassified", 10}};
+
 # Default speed limits by OSM highway type (m/s)
 DEFAULT_SPEEDS_MPS = {
     "motorway": 33.3,       # 120 km/h
