@@ -214,6 +214,7 @@ def generate_census_demand(
     horizon_end: int = 3600,
     mode: str = "car",
     max_snap_distance_km: float = 0.5,
+    allow_oversample: bool = False,
 ) -> dict:
     """
     Generate census-calibrated demand.csv from model data and network.
@@ -239,6 +240,9 @@ def generate_census_demand(
         horizon_end: Simulation end time (seconds).
         mode: Travel mode (default "car").
         max_snap_distance_km: Max distance for building-to-node snap.
+        allow_oversample: If True, allow num_trips > available commuters
+            (origins will be resampled). If False, raise an error when the
+            model file does not contain enough raw commuter records.
 
     Returns:
         Summary dict compatible with existing pipeline.
@@ -269,9 +273,15 @@ def generate_census_demand(
         origin_node_buildings[node_id].append(bld)
 
     if not origin_node_pop:
+        n_bld = len(model_data.buildings)
+        n_per = len(model_data.persons)
         raise ValueError(
-            "No residential buildings mapped to network nodes. "
-            "Check bounding box overlap between model file and network."
+            f"No residential buildings mapped to network nodes.\n"
+            f"  Model file contained {n_bld:,} buildings and {n_per:,} persons "
+            f"within the bounding box.\n"
+            f"  If both are 0, the model file likely covers a different city "
+            f"than this scenario's bounding box.\n"
+            f"  Check that the model file matches the target city."
         )
 
     origin_nodes = list(origin_node_pop.keys())
@@ -308,6 +318,27 @@ def generate_census_demand(
 
     avg_commute = sum(p.commute_min for p in all_commuters) / len(all_commuters)
     logger.info("Census commuters: %d (avg %.0f min)", len(all_commuters), avg_commute)
+
+    # Guard: refuse to oversample unless explicitly allowed
+    if num_trips > len(all_commuters) and not allow_oversample:
+        raise ValueError(
+            f"Requested {num_trips:,} trips but only {len(all_commuters):,} "
+            f"raw census commuters are available in the model file for this "
+            f"bounding box.  This would require reusing the same origin "
+            f"records.\n\n"
+            f"Options:\n"
+            f"  1. Pass --allow-oversample to permit resampling origins\n"
+            f"  2. Omit --model to use the synthetic gravity model instead\n"
+            f"  3. Use a wider bounding box / radius to capture more records\n"
+            f"  4. (Future) Enable WGTP household-weight expansion\n"
+        )
+    if num_trips > len(all_commuters) and allow_oversample:
+        ratio = num_trips / len(all_commuters)
+        logger.warning(
+            "Oversampling enabled: %d trips from %d raw commuters "
+            "(%.1f× oversample ratio — origins will repeat)",
+            num_trips, len(all_commuters), ratio,
+        )
 
     # 6. Generate trips
     trips: list[dict] = []

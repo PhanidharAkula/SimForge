@@ -13,7 +13,6 @@ Demand modes:
 Usage:
   python scripts/generate_nyc_5m.py                              # synthetic demand
   python scripts/generate_nyc_5m.py --model nyc_model.txt  # census demand
-  python scripts/generate_nyc_5m.py --model nyc_model.txt --demand-only
 
 Output: scenarios/nyc_5m/
 """
@@ -141,7 +140,8 @@ def _generate_demand_synthetic(bbox: BoundingBox, out: Path) -> dict:
 
 
 def _generate_demand_census(bbox: BoundingBox, out: Path,
-                            model_path: Path) -> dict:
+                            model_path: Path,
+                            allow_oversample: bool = False) -> dict:
     """Generate demand from a ModelGen census file."""
     logger.info("Parsing ModelGen file: %s", model_path)
     logger.info("  bbox (%.4f, %.4f, %.4f, %.4f)",
@@ -160,6 +160,7 @@ def _generate_demand_census(bbox: BoundingBox, out: Path,
         horizon_start=HORIZON_START,
         horizon_end=HORIZON_END,
         mode="car",
+        allow_oversample=allow_oversample,
     )
 
 
@@ -177,9 +178,10 @@ def parse_args() -> argparse.Namespace:
              "When omitted, synthetic gravity-model demand is generated.",
     )
     parser.add_argument(
-        "--demand-only", action="store_true",
-        help="Only regenerate demand.csv (skip network, signals, config). "
-             "Requires an existing scenario bundle.",
+        "--allow-oversample", action="store_true",
+        help="Allow more trips than raw census commuters in the model file. "
+             "Origins will be resampled (repeated). Without this flag, the "
+             "script errors if the model file has fewer commuters than NUM_TRIPS.",
     )
     return parser.parse_args()
 
@@ -199,54 +201,44 @@ def main() -> None:
         logger.error("Model file not found: %s", args.model)
         sys.exit(1)
 
-    # Validate --demand-only requires existing bundle
-    if args.demand_only and not (out / "network.xml").exists():
-        logger.error("--demand-only requires an existing bundle at %s", out)
-        sys.exit(1)
-
     logger.info("=" * 60)
     logger.info("Generating  %s  (%s)", SCENARIO_ID, DESCRIPTION)
     if args.model:
         logger.info("Demand mode: census (ModelGen: %s)", args.model.name)
     else:
         logger.info("Demand mode: synthetic (gravity model)")
-    if args.demand_only:
-        logger.info("Mode: demand-only (reusing existing network/signals)")
     logger.info("=" * 60)
 
     t0 = time.time()
 
-    net = None
-    sig = None
+    # 1 -- Network from OSM
+    if out.exists():
+        shutil.rmtree(out)
+    out.mkdir(parents=True)
 
-    if not args.demand_only:
-        # 1 -- Network from OSM
-        if out.exists():
-            shutil.rmtree(out)
-        out.mkdir(parents=True)
+    logger.info("Downloading OSM network (%.1f km radius) ...", RADIUS_KM)
+    net = build_network_from_osm(bbox, out / "network.xml",
+                                 network_type="drive")
+    logger.info("Network: %d nodes, %d links",
+                net["node_count"], net["link_count"])
 
-        logger.info("Downloading OSM network (%.1f km radius) ...", RADIUS_KM)
-        net = build_network_from_osm(bbox, out / "network.xml",
-                                     network_type="drive")
-        logger.info("Network: %d nodes, %d links",
-                    net["node_count"], net["link_count"])
+    # 3 -- Signals (inferred from network topology)
+    logger.info("Inferring traffic signals from network topology ...")
+    sig = build_signals_default(
+        network_path=out / "network.xml",
+        output_path=out / "signals.xml",
+        min_degree=4,
+    )
+    logger.info("Signals: %d controllers", sig["signal_count"])
 
-        # 3 -- Signals (inferred from network topology)
-        logger.info("Inferring traffic signals from network topology ...")
-        sig = build_signals_default(
-            network_path=out / "network.xml",
-            output_path=out / "signals.xml",
-            min_degree=4,
-        )
-        logger.info("Signals: %d controllers", sig["signal_count"])
-
-        # 4 -- Config / Manifest
-        _write_config_xml(out / "config.xml")
-        _write_manifest_xml(out / "manifest.xml")
+    # 4 -- Config / Manifest
+    _write_config_xml(out / "config.xml")
+    _write_manifest_xml(out / "manifest.xml")
 
     # 2 -- Demand
     if args.model:
-        dem = _generate_demand_census(bbox, out, args.model)
+        dem = _generate_demand_census(bbox, out, args.model,
+                                            args.allow_oversample)
     else:
         dem = _generate_demand_synthetic(bbox, out)
 
@@ -258,15 +250,9 @@ def main() -> None:
     print()
     print("=" * 60)
     print(f"  {SCENARIO_ID}")
-    if net:
-        print(f"  Network : {net['node_count']} nodes, {net['link_count']} links")
-    else:
-        print(f"  Network : (reused existing)")
+    print(f"  Network : {net['node_count']} nodes, {net['link_count']} links")
     print(f"  Demand  : {dem['trip_count']} trips ({strategy})")
-    if sig:
-        print(f"  Signals : {sig['signal_count']} controllers")
-    else:
-        print(f"  Signals : (reused existing)")
+    print(f"  Signals : {sig['signal_count']} controllers")
     if strategy == "census":
         print(f"  Census  : {dem.get('census_commuters', '?')} commuters, "
               f"avg {dem.get('avg_commute_min', '?')} min")
