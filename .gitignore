@@ -54,3 +54,6 @@ results/
 # Tmp
 tmp/
 temp/
+
+# ModelGen raw data
+ModelGen/*.txt
