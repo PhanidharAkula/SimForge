@@ -206,22 +206,23 @@ def create_example_runspec(output_path: Path) -> RunSpec:
         global_output_dir="runs",
         runs=[
             RunConfig(
-                scenario_id="toy_2x2_grid",
-                scenario_path="scenarios/toy_2x2_grid",
+                scenario_id="chicago_5k",
+                scenario_path="scenarios/chicago_5k",
                 engine="sumo",
                 environment="local_cpu",
                 repeats=3,
-                seed=42
+                seed=42,
+                mode=SimulationMode.MESOSCOPIC,
             ),
             RunConfig(
-                scenario_id="sioux_falls_tier50k",
-                scenario_path="scenarios/sioux_falls_tier50k",
+                scenario_id="nyc_5k",
+                scenario_path="scenarios/nyc_5k",
                 engine="sumo",
                 environment="local_cpu",
-                repeats=5,
-                seed=100,
-                timeout_s=7200
-            )
+                repeats=3,
+                seed=42,
+                mode=SimulationMode.MESOSCOPIC,
+            ),
         ]
     )
     

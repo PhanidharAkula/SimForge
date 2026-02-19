@@ -284,9 +284,9 @@ Examples:
     scenarios_available = get_scenarios()
     if not scenarios_available:
         print("❌ No scenarios found. Run data generation scripts first:")
-        print("   python scripts/generate_data/generate_nyc_5k.py")
-        print("   python scripts/generate_data/generate_la_5k.py")
-        print("   python scripts/generate_data/generate_chicago_5k.py")
+        print("   python scripts/generate_chicago_5k.py")
+        print("   python scripts/generate_nyc_5k.py")
+        print("   python scripts/generate_la_5k.py")
         return 1
     
     # Determine scenarios to run

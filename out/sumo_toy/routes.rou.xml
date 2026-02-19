@@ -1,6 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!-- Placeholder SUMO routes generated from canonical demand.csv -->
-<!-- Scenario: toy_2x2_grid, trips: 6 -->
-<routes>
-  <!-- TODO: implement canonical demand -> SUMO routes conversion -->
-</routes>

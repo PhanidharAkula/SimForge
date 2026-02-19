@@ -43,9 +43,14 @@ source .venv/bin/activate
 # 3. Install Python dependencies
 pip install -r requirements.txt
 
-# 4. Verify installation
-python -m pipeline.validation.validate_bundle scenarios/toy_2x2_grid
-# Expected: [VALID] Scenario bundle at: .../scenarios/toy_2x2_grid
+# 4. Generate scenario data
+python scripts/generate_chicago_5k.py
+python scripts/generate_nyc_5k.py
+python scripts/generate_la_5k.py
+
+# 5. Verify installation
+python -m pipeline.validation.validate_bundle scenarios/chicago_5k
+# Expected: [VALID] Scenario bundle at: .../scenarios/chicago_5k
 ```
 
 ---
@@ -85,7 +90,7 @@ java -version
 # Expected: openjdk 17.x or higher
 ```
 
-### QarSUMO (Optional - GPU only)
+### QarSUMO (Optional — GPU only)
 
 QarSUMO requires NVIDIA GPU with CUDA. Download from:
 https://github.com/LLNL/QarSUMO
@@ -99,52 +104,37 @@ If QarSUMO is not available, the framework automatically falls back to standard 
 ### Step 1: Validate All Scenarios
 
 ```bash
-# Validate toy scenario
-python -m pipeline.validation.validate_bundle scenarios/toy_2x2_grid
-
-# Validate city scenarios
-python -m pipeline.validation.validate_bundle scenarios/sioux_falls_tier50k
-python -m pipeline.validation.validate_bundle scenarios/austin_tier50k
-python -m pipeline.validation.validate_bundle scenarios/berlin_tier50k
+python -m pipeline.validation.validate_bundle scenarios/chicago_5k
+python -m pipeline.validation.validate_bundle scenarios/nyc_5k
+python -m pipeline.validation.validate_bundle scenarios/la_5k
 ```
 
 All should report `[VALID]`.
 
-### Step 2: Run Toy Scenario (Sanity Check)
+### Step 2: Quick Sanity Check
 
 ```bash
-# Test all engines on toy scenario
-python -m execution.run_benchmark runspecs/dev_toy.yaml
+# Run a single scenario with SUMO mesoscopic
+python run.py --scenario chicago_5k --engine sumo --mode meso --repeats 1
 ```
 
-Expected: ~30 seconds, all engines pass.
+Expected: completes in under 30 seconds.
 
-### Step 3: Run Development Benchmark
+### Step 3: Run Full 5K Benchmark
 
 ```bash
-# Quick 50k benchmark (mesoscopic only)
-python -m execution.run_benchmark runspecs/dev_mesoscopic.yaml
+# Full benchmark: 3 cities × 3 engines × mesoscopic × 3 repeats = 27 runs
+python -m execution.run_benchmark runspecs/benchmark_5k.yaml
 ```
 
-Expected: ~5-10 minutes.
+Expected: 10–30 minutes depending on hardware.
 
-### Step 4: Run Full Thesis Benchmark
+### Step 4: Run via CLI (Alternative)
 
 ```bash
-# Full 50k matrix (all engines, 3 seeds)
-python -m execution.run_benchmark runspecs/full_50k_mesoscopic.yaml
+# Run all combinations using the main CLI
+python run.py --mode meso --repeats 3
 ```
-
-Expected: ~30-60 minutes depending on hardware.
-
-### Step 5: Run Complete Matrix (Optional)
-
-```bash
-# Complete thesis matrix (all cities, all tiers, all engines)
-python -m execution.run_benchmark runspecs/thesis_benchmark_matrix.yaml
-```
-
-Expected: Several hours to days depending on tier sizes.
 
 ---
 
@@ -156,56 +146,56 @@ Results are stored in:
 
 ```
 runs/
-├── <scenario>/
-│   ├── <engine>/
-│   │   └── <mode>/
-│   │       ├── seed_42/
-│   │       ├── seed_43/
-│   │       └── seed_44/
+├── benchmark_<timestamp>/
+│   ├── <scenario>_<engine>_<mode>_seed<N>/
+│   │   ├── native_files/     # Simulator-native input files
+│   │   ├── tripinfo.xml      # SUMO trip-level output
+│   │   └── statistics.xml    # SUMO summary statistics
+│   └── benchmark_results.json
 ```
 
 ### Extracting Metrics
 
 ```bash
-# Extract travel times from SUMO output
-python -c "
-from evaluation.metrics.travel_time import extract_sumo_travel_times
-times = extract_sumo_travel_times('runs/sioux_falls_sumo_meso/sumo/seed_42/output/tripinfo.xml')
-print(f'Mean travel time: {sum(times)/len(times):.1f}s')
-"
+# Analyze benchmark results
+python -m evaluation.analyze_benchmark runs/benchmark_<timestamp>/benchmark_results.json
 ```
 
-### Generating Summary
+### Generating Thesis Plots
 
 ```bash
-# Run metrics collection
-python -m evaluation.collect_results runs/
+python -m evaluation.generate_plots runs/benchmark_<timestamp>/benchmark_results.json
 ```
-
-This generates `results/summary.csv` with all metrics.
 
 ---
 
-## Expected Results
+## Expected Results (5K Tier)
 
-### Toy Scenario (6 trips)
+### Chicago 5K (5,000 trips, 3,343 nodes, 8,362 links)
 
-| Engine     | Runtime | Mean Travel Time |
-| ---------- | ------- | ---------------- |
-| SUMO micro | ~0.03s  | ~21s             |
-| SUMO meso  | ~0.03s  | ~21s             |
-| QarSUMO\*  | ~0.03s  | ~21s             |
-| MATSim     | ~7s     | ~21s             |
+| Engine    | Mode | Expected Runtime |
+| --------- | ---- | ---------------- |
+| SUMO      | meso | ~2–5s            |
+| QarSUMO\* | meso | ~2–5s            |
+| MATSim    | meso | ~10–15s          |
+
+### NYC 5K (5,000 trips, 1,913 nodes, 3,877 links)
+
+| Engine    | Mode | Expected Runtime |
+| --------- | ---- | ---------------- |
+| SUMO      | meso | ~1–3s            |
+| QarSUMO\* | meso | ~1–3s            |
+| MATSim    | meso | ~8–12s           |
+
+### LA 5K (5,000 trips, 6,333 nodes, 17,685 links)
+
+| Engine    | Mode | Expected Runtime |
+| --------- | ---- | ---------------- |
+| SUMO      | meso | ~3–8s            |
+| QarSUMO\* | meso | ~3–8s            |
+| MATSim    | meso | ~12–20s          |
 
 \*Falls back to SUMO without GPU
-
-### Sioux Falls 50k (50,000 trips)
-
-| Engine     | Runtime | Status   |
-| ---------- | ------- | -------- |
-| SUMO micro | ~120s   | Expected |
-| SUMO meso  | ~15s    | Expected |
-| MATSim     | ~45s    | Expected |
 
 ---
 
@@ -245,32 +235,18 @@ sudo apt-get install openjdk-17-jdk
 
 ### Slow MATSim runs
 
-MATSim has JVM startup overhead (~5-7s). This is normal for small scenarios.
+MATSim has JVM startup overhead (~5–7s). This is normal for small scenarios.
 
 ---
 
 ## Reproducing Specific Figures
 
-### Figure 1: Travel Time CDFs
-
 ```bash
-# Generate CDF data
-python scripts/plot_travel_time_cdf.py runs/ figures/travel_time_cdf.png
+# Generate all thesis figures from benchmark results
+python -m evaluation.generate_plots runs/<benchmark_dir>/benchmark_results.json
 ```
 
-### Figure 2: Runtime Comparison
-
-```bash
-# Generate bar chart
-python scripts/plot_runtime_comparison.py results/summary.csv figures/runtime.png
-```
-
-### Figure 3: Scaling Analysis
-
-```bash
-# Requires 50k, 500k, 5M tier runs
-python scripts/plot_scaling.py results/summary.csv figures/scaling.png
-```
+Individual plot scripts are available in `evaluation/generate_plots.py`.
 
 ---
 
@@ -290,22 +266,14 @@ To reproduce exactly, use these versions.
 
 ---
 
-## Contact
-
-For questions about reproducing this work:
-
-- Open an issue on the repository
-- Email: [thesis author email]
-
----
-
 ## Citation
 
 ```bibtex
 @mastersthesis{simforge2026,
   author = {Dharakula, Phani},
-  title = {SimForge: A Reproducible Cross-Simulator Benchmarking Framework for Urban Traffic Simulation},
+  title  = {SimForge: A Reproducible Cross-Simulator Benchmarking Framework
+            for Urban Traffic Simulation},
   school = {University of Texas at Austin},
-  year = {2026}
+  year   = {2026}
 }
 ```

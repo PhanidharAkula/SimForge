@@ -2,22 +2,7 @@
 Scenario Builder Pipeline
 
 Tools for generating canonical scenario bundles from various data sources.
+
+Per-city generation scripts live in scripts/ (e.g., generate_chicago_5k.py).
+They use pipeline.network, pipeline.demand, and pipeline.signals directly.
 """
-
-from .generate_city_scenario import (
-    ScenarioGenerator,
-    CityDefinition,
-    CITY_DEFINITIONS,
-    DEMAND_TIERS,
-    estimate_generation_time,
-    format_time_estimate,
-)
-
-__all__ = [
-    "ScenarioGenerator",
-    "CityDefinition", 
-    "CITY_DEFINITIONS",
-    "DEMAND_TIERS",
-    "estimate_generation_time",
-    "format_time_estimate",
-]

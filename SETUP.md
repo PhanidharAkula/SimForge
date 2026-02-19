@@ -1,6 +1,6 @@
-# SimForge Complete Setup Guide
+# SimForge Setup Guide
 
-This guide explains how to set up and run SimForge from scratch on any machine.
+This guide explains how to set up and run SimForge from scratch.
 
 ## Table of Contents
 
@@ -25,7 +25,7 @@ This guide explains how to set up and run SimForge from scratch on any machine.
 
 | Software   | Version | Installation                                                              |
 | ---------- | ------- | ------------------------------------------------------------------------- |
-| **Python** | 3.10+   | `brew install python@3.11` or system package manager                      |
+| **Python** | 3.10+   | `brew install python@3.13` or system package manager                      |
 | **Java**   | 17+     | `brew install openjdk@17` (required for MATSim)                           |
 | **SUMO**   | 1.18+   | `brew install sumo` or [download](https://sumo.dlr.de/docs/Downloads.php) |
 | **Git**    | 2.30+   | Usually pre-installed                                                     |
@@ -33,14 +33,9 @@ This guide explains how to set up and run SimForge from scratch on any machine.
 ### Verify Prerequisites
 
 ```bash
-# Check Python
-python3 --version  # Should be 3.10+
-
-# Check Java (for MATSim)
-java -version  # Should be 17+
-
-# Check SUMO
-sumo --version  # Should be 1.18+
+python3 --version   # Should be 3.10+
+java -version       # Should be 17+
+sumo --version      # Should be 1.18+
 ```
 
 ---
@@ -50,19 +45,16 @@ sumo --version  # Should be 1.18+
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourrepo/SimForge.git
+git clone <repo-url>
 cd SimForge
 ```
 
 ### 2. Create Python Virtual Environment
 
 ```bash
-# Create virtual environment
 python3 -m venv .venv
-
-# Activate it
-source .venv/bin/activate  # macOS/Linux
-# .venv\Scripts\activate   # Windows
+source .venv/bin/activate   # macOS/Linux
+# .venv\Scripts\activate    # Windows
 ```
 
 ### 3. Install Python Dependencies
@@ -75,10 +67,7 @@ pip install -r requirements.txt
 ### 4. Install MATSim JAR
 
 ```bash
-# Create lib directory
 mkdir -p lib/matsim-15.0
-
-# Download MATSim 15.0 release
 curl -L -o matsim-15.0.zip https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0.zip
 unzip matsim-15.0.zip -d lib/
 rm matsim-15.0.zip
@@ -90,263 +79,165 @@ rm matsim-15.0.zip
 # Run tests
 python -m pytest tests/ -v
 
+# Check SUMO adapter
+python -c "from adapters.sumo.sumo_adapter import SUMOAdapter; print('SUMO: OK')"
+
 # Check MATSim JAR detection
 python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MATSim:', find_matsim_jar())"
-
-# Check SUMO
-python -c "from adapters.sumo.sumo_adapter import SUMOAdapter; print('SUMO: OK')"
 ```
 
 ---
 
 ## Scenario Data
 
+### Current Scenarios (5K tier)
+
+| Scenario     | City    | Nodes  | Links   | Trips | Radius |
+| ------------ | ------- | ------ | ------- | ----- | ------ |
+| `chicago_5k` | Chicago | ~3,300 | ~8,400  | 5,000 | 4 km   |
+| `nyc_5k`     | NYC     | ~1,900 | ~3,900  | 5,000 | 3 km   |
+| `la_5k`      | LA      | ~6,300 | ~17,700 | 5,000 | 5 km   |
+
 ### Where Does the Data Come From?
 
 SimForge uses **synthetic data derived from real sources**:
 
-| File           | Source                  | Data Type                               |
-| -------------- | ----------------------- | --------------------------------------- |
-| `network.xml`  | **OpenStreetMap (OSM)** | Real road network topology              |
-| `demand.csv`   | **Generated**           | Synthetic trips using population models |
-| `signals.xml`  | **Generated/Estimated** | Traffic signal timing patterns          |
-| `config.xml`   | **Created**             | Simulation parameters (seed, duration)  |
-| `manifest.xml` | **Created**             | Checksums and metadata                  |
+| File         | Source                  | Data Type                              |
+| ------------ | ----------------------- | -------------------------------------- |
+| network.xml  | **OpenStreetMap (OSM)** | Real road network topology             |
+| demand.csv   | **Generated**           | Synthetic trips using gravity model    |
+| signals.xml  | **Generated/Estimated** | Traffic signal timing patterns         |
+| config.xml   | **Created**             | Simulation parameters (seed, duration) |
+| manifest.xml | **Created**             | Checksums and metadata                 |
 
-### Why Synthetic Demand?
+### Generating Scenarios
 
-Per the thesis plan, synthetic demand is used because:
-
-- **Privacy**: Real trip data contains personally identifiable information (PII)
-- **Scalability**: Real data is expensive/unavailable at 50k-5M scale
-- **Reproducibility**: Synthetic data with fixed seeds ensures identical runs
-- **Licensing**: OD matrices from public planning models avoid IP issues
-
-The demand is **statistically realistic** - generated using:
-
-- Population density from census data
-- Peak-hour distribution curves (8% of daily trips in AM peak)
-- Origin-destination patterns based on urban form
-
-### Pre-Built Scenarios
-
-| Scenario              | Nodes  | Links   | Available Tiers |
-| --------------------- | ------ | ------- | --------------- |
-| `toy_2x2_grid`        | 9      | 24      | Test only       |
-| `sioux_falls_tier50k` | ~3,000 | ~8,000  | 50k             |
-| `austin_tier50k`      | 44,861 | 110,533 | 50k             |
-| `berlin_tier50k`      | 39,866 | 103,309 | 50k             |
-
-### Generating Your Own Scenarios
+Each city has a standalone generation script:
 
 ```bash
-# Generate Austin 50k
-python -m pipeline.scenariobuilder.build_city_bundles austin --tier 50k
-
-# Generate Berlin at multiple tiers
-python -m pipeline.scenariobuilder.build_city_bundles berlin --tier all
-
-# Generate all cities
-python -m pipeline.scenariobuilder.build_city_bundles --all
+python scripts/generate_chicago_5k.py
+python scripts/generate_nyc_5k.py
+python scripts/generate_la_5k.py
 ```
 
-**Time estimates for scenario generation:**
+Generation time is typically 10–30 seconds per city (depends on OSM download).
 
-- 50k tier: ~2-5 minutes (depends on OSM download)
-- 500k tier: ~10-15 minutes
-- 5M tier: ~30-60 minutes
+### Validating Scenarios
+
+```bash
+python -m pipeline.validation.validate_bundle scenarios/chicago_5k
+python -m pipeline.validation.validate_bundle scenarios/nyc_5k
+python -m pipeline.validation.validate_bundle scenarios/la_5k
+```
 
 ---
 
 ## Running Simulations
 
-### Quick Start: Toy Scenario
+### Quick Start
 
 ```bash
-# Run with SUMO (microscopic)
-python run.py run toy_2x2_grid sumo
+# Run a specific scenario with SUMO (mesoscopic)
+python run.py --scenario chicago_5k --engine sumo --mode meso
 
-# Run with SUMO mesoscopic
-python run.py run toy_2x2_grid sumo --mesoscopic
+# Run all scenarios with all engines
+python run.py
 
-# Run with MATSim
-python run.py run toy_2x2_grid matsim
+# List available options
+python run.py --list
 ```
 
-### Run City Scenarios
+### Run Full Benchmark
 
 ```bash
-# Run Austin with SUMO
-python run.py run austin_50k sumo
-
-# Run Berlin with MATSim
-python run.py run berlin_50k matsim
-```
-
-### Run Full Benchmark Matrix
-
-```bash
-# Execute the thesis benchmark runspec
-python run.py benchmark runspecs/thesis_benchmark_matrix.yaml
+# Execute the 5K benchmark runspec (3 cities × 3 engines × mesoscopic × 3 repeats)
+python -m execution.run_benchmark runspecs/benchmark_5k.yaml
 ```
 
 ### Run Individual Adapter CLI
 
 ```bash
 # SUMO adapter directly
-python -m adapters.sumo.cli scenarios/toy_2x2_grid out/sumo_output
+python -m adapters.sumo.cli scenarios/chicago_5k runs/chicago_sumo
 
 # MATSim adapter directly
-python -m adapters.matsim.cli scenarios/toy_2x2_grid out/matsim_output
+python -m adapters.matsim.cli scenarios/chicago_5k runs/chicago_matsim
+```
+
+### Run SUMO Locally (with binary invocation)
+
+```bash
+python -m execution.run_sumo_local scenarios/chicago_5k runs/chicago_sumo_out
 ```
 
 ---
 
 ## Understanding the Output
 
-### What Results Do Simulators Produce?
-
-After running a simulation, you get:
-
-```
-out/{engine}_{scenario}/
-├── trips.csv          # Completed trips with travel times
-├── link_stats.csv     # Per-link flow counts and speeds
-├── runtime.json       # Wall-clock time, throughput metrics
-└── config_used.xml    # Actual configuration used
-```
-
 ### Key Metrics (Per Thesis)
 
 | Dimension           | Metric     | Formula                    | Purpose                  |
 | ------------------- | ---------- | -------------------------- | ------------------------ |
-| **Fidelity**        | RMSE       | √(Σ(sim-obs)²/n)           | Accuracy vs ground truth |
-| **Fidelity**        | GEH        | √(2(sim-obs)²/(sim+obs))   | Traffic count comparison |
-| **Fidelity**        | KS         | max\|F_sim(x) - F_obs(x)\| | Distribution similarity  |
-| **Scalability**     | Runtime    | Twall (seconds)            | How fast it runs         |
+| **Fidelity**        | RMSE       | √(Σ(sim−obs)²/n)           | Accuracy vs ground truth |
+| **Fidelity**        | GEH        | √(2(sim−obs)²/(sim+obs))   | Traffic count comparison |
+| **Fidelity**        | KS         | max\|F_sim(x) − F_obs(x)\| | Distribution similarity  |
+| **Scalability**     | Runtime    | T_wall (seconds)           | How fast it runs         |
 | **Scalability**     | Throughput | vehicles/sec/core          | Efficiency per core      |
-| **Reproducibility** | R          | 1 - σ/μ                    | Run-to-run consistency   |
-
-### Example Output
-
-```
-==============================
-Simulation Complete: toy_2x2_grid + sumo
-==============================
-Runtime:        12.4 seconds
-Trips Complete: 1,000
-Avg Travel Time: 245.3 seconds
-Throughput:     80.6 vehicles/sec
-```
-
-### Final Thesis Output
-
-The complete thesis benchmark produces:
-
-1. **Comparative Tables**: Fidelity/scalability across all 3 cities × 3 tiers × 5 engines
-2. **Scalability Plots**: Runtime vs agent count (log-log)
-3. **Reproducibility Scores**: R values with 95% confidence intervals
-4. **Hardware Efficiency**: vehicles/sec/core and vehicles/sec/watt
+| **Reproducibility** | R          | 1 − σ/μ                    | Run-to-run consistency   |
 
 ---
 
 ## GPU Acceleration
 
-### How GPU Helps (QarSUMO)
+### QarSUMO
 
 | Mode          | Hardware    | Speedup  | Use Case                   |
 | ------------- | ----------- | -------- | -------------------------- |
 | CPU (SUMO)    | Any CPU     | Baseline | Small scenarios, debugging |
-| GPU (QarSUMO) | NVIDIA CUDA | 10-50x   | Large-scale (500k+ agents) |
+| GPU (QarSUMO) | NVIDIA CUDA | 10–50×   | Large-scale (500k+ agents) |
 
-### GPU Requirements for QarSUMO
-
-- NVIDIA GPU with CUDA 11.0+
-- QarSUMO binary compiled with CUDA support
-- At least 8GB VRAM for 500k agents
-
-### Running with GPU
-
-```bash
-# QarSUMO uses GPU automatically if available
-python run.py run austin_50k qarsumo
-
-# Force CPU fallback
-python run.py run austin_50k qarsumo --no-gpu
-```
-
-### Current Status
-
-On your local machine:
-
-- **SUMO**: ✅ Installed and working
-- **MATSim**: ✅ Installed (lib/matsim-15.0/)
-- **QarSUMO**: ⚠️ Binary not found - falls back to SUMO
-
-To install QarSUMO with GPU support, you need to compile from source with CUDA.
+QarSUMO requires an NVIDIA GPU with CUDA 11.0+ and at least 8 GB VRAM.
+When no GPU is available, QarSUMO falls back to CPU SUMO automatically.
 
 ---
 
 ## Command Reference
 
-### Main CLI Commands
+### Main CLI (`run.py`)
 
 ```bash
-# List available scenarios
-python run.py list
-
-# Run single scenario
-python run.py run <scenario> <engine> [options]
-
-# Run benchmark matrix
-python run.py benchmark <runspec.yaml>
-
-# Validate scenario bundle
-python -m pipeline.validation.validate_bundle scenarios/<name>
+python run.py                                       # Run ALL
+python run.py --scenario chicago_5k                 # One scenario
+python run.py --scenario chicago_5k,nyc_5k          # Multiple
+python run.py --engine sumo,matsim                  # Specific engines
+python run.py --mode meso                           # Mesoscopic only
+python run.py --repeats 5                           # 5 repeats
+python run.py --list                                # Show available options
+python run.py --validate-only                       # Validate only
 ```
 
-### Options
+### Benchmark Harness
 
-| Flag             | Description                                   |
-| ---------------- | --------------------------------------------- |
-| `--mesoscopic`   | Use mesoscopic mode (faster, less detailed)   |
-| `--iterations N` | Number of iterations (MATSim)                 |
-| `--seed N`       | Random seed for reproducibility               |
-| `--output DIR`   | Output directory                              |
-| `--force`        | Overwrite existing output (skip confirmation) |
+```bash
+python -m execution.run_benchmark runspecs/benchmark_5k.yaml
+```
 
-### What is `--force`?
+### Bundle Validation
 
-The `--force` flag skips the "output directory exists" warning and overwrites previous results. Use it when:
-
-- Re-running experiments after code changes
-- Automating batch runs in scripts
-- You're sure you don't need the old output
+```bash
+python -m pipeline.validation.validate_bundle scenarios/<name>
+```
 
 ---
 
 ## Troubleshooting
 
-### Common Issues
-
-| Problem                | Solution                                             |
-| ---------------------- | ---------------------------------------------------- |
-| `MATSim JAR not found` | Run the MATSim download commands above               |
-| `SUMO not found`       | Install via `brew install sumo`                      |
-| `Java version error`   | Install Java 17+: `brew install openjdk@17`          |
-| `OSM download failed`  | Check internet connection, retry with smaller radius |
-| `Out of memory`        | Reduce tier (use 50k instead of 500k)                |
-
-### Getting Help
-
-```bash
-# CLI help
-python run.py --help
-python run.py run --help
-
-# Run tests
-python -m pytest tests/ -v
-```
+| Problem                | Solution                                    |
+| ---------------------- | ------------------------------------------- |
+| `MATSim JAR not found` | Run the MATSim download commands above      |
+| `SUMO not found`       | Install via `brew install sumo`             |
+| `Java not found`       | Install Java 17+: `brew install openjdk@17` |
+| OSM download timeout   | Check internet connection, retry            |
 
 ---
 
@@ -354,29 +245,24 @@ python -m pytest tests/ -v
 
 ```
 SimForge/
-├── adapters/           # Simulator-specific converters
-│   ├── sumo/          # SUMO/QarSUMO adapter
-│   ├── matsim/        # MATSim adapter
-│   └── qarsumo/       # QarSUMO (GPU) adapter
-├── canonical/          # Schema documentation
-├── evaluation/         # Metrics computation
-├── execution/          # Benchmark harness
-├── lib/               # External JARs (MATSim)
-├── pipeline/          # Data generation tools
-│   ├── scenariobuilder/  # City bundle generator
-│   └── validation/       # Bundle validators
-├── runspecs/          # Benchmark configurations
-├── scenarios/         # Input scenario bundles
-├── tests/             # Unit tests
-├── run.py             # Main CLI
-├── requirements.txt   # Python dependencies
-└── SETUP.md          # This file
+├── adapters/               # Simulator-specific converters
+│   ├── sumo/               # SUMO/QarSUMO adapter
+│   ├── matsim/             # MATSim adapter
+│   └── qarsumo/            # QarSUMO (GPU) adapter
+├── canonical/              # Schema documentation
+├── evaluation/             # Metrics computation
+├── execution/              # Benchmark harness
+├── lib/                    # External JARs (MATSim)
+├── pipeline/               # Data generation pipeline
+│   ├── network/            # OSM → canonical network
+│   ├── demand/             # Synthetic trip generation
+│   ├── signals/            # Traffic signal inference
+│   └── validation/         # Bundle validators
+├── scripts/                # Per-city generation scripts
+├── runspecs/               # Benchmark configurations
+├── scenarios/              # Input scenario bundles
+├── tests/                  # Unit & integration tests
+├── run.py                  # Main CLI
+├── requirements.txt        # Python dependencies
+└── SETUP.md                # This file
 ```
-
----
-
-## License
-
-- Code: Apache-2.0
-- Schemas: CC BY 4.0
-- Network data derived from OpenStreetMap: ODbL

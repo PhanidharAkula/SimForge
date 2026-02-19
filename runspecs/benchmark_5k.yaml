@@ -1,0 +1,92 @@
+# =============================================================================
+# SimForge Benchmark — 5K Tier
+# =============================================================================
+#
+# 3 cities × 3 engines × mesoscopic mode × 3 repeats = 27 runs
+#
+# Cities:   Chicago, New York City, Los Angeles
+# Engines:  SUMO, QarSUMO, MATSim
+# Tier:     5K trips
+# =============================================================================
+
+name: benchmark_5k
+description: >
+  SimForge 5K-tier benchmark — three US cities evaluated across
+  SUMO (mesoscopic), QarSUMO (mesoscopic, GPU-fallback), and MATSim.
+output_dir: runs/benchmark_5k
+
+runs:
+  # ----- Chicago -----
+  - scenario: chicago_5k
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  - scenario: chicago_5k
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  - scenario: chicago_5k
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  # ----- New York City -----
+  - scenario: nyc_5k
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  - scenario: nyc_5k
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  - scenario: nyc_5k
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  # ----- Los Angeles -----
+  - scenario: la_5k
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  - scenario: la_5k
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600
+
+  - scenario: la_5k
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    increment_seed: true
+    timeout_seconds: 600

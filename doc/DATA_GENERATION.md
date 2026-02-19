@@ -74,7 +74,7 @@ Real travel demand data sources:
 
 1. **Reproducibility**: Anyone can regenerate identical demand
 2. **Cost**: No licensing fees or data agreements required
-3. **Flexibility**: Can scale to any demand level (50k → 5M)
+3. **Flexibility**: Can scale to any demand level (5K → 5M)
 4. **Fairness**: Same demand generation for all simulators
 5. **Control**: Known ground truth for validation
 
@@ -222,11 +222,12 @@ def sample_departure_time():
 
 ### 4.3 Demand Tiers
 
-| Tier | Trip Count | Use Case                   |
-| ---- | ---------- | -------------------------- |
-| 50k  | 50,000     | Development, quick testing |
-| 500k | 500,000    | Scalability testing        |
-| 5M   | 5,000,000  | Full-scale benchmarks      |
+| Tier | Trip Count | Use Case                       |
+| ---- | ---------- | ------------------------------ |
+| 5K   | 5,000      | Thesis benchmarks (current)    |
+| 50k  | 50,000     | Development, quick testing     |
+| 500k | 500,000    | Scalability testing (future)   |
+| 5M   | 5,000,000  | Full-scale benchmarks (future) |
 
 ### 4.4 Mode Assignment
 
@@ -334,12 +335,17 @@ Every file tracked in `manifest.xml` with SHA-256:
 Validation command:
 
 ```bash
-python -m pipeline.validation.validate_bundle scenarios/nyc_tier50k
+python -m pipeline.validation.validate_bundle scenarios/chicago_5k
 ```
 
 ---
 
 ## 7. HPC Generation Guide (OSC)
+
+> **Note**: The 5K-tier scenarios used in the current thesis benchmarks generate
+> locally in under 30 seconds each. HPC is only needed for future higher-tier
+> scenarios (50K, 500K, 5M). The scripts and instructions below are preserved
+> for that future use.
 
 ### 7.1 Ohio Supercomputer Center (OSC) Overview
 
@@ -535,10 +541,10 @@ Each scenario tagged with:
 ### 8.4 Regeneration Command
 
 ```bash
-# Exact reproduction with same seed
-python -m pipeline.scenariobuilder.generate_city_scenario \
-    --city nyc --tier 50k --output scenarios/nyc_tier50k \
-    --seed 42
+# Exact reproduction with same seed (each script uses seed=42 by default)
+python scripts/generate_chicago_5k.py
+python scripts/generate_nyc_5k.py
+python scripts/generate_la_5k.py
 ```
 
 ---
@@ -597,25 +603,21 @@ quality_score = {
 
 ---
 
-## Appendix A: City Bounding Boxes
+## Appendix A: City Centers (5K Scenarios)
 
-| City    | South   | West      | North   | East      |
-| ------- | ------- | --------- | ------- | --------- |
-| NYC     | 40.4774 | -74.2591  | 40.9176 | -73.7004  |
-| LA      | 33.7037 | -118.6682 | 34.3373 | -117.6462 |
-| Chicago | 41.6445 | -87.9401  | 42.0230 | -87.5241  |
-| Austin  | 30.1007 | -97.9384  | 30.5167 | -97.5614  |
-| Berlin  | 52.3382 | 13.0883   | 52.6755 | 13.7611   |
+| City    | Center Lat | Center Lon | Radius (km) | Nodes  | Links   |
+| ------- | ---------- | ---------- | ----------- | ------ | ------- |
+| Chicago | 41.8781    | -87.6298   | 4.0         | ~3,300 | ~8,400  |
+| NYC     | 40.7580    | -73.9855   | 3.0         | ~1,900 | ~3,900  |
+| LA      | 34.0522    | -118.2437  | 5.0         | ~6,300 | ~17,700 |
 
-## Appendix B: File Size Estimates
+## Appendix B: File Size Estimates (5K Tier)
 
-| City    | Tier | network.xml | demand.csv | Total Bundle |
-| ------- | ---- | ----------- | ---------- | ------------ |
-| NYC     | 50k  | ~150 MB     | ~5 MB      | ~160 MB      |
-| NYC     | 500k | ~150 MB     | ~50 MB     | ~210 MB      |
-| NYC     | 5M   | ~150 MB     | ~500 MB    | ~700 MB      |
-| LA      | 50k  | ~120 MB     | ~5 MB      | ~130 MB      |
-| Chicago | 50k  | ~90 MB      | ~5 MB      | ~100 MB      |
+| City    | network.xml | demand.csv | signals.xml | Total Bundle |
+| ------- | ----------- | ---------- | ----------- | ------------ |
+| Chicago | ~3.5 MB     | ~300 KB    | ~400 KB     | ~5 MB        |
+| NYC     | ~1.5 MB     | ~300 KB    | ~200 KB     | ~3 MB        |
+| LA      | ~7.0 MB     | ~300 KB    | ~700 KB     | ~9 MB        |
 
 ## Appendix C: References
 
