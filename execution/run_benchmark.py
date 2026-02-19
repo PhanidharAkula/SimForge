@@ -9,9 +9,9 @@ Orchestrates:
 5. Collecting outputs and computing metrics
 
 Usage:
-    python -m execution.run_benchmark runspecs/benchmark_v1.yaml
-    python -m execution.run_benchmark runspecs/benchmark_v1.yaml --dry-run
-    python -m execution.run_benchmark runspecs/benchmark_v1.yaml --scenario toy_2x2_grid
+    python -m execution.run_benchmark runspecs/benchmark_5k.yaml
+    python -m execution.run_benchmark runspecs/benchmark_5k.yaml --dry-run
+    python -m execution.run_benchmark runspecs/benchmark_5k.yaml --scenario chicago_5k
 """
 
 import json

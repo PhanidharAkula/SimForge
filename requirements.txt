@@ -2,10 +2,8 @@
 # SimForge Python Dependencies
 # ==============================================
 
-# Core parsing / XML / data
+# Core parsing / XML
 lxml
-pydantic
-pandas
 pyyaml
 
 # Network extraction from OSM
@@ -16,14 +14,6 @@ shapely
 
 # Testing
 pytest
-
-# CLI
-click
-
-# Optional: Jupyter notebooks
-# jupyter
-# matplotlib
-# seaborn
 
 # ==============================================
 # EXTERNAL DEPENDENCIES (NOT PIP PACKAGES)

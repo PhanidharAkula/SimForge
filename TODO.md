@@ -3,7 +3,7 @@
 ## Scope
 
 - **Simulators**: SUMO, QarSUMO, MATSim
-- **Tier**: 5K trips (thesis-scale)
+- **Tiers**: 5K, 50K, 500K, 5M trips
 - **Cities**: Chicago, New York City, Los Angeles
 
 ---
@@ -42,21 +42,36 @@
 - [x] All scenarios validated (manifest hash checks pass)
 - [x] Per-city standalone generation scripts
 
-## Milestone 5 — Benchmark & Analysis ✅
+## Milestone 5 — Census Demand Pipeline ✅
 
-- [x] Unified runspec for 5K benchmark (3 cities × 3 engines × meso × 3 repeats)
+- [x] ModelGen output parser (buildings, households, persons)
+- [x] Census-calibrated demand generator (population-weighted origins, JWMNP-calibrated departures)
+- [x] `--model` CLI flag on all generation scripts
+- [x] Oversample guard with `--allow-oversample` safety flag
+
+## Milestone 6 — Multi-Tier Scaling ✅
+
+- [x] 12 generation scripts (3 cities × 4 tiers)
+- [x] Tier parameters: radius, horizon, trip count scaled per city
+- [x] Runspecs for all 4 tiers (benchmark_5k, 50k, 500k, 5m)
+- [x] Census capacity verified for 5K, 50K, 500K tiers
+- [x] 5M tier scripts with oversample documentation
+
+## Milestone 7 — Benchmark & Analysis ✅
+
+- [x] Unified runspec for 5K benchmark (27 runs)
 - [x] Benchmark analysis tools (analyze_benchmark.py)
 - [x] Comparison mode analysis (compare_modes.py)
 - [x] Plot generation for thesis figures (generate_plots.py)
 
-## Milestone 6 — Test Suite ✅
+## Milestone 8 — Test Suite ✅
 
 - [x] Adapter determinism test (SUMO hash stability)
 - [x] SUMO adapter integration test
 - [x] Bundle validator test (valid + corruption detection)
 - [x] Travel-time metrics unit test
 - [x] Fidelity, scalability, reproducibility metric unit tests
-- [x] All 57 tests passing
+- [x] All tests passing
 
 ---
 
@@ -64,7 +79,7 @@
 
 ### Thesis Execution
 
-- [ ] Run full benchmark matrix (27 runs) and collect results
+- [ ] Run full benchmark matrix (27 runs per tier) and collect results
 - [ ] Generate thesis figures from benchmark data
 - [ ] Fill in results tables in thesis chapters
 
@@ -77,9 +92,10 @@
 
 ### Future Enhancements (Post-Thesis)
 
-- [ ] Higher demand tiers (50K, 500K, 5M)
-- [ ] Additional cities
+- [ ] WGTP household-weight expansion for true 5M census demand
+- [ ] Additional cities (obtain Chicago census model file)
+- [ ] Multi-modal demand (bus, subway, taxi beyond car-only)
 - [ ] POLARIS / LPSim adapter (backup simulators)
 - [ ] HPC execution support (SLURM)
 - [ ] Microscopic mode benchmarks
-- [ ] Real OD demand integration
+- [ ] Real workplace OD destination integration

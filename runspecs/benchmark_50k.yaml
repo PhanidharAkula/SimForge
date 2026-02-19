@@ -1,101 +1,102 @@
 # =============================================================================
-# SimForge Benchmark — 5K Tier
+# SimForge Benchmark — 50K Tier
 # =============================================================================
 #
 # 3 cities × 3 engines × mesoscopic mode × 3 repeats = 27 runs
 #
 # Cities:   Chicago, New York City, Los Angeles
 # Engines:  SUMO, QarSUMO, MATSim
-# Tier:     5K trips (1-hour horizon)
+# Tier:     50K trips (2-hour horizon)
 # =============================================================================
 
-name: benchmark_5k
+name: benchmark_50k
 description: >
-  SimForge 5K-tier benchmark — three US cities evaluated across
+  SimForge 50K-tier benchmark — three US cities evaluated across
   SUMO (mesoscopic), QarSUMO (mesoscopic, GPU-fallback), and MATSim.
-output_dir: runs/benchmark_5k
+  Wider geographic radius than 5K tier.
+output_dir: runs/benchmark_50k
 
 runs:
   # ----- Chicago -----
-  - scenario_id: chicago_5k
-    scenario_path: scenarios/chicago_5k
+  - scenario_id: chicago_50k
+    scenario_path: scenarios/chicago_50k
     engine: sumo
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
-  - scenario_id: chicago_5k
-    scenario_path: scenarios/chicago_5k
+  - scenario_id: chicago_50k
+    scenario_path: scenarios/chicago_50k
     engine: qarsumo
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
-  - scenario_id: chicago_5k
-    scenario_path: scenarios/chicago_5k
+  - scenario_id: chicago_50k
+    scenario_path: scenarios/chicago_50k
     engine: matsim
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
   # ----- New York City -----
-  - scenario_id: nyc_5k
-    scenario_path: scenarios/nyc_5k
+  - scenario_id: nyc_50k
+    scenario_path: scenarios/nyc_50k
     engine: sumo
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
-  - scenario_id: nyc_5k
-    scenario_path: scenarios/nyc_5k
+  - scenario_id: nyc_50k
+    scenario_path: scenarios/nyc_50k
     engine: qarsumo
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
-  - scenario_id: nyc_5k
-    scenario_path: scenarios/nyc_5k
+  - scenario_id: nyc_50k
+    scenario_path: scenarios/nyc_50k
     engine: matsim
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
   # ----- Los Angeles -----
-  - scenario_id: la_5k
-    scenario_path: scenarios/la_5k
+  - scenario_id: la_50k
+    scenario_path: scenarios/la_50k
     engine: sumo
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
-  - scenario_id: la_5k
-    scenario_path: scenarios/la_5k
+  - scenario_id: la_50k
+    scenario_path: scenarios/la_50k
     engine: qarsumo
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
 
-  - scenario_id: la_5k
-    scenario_path: scenarios/la_5k
+  - scenario_id: la_50k
+    scenario_path: scenarios/la_50k
     engine: matsim
     mode: mesoscopic
     repeats: 3
     seed: 42
     seed_increment: true
-    timeout_s: 600
+    timeout_s: 1800
