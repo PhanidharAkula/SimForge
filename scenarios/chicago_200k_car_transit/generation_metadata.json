@@ -1,0 +1,20 @@
+{
+  "scenario_id": "chicago_200k_car_transit",
+  "city": "chicago",
+  "city_name": "Chicago, IL",
+  "trips_requested": 200000,
+  "trips_generated": 200000,
+  "modes": [
+    "car",
+    "transit"
+  ],
+  "start_time_s": 0,
+  "end_time_s": 86400,
+  "radius_km": 15.0,
+  "seed": 42,
+  "demand_strategy": "census",
+  "node_count": 27536,
+  "link_count": 72981,
+  "signal_count": 23289,
+  "generation_time_s": 3364.4
+}

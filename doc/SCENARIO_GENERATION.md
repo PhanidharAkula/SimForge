@@ -519,22 +519,22 @@ SimForge scenarios are **more realistic than typical synthetic benchmarks** beca
 
 Each pipeline component is scored on a 0–100% realism scale based on how closely it approximates ground truth:
 
-| Component                     | Realism | Source                          | Justification                                                                                                     |
-| ----------------------------- | ------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| **Road network topology**     | 95%     | OpenStreetMap                   | GPS-traced roads, crowd-verified. Minor gaps in new construction or private roads.                                 |
-| **Road lengths**              | 95%     | OSM way geometries              | Computed from GPS coordinates; sub-meter accuracy in urban areas.                                                  |
-| **Speed limits**              | 75%     | OSM `maxspeed` tag + defaults   | ~60% of roads have real tags; remaining ~40% use road-class defaults (±5 mph typical error).                       |
-| **Lane counts**               | 60%     | OSM `lanes` tag + defaults      | ~30-40% of roads tagged; rest defaults to 1-2 lanes. Arterials/highways better tagged than locals.                 |
+| Component                     | Realism | Source                          | Justification                                                                                                        |
+| ----------------------------- | ------- | ------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Road network topology**     | 95%     | OpenStreetMap                   | GPS-traced roads, crowd-verified. Minor gaps in new construction or private roads.                                   |
+| **Road lengths**              | 95%     | OSM way geometries              | Computed from GPS coordinates; sub-meter accuracy in urban areas.                                                    |
+| **Speed limits**              | 75%     | OSM `maxspeed` tag + defaults   | ~60% of roads have real tags; remaining ~40% use road-class defaults (±5 mph typical error).                         |
+| **Lane counts**               | 60%     | OSM `lanes` tag + defaults      | ~30-40% of roads tagged; rest defaults to 1-2 lanes. Arterials/highways better tagged than locals.                   |
 | **Trip origins**              | 85%     | LandScan + PUMS + OSM buildings | Population-weighted building locations. True spatial distribution of where people live. Random within-node sampling. |
-| **Trip destinations**         | 30–40%  | Gravity model (no real OD)      | Degree-weighted distance-decayed model. No employment data, no land-use data, no survey data.                       |
-| **Departure times**           | 70%     | PUMS JWMNP + Gaussian model     | Census commute durations are real; distribution shape is modeled (Gaussian vs real asymmetric peak).                |
-| **Mode split (multi-mode)**   | 85%     | PUMS JWTRNS                     | Directly from census survey. Real self-reported mode. No transit routing though.                                   |
-| **Mode split (single-mode)**  | N/A     | Fixed assignment                | All trips forced to one mode — not a realism question.                                                             |
-| **Signal locations**          | 50%     | Degree ≥ 4 heuristic           | Correlated with real signal placement but misses some signals and includes false positives.                         |
-| **Signal timing**             | 25%     | Generic 2-phase controller      | Real signals use 4-8 phases with coordinated offsets, adaptive control, protected turns.                           |
-| **Building locations**        | 90%     | OSM building polygons           | Real footprints. Some buildings missing from OSM, especially in suburban areas.                                     |
-| **Person demographics**       | 90%     | Census PUMS microdata           | Real survey responses. Anonymized but statistically representative at PUMA level.                                   |
-| **Building-to-road snapping** | 85%     | ModelGen nearest-road algorithm  | Sub-50m accuracy in urban areas. Occasionally snaps to wrong road in complex layouts.                              |
+| **Trip destinations**         | 30–40%  | Gravity model (no real OD)      | Degree-weighted distance-decayed model. No employment data, no land-use data, no survey data.                        |
+| **Departure times**           | 70%     | PUMS JWMNP + Gaussian model     | Census commute durations are real; distribution shape is modeled (Gaussian vs real asymmetric peak).                 |
+| **Mode split (multi-mode)**   | 85%     | PUMS JWTRNS                     | Directly from census survey. Real self-reported mode. No transit routing though.                                     |
+| **Mode split (single-mode)**  | N/A     | Fixed assignment                | All trips forced to one mode — not a realism question.                                                               |
+| **Signal locations**          | 50%     | Degree ≥ 4 heuristic            | Correlated with real signal placement but misses some signals and includes false positives.                          |
+| **Signal timing**             | 25%     | Generic 2-phase controller      | Real signals use 4-8 phases with coordinated offsets, adaptive control, protected turns.                             |
+| **Building locations**        | 90%     | OSM building polygons           | Real footprints. Some buildings missing from OSM, especially in suburban areas.                                      |
+| **Person demographics**       | 90%     | Census PUMS microdata           | Real survey responses. Anonymized but statistically representative at PUMA level.                                    |
+| **Building-to-road snapping** | 85%     | ModelGen nearest-road algorithm | Sub-50m accuracy in urban areas. Occasionally snaps to wrong road in complex layouts.                                |
 
 ### Overall Realism Estimate: Current Configuration
 
@@ -557,23 +557,23 @@ $$\text{Overall Realism} = \frac{w_\text{net} \cdot R_\text{net} + w_\text{orig}
 
 If ModelGen integrates real destination data (e.g., LODES employment locations, NHTS travel diaries, or land-use-based activity centers), the destination component would improve from ~35% to ~80-85%:
 
-| Component    | Weight | Current | With Real OD | Delta   |
-| ------------ | ------ | ------- | ------------ | ------- |
-| Network      | 0.25   | 85%     | 85%          | —       |
-| Origins      | 0.20   | 85%     | 85%          | —       |
-| Destinations | 0.25   | 35%     | 82%          | **+47** |
-| Departure    | 0.15   | 70%     | 75%          | +5      |
-| Signals      | 0.15   | 35%     | 35%          | —       |
-| **Total**    | **1.00** | **62.8%** | **74.5%** | **+11.7** |
+| Component    | Weight   | Current   | With Real OD | Delta     |
+| ------------ | -------- | --------- | ------------ | --------- |
+| Network      | 0.25     | 85%       | 85%          | —         |
+| Origins      | 0.20     | 85%       | 85%          | —         |
+| Destinations | 0.25     | 35%       | 82%          | **+47**   |
+| Departure    | 0.15     | 70%       | 75%          | +5        |
+| Signals      | 0.15     | 35%       | 35%          | —         |
+| **Total**    | **1.00** | **62.8%** | **74.5%**    | **+11.7** |
 
 With additional signal timing improvements (from real signal plans or AI-optimized timing):
 
-| Improvement Scenario           | Projected Realism |
-| ------------------------------ | ----------------- |
-| Current (v1.0)                 | ~60-65%           |
-| + Real OD destinations         | ~75-80%           |
-| + Real OD + real signal timing | ~85-90%           |
-| + Real OD + signals + activity chains | ~90-95%    |
+| Improvement Scenario                  | Projected Realism |
+| ------------------------------------- | ----------------- |
+| Current (v1.0)                        | ~60-65%           |
+| + Real OD destinations                | ~75-80%           |
+| + Real OD + real signal timing        | ~85-90%           |
+| + Real OD + signals + activity chains | ~90-95%           |
 
 ### Why This Level of Realism Is Sufficient for Cross-Simulator Benchmarking
 

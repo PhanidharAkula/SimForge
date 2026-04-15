@@ -37,29 +37,29 @@ SimForge solves these challenges through five interacting subsystems:
 
 ### 3.1.1 Design Goals
 
-| Goal                  | Mechanism                                                                                      |
-| --------------------- | ---------------------------------------------------------------------------------------------- |
-| **Fairness**          | Identical canonical inputs → each simulator receives equivalent scenarios                      |
-| **Reproducibility**   | Fixed seeds, sorted outputs, SHA-256 hash verification, exact version pinning                  |
-| **Extensibility**     | New simulators require only a new adapter implementing a 3-method interface                     |
-| **Transparency**      | All data sources documented; every transformation traceable from source to output               |
-| **Scalability**       | Scenarios from 1K to 5M trips; runs on laptop or HPC cluster                                   |
+| Goal                | Mechanism                                                                         |
+| ------------------- | --------------------------------------------------------------------------------- |
+| **Fairness**        | Identical canonical inputs → each simulator receives equivalent scenarios         |
+| **Reproducibility** | Fixed seeds, sorted outputs, SHA-256 hash verification, exact version pinning     |
+| **Extensibility**   | New simulators require only a new adapter implementing a 3-method interface       |
+| **Transparency**    | All data sources documented; every transformation traceable from source to output |
+| **Scalability**     | Scenarios from 1K to 5M trips; runs on laptop or HPC cluster                      |
 
 ### 3.1.2 Technology Stack
 
-| Component          | Technology                    | Version  | Role                                    |
-| ------------------ | ----------------------------- | -------- | --------------------------------------- |
-| Core framework     | Python                        | 3.10+    | All pipeline, adapter, and harness code |
-| XML processing     | lxml / xml.etree.ElementTree  | —        | Canonical and simulator XML I/O         |
-| Network extraction | osmnx + networkx              | 1.9+     | OpenStreetMap download and graph ops    |
-| Data processing    | pandas                        | 2.0+     | Demand CSV handling                     |
-| Validation         | pydantic                      | 2.0+     | Schema enforcement                      |
-| SUMO simulator     | SUMO (eclipse-sumo)           | 1.20.0   | Microscopic + mesoscopic simulation     |
-| MATSim simulator   | MATSim                        | 15.0     | Activity-based mesoscopic simulation    |
-| MATSim runtime     | Java (OpenJDK)                | 17+      | JVM for MATSim execution               |
-| QarSUMO            | QarSUMO (LLNL)               | —        | GPU-accelerated SUMO variant            |
-| GPU compute        | CUDA                          | 11.8+    | QarSUMO acceleration                    |
-| Testing            | pytest                        | 8.0+     | 57 tests across all subsystems          |
+| Component          | Technology                   | Version | Role                                    |
+| ------------------ | ---------------------------- | ------- | --------------------------------------- |
+| Core framework     | Python                       | 3.10+   | All pipeline, adapter, and harness code |
+| XML processing     | lxml / xml.etree.ElementTree | —       | Canonical and simulator XML I/O         |
+| Network extraction | osmnx + networkx             | 1.9+    | OpenStreetMap download and graph ops    |
+| Data processing    | pandas                       | 2.0+    | Demand CSV handling                     |
+| Validation         | pydantic                     | 2.0+    | Schema enforcement                      |
+| SUMO simulator     | SUMO (eclipse-sumo)          | 1.20.0  | Microscopic + mesoscopic simulation     |
+| MATSim simulator   | MATSim                       | 15.0    | Activity-based mesoscopic simulation    |
+| MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
+| QarSUMO            | QarSUMO (LLNL)               | —       | GPU-accelerated SUMO variant            |
+| GPU compute        | CUDA                         | 11.8+   | QarSUMO acceleration                    |
+| Testing            | pytest                       | 8.0+    | 57 tests across all subsystems          |
 
 ---
 
@@ -81,13 +81,13 @@ Design principles:
 
 Each scenario bundle consists of five canonical files:
 
-| File             | Format | Purpose                                    | Key Contents                                      |
-| ---------------- | ------ | ------------------------------------------ | ------------------------------------------------- |
-| `network.xml`    | XML    | Static road infrastructure                 | Nodes (intersections), links (road segments)       |
-| `demand.csv`     | CSV    | Travel demand (trip table)                 | Origin, destination, departure time, mode          |
-| `signals.xml`    | XML    | Traffic signal controllers                 | Junction IDs, phases, cycle lengths                |
-| `config.xml`     | XML    | Simulation parameters                      | Time horizon, random seed, units                   |
-| `manifest.xml`   | XML    | File inventory with integrity verification | File list, types, SHA-256 checksums                |
+| File           | Format | Purpose                                    | Key Contents                                 |
+| -------------- | ------ | ------------------------------------------ | -------------------------------------------- |
+| `network.xml`  | XML    | Static road infrastructure                 | Nodes (intersections), links (road segments) |
+| `demand.csv`   | CSV    | Travel demand (trip table)                 | Origin, destination, departure time, mode    |
+| `signals.xml`  | XML    | Traffic signal controllers                 | Junction IDs, phases, cycle lengths          |
+| `config.xml`   | XML    | Simulation parameters                      | Time horizon, random seed, units             |
+| `manifest.xml` | XML    | File inventory with integrity verification | File list, types, SHA-256 checksums          |
 
 ### 3.2.3 Network Schema (`network.xml`)
 
@@ -111,27 +111,27 @@ The network schema defines the static road infrastructure as a **directed graph*
 
 **Node attributes:**
 
-| Attribute | Type   | Required | Description                                          |
-| --------- | ------ | -------- | ---------------------------------------------------- |
-| `id`      | string | Yes      | Unique node identifier (format: `n{index}`)          |
-| `x`       | float  | Yes      | Longitude (EPSG:4326) or x-coordinate                |
-| `y`       | float  | Yes      | Latitude (EPSG:4326) or y-coordinate                 |
-| `type`    | string | Yes      | `intersection`, `dead_end`, or `highway_ramp`        |
-| `osm_id`  | string | No       | Original OpenStreetMap node ID for provenance         |
+| Attribute | Type   | Required | Description                                   |
+| --------- | ------ | -------- | --------------------------------------------- |
+| `id`      | string | Yes      | Unique node identifier (format: `n{index}`)   |
+| `x`       | float  | Yes      | Longitude (EPSG:4326) or x-coordinate         |
+| `y`       | float  | Yes      | Latitude (EPSG:4326) or y-coordinate          |
+| `type`    | string | Yes      | `intersection`, `dead_end`, or `highway_ramp` |
+| `osm_id`  | string | No       | Original OpenStreetMap node ID for provenance |
 
 **Link attributes:**
 
-| Attribute                | Type   | Required | Description                                           |
-| ------------------------ | ------ | -------- | ----------------------------------------------------- |
-| `id`                     | string | Yes      | Unique link identifier (format: `l{index}`)           |
-| `from`                   | string | Yes      | Source node ID (must exist in nodes)                   |
-| `to`                     | string | Yes      | Target node ID (must exist in nodes)                   |
-| `length`                 | float  | Yes      | Road segment length in meters                          |
-| `lanes`                  | int    | Yes      | Number of lanes (≥ 1)                                  |
-| `speed_limit`            | float  | Yes      | Posted speed limit in m/s                              |
-| `capacity_veh_per_hour`  | int    | No       | Hourly capacity per HCM 2016 (derived if absent)       |
-| `road_type`              | string | Yes      | Road classification (motorway, primary, residential…)  |
-| `osm_way_id`             | string | No       | Original OpenStreetMap way ID                          |
+| Attribute               | Type   | Required | Description                                           |
+| ----------------------- | ------ | -------- | ----------------------------------------------------- |
+| `id`                    | string | Yes      | Unique link identifier (format: `l{index}`)           |
+| `from`                  | string | Yes      | Source node ID (must exist in nodes)                  |
+| `to`                    | string | Yes      | Target node ID (must exist in nodes)                  |
+| `length`                | float  | Yes      | Road segment length in meters                         |
+| `lanes`                 | int    | Yes      | Number of lanes (≥ 1)                                 |
+| `speed_limit`           | float  | Yes      | Posted speed limit in m/s                             |
+| `capacity_veh_per_hour` | int    | No       | Hourly capacity per HCM 2016 (derived if absent)      |
+| `road_type`             | string | Yes      | Road classification (motorway, primary, residential…) |
+| `osm_way_id`            | string | No       | Original OpenStreetMap way ID                         |
 
 **Design decisions:**
 
@@ -142,13 +142,13 @@ The network schema defines the static road infrastructure as a **directed graph*
 
 **Typical scale (Chicago 5K, 4km radius):**
 
-| Metric         | Value  |
-| -------------- | ------ |
-| Nodes          | 1,248  |
-| Links          | 2,871  |
-| Total road km  | ~180   |
-| Avg link length | 62.7 m |
-| Road types     | 7 (motorway through residential) |
+| Metric          | Value                            |
+| --------------- | -------------------------------- |
+| Nodes           | 1,248                            |
+| Links           | 2,871                            |
+| Total road km   | ~180                             |
+| Avg link length | 62.7 m                           |
+| Road types      | 7 (motorway through residential) |
 
 ### 3.2.4 Demand Schema (`demand.csv`)
 
@@ -165,13 +165,13 @@ t2,n399,n603,25301,transit
 
 **Column definitions:**
 
-| Column                | Type   | Required | Description                                              |
-| --------------------- | ------ | -------- | -------------------------------------------------------- |
-| `trip_id`             | string | Yes      | Unique trip identifier (format: `t{index}`)              |
-| `origin_node_id`      | string | Yes      | Starting network node (must exist in network.xml)        |
-| `destination_node_id` | string | Yes      | Ending network node (must exist in network.xml)          |
-| `departure_time_s`    | int    | Yes      | Departure time in seconds from simulation start          |
-| `mode`                | string | Yes      | Travel mode: `car`, `transit`, `bike`, `walk`            |
+| Column                | Type   | Required | Description                                       |
+| --------------------- | ------ | -------- | ------------------------------------------------- |
+| `trip_id`             | string | Yes      | Unique trip identifier (format: `t{index}`)       |
+| `origin_node_id`      | string | Yes      | Starting network node (must exist in network.xml) |
+| `destination_node_id` | string | Yes      | Ending network node (must exist in network.xml)   |
+| `departure_time_s`    | int    | Yes      | Departure time in seconds from simulation start   |
+| `mode`                | string | Yes      | Travel mode: `car`, `transit`, `bike`, `walk`     |
 
 **Design decisions:**
 
@@ -182,10 +182,10 @@ t2,n399,n603,25301,transit
 
 **Demand generation strategies** (detailed in §3.3.4):
 
-| Strategy    | Real Data Used                            | Realism Level |
-| ----------- | ----------------------------------------- | ------------- |
-| Census      | LandScan, PUMS JWMNP/JWTRNS, OSM buildings | Medium-High   |
-| Synthetic   | Network topology only                     | Low           |
+| Strategy  | Real Data Used                             | Realism Level |
+| --------- | ------------------------------------------ | ------------- |
+| Census    | LandScan, PUMS JWMNP/JWTRNS, OSM buildings | Medium-High   |
+| Synthetic | Network topology only                      | Low           |
 
 ### 3.2.5 Signals Schema (`signals.xml`)
 
@@ -207,19 +207,19 @@ The signals schema defines traffic signal controllers at intersections.
 
 **Controller attributes:**
 
-| Attribute        | Type   | Description                                    |
-| ---------------- | ------ | ---------------------------------------------- |
-| `junction_id`    | string | Unique signal controller ID                    |
-| `node_id`        | string | Associated network node (must exist in network)|
-| `cycle_length_s` | int    | Total cycle length in seconds                  |
+| Attribute        | Type   | Description                                     |
+| ---------------- | ------ | ----------------------------------------------- |
+| `junction_id`    | string | Unique signal controller ID                     |
+| `node_id`        | string | Associated network node (must exist in network) |
+| `cycle_length_s` | int    | Total cycle length in seconds                   |
 
 **Phase attributes:**
 
-| Attribute    | Type   | Description                                                   |
-| ------------ | ------ | ------------------------------------------------------------- |
-| `phase_id`   | string | Unique within controller                                      |
-| `duration_s` | int    | Phase duration in seconds                                     |
-| `state`      | string | Signal state per approach (G=green, y=yellow, r=red)          |
+| Attribute    | Type   | Description                                          |
+| ------------ | ------ | ---------------------------------------------------- |
+| `phase_id`   | string | Unique within controller                             |
+| `duration_s` | int    | Phase duration in seconds                            |
+| `state`      | string | Signal state per approach (G=green, y=yellow, r=red) |
 
 **Design decisions:**
 
@@ -244,13 +244,13 @@ Simulation parameters that control execution behavior.
 
 **Key parameters:**
 
-| Parameter      | Type   | Description                                                     |
-| -------------- | ------ | --------------------------------------------------------------- |
-| `scenario_id`  | string | Unique human-readable identifier                                |
-| `start_time_s` | int    | Simulation start time (seconds from midnight, or relative)      |
-| `end_time_s`   | int    | Simulation end time                                             |
+| Parameter      | Type   | Description                                                              |
+| -------------- | ------ | ------------------------------------------------------------------------ |
+| `scenario_id`  | string | Unique human-readable identifier                                         |
+| `start_time_s` | int    | Simulation start time (seconds from midnight, or relative)               |
+| `end_time_s`   | int    | Simulation end time                                                      |
 | `random_seed`  | int    | Master seed for reproducibility (propagated to all stochastic processes) |
-| `version`      | string | Schema version for forward compatibility                        |
+| `version`      | string | Schema version for forward compatibility                                 |
 
 ### 3.2.7 Manifest Schema (`manifest.xml`)
 
@@ -280,12 +280,12 @@ File inventory with integrity verification via SHA-256 hashes.
 
 The validator (`pipeline/validation/validate_bundle.py`) enforces cross-file consistency through four categories of checks:
 
-| Check Category           | What Is Verified                                                    | Why It Matters                                      |
-| ------------------------ | ------------------------------------------------------------------- | --------------------------------------------------- |
-| **Structural integrity** | All required files exist and parse correctly                        | Prevents runtime failures in simulators             |
-| **Referential integrity**| All origin/destination nodes in demand exist in network; all signal nodes exist in network | Ensures demand can be routed on the network |
-| **Schema compliance**    | Required attributes present with valid types                        | Catches generation bugs before simulation           |
-| **Hash verification**    | File contents match SHA-256 hashes in manifest                      | Detects data corruption or unauthorized modification|
+| Check Category            | What Is Verified                                                                           | Why It Matters                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
+| **Structural integrity**  | All required files exist and parse correctly                                               | Prevents runtime failures in simulators              |
+| **Referential integrity** | All origin/destination nodes in demand exist in network; all signal nodes exist in network | Ensures demand can be routed on the network          |
+| **Schema compliance**     | Required attributes present with valid types                                               | Catches generation bugs before simulation            |
+| **Hash verification**     | File contents match SHA-256 hashes in manifest                                             | Detects data corruption or unauthorized modification |
 
 **Validation implementation** (simplified):
 
@@ -293,19 +293,19 @@ The validator (`pipeline/validation/validate_bundle.py`) enforces cross-file con
 def validate_bundle(scenario_path: Path) -> ValidationResult:
     # 1. Load manifest and verify all files exist
     manifest = parse_manifest(scenario_path / "manifest.xml")
-    
+
     # 2. Extract network node IDs
     network_nodes = extract_node_ids(scenario_path / "network.xml")
-    
+
     # 3. Check demand references
     for trip in parse_demand(scenario_path / "demand.csv"):
         assert trip.origin_node_id in network_nodes
         assert trip.destination_node_id in network_nodes
-    
+
     # 4. Check signal references
     for signal in parse_signals(scenario_path / "signals.xml"):
         assert signal.node_id in network_nodes
-    
+
     # 5. Verify SHA-256 hashes
     for file_entry in manifest.files:
         assert compute_sha256(file_entry.path) == file_entry.sha256
@@ -353,11 +353,11 @@ python generate.py --city chicago --trips 5000 --synthetic --seed 42
 
 **Predefined cities:**
 
-| City    | Center (lat, lon)        | Radius | Typical Nodes | Typical Links |
-| ------- | ------------------------ | ------ | ------------- | ------------- |
-| Chicago | (41.8781, -87.6298)      | 4 km   | 1,248         | 2,871         |
-| LA      | (34.0522, -118.2437)     | 6 km   | 6,333         | 17,685        |
-| NYC     | (40.7580, -73.9855)      | 3 km   | 1,913         | 3,877         |
+| City    | Center (lat, lon)    | Radius | Typical Nodes | Typical Links |
+| ------- | -------------------- | ------ | ------------- | ------------- |
+| Chicago | (41.8781, -87.6298)  | 4 km   | 1,248         | 2,871         |
+| LA      | (34.0522, -118.2437) | 6 km   | 6,333         | 17,685        |
+| NYC     | (40.7580, -73.9855)  | 3 km   | 1,913         | 3,877         |
 
 **Pipeline steps:**
 
@@ -379,34 +379,34 @@ python generate.py --city chicago --trips 5000 --synthetic --seed 42
 
 4. **Attribute extraction and defaulting:**
 
-   | OSM Tag        | Canonical Attribute   | Default (if missing)                         |
-   | -------------- | --------------------- | -------------------------------------------- |
-   | `highway=*`    | `road_type`           | `unclassified`                               |
-   | `maxspeed=*`   | `speed_limit` (m/s)   | By road type (see table below)               |
-   | `lanes=*`      | `lanes`               | By road type (see table below)               |
-   | `oneway=*`     | Directed links        | Based on highway type (motorways are one-way) |
+   | OSM Tag      | Canonical Attribute | Default (if missing)                          |
+   | ------------ | ------------------- | --------------------------------------------- |
+   | `highway=*`  | `road_type`         | `unclassified`                                |
+   | `maxspeed=*` | `speed_limit` (m/s) | By road type (see table below)                |
+   | `lanes=*`    | `lanes`             | By road type (see table below)                |
+   | `oneway=*`   | Directed links      | Based on highway type (motorways are one-way) |
 
    **Speed limit defaults** (applied when OSM `maxspeed` tag is absent):
 
-   | Road Type    | Default Speed (mph) | Default Speed (m/s) |
-   | ------------ | ------------------- | ------------------- |
-   | motorway     | 65                  | 29.1                |
-   | trunk        | 55                  | 24.6                |
-   | primary      | 45                  | 20.1                |
-   | secondary    | 35                  | 15.6                |
-   | tertiary     | 30                  | 13.4                |
-   | residential  | 25                  | 11.2                |
+   | Road Type   | Default Speed (mph) | Default Speed (m/s) |
+   | ----------- | ------------------- | ------------------- |
+   | motorway    | 65                  | 29.1                |
+   | trunk       | 55                  | 24.6                |
+   | primary     | 45                  | 20.1                |
+   | secondary   | 35                  | 15.6                |
+   | tertiary    | 30                  | 13.4                |
+   | residential | 25                  | 11.2                |
 
    **Lane count defaults:**
 
-   | Road Type    | Default Lanes |
-   | ------------ | ------------- |
-   | motorway     | 3             |
-   | trunk        | 2             |
-   | primary      | 2             |
-   | secondary    | 2             |
-   | tertiary     | 1             |
-   | residential  | 1             |
+   | Road Type   | Default Lanes |
+   | ----------- | ------------- |
+   | motorway    | 3             |
+   | trunk       | 2             |
+   | primary     | 2             |
+   | secondary   | 2             |
+   | tertiary    | 1             |
+   | residential | 1             |
 
 5. **Canonical XML generation**: Nodes and links written with sequential IDs (`n0`, `n1`, ..., `l0`, `l1`, ...), sorted deterministically.
 
@@ -462,20 +462,20 @@ ModelGen file → parse_model_file.py → generate_census_demand.py → demand.c
 
 **ModelGen data sources** (integrated by the separate C++ ModelGen tool):
 
-| Source                      | What It Provides                           | Scale                    |
-| --------------------------- | ------------------------------------------ | ------------------------ |
-| OpenStreetMap               | Building locations, footprints, land use   | Every mapped building    |
-| LandScan (ORNL)             | Population density at ~1km grid cells       | Global coverage          |
-| U.S. Census PUMS (ACS 5yr) | Household demographics, commute data        | ~1% population sample    |
-| PUMA Shapefiles (IPUMS)     | Geographic boundaries linking PUMS to areas | 2,378 PUMAs nationwide   |
+| Source                     | What It Provides                            | Scale                  |
+| -------------------------- | ------------------------------------------- | ---------------------- |
+| OpenStreetMap              | Building locations, footprints, land use    | Every mapped building  |
+| LandScan (ORNL)            | Population density at ~1km grid cells       | Global coverage        |
+| U.S. Census PUMS (ACS 5yr) | Household demographics, commute data        | ~1% population sample  |
+| PUMA Shapefiles (IPUMS)    | Geographic boundaries linking PUMS to areas | 2,378 PUMAs nationwide |
 
 **ModelGen output format** (space-delimited text with 3 record types):
 
-| Record | Fields                                                          | Count (Chicago) |
-| ------ | --------------------------------------------------------------- | --------------- |
+| Record | Fields                                                               | Count (Chicago) |
+| ------ | -------------------------------------------------------------------- | --------------- |
 | `bld`  | ID, levels, population, is_home, kind, sqft, bbox, way_lat/lon, PUMA | 832,750         |
-| `hld`  | bld_ID, PUMS serial, bedrooms, WGTP, HINCP, person_ids          | ~500K+          |
-| `per`  | ID, AGEP, WAGP, JWMNP, JWTRNS, schedule                         | ~1M+            |
+| `hld`  | bld_ID, PUMS serial, bedrooms, WGTP, HINCP, person_ids               | ~500K+          |
+| `per`  | ID, AGEP, WAGP, JWMNP, JWTRNS, schedule                              | ~1M+            |
 
 **Census demand generation algorithm** (7 steps):
 
@@ -497,21 +497,21 @@ ModelGen file → parse_model_file.py → generate_census_demand.py → demand.c
 
 **JWTRNS → canonical mode mapping:**
 
-| PUMS Code | Census Mode              | SimForge Mode |
-| --------- | ------------------------ | ------------- |
-| 1         | Car — drove alone        | `car`         |
-| 2         | Car — carpooled          | `car`         |
-| 3         | Bus                      | `transit`     |
-| 4         | Streetcar/trolley        | `transit`     |
-| 5         | Subway/elevated rail     | `transit`     |
-| 6         | Railroad                 | `transit`     |
-| 7         | Ferryboat                | `transit`     |
-| 8         | Bicycle                  | `bike`        |
-| 9         | Walked                   | `walk`        |
-| 10        | Worked from home         | excluded      |
-| 11        | Taxicab/rideshare        | `car`         |
-| 12        | Other                    | `car`         |
-| -1        | Not a worker             | excluded      |
+| PUMS Code | Census Mode          | SimForge Mode |
+| --------- | -------------------- | ------------- |
+| 1         | Car — drove alone    | `car`         |
+| 2         | Car — carpooled      | `car`         |
+| 3         | Bus                  | `transit`     |
+| 4         | Streetcar/trolley    | `transit`     |
+| 5         | Subway/elevated rail | `transit`     |
+| 6         | Railroad             | `transit`     |
+| 7         | Ferryboat            | `transit`     |
+| 8         | Bicycle              | `bike`        |
+| 9         | Walked               | `walk`        |
+| 10        | Worked from home     | excluded      |
+| 11        | Taxicab/rideshare    | `car`         |
+| 12        | Other                | `car`         |
+| -1        | Not a worker         | excluded      |
 
 #### Synthetic Demand (Fallback)
 
@@ -529,14 +529,14 @@ Used when no ModelGen file is available. Generates demand from network topology 
 
 **Comparison with census mode:**
 
-| Feature              | Census Mode               | Synthetic Mode        |
-| -------------------- | ------------------------- | --------------------- |
-| Origin weighting     | Real population           | Node degree           |
-| Destination model    | Commute-calibrated gravity| Topology-only gravity |
-| Departure times      | Gaussian peak (JWMNP)     | Uniform random        |
-| Mode assignment      | Census JWTRNS             | Fixed (car only)      |
-| External data needed | ModelGen file (~300MB)    | None                  |
-| Realism              | ~60-65%                   | ~15-20%               |
+| Feature              | Census Mode                | Synthetic Mode        |
+| -------------------- | -------------------------- | --------------------- |
+| Origin weighting     | Real population            | Node degree           |
+| Destination model    | Commute-calibrated gravity | Topology-only gravity |
+| Departure times      | Gaussian peak (JWMNP)      | Uniform random        |
+| Mode assignment      | Census JWTRNS              | Fixed (car only)      |
+| External data needed | ModelGen file (~300MB)     | None                  |
+| Realism              | ~60-65%                    | ~15-20%               |
 
 ---
 
@@ -584,14 +584,14 @@ config.xml   ──► scenario.sumocfg
 
 **Key mapping decisions:**
 
-| Canonical                  | SUMO                        | Transformation                                        |
-| -------------------------- | --------------------------- | ----------------------------------------------------- |
-| `node (x, y)`             | `node (x, y, type)`        | x=lon, y=lat; type defaults to `priority`             |
-| `link (from, to, length)` | `edge + lanes`              | One edge per link; numLanes, speed from canonical      |
-| `link.speed_limit`        | `edge.speed`                | Direct copy (both in m/s)                              |
-| `link.lanes`              | `edge.numLanes`             | Direct copy                                            |
-| Trip (origin, dest)       | Vehicle with route           | BFS shortest path on node graph → edge sequence       |
-| `config.random_seed`      | `--seed` CLI arg             | Passed to sumo/sumo-gui                                |
+| Canonical                 | SUMO                | Transformation                                    |
+| ------------------------- | ------------------- | ------------------------------------------------- |
+| `node (x, y)`             | `node (x, y, type)` | x=lon, y=lat; type defaults to `priority`         |
+| `link (from, to, length)` | `edge + lanes`      | One edge per link; numLanes, speed from canonical |
+| `link.speed_limit`        | `edge.speed`        | Direct copy (both in m/s)                         |
+| `link.lanes`              | `edge.numLanes`     | Direct copy                                       |
+| Trip (origin, dest)       | Vehicle with route  | BFS shortest path on node graph → edge sequence   |
+| `config.random_seed`      | `--seed` CLI arg    | Passed to sumo/sumo-gui                           |
 
 **BFS Routing**: The SUMO adapter computes shortest paths at conversion time (not at simulation time). For each trip in demand.csv:
 
@@ -628,13 +628,13 @@ config.xml   ──► config.xml (MATSim config format) + vehicles.xml
 
 **Key mapping decisions:**
 
-| Canonical          | MATSim                           | Notes                                           |
-| ------------------ | -------------------------------- | ----------------------------------------------- |
-| Node (x, y)       | Node with coords                 | Coordinates preserved as-is                      |
-| Link               | Link with freespeed, capacity    | `freespeed = speed_limit`; capacity from lanes × 1800 |
-| Trip (OD, time)    | Person with 2-activity plan      | home(origin) → work(destination)                 |
-| Mode               | Leg mode                         | car/transit/bike mapped to MATSim modes          |
-| Random seed        | `config/global/randomSeed`       | Propagated to MATSim config XML                  |
+| Canonical       | MATSim                        | Notes                                                 |
+| --------------- | ----------------------------- | ----------------------------------------------------- |
+| Node (x, y)     | Node with coords              | Coordinates preserved as-is                           |
+| Link            | Link with freespeed, capacity | `freespeed = speed_limit`; capacity from lanes × 1800 |
+| Trip (OD, time) | Person with 2-activity plan   | home(origin) → work(destination)                      |
+| Mode            | Leg mode                      | car/transit/bike mapped to MATSim modes               |
+| Random seed     | `config/global/randomSeed`    | Propagated to MATSim config XML                       |
 
 **Demand conversion**: Each canonical trip becomes a MATSim agent with a 2-activity plan:
 
@@ -656,13 +656,13 @@ config.xml   ──► config.xml (MATSim config format) + vehicles.xml
 2. Locates `matsim-15.0.jar` in the `lib/` directory
 3. Constructs classpath including all dependency JARs
 
-| Aspect                | SUMO          | MATSim                     |
-| --------------------- | ------------- | -------------------------- |
-| Resolution            | Vehicle-level | Agent-level                |
-| Demand representation | OD routes     | Activity plans             |
-| Traffic flow          | Car-following | Queue-based (mesoscopic)   |
+| Aspect                | SUMO          | MATSim                         |
+| --------------------- | ------------- | ------------------------------ |
+| Resolution            | Vehicle-level | Agent-level                    |
+| Demand representation | OD routes     | Activity plans                 |
+| Traffic flow          | Car-following | Queue-based (mesoscopic)       |
 | Typical iterations    | 1             | 1 (forced for fair comparison) |
-| Startup overhead      | ~0.1s         | ~5-7s (JVM warmup)         |
+| Startup overhead      | ~0.1s         | ~5-7s (JVM warmup)             |
 
 ### 3.4.4 QarSUMO Adapter
 
@@ -825,11 +825,11 @@ All run results are serialized to `benchmark_results.json`:
 
 The evaluation framework measures three orthogonal quality dimensions:
 
-| Dimension           | Question                                                    | Metrics                            |
-| ------------------- | ----------------------------------------------------------- | ---------------------------------- |
-| **Fidelity**        | How closely do simulators agree with each other?            | RMSE, GEH, KS statistic           |
-| **Scalability**     | How efficiently does each simulator use compute resources?  | Runtime, throughput, SRT           |
-| **Reproducibility** | How consistent are results across repeated runs?            | Reproducibility index $R$          |
+| Dimension           | Question                                                   | Metrics                   |
+| ------------------- | ---------------------------------------------------------- | ------------------------- |
+| **Fidelity**        | How closely do simulators agree with each other?           | RMSE, GEH, KS statistic   |
+| **Scalability**     | How efficiently does each simulator use compute resources? | Runtime, throughput, SRT  |
+| **Reproducibility** | How consistent are results across repeated runs?           | Reproducibility index $R$ |
 
 ### 3.6.2 Fidelity Metrics
 
@@ -845,11 +845,11 @@ $$\text{GEH} = \sqrt{\frac{2(M - C)^2}{M + C}}$$
 
 where $M$ is the modeled value and $C$ is the comparison/observed value. Standard in traffic engineering (UK DfT, FHWA):
 
-| GEH Range | Interpretation               | Action                |
-| --------- | ---------------------------- | --------------------- |
-| < 5       | Acceptable fit               | No action needed      |
-| 5 – 10    | Warrants investigation       | Check individual links |
-| > 10      | Poor fit                     | Model needs revision  |
+| GEH Range | Interpretation         | Action                 |
+| --------- | ---------------------- | ---------------------- |
+| < 5       | Acceptable fit         | No action needed       |
+| 5 – 10    | Warrants investigation | Check individual links |
+| > 10      | Poor fit               | Model needs revision   |
 
 The implementation computes per-link GEH and reports both the **mean GEH** and the **percentage of links with GEH < 5** (the industry-standard acceptance criterion).
 
@@ -904,14 +904,14 @@ $$R = 1 - \frac{\sigma}{\mu}$$
 
 where $\sigma$ is standard deviation and $\mu$ is mean of a KPI across repeated runs with different random seeds.
 
-| $R$ Range   | Interpretation             |
-| ----------- | -------------------------- |
-| $R \geq 0.99$ | Excellent (near-deterministic) |
-| $0.95 \leq R < 0.99$ | Very good              |
-| $0.90 \leq R < 0.95$ | Good                   |
-| $0.80 \leq R < 0.90$ | Acceptable             |
-| $0.50 \leq R < 0.80$ | Marginal               |
-| $R < 0.50$  | Poor                       |
+| $R$ Range            | Interpretation                 |
+| -------------------- | ------------------------------ |
+| $R \geq 0.99$        | Excellent (near-deterministic) |
+| $0.95 \leq R < 0.99$ | Very good                      |
+| $0.90 \leq R < 0.95$ | Good                           |
+| $0.80 \leq R < 0.90$ | Acceptable                     |
+| $0.50 \leq R < 0.80$ | Marginal                       |
+| $R < 0.50$           | Poor                           |
 
 **Multi-KPI analysis**: The `MultiKPIReproducibility` class computes $R$ across multiple KPIs (mean travel time, p95 travel time, throughput, etc.) and reports the **overall reproducibility** as the average $R$ across all KPIs.
 
@@ -936,11 +936,11 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 **Computed statistics:**
 
-| Statistic              | Formula                                       |
-| ---------------------- | --------------------------------------------- |
-| Mean travel time       | $\bar{t} = \frac{1}{n}\sum_i t_i$            |
-| P95 travel time        | 95th percentile of sorted durations            |
-| Trip completion count  | Number of trips with arrival time < end_time   |
+| Statistic             | Formula                                      |
+| --------------------- | -------------------------------------------- |
+| Mean travel time      | $\bar{t} = \frac{1}{n}\sum_i t_i$            |
+| P95 travel time       | 95th percentile of sorted durations          |
+| Trip completion count | Number of trips with arrival time < end_time |
 
 ---
 
@@ -950,27 +950,27 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 The framework includes **57 tests** across all subsystems:
 
-| Test Module                     | Tests | What It Validates                                         |
-| ------------------------------- | ----- | --------------------------------------------------------- |
-| `test_validator.py`             | 7     | Bundle validation: missing files, bad refs, hash mismatch |
-| `test_sumo_adapter.py`         | 9     | SUMO conversion: network, routes, config, BFS routing     |
-| `test_adapter_determinism.py`  | 5     | Byte-identical outputs from identical inputs              |
-| `test_fidelity_metrics.py`     | 10    | RMSE, GEH, KS computation correctness                    |
-| `test_reproducibility_metrics.py`| 8   | R-index computation, edge cases, interpretation            |
-| `test_scalability_metrics.py`  | 7     | Timer, throughput, hardware detection                      |
-| `test_metrics_travel_time.py`  | 11    | SUMO tripinfo parsing, statistics computation              |
+| Test Module                       | Tests | What It Validates                                         |
+| --------------------------------- | ----- | --------------------------------------------------------- |
+| `test_validator.py`               | 7     | Bundle validation: missing files, bad refs, hash mismatch |
+| `test_sumo_adapter.py`            | 9     | SUMO conversion: network, routes, config, BFS routing     |
+| `test_adapter_determinism.py`     | 5     | Byte-identical outputs from identical inputs              |
+| `test_fidelity_metrics.py`        | 10    | RMSE, GEH, KS computation correctness                     |
+| `test_reproducibility_metrics.py` | 8     | R-index computation, edge cases, interpretation           |
+| `test_scalability_metrics.py`     | 7     | Timer, throughput, hardware detection                     |
+| `test_metrics_travel_time.py`     | 11    | SUMO tripinfo parsing, statistics computation             |
 
 **All 57 tests passing** as of current version.
 
 ### 3.7.2 Determinism Guarantees
 
-| Mechanism            | What It Ensures                                               |
-| -------------------- | ------------------------------------------------------------- |
-| Fixed random seeds   | All stochastic processes seeded via config.xml `random_seed`  |
-| Sorted outputs       | All XML/CSV files use sorted iteration over sets/dicts        |
-| SHA-256 hashes       | Manifest checksums detect any input drift                     |
-| Version pinning      | `requirements.txt` specifies exact package versions           |
-| Deterministic BFS    | Adapter routing uses sorted adjacency lists for tie-breaking  |
+| Mechanism          | What It Ensures                                              |
+| ------------------ | ------------------------------------------------------------ |
+| Fixed random seeds | All stochastic processes seeded via config.xml `random_seed` |
+| Sorted outputs     | All XML/CSV files use sorted iteration over sets/dicts       |
+| SHA-256 hashes     | Manifest checksums detect any input drift                    |
+| Version pinning    | `requirements.txt` specifies exact package versions          |
+| Deterministic BFS  | Adapter routing uses sorted adjacency lists for tie-breaking |
 
 ### 3.7.3 Error Handling
 

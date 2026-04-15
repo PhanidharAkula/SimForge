@@ -43,15 +43,16 @@ SimForge is a cross-simulator benchmarking framework for urban traffic simulatio
 
 The canonical schema is the lingua franca of SimForge. Every scenario is expressed as a five-file bundle:
 
-| File           | Schema    | Role                                        | Key Design Decision                                    |
-| -------------- | --------- | ------------------------------------------- | ------------------------------------------------------ |
-| `network.xml`  | `network_v0` | Directed graph (nodes + links)           | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability |
-| `demand.csv`   | `demand_v0`  | Trip table (origin, dest, depart, mode)  | CSV for ease of analysis; departure in seconds         |
-| `signals.xml`  | `signals_v0` | Fixed-time 2-phase controllers           | Simplified to common denominator across all simulators |
-| `config.xml`   | `config_v0`  | Scenario metadata + parameters           | Engine-agnostic parameters only                        |
-| `manifest.xml` | `manifest_v0`| SHA-256 hashes + sizes for all files     | Hash-based integrity verification                      |
+| File           | Schema        | Role                                    | Key Design Decision                                        |
+| -------------- | ------------- | --------------------------------------- | ---------------------------------------------------------- |
+| `network.xml`  | `network_v0`  | Directed graph (nodes + links)          | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability |
+| `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode) | CSV for ease of analysis; departure in seconds             |
+| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers          | Simplified to common denominator across all simulators     |
+| `config.xml`   | `config_v0`   | Scenario metadata + parameters          | Engine-agnostic parameters only                            |
+| `manifest.xml` | `manifest_v0` | SHA-256 hashes + sizes for all files    | Hash-based integrity verification                          |
 
 **Why this design:**
+
 - XML for structured, hierarchical data (networks, signals) — well-supported by all simulators
 - CSV for tabular data (demand) — enables pandas analysis, spreadsheet inspection
 - SHA-256 manifest prevents accidental corruption and enables cache-based deduplication
@@ -128,6 +129,7 @@ Each adapter translates the canonical bundle into simulator-specific input forma
 ```
 
 **SUMO adapter internals** (most complex):
+
 1. Parse `network.xml` → build adjacency graph
 2. Parse `demand.csv` → BFS shortest path for each trip (at conversion time, not simulation time)
 3. Generate `.nod.xml`, `.edg.xml`, `.tll.xml` from network + signals
@@ -167,6 +169,7 @@ BenchmarkResult (JSON)
 ```
 
 **RunSpec example** (`runspecs/benchmark_5k.yaml`):
+
 ```yaml
 name: benchmark_5k
 scenarios:
@@ -182,12 +185,12 @@ seeds: [42, 43, 44]
 
 Three metric families, each in a dedicated module:
 
-| Family          | Module                | Metrics                                  | Purpose           |
-| --------------- | --------------------- | ---------------------------------------- | ----------------- |
-| Fidelity        | `metrics/fidelity.py` | RMSE, GEH (batch), KS statistic         | Cross-sim agreement |
-| Scalability     | `metrics/scalability.py` | Wall-clock, throughput, SRT, hardware | Performance        |
-| Reproducibility | `metrics/reproducibility.py` | R-index, CV, multi-KPI           | Consistency        |
-| Travel Time     | `metrics/travel_time.py` | Mean, P95, completion rate              | Per-run extraction |
+| Family          | Module                       | Metrics                               | Purpose             |
+| --------------- | ---------------------------- | ------------------------------------- | ------------------- |
+| Fidelity        | `metrics/fidelity.py`        | RMSE, GEH (batch), KS statistic       | Cross-sim agreement |
+| Scalability     | `metrics/scalability.py`     | Wall-clock, throughput, SRT, hardware | Performance         |
+| Reproducibility | `metrics/reproducibility.py` | R-index, CV, multi-KPI                | Consistency         |
+| Travel Time     | `metrics/travel_time.py`     | Mean, P95, completion rate            | Per-run extraction  |
 
 ---
 
@@ -234,6 +237,7 @@ evaluation/metrics/travel_time.py   (xml.etree — SUMO tripinfo parser)
 ```
 
 **External dependencies** (from `requirements.txt`):
+
 - `osmnx` — OpenStreetMap network extraction
 - `lxml` — XML processing
 - `pandas` — demand CSV handling
@@ -305,10 +309,10 @@ User: python run.py --scenario chicago_5k --engine sumo --mode meso --seed 42
 
 **Solution**: Canonical intermediate representation reduces this to N adapters (one per simulator).
 
-| Approach          | Adapters Needed | Maintenance    |
-| ----------------- | --------------- | -------------- |
-| Direct N↔N        | N(N-1) = 20    | Quadratic      |
-| Canonical (hub)   | N = 5           | Linear         |
+| Approach        | Adapters Needed | Maintenance |
+| --------------- | --------------- | ----------- |
+| Direct N↔N      | N(N-1) = 20     | Quadratic   |
+| Canonical (hub) | N = 5           | Linear      |
 
 ### 5.2 Why BFS at Conversion Time?
 
@@ -326,22 +330,22 @@ MATSim's replanning loop (default: 100+ iterations) progressively improves route
 
 ### 5.4 Why CSV for Demand?
 
-| Format | Pros                           | Cons                            |
-| ------ | ------------------------------ | ------------------------------- |
-| XML    | Consistent with other files    | Verbose for tabular data        |
-| CSV    | Simple, pandas-friendly, fast  | No schema enforcement           |
-| Parquet| Compact, typed                 | Requires pyarrow, overkill      |
+| Format  | Pros                          | Cons                       |
+| ------- | ----------------------------- | -------------------------- |
+| XML     | Consistent with other files   | Verbose for tabular data   |
+| CSV     | Simple, pandas-friendly, fast | No schema enforcement      |
+| Parquet | Compact, typed                | Requires pyarrow, overkill |
 
 CSV chosen for simplicity, tool compatibility, and human readability.
 
 ### 5.5 Why Census-Calibrated Demand?
 
-| Strategy       | Realism | Reproducibility | Data Required               |
-| -------------- | ------- | --------------- | --------------------------- |
-| Uniform random | ~20%    | Perfect         | None                        |
-| Gravity model  | ~40%    | Perfect         | Node locations              |
-| Census-calibrated | ~60-65% | Perfect      | ModelGen files (free)       |
-| Real OD data   | ~90%    | Dataset-dependent | StreetLight/Replica ($$$$) |
+| Strategy          | Realism | Reproducibility   | Data Required              |
+| ----------------- | ------- | ----------------- | -------------------------- |
+| Uniform random    | ~20%    | Perfect           | None                       |
+| Gravity model     | ~40%    | Perfect           | Node locations             |
+| Census-calibrated | ~60-65% | Perfect           | ModelGen files (free)      |
+| Real OD data      | ~90%    | Dataset-dependent | StreetLight/Replica ($$$$) |
 
 Census-calibrated balances realism with reproducibility at zero cost.
 
@@ -351,22 +355,23 @@ Census-calibrated balances realism with reproducibility at zero cost.
 
 ### 6.1 Test Suite Organization
 
-| Test File                         | Tests | Scope                              |
-| --------------------------------- | ----- | ---------------------------------- |
-| `test_adapter_determinism.py`     | 4     | Byte-identical output across runs  |
-| `test_fidelity_metrics.py`        | 6     | RMSE, GEH, KS computation         |
-| `test_metrics_travel_time.py`     | 5     | SUMO tripinfo parsing              |
-| `test_reproducibility_metrics.py` | 7     | R-index, multi-KPI analysis        |
-| `test_scalability_metrics.py`     | 6     | Timer, throughput, hardware info   |
-| `test_sumo_adapter.py`           | 18    | Full SUMO conversion pipeline      |
-| `test_validator.py`              | 11    | Bundle validation checks           |
+| Test File                         | Tests  | Scope                             |
+| --------------------------------- | ------ | --------------------------------- |
+| `test_adapter_determinism.py`     | 4      | Byte-identical output across runs |
+| `test_fidelity_metrics.py`        | 6      | RMSE, GEH, KS computation         |
+| `test_metrics_travel_time.py`     | 5      | SUMO tripinfo parsing             |
+| `test_reproducibility_metrics.py` | 7      | R-index, multi-KPI analysis       |
+| `test_scalability_metrics.py`     | 6      | Timer, throughput, hardware info  |
+| `test_sumo_adapter.py`            | 18     | Full SUMO conversion pipeline     |
+| `test_validator.py`               | 11     | Bundle validation checks          |
 | **Total**                         | **57** | **All passing**                   |
 
 ### 6.2 Determinism Guarantees
 
 The `test_adapter_determinism.py` module runs each adapter twice with the same inputs and asserts byte-identical outputs, verifying:
+
 - No timestamp injection
-- No non-deterministic iteration ordering  
+- No non-deterministic iteration ordering
 - No floating-point rounding differences
 - No random seed leakage
 
