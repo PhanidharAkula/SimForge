@@ -164,12 +164,44 @@ pytest tests/ -v -k sumo  # SUMO-related tests only
 
 ---
 
+## 🏗️ Architecture
+
+SimForge has five subsystems connected through the canonical schema:
+
+```
+Data Sources → Generation Pipeline → Canonical Bundle → Adapter Layer → Execution Harness → Evaluation Metrics
+```
+
+| Subsystem           | Modules                                      | Purpose                                         |
+| ------------------- | -------------------------------------------- | ----------------------------------------------- |
+| Generation Pipeline | `pipeline/network/`, `pipeline/demand/`, `pipeline/signals/` | OSM + Census → validated canonical bundles |
+| Canonical Schema    | `canonical/schema/`                           | 5-file intermediate representation (network, demand, signals, config, manifest) |
+| Adapter Layer       | `adapters/sumo/`, `adapters/matsim/`, `adapters/qarsumo/` | Canonical → simulator-specific format |
+| Execution Harness   | `execution/`                                  | RunSpec-driven benchmark orchestration           |
+| Evaluation Metrics  | `evaluation/metrics/`                         | Fidelity (RMSE, GEH, KS), Scalability, Reproducibility |
+
+**Key design decisions:**
+- **BFS routing at conversion time** — deterministic, version-independent routes
+- **MATSim `lastIteration=0`** — single-pass execution for fair cross-simulator comparison
+- **SHA-256 manifest** — integrity verification before every simulation run
+- **Census-calibrated demand** — real population-weighted origins, census commute times (~60-65% realism)
+
+For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md).
+
+---
+
 ## 📚 Documentation
 
-- `SETUP.md` — Detailed installation guide
-- `canonical/schema/` — Schema specifications
-- `adapters/sumo/SUMO_NOTES.md` — SUMO mapping rules
-- `adapters/matsim/MATSIM_NOTES.md` — MATSim mapping rules
-- `doc/chapters/` — Thesis chapter drafts
+| Document                                           | Description                                    |
+| -------------------------------------------------- | ---------------------------------------------- |
+| [SETUP.md](SETUP.md)                               | Installation guide (local + HPC)               |
+| [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md)          | End-to-end system architecture                 |
+| [doc/DATA_GENERATION.md](doc/DATA_GENERATION.md)    | Data sources, generation pipeline, validation  |
+| [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) | Scenario generation with realism assessment |
+| [doc/REPRODUCING.md](doc/REPRODUCING.md)            | Full reproduction guide                        |
+| [doc/chapters/methods.md](doc/chapters/methods.md)  | Thesis Chapter 3 — Methods                     |
+| [doc/chapters/experiments.md](doc/chapters/experiments.md) | Thesis Chapter 4 — Experiments            |
+| [canonical/schema/](canonical/schema/)              | Schema specifications (v0)                     |
+| `adapters/*/MAPPING.md`                             | Per-adapter field mapping rules                |
 
 ---

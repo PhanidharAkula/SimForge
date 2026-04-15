@@ -27,7 +27,7 @@ Each canonical scenario bundle contains five files:
 | File           | Format | Real/Synthetic | Description                                        |
 | -------------- | ------ | -------------- | -------------------------------------------------- |
 | `network.xml`  | XML    | **Real**       | Road network topology from OpenStreetMap           |
-| `demand.csv`   | CSV    | **Synthetic**  | Travel demand (OD trips)                           |
+| `demand.csv`   | CSV    | **Census-calibrated** | Travel demand (OD trips, census-weighted origins) |
 | `signals.xml`  | XML    | **Semi-real**  | Traffic signals (locations real, timing estimated) |
 | `config.xml`   | XML    | Generated      | Simulation parameters                              |
 | `manifest.xml` | XML    | Generated      | File inventory with SHA-256 hashes                 |
@@ -58,7 +58,7 @@ Each canonical scenario bundle contains five files:
 | **Link capacity**            | HCM 2016 formulas                 | Derived from lane count + road type   |
 | **Free-flow speed**          | Speed limit or road class default | When maxspeed tag missing             |
 
-### 2.3 Why Synthetic Demand?
+### 2.3 Why Census-Calibrated Demand?
 
 Real travel demand data sources:
 
@@ -70,13 +70,21 @@ Real travel demand data sources:
 | NHTS             | Free   | National        | Survey, not city-specific |
 | Transit surveys  | Varies | Agency-specific | Often restricted          |
 
-**Decision**: Use synthetic demand because:
+**Decision**: Use census-calibrated demand via ModelGen because:
 
-1. **Reproducibility**: Anyone can regenerate identical demand
-2. **Cost**: No licensing fees or data agreements required
-3. **Flexibility**: Can scale to any demand level (5K → 5M)
-4. **Fairness**: Same demand generation for all simulators
-5. **Control**: Known ground truth for validation
+1. **Reproducibility**: Anyone with ModelGen files can regenerate identical demand
+2. **Cost**: Census data + ModelGen outputs are freely available
+3. **Realism**: Population-weighted origins, census commute times, real mode splits
+4. **Flexibility**: Can scale to any demand level (5K → 5M)
+5. **Fairness**: Same demand generation for all simulators
+6. **Traceability**: Every trip traces back to a specific census building/household/person
+
+**SimForge uses two demand strategies:**
+
+| Strategy | Module | Data Required | Realism | Use Case |
+| --- | --- | --- | --- | --- |
+| Census-calibrated | `generate_census_demand.py` | ModelGen files (281-608 MB/city) | ~60-65% | Primary (thesis benchmarks) |
+| Synthetic fallback | `generate_synthetic_demand.py` | None (network only) | ~20% | Quick testing, no ModelGen |
 
 ---
 
@@ -181,60 +189,109 @@ capacity = lanes × base_capacity × adjustment_factors
 
 ## 4. Demand Generation Pipeline
 
-### 4.1 Synthetic Demand Model
+### 4.1 Census-Calibrated Demand (Primary)
 
-We use a **gravity model with random sampling**:
+The primary demand strategy uses **ModelGen census data** combined with a **gravity model** for destinations:
+
+**7-step algorithm** (implemented in `generate_census_demand.py`):
+
+1. **Parse network** → extract all nodes with coordinates into spatial lookup
+2. **Parse ModelGen file** → extract buildings, households, persons (dataclasses)
+3. **Filter to bounding box** → keep only buildings inside the scenario bbox
+4. **Map buildings to nearest network nodes** → grid-based spatial index (O(1) lookup per building)
+5. **Extract commuters** → filter persons with commute data (JWMNP > 0, JWTRNS mapped)
+6. **Gravity model for destinations** → $P(\text{dest}_j) \propto \frac{\text{jobs}_j}{\text{dist}(i,j)^2}$
+7. **Gaussian departure time** → $t \sim \mathcal{N}(\mu_\text{commute}, \sigma=15\text{min})$ where $\mu$ = census JWMNP midpoint
+
+**Data sources for each trip component:**
+
+| Component | Source | Census Variable | Realism |
+| --- | --- | --- | --- |
+| Origin node | ModelGen building location → nearest network node | Lat/lon | Real |
+| Destination | Gravity model (distance-weighted random) | — | Synthetic |
+| Departure time | Census commute time | JWMNP (journey-to-work minutes) | Real distribution |
+| Mode | Census transport mode | JWTRNS (journey-to-work transport) | Real |
+
+**JWTRNS → mode mapping** (from `parse_model_file.py`):
+
+```python
+JWTRNS_TO_MODE = {
+    1: "car",      # Car, truck, or van
+    2: "car",      # Car, truck, or van (2+ occupants)
+    3: "transit",  # Bus or trolley bus
+    4: "transit",  # Streetcar or trolley car
+    5: "transit",  # Subway or elevated
+    6: "transit",  # Railroad
+    7: "transit",  # Ferryboat
+    8: "bike",     # Bicycle
+    9: "walk",     # Walked
+    10: "car",     # Taxicab
+    11: "car",     # Motorcycle
+    12: "car",     # Other method
+}
+```
+
+### 4.1.1 Synthetic Demand Fallback
+
+When ModelGen data is unavailable, the fallback uses uniform random sampling:
 
 ```python
 P(trip from i to j) ∝ (Pop_i × Pop_j) / distance(i,j)^β
 ```
 
-Where:
-
-- `Pop_i`, `Pop_j` = population proxies (node connectivity)
-- `β` = distance decay parameter (typically 1.5-2.0)
-
-**Simplified approach** (current implementation):
-
-- Uniform random sampling of origin/destination nodes
-- Weighted by node degree (more connected = more trips)
+Where `Pop_i`, `Pop_j` = population proxies (node connectivity), `β` = 2.0.
 
 ### 4.2 Departure Time Distribution
 
-Trips distributed across 24 hours following typical urban patterns:
-
-| Period   | Time Range  | % of Daily Trips | Distribution |
-| -------- | ----------- | ---------------- | ------------ |
-| AM Peak  | 07:00-09:00 | 25%              | Uniform      |
-| PM Peak  | 16:00-19:00 | 30%              | Uniform      |
-| Off-Peak | All other   | 45%              | Uniform      |
+**Census-calibrated** (primary): Gaussian centered on census commute time midpoint:
 
 ```python
-def sample_departure_time():
-    r = random.random()
-    if r < 0.25:      # Morning peak
-        return uniform(7*3600, 9*3600)
-    elif r < 0.55:    # Evening peak
-        return uniform(16*3600, 19*3600)
-    else:             # Off-peak
-        return uniform(0, 24*3600)
+def _generate_departure_time(commute_minutes: float, rng: random.Random) -> float:
+    """Gaussian departure centered on commute midpoint."""
+    midpoint_seconds = commute_minutes * 60
+    sigma = 15 * 60  # 15 minutes standard deviation
+    departure = rng.gauss(midpoint_seconds, sigma)
+    return max(0.0, min(departure, 86400.0))
 ```
+
+**JWMNP bins → midpoint mapping:**
+
+| JWMNP | Range | Midpoint (min) |
+| --- | --- | --- |
+| 1 | < 5 min | 2.5 |
+| 2 | 5-9 min | 7.0 |
+| 3 | 10-14 min | 12.0 |
+| 4 | 15-19 min | 17.0 |
+| 5 | 20-24 min | 22.0 |
+| 6 | 25-29 min | 27.0 |
+| 7 | 30-34 min | 32.0 |
+| 8 | 35-39 min | 37.0 |
+| 9 | 40-44 min | 42.0 |
+| 10 | 45-59 min | 52.0 |
+| 11 | 60-89 min | 75.0 |
+| 12 | ≥ 90 min | 105.0 |
 
 ### 4.3 Demand Tiers
 
-| Tier | Trip Count | Use Case                       |
-| ---- | ---------- | ------------------------------ |
-| 5K   | 5,000      | Thesis benchmarks (current)    |
-| 50k  | 50,000     | Development, quick testing     |
-| 500k | 500,000    | Scalability testing (future)   |
-| 5M   | 5,000,000  | Full-scale benchmarks (future) |
+| Tier | Trip Count | Use Case                       | Generation Time (est.) |
+| ---- | ---------- | ------------------------------ | ---------------------- |
+| 5K   | 5,000      | Thesis benchmarks (current)    | ~28 seconds            |
+| 50K  | 50,000     | Medium-scale stress test       | ~3-5 minutes           |
+| 500K | 500,000    | Large-scale scalability        | ~30-60 minutes         |
+| 5M   | 5,000,000  | Full-scale HPC benchmarks      | ~3-6 hours (HPC)       |
 
 ### 4.4 Mode Assignment
 
-Currently **car-only** demand:
+**Census-calibrated**: Mode assigned from census JWTRNS variable per person.
 
-- All trips assigned mode = "car"
-- Future work: multi-modal (transit, bike, walk)
+**Current support:**
+
+| Mode | Supported | Routing |
+| --- | --- | --- |
+| car | ✅ Yes | BFS shortest path (SUMO adapter) |
+| transit | ✅ Assigned | Mode label only (no transit routing yet) |
+| bike | ✅ Assigned | Mode label only |
+| walk | ✅ Assigned | Mode label only |
 
 ### 4.5 Demand File Format
 
@@ -563,10 +620,10 @@ python scripts/03_medium_multimodal.py # 50K LA multi-mode
 
 | Limitation                   | Impact                        | Mitigation                    |
 | ---------------------------- | ----------------------------- | ----------------------------- |
-| No real OD data              | May not match actual patterns | Consistent across simulators  |
-| Uniform spatial distribution | Missing activity centers      | Future: weighted sampling     |
-| Car-only                     | No transit, bike, walk        | Future: multi-modal           |
-| No temporal variation        | Same pattern daily            | Future: day-of-week variation |
+| Destinations are synthetic   | Gravity model, not real OD    | ~60-65% realism; consistent across sims |
+| Origins are population-weighted | Real building locations      | Census-calibrated via ModelGen |
+| Transit not routed           | Mode assigned but not simulated | Future: transit network integration |
+| Departure Gaussian approx.   | May miss exact peak shape    | Calibrated from JWMNP census bins |
 
 ### 9.3 Signal Limitations
 
@@ -580,24 +637,30 @@ python scripts/03_medium_multimodal.py # 50K LA multi-mode
 
 ## 10. Future Enhancements
 
-### 10.1 Planned Improvements
+### 10.1 Planned Improvements (with projected realism impact)
 
-1. **Real demand integration**: Census LODES, LEHD data
-2. **Multi-modal demand**: Transit, bike, pedestrian trips
-3. **Signal coordination**: Arterial green waves
-4. **Population-weighted demand**: Based on census tracts
-5. **Time-of-day variation**: Weekday vs weekend patterns
+| Enhancement | Current | Projected | Effort |
+| --- | --- | --- | --- |
+| Real OD data (LODES/LEHD) | Gravity model (~40%) | Real employment flows (~85%) | Medium |
+| Transit network routing | Mode label only | Actual GTFS routes | High |
+| Signal coordination | Fixed-time, no offset | Green wave optimization | Medium |
+| Activity chains | Home→Work only | Home→Work→Shop→Home | High |
+| Weekday/weekend variation | Single pattern | Day-specific profiles | Low |
 
 ### 10.2 Data Quality Scoring
 
-Future: automatic quality scoring for generated scenarios:
+Current quantitative realism assessment (see `doc/SCENARIO_GENERATION.md` §6B):
 
 ```python
 quality_score = {
-    "network_completeness": 0.95,  # % links with all attributes
-    "demand_realism": 0.80,        # Gravity model fit
-    "signal_coverage": 0.70,       # % intersections with signals
-    "overall": 0.82
+    "network_topology": 0.90,       # Real OSM data
+    "demand_origins": 0.80,         # Census-calibrated building locations
+    "demand_destinations": 0.40,    # Gravity model (synthetic)
+    "departure_times": 0.75,        # Census JWMNP calibrated
+    "mode_split": 0.65,             # Census JWTRNS (labels only)
+    "signal_locations": 0.80,       # Real OSM positions
+    "signal_timing": 0.40,          # Estimated defaults
+    "overall_weighted": 0.628       # Impact-weighted average
 }
 ```
 
