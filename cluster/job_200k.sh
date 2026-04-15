@@ -31,7 +31,7 @@ cd "$HOME/SimForge"
 
 # Load Python module (adjust if needed after running setup_redhawk.sh)
 module purge 2>/dev/null || true
-module load python-3.10.0
+module load anaconda-python3.10
 
 source .venv/bin/activate
 
