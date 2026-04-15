@@ -31,7 +31,7 @@ cd "$HOME/SimForge"
 
 # Load Python module (adjust if needed after running setup_redhawk.sh)
 module purge 2>/dev/null || true
-module load python/3.10 2>/dev/null || module load python/3.11 2>/dev/null || module load python3 2>/dev/null || true
+module load python-3.10.0
 
 source .venv/bin/activate
 

@@ -37,17 +37,7 @@ fi
 # -----------------------------------------------------------
 echo "[2/4] Loading Python module..."
 module purge 2>/dev/null || true
-
-# Try common module names (varies by cluster config)
-if module avail python 2>&1 | grep -q "python/3.10"; then
-    module load python/3.10
-elif module avail python 2>&1 | grep -q "python/3.11"; then
-    module load python/3.11
-elif module avail python 2>&1 | grep -q "python3"; then
-    module load python3
-else
-    echo "WARNING: No Python 3.10+ module found. Trying system python3..."
-fi
+module load python-3.10.0
 
 python3 --version
 
