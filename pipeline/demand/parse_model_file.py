@@ -230,6 +230,7 @@ def parse_model_file(
     model_path: Path,
     bbox: Optional[tuple[float, float, float, float]] = None,
     car_only: bool = True,
+    modes: Optional[list[str]] = None,
 ) -> ModelData:
     """
     Parse a modelgen output file and return structured data.
@@ -242,6 +243,10 @@ def parse_model_file(
         car_only: If True, only keep persons with car-compatible transport
                   modes (JWTRNS in {1, 2, 11, 12}).  Default True since
                   SimForge v0 only simulates car traffic.
+                  Ignored if `modes` is provided.
+        modes: Optional list of canonical modes to keep (e.g. ["car", "transit"]).
+               When provided, overrides `car_only`.  Persons whose JWTRNS
+               maps to a mode in this list are kept.
 
     Returns:
         ModelData with buildings, households, and persons.
@@ -310,7 +315,14 @@ def parse_model_file(
     filtered_persons = [p for p in all_persons if p.per_id in kept_per_ids]
 
     # Optionally filter to car commuters only
-    if car_only:
+    if modes is not None:
+        # User specified explicit modes — filter by those
+        allowed_jwtrns = {code for code, m in JWTRNS_TO_MODE.items() if m in modes}
+        filtered_persons = [
+            p for p in filtered_persons
+            if p.transport_mode in allowed_jwtrns and p.commute_min > 0
+        ]
+    elif car_only:
         car_modes = {1, 2, 11, 12}  # drove alone, carpool, taxi/rideshare, other
         filtered_persons = [
             p for p in filtered_persons

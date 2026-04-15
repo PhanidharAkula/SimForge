@@ -36,7 +36,7 @@ import logging
 
 from lxml import etree
 
-from pipeline.demand.parse_model_file import ModelData, Building
+from pipeline.demand.parse_model_file import ModelData, Building, JWTRNS_TO_MODE
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -213,6 +213,7 @@ def generate_census_demand(
     horizon_start: int = 0,
     horizon_end: int = 3600,
     mode: str = "car",
+    modes: Optional[list[str]] = None,
     max_snap_distance_km: float = 0.5,
     allow_oversample: bool = False,
 ) -> dict:
@@ -238,7 +239,12 @@ def generate_census_demand(
         seed: Random seed for reproducibility.
         horizon_start: Simulation start time (seconds).
         horizon_end: Simulation end time (seconds).
-        mode: Travel mode (default "car").
+        mode: Single travel mode for all trips (default "car").
+              Ignored if `modes` is provided.
+        modes: List of allowed modes (e.g. ["car", "transit"]).
+               When provided, each trip gets the census person's actual
+               mode from JWTRNS.  Only persons with modes in this list
+               are sampled.
         max_snap_distance_km: Max distance for building-to-node snap.
         allow_oversample: If True, allow num_trips > available commuters
             (origins will be resampled). If False, raise an error when the
@@ -395,12 +401,18 @@ def generate_census_demand(
             rng, person.commute_min, horizon_start, horizon_end
         )
 
+        # Determine mode: use census person's actual mode if multi-mode
+        if modes is not None:
+            trip_mode = JWTRNS_TO_MODE.get(person.transport_mode, "car")
+        else:
+            trip_mode = mode
+
         trips.append({
             "trip_id": f"t{len(trips)}",
             "origin_node_id": origin,
             "destination_node_id": destination,
             "departure_time_s": departure,
-            "mode": mode,
+            "mode": trip_mode,
         })
 
     # Sort by departure time and renumber
