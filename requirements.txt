@@ -7,10 +7,11 @@ lxml
 pyyaml
 
 # Network extraction from OSM
-osmnx
+# Pinned for compatibility with HPC Anaconda (pandas 1.5, numpy 1.23)
+osmnx>=1.1,<2
 networkx
-geopandas
-shapely
+geopandas>=0.9,<1
+shapely>=1.8,<3
 
 # Testing
 pytest
