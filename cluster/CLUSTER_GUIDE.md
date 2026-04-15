@@ -6,17 +6,17 @@
 
 ## Cluster Comparison
 
-| Feature            | OSC Pitzer (Primary)              | RedHawk (Legacy)           |
-| ------------------ | --------------------------------- | -------------------------- |
-| Account / Project  | `PMIU0110`                        | `akulap`                   |
-| Python             | `python/3.12` (module)            | `anaconda-python3.10`      |
-| SUMO               | `pip install eclipse-sumo`        | Not available              |
-| Internet on nodes  | **Yes** (OSM download works)      | **No** (jobs hang)         |
-| Max wall time      | 7 days                            | 20 days                    |
-| CPUs/node          | 40-48                             | 24+                        |
-| RAM/node           | 178-744 GB                        | 93-708 GB                  |
-| GPUs               | V100 (2-4 per node, GRES works)   | CUDA available             |
-| SSH                | `ssh pitzer`                      | `ssh redhawk`              |
+| Feature           | OSC Pitzer (Primary)            | RedHawk (Legacy)      |
+| ----------------- | ------------------------------- | --------------------- |
+| Account / Project | `PMIU0110`                      | `akulap`              |
+| Python            | `python/3.12` (module)          | `anaconda-python3.10` |
+| SUMO              | `pip install eclipse-sumo`      | Not available         |
+| Internet on nodes | **Yes** (OSM download works)    | **No** (jobs hang)    |
+| Max wall time     | 7 days                          | 20 days               |
+| CPUs/node         | 40-48                           | 24+                   |
+| RAM/node          | 178-744 GB                      | 93-708 GB             |
+| GPUs              | V100 (2-4 per node, GRES works) | CUDA available        |
+| SSH               | `ssh pitzer`                    | `ssh redhawk`         |
 
 ---
 
@@ -29,6 +29,7 @@
 ## Table of Contents
 
 ### OSC Pitzer
+
 1. [Connect to Pitzer](#p1-connect-to-pitzer)
 2. [First-Time Setup (Pitzer)](#p2-first-time-setup-pitzer)
 3. [Transfer Model Files (Pitzer)](#p3-transfer-model-files-pitzer)
@@ -39,6 +40,7 @@
 8. [Pitzer Quick Reference](#p8-pitzer-quick-reference)
 
 ### RedHawk (Legacy)
+
 9. [Connect to RedHawk](#9-connect-to-redhawk)
 10. [First-Time Setup (RedHawk)](#10-first-time-setup-redhawk)
 11. [Transfer Model Files (RedHawk)](#11-transfer-model-files-redhawk)
@@ -297,12 +299,12 @@ sacct -u $USER                          # Job history
 
 ### Available Pitzer Jobs
 
-| Script                           | Purpose                        | Resources  | Est. Time |
-| -------------------------------- | ------------------------------ | ---------- | --------- |
-| `cluster/job_pitzer_200k.sh`     | Generate 200K Chicago scenario | 8 CPU, 32G | 25-45 min |
-| `cluster/job_pitzer_500k.sh`     | Generate 500K NYC scenario     | 8 CPU, 64G | 1-2 hrs   |
-| `cluster/job_pitzer_benchmark.sh`| Run all simulations            | 8 CPU, 32G | 2-4 hrs   |
-| `cluster/job_pitzer_evaluate.sh` | Analyze results + plots        | 4 CPU, 8G  | 5-15 min  |
+| Script                            | Purpose                        | Resources  | Est. Time |
+| --------------------------------- | ------------------------------ | ---------- | --------- |
+| `cluster/job_pitzer_200k.sh`      | Generate 200K Chicago scenario | 8 CPU, 32G | 25-45 min |
+| `cluster/job_pitzer_500k.sh`      | Generate 500K NYC scenario     | 8 CPU, 64G | 1-2 hrs   |
+| `cluster/job_pitzer_benchmark.sh` | Run all simulations            | 8 CPU, 32G | 2-4 hrs   |
+| `cluster/job_pitzer_evaluate.sh`  | Analyze results + plots        | 4 CPU, 8G  | 5-15 min  |
 
 ### End-to-End Pipeline (Pitzer)
 
@@ -316,6 +318,7 @@ Step 6: Download    →  scp results to local Mac
 ```
 
 ---
+
 ---
 
 # Part 2 — RedHawk (Legacy)
