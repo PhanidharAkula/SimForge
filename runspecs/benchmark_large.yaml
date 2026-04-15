@@ -1,0 +1,77 @@
+# =============================================================================
+# SimForge Benchmark — Large Tier (supercomputer)
+# =============================================================================
+#
+# Scenarios:  chicago_200k_car_transit, nyc_500k_car
+# Engines:    SUMO, QarSUMO, MATSim
+# Mode:       mesoscopic
+# Repeats:    3
+# Total runs: 2 scenarios × 3 engines × 3 repeats = 18
+#
+# NOTE: These scenarios must be generated first:
+#   python scripts/04_large_full_day.py
+#   python scripts/05_stress_test.py
+# =============================================================================
+
+name: benchmark_large
+description: >
+  SimForge large-tier benchmark — 200K and 500K trip scenarios for
+  supercomputer execution. GPU acceleration recommended for QarSUMO.
+output_dir: runs/benchmark_large
+
+runs:
+  # ----- Chicago 200K car+transit (full day) -----
+  - scenario_id: chicago_200k_car_transit
+    scenario_path: scenarios/chicago_200k_car_transit
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    seed_increment: true
+    timeout_s: 3600
+
+  - scenario_id: chicago_200k_car_transit
+    scenario_path: scenarios/chicago_200k_car_transit
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    seed_increment: true
+    timeout_s: 3600
+
+  - scenario_id: chicago_200k_car_transit
+    scenario_path: scenarios/chicago_200k_car_transit
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    seed_increment: true
+    timeout_s: 3600
+
+  # ----- NYC 500K car (stress test) -----
+  - scenario_id: nyc_500k_car
+    scenario_path: scenarios/nyc_500k_car
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    seed_increment: true
+    timeout_s: 7200
+
+  - scenario_id: nyc_500k_car
+    scenario_path: scenarios/nyc_500k_car
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    seed_increment: true
+    timeout_s: 7200
+
+  - scenario_id: nyc_500k_car
+    scenario_path: scenarios/nyc_500k_car
+    engine: matsim
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    seed_increment: true
+    timeout_s: 7200

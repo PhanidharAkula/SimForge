@@ -58,15 +58,15 @@ pip install -r requirements.txt
 ### Generate Scenario Data
 
 ```bash
-python scripts/generate_chicago_5k.py
-python scripts/generate_nyc_5k.py
-python scripts/generate_la_5k.py
+python scripts/01_quick_test.py       # 1K Chicago car
+python scripts/02_small_commute.py    # 10K NYC car
+python scripts/03_medium_multimodal.py # 50K LA multi-mode
 ```
 
 ### Validate a Scenario
 
 ```bash
-python -m pipeline.validation.validate_bundle scenarios/chicago_5k
+python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 ```
 
 ### Run Simulations
@@ -76,7 +76,7 @@ python -m pipeline.validation.validate_bundle scenarios/chicago_5k
 python run.py
 
 # Run a specific scenario with a specific engine
-python run.py --scenario chicago_5k --engine sumo --mode meso
+python run.py --scenario chicago_1k_car --engine sumo --mode meso
 
 # List available options
 python run.py --list
@@ -85,7 +85,7 @@ python run.py --list
 ### Run Full Benchmark
 
 ```bash
-python -m execution.run_benchmark runspecs/benchmark_5k.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
 ---
@@ -111,9 +111,9 @@ SimForge/
 ├── scripts/                # Per-city data generation scripts
 ├── runspecs/               # Benchmark configurations (YAML)
 ├── scenarios/              # Generated canonical bundles
-│   ├── chicago_5k/
-│   ├── nyc_5k/
-│   └── la_5k/
+│   ├── chicago_1k_car/
+│   ├── nyc_10k_car/
+│   └── la_50k_bike_car_transit/
 ├── lib/matsim-15.0/        # MATSim JAR + libs
 ├── runs/                   # Simulation output (gitignored)
 ├── tests/                  # pytest test suite

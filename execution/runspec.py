@@ -206,8 +206,8 @@ def create_example_runspec(output_path: Path) -> RunSpec:
         global_output_dir="runs",
         runs=[
             RunConfig(
-                scenario_id="chicago_5k",
-                scenario_path="scenarios/chicago_5k",
+                scenario_id="chicago_1k_car",
+                scenario_path="scenarios/chicago_1k_car",
                 engine="sumo",
                 environment="local_cpu",
                 repeats=3,
@@ -215,8 +215,8 @@ def create_example_runspec(output_path: Path) -> RunSpec:
                 mode=SimulationMode.MESOSCOPIC,
             ),
             RunConfig(
-                scenario_id="nyc_5k",
-                scenario_path="scenarios/nyc_5k",
+                scenario_id="nyc_10k_car",
+                scenario_path="scenarios/nyc_10k_car",
                 engine="sumo",
                 environment="local_cpu",
                 repeats=3,

@@ -91,13 +91,13 @@ python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MA
 | 500K | 500,000   | 4 hr    | Large-scale evaluation     |
 | 5M   | 5,000,000 | 8 hr    | Extreme scale (GPU needed) |
 
-### 5K Scenarios (Default)
+### Current Scenarios
 
-| Scenario     | City    | Radius | Nodes  | Links   | Trips |
-| ------------ | ------- | ------ | ------ | ------- | ----- |
-| `chicago_5k` | Chicago | 4 km   | ~3,300 | ~8,400  | 5,000 |
-| `nyc_5k`     | NYC     | 3 km   | ~1,900 | ~3,900  | 5,000 |
-| `la_5k`      | LA      | 5 km   | ~6,300 | ~17,700 | 5,000 |
+| Scenario                  | City    | Trips  | Modes              |
+| ------------------------- | ------- | ------ | ------------------ |
+| `chicago_1k_car`          | Chicago | 1,000  | car                |
+| `nyc_10k_car`             | NYC     | 10,000 | car                |
+| `la_50k_bike_car_transit` | LA      | 50,000 | bike, car, transit |
 
 ### Data Sources
 
@@ -119,23 +119,20 @@ Each generation script supports two demand modes:
 ### Generating Scenarios
 
 ```bash
-# 5K tier (quick, ~30 seconds each)
-python scripts/generate_chicago_5k.py
-python scripts/generate_nyc_5k.py
-python scripts/generate_la_5k.py
+# Run preset scripts
+python scripts/01_quick_test.py       # 1K Chicago car
+python scripts/02_small_commute.py    # 10K NYC car
+python scripts/03_medium_multimodal.py # 50K LA multi-mode
 
-# With census-calibrated demand
-python scripts/generate_la_5k.py --model la_model.txt
-
-# Higher tiers
-python scripts/generate_la_50k.py
-python scripts/generate_nyc_500k.py --model nyc_model.txt
+# Or use generate.py directly
+python generate.py --city chicago --trips 1000 --modes car
+python generate.py --preset quick_test
 ```
 
 ### Validating Scenarios
 
 ```bash
-python -m pipeline.validation.validate_bundle scenarios/chicago_5k
+python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 ```
 
 ---
@@ -146,7 +143,7 @@ python -m pipeline.validation.validate_bundle scenarios/chicago_5k
 
 ```bash
 # Run a specific scenario with SUMO (mesoscopic)
-python run.py --scenario chicago_5k --engine sumo --mode meso
+python run.py --scenario chicago_1k_car --engine sumo --mode meso
 
 # Run all scenarios with all engines
 python run.py
@@ -158,21 +155,21 @@ python run.py --list
 ### Run Benchmark from Runspec
 
 ```bash
-# 5K benchmark (3 cities × 3 engines × meso × 3 repeats = 27 runs)
-python -m execution.run_benchmark runspecs/benchmark_5k.yaml
+# Small benchmark (3 scenarios × 3 engines × meso × 3 repeats = 27 runs)
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 # Dry run (validate without executing)
-python -m execution.run_benchmark runspecs/benchmark_5k.yaml --dry-run
+python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
 
 # Filter to one scenario
-python -m execution.run_benchmark runspecs/benchmark_5k.yaml --scenario chicago_5k
+python -m execution.run_benchmark runspecs/benchmark_small.yaml --scenario chicago_1k_car
 ```
 
 ### Run Individual Adapter CLI
 
 ```bash
-python -m adapters.sumo.cli scenarios/chicago_5k runs/chicago_sumo
-python -m adapters.matsim.cli scenarios/chicago_5k runs/chicago_matsim
+python -m adapters.sumo.cli scenarios/chicago_1k_car runs/chicago_sumo
+python -m adapters.matsim.cli scenarios/chicago_1k_car runs/chicago_matsim
 ```
 
 ---

@@ -335,7 +335,7 @@ Every file tracked in `manifest.xml` with SHA-256:
 Validation command:
 
 ```bash
-python -m pipeline.validation.validate_bundle scenarios/chicago_5k
+python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 ```
 
 ---
@@ -542,9 +542,9 @@ Each scenario tagged with:
 
 ```bash
 # Exact reproduction with same seed (each script uses seed=42 by default)
-python scripts/generate_chicago_5k.py
-python scripts/generate_nyc_5k.py
-python scripts/generate_la_5k.py
+python scripts/01_quick_test.py       # 1K Chicago car
+python scripts/02_small_commute.py    # 10K NYC car
+python scripts/03_medium_multimodal.py # 50K LA multi-mode
 ```
 
 ---

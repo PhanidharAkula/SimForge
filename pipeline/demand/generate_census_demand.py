@@ -18,9 +18,9 @@ Usage (library):
     data = parse_model_file(model_path, bbox=(...))
     result = generate_census_demand(
         model_data=data,
-        network_path=Path("scenarios/la_5k/network.xml"),
-        output_path=Path("scenarios/la_5k/demand.csv"),
-        num_trips=5000,
+        network_path=Path("scenarios/chicago_1k_car/network.xml"),
+        output_path=Path("scenarios/chicago_1k_car/demand.csv"),
+        num_trips=1000,
         seed=42,
     )
 """

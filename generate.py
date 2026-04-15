@@ -51,6 +51,7 @@ from pipeline.demand.generate_synthetic_demand import generate_synthetic_demand
 from pipeline.demand.generate_census_demand import generate_census_demand
 from pipeline.demand.parse_model_file import parse_model_file
 from pipeline.signals.build_signals_default import build_signals_default
+from pipeline.modelgen_scanner import scan_modelgen_dir
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 logger = logging.getLogger(__name__)
@@ -68,10 +69,6 @@ CITIES = {
         "default_radius_km": 4.0,
         "model_file": "modelgen/chicago_model.txt",
         "description": "Chicago urban core — The Loop and surrounding neighbourhoods",
-        "max_census_trips": {
-            "car": 500_000,
-            "all": 600_000,
-        },
     },
     "nyc": {
         "name": "New York City, NY",
@@ -80,10 +77,6 @@ CITIES = {
         "default_radius_km": 3.0,
         "model_file": "modelgen/nyc_model.txt",
         "description": "Manhattan Midtown and surrounding boroughs",
-        "max_census_trips": {
-            "car": 400_000,
-            "all": 700_000,
-        },
     },
     "la": {
         "name": "Los Angeles, CA",
@@ -92,10 +85,6 @@ CITIES = {
         "default_radius_km": 5.0,
         "model_file": "modelgen/la_model.txt",
         "description": "Downtown LA and surrounding urban area",
-        "max_census_trips": {
-            "car": 500_000,
-            "all": 600_000,
-        },
     },
 }
 
@@ -109,48 +98,48 @@ VALID_MODES = {"car", "transit", "bike", "walk"}
 
 PRESETS = {
     "quick_test": {
-        "description": "Quick validation — 1K car trips, 30-min window",
+        "description": "Quick test — 1K car trips, Chicago, 1-hour window",
         "city": "chicago",
         "trips": 1_000,
         "modes": ["car"],
-        "start_time": 0,
-        "end_time": 1800,
+        "start_time": 25200,   # 7:00 AM
+        "end_time": 28800,     # 8:00 AM
         "radius_km": 2.0,
         "seed": 42,
     },
-    "morning_rush": {
-        "description": "Morning commute — 50K car trips, 6–9 AM",
-        "city": "la",
-        "trips": 50_000,
-        "modes": ["car"],
-        "start_time": 21600,   # 6:00 AM
-        "end_time": 32400,     # 9:00 AM
-        "radius_km": 10.0,
-        "seed": 42,
-    },
-    "multimodal_city": {
-        "description": "Multi-modal NYC — 20K trips (car + transit + bike), 2-hour window",
+    "small_commute": {
+        "description": "Small commute — 10K car trips, NYC, 7–9 AM",
         "city": "nyc",
-        "trips": 20_000,
-        "modes": ["car", "transit", "bike"],
+        "trips": 10_000,
+        "modes": ["car"],
         "start_time": 25200,   # 7:00 AM
         "end_time": 32400,     # 9:00 AM
         "radius_km": 4.0,
         "seed": 42,
     },
-    "full_day": {
-        "description": "Full day LA — 100K car trips, 24-hour window",
+    "medium_multimodal": {
+        "description": "Medium multi-modal — 50K trips (car+transit+bike), LA, 6–10 AM",
         "city": "la",
-        "trips": 100_000,
-        "modes": ["car"],
+        "trips": 50_000,
+        "modes": ["car", "transit", "bike"],
+        "start_time": 21600,   # 6:00 AM
+        "end_time": 36000,     # 10:00 AM
+        "radius_km": 10.0,
+        "seed": 42,
+    },
+    "large_full_day": {
+        "description": "Large full-day — 200K car+transit trips, Chicago, 24-hour",
+        "city": "chicago",
+        "trips": 200_000,
+        "modes": ["car", "transit"],
         "start_time": 0,
         "end_time": 86400,     # 24 hours
         "radius_km": 15.0,
         "seed": 42,
     },
     "stress_test": {
-        "description": "Large-scale stress test — 500K car trips, Chicago, 4-hour window",
-        "city": "chicago",
+        "description": "Stress test — 500K car trips, NYC, 6–10 AM",
+        "city": "nyc",
         "trips": 500_000,
         "modes": ["car"],
         "start_time": 21600,   # 6:00 AM
@@ -261,7 +250,11 @@ def _write_manifest_xml(path: Path, scenario_id: str) -> None:
 # =============================================================================
 
 def show_list():
-    """Show available cities and presets."""
+    """Show available cities and presets with live census data."""
+    # Get live census stats
+    scan_data = scan_modelgen_dir()
+    city_stats = scan_data.get("cities", {})
+
     print("\n" + "=" * 65)
     print("  SimForge — Available Cities & Presets")
     print("=" * 65)
@@ -270,14 +263,16 @@ def show_list():
     print("  " + "-" * 61)
     for key, city in CITIES.items():
         model_path = Path(__file__).parent / city["model_file"]
-        has_model = "✓" if model_path.exists() else "✗"
-        print(f"    {key:<12} {city['name']:<25} census: {has_model}  "
+        has_model = model_path.exists()
+        status = "census: YES" if has_model else "census: NO"
+        print(f"    {key:<12} {city['name']:<25} {status}  "
               f"r={city['default_radius_km']}km")
         print(f"    {'':12} {city['description']}")
-        car_max = city['max_census_trips']['car']
-        all_max = city['max_census_trips']['all']
-        print(f"    {'':12} Max census trips: ~{car_max:,} (car-only), "
-              f"~{all_max:,} (all modes)")
+        if key in city_stats:
+            stats = city_stats[key]
+            car = stats['mode_counts'].get('car', 0)
+            total = stats['commuters']
+            print(f"    {'':12} Census: {car:,} car, {total:,} total commuters")
         print()
 
     print("  PRESETS (use --preset <name>):")
@@ -293,8 +288,7 @@ def show_list():
 
     print("  VALID MODES:", ", ".join(sorted(VALID_MODES)))
     print()
-    print("  Note: Census data supports up to ~500K car trips per city")
-    print("        without oversampling. Beyond that, use --allow-oversample.")
+    print("  Tip: Run 'python help.py cities' for detailed census limits.")
     print("=" * 65 + "\n")
 
 

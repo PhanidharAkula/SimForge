@@ -14,7 +14,7 @@ from pipeline.validation.validate_bundle import validate_bundle
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Pick the first available generated scenario
-_CANDIDATES = ["chicago_5k", "nyc_5k", "la_5k"]
+_CANDIDATES = ["chicago_1k_car", "nyc_10k_car", "la_50k_bike_car_transit"]
 SCENARIO: Path | None = None
 for _name in _CANDIDATES:
     _path = REPO_ROOT / "scenarios" / _name

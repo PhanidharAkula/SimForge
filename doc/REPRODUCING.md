@@ -44,13 +44,13 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 # 4. Generate scenario data
-python scripts/generate_chicago_5k.py
-python scripts/generate_nyc_5k.py
-python scripts/generate_la_5k.py
+python scripts/01_quick_test.py       # 1K Chicago car
+python scripts/02_small_commute.py    # 10K NYC car
+python scripts/03_medium_multimodal.py # 50K LA multi-mode
 
 # 5. Verify installation
-python -m pipeline.validation.validate_bundle scenarios/chicago_5k
-# Expected: [VALID] Scenario bundle at: .../scenarios/chicago_5k
+python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
+# Expected: [VALID] Scenario bundle at: .../scenarios/chicago_1k_car
 ```
 
 ---
@@ -104,9 +104,9 @@ If QarSUMO is not available, the framework automatically falls back to standard 
 ### Step 1: Validate All Scenarios
 
 ```bash
-python -m pipeline.validation.validate_bundle scenarios/chicago_5k
-python -m pipeline.validation.validate_bundle scenarios/nyc_5k
-python -m pipeline.validation.validate_bundle scenarios/la_5k
+python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
+python -m pipeline.validation.validate_bundle scenarios/nyc_10k_car
+python -m pipeline.validation.validate_bundle scenarios/la_50k_bike_car_transit
 ```
 
 All should report `[VALID]`.
@@ -115,7 +115,7 @@ All should report `[VALID]`.
 
 ```bash
 # Run a single scenario with SUMO mesoscopic
-python run.py --scenario chicago_5k --engine sumo --mode meso --repeats 1
+python run.py --scenario chicago_1k_car --engine sumo --mode meso --repeats 1
 ```
 
 Expected: completes in under 30 seconds.
@@ -124,7 +124,7 @@ Expected: completes in under 30 seconds.
 
 ```bash
 # Full benchmark: 3 cities × 3 engines × mesoscopic × 3 repeats = 27 runs
-python -m execution.run_benchmark runspecs/benchmark_5k.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
 Expected: 10–30 minutes depending on hardware.

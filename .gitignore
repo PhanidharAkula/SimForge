@@ -67,3 +67,7 @@ lib/
 
 # Benchmark output runs (generated data)
 runs/
+
+# Cluster job logs
+cluster/logs/*.out
+cluster/logs/*.err

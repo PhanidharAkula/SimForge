@@ -5,8 +5,8 @@ This script runs the same scenario in both modes and computes
 fidelity metrics to quantify the accuracy-performance trade-off.
 
 Usage:
-    python -m evaluation.compare_modes scenarios/sioux_falls_tier50k
-    python -m evaluation.compare_modes scenarios/sioux_falls_tier50k --seed 42
+    python -m evaluation.compare_modes scenarios/chicago_1k_car
+    python -m evaluation.compare_modes scenarios/chicago_1k_car --seed 42
 """
 
 import argparse
@@ -131,7 +131,7 @@ def run_mode(
     # Prepare SUMO inputs
     try:
         summary = prepare_sumo_inputs(scenario_path, mode_dir)
-        config_path = mode_dir / f"{summary['scenario_id']}.sumocfg"
+        config_path = mode_dir / f"{summary.scenario_id}.sumocfg"
     except Exception as e:
         return ModeResult(
             mode=mode_name,

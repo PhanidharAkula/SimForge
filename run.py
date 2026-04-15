@@ -4,8 +4,8 @@ SimForge Runner - Simplified CLI
 
 Usage:
     python run.py                                    # Run all scenarios, all engines, all modes
-    python run.py --scenario nyc_5k                 # Run specific scenario
-    python run.py --scenario nyc_5k,la_5k           # Run multiple scenarios
+    python run.py --scenario chicago_1k_car           # Run specific scenario
+    python run.py --scenario chicago_1k_car,nyc_10k_car  # Run multiple scenarios
     python run.py --engine sumo,matsim              # Run with specific engines
     python run.py --mode micro                      # Run with specific mode
     python run.py --repeats 5                       # Run with 5 repeats
@@ -45,14 +45,10 @@ def get_scenarios() -> Dict[str, dict]:
             name = scenario_path.name
             
             # Parse trip count from name
-            if "5m" in name:
-                trips = "5M"
-            elif "500k" in name:
-                trips = "500K"
-            elif "50k" in name:
-                trips = "50K"
-            elif "5k" in name:
-                trips = "5K"
+            import re
+            m = re.search(r'(\d+[km]?)', name)
+            if m:
+                trips = m.group(1).upper()
             else:
                 trips = "?"
             
@@ -244,8 +240,8 @@ def main():
         epilog="""
 Examples:
   python run.py                              # Run ALL (default)
-  python run.py --scenario nyc_5k            # Run one scenario
-  python run.py --scenario nyc_5k,la_5k      # Run multiple scenarios
+  python run.py --scenario chicago_1k_car    # Run one scenario
+  python run.py --scenario chicago_1k_car,nyc_10k_car  # Run multiple
   python run.py --engine sumo                # Run with one engine
   python run.py --engine sumo,matsim         # Run with multiple engines
   python run.py --mode meso                  # Run with one mode
@@ -283,10 +279,9 @@ Examples:
     # Get available scenarios
     scenarios_available = get_scenarios()
     if not scenarios_available:
-        print("❌ No scenarios found. Run data generation scripts first:")
-        print("   python scripts/generate_chicago_5k.py")
-        print("   python scripts/generate_nyc_5k.py")
-        print("   python scripts/generate_la_5k.py")
+        print("❌ No scenarios found. Generate scenarios first:")
+        print("   python scripts/01_quick_test.py")
+        print("   python generate.py --preset quick_test")
         return 1
     
     # Determine scenarios to run

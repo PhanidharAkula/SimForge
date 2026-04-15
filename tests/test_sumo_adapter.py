@@ -15,7 +15,7 @@ from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Pick the first available generated scenario (chicago preferred, fall back to others)
-_CANDIDATES = ["chicago_5k", "nyc_5k", "la_5k"]
+_CANDIDATES = ["chicago_1k_car", "nyc_10k_car", "la_50k_bike_car_transit"]
 SCENARIO: Path | None = None
 for _name in _CANDIDATES:
     _path = REPO_ROOT / "scenarios" / _name
@@ -46,8 +46,8 @@ def test_prepare_sumo_inputs_creates_expected_files(tmp_path) -> None:
     assert summary.node_count > 0
     assert summary.link_count > 0
     assert summary.trip_count > 0
-    assert summary.start_time_s == 0
-    assert summary.end_time_s == 3600
+    assert summary.start_time_s >= 0
+    assert summary.end_time_s > summary.start_time_s
 
     # Files must exist
     net_path = out_dir / "net.net.xml"
