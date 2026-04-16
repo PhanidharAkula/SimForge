@@ -17,7 +17,7 @@ from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Pick the first available generated scenario
-_CANDIDATES = ["chicago_1k_car", "nyc_10k_car", "la_50k_bike_car_transit"]
+_CANDIDATES = ["chicago_1k_car", "nyc_1k_car", "la_1k_car", "nyc_10k_car", "la_50k_bike_car_transit"]
 _SCENARIO: Path | None = None
 for _name in _CANDIDATES:
     _path = REPO_ROOT / "scenarios" / _name
