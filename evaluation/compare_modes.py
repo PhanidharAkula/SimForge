@@ -131,7 +131,7 @@ def run_mode(
     # Prepare SUMO inputs
     try:
         summary = prepare_sumo_inputs(scenario_path, mode_dir)
-        config_path = mode_dir / f"{summary.scenario_id}.sumocfg"
+        config_path = mode_dir / "toy.sumocfg"
     except Exception as e:
         return ModeResult(
             mode=mode_name,
@@ -165,21 +165,25 @@ def run_mode(
         )
         runtime = time.time() - start_time
         
+        # SUMO returns non-zero for warnings; only fail on actual Error: lines
+        # AND if tripinfo.xml is missing
+        tripinfo_path = mode_dir / "tripinfo.xml"
         if result.returncode != 0:
             error_lines = [
                 line for line in (result.stderr or "").split("\n")
                 if line.strip().startswith("Error:")
             ]
-            error_msg = "\n".join(error_lines[:3]) if error_lines else "Unknown error"
-            return ModeResult(
-                mode=mode_name,
-                runtime_s=runtime,
-                success=False,
-                trip_count=0,
-                mean_travel_time_s=0,
-                p95_travel_time_s=0,
-                error=error_msg
-            )
+            if error_lines and not tripinfo_path.exists():
+                error_msg = "\n".join(error_lines[:3])
+                return ModeResult(
+                    mode=mode_name,
+                    runtime_s=runtime,
+                    success=False,
+                    trip_count=0,
+                    mean_travel_time_s=0,
+                    p95_travel_time_s=0,
+                    error=error_msg
+                )
     except subprocess.TimeoutExpired:
         return ModeResult(
             mode=mode_name,

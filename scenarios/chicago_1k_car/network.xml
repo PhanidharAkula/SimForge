@@ -1253,7 +1253,7 @@
   </nodes>
   <links>
     <link id="l0" from="n0" to="n727" length="699.7" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[24229922, 56716748, 56716749]"/>
-    <link id="l1" from="n1" to="n580" length="269.83" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[1395015168, 26233492, 1395015167]"/>
+    <link id="l1" from="n1" to="n580" length="269.83" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[1395015168, 26233492, 1395015167]"/>
     <link id="l10" from="n6" to="n734" length="154.84" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="907999287" name="Kennedy Expressway"/>
     <link id="l100" from="n46" to="n888" length="110.79" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[435555353, 435555362, 435555356]" name="North State Street"/>
     <link id="l1000" from="n388" to="n313" length="121.68" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24088511" name="West Maxwell Street"/>
@@ -1262,7 +1262,7 @@
     <link id="l1003" from="n389" to="n287" length="95.93" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[633300067, 633300054]" name="West Madison Street"/>
     <link id="l1004" from="n389" to="n324" length="151.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="527289417" name="North Carpenter Street"/>
     <link id="l1005" from="n389" to="n1060" length="97.03" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="633300054" name="West Madison Street"/>
-    <link id="l1006" from="n390" to="n178" length="82.93" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784888, 59407132]" name="West Ida B. Wells Drive"/>
+    <link id="l1006" from="n390" to="n178" length="82.93" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784888, 59407132]" name="West Ida B. Wells Drive"/>
     <link id="l1007" from="n390" to="n785" length="132.61" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="24090845" name="South Federal Street"/>
     <link id="l1008" from="n391" to="n453" length="183.78" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[24089448, 967955375]" name="West Tilden Street"/>
     <link id="l1009" from="n392" to="n599" length="126.25" lanes="3" speed_limit="11.1" highway_type="residential" osm_way_id="[626246212, 314011261]" name="East 16th Street"/>
@@ -1377,7 +1377,7 @@
     <link id="l1107" from="n424" to="n603" length="89.93" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1260443998" name="North Franklin Street"/>
     <link id="l1108" from="n424" to="n756" length="87.74" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1330337193" name="North Franklin Street"/>
     <link id="l1109" from="n425" to="n171" length="140.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="208648734" name="South Aberdeen Street"/>
-    <link id="l111" from="n52" to="n1185" length="123.74" lanes="6" speed_limit="13.4" highway_type="secondary" osm_way_id="[145846240, 435562942]" name="North Michigan Avenue"/>
+    <link id="l111" from="n52" to="n1185" length="123.74" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[145846240, 435562942]" name="North Michigan Avenue"/>
     <link id="l1110" from="n425" to="n430" length="142.75" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="208648734" name="South Aberdeen Street"/>
     <link id="l1111" from="n426" to="n201" length="119.85" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="57377520" name="West Erie Street"/>
     <link id="l1112" from="n426" to="n339" length="119.36" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="57377520" name="West Erie Street"/>
@@ -1596,12 +1596,12 @@
     <link id="l1304" from="n505" to="n301" length="15.88" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="917429185" name="East Lake Street"/>
     <link id="l1305" from="n505" to="n618" length="55.91" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[1171996560, 1171996561]" name="East Lake Street"/>
     <link id="l1306" from="n505" to="n991" length="142.33" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[435657106, 633954396, 230975349]" name="North Michigan Avenue"/>
-    <link id="l1307" from="n506" to="n507" length="192.97" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[59426304, 59426285, 59426302]" name="North New Street"/>
+    <link id="l1307" from="n506" to="n507" length="192.97" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[59426304, 59426285, 59426302]" name="North McClurg Court"/>
     <link id="l1308" from="n506" to="n507" length="76.14" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="186431131" name="East North Water Street"/>
     <link id="l1309" from="n506" to="n510" length="172.06" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="24800323" name="North New Street"/>
     <link id="l131" from="n60" to="n1172" length="7.79" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="1191329601" name="North State Street"/>
-    <link id="l1310" from="n506" to="n758" length="329.14" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1168833672, 59419636]" name="East North Water Street"/>
-    <link id="l1311" from="n507" to="n506" length="192.97" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[59426304, 59426285, 59426302]" name="East River Drive"/>
+    <link id="l1310" from="n506" to="n758" length="329.14" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1168833672, 59419636]" name="East Lower North Water Street"/>
+    <link id="l1311" from="n507" to="n506" length="192.97" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[59426304, 59426285, 59426302]" name="North McClurg Court"/>
     <link id="l1312" from="n507" to="n506" length="76.14" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="186431131" name="East North Water Street"/>
     <link id="l1313" from="n507" to="n751" length="173.12" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="186431132" name="North McClurg Court"/>
     <link id="l1314" from="n507" to="n992" length="174.91" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="231170108" name="East North Water Street"/>
@@ -1693,12 +1693,12 @@
     <link id="l1392" from="n546" to="n683" length="89.05" lanes="3" speed_limit="13.4" highway_type="trunk" osm_way_id="124538337" name="East Lower Wacker Drive"/>
     <link id="l1393" from="n547" to="n683" length="244.93" lanes="2" speed_limit="19.4" highway_type="trunk_link" osm_way_id="[1178693768, 1031073558, 48785119]"/>
     <link id="l1394" from="n548" to="n549" length="13.31" lanes="1" speed_limit="8.9" highway_type="tertiary" osm_way_id="1049333845" name="East Randolph Street"/>
-    <link id="l1395" from="n548" to="n823" length="253.14" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24954945, 1165302084, 620350566, 235916946, 618358902, 583081976]" name="Upper North Columbus Drive"/>
+    <link id="l1395" from="n548" to="n823" length="253.14" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24954945, 1165302084, 620350566, 235916946, 618358902, 583081976]" name="North Upper Columbus Drive"/>
     <link id="l1396" from="n549" to="n674" length="20.4" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="435657111" name="Upper North Columbus Drive"/>
     <link id="l1397" from="n549" to="n806" length="71.79" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="[618358900, 1214762437]" name="East Randolph Street"/>
     <link id="l1398" from="n550" to="n694" length="17.82" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1177948379" name="North Columbus Drive"/>
     <link id="l1399" from="n550" to="n886" length="509.9" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1422481704, 48786424, 23810324, 435660726]" name="East Randolph Drive"/>
-    <link id="l14" from="n8" to="n1175" length="143.29" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[1191449389, 1191447455]" name="South Canal Bus Lane"/>
+    <link id="l14" from="n8" to="n1175" length="143.29" lanes="2" speed_limit="13.9" highway_type="busway" osm_way_id="[1191449389, 1191447455]" name="South Canal Bus Lane"/>
     <link id="l140" from="n65" to="n76" length="122.76" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1049318472, 1049318471]" name="West Monroe Street"/>
     <link id="l1400" from="n551" to="n1145" length="39.41" lanes="4" speed_limit="8.9" highway_type="secondary" osm_way_id="435562941" name="East Randolph Street"/>
     <link id="l1401" from="n552" to="n545" length="136.83" lanes="3" speed_limit="13.4" highway_type="trunk" osm_way_id="124538338" name="East Lower Wacker Drive"/>
@@ -1759,12 +1759,12 @@
     <link id="l1451" from="n573" to="n574" length="145.68" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[26233441, 1124004470]"/>
     <link id="l1452" from="n573" to="n1135" length="39.21" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="1123984332" name="Kennedy Expressway"/>
     <link id="l1453" from="n574" to="n217" length="88.2" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="26233078" name="West Washington Boulevard"/>
-    <link id="l1454" from="n575" to="n491" length="266.02" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[435724129, 1124004471]"/>
+    <link id="l1454" from="n575" to="n491" length="266.02" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[435724129, 1124004471]"/>
     <link id="l1455" from="n575" to="n724" length="123.42" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[1312951474, 26233447]"/>
     <link id="l1456" from="n576" to="n250" length="128.37" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="909945264" name="Kennedy Expressway"/>
     <link id="l1457" from="n576" to="n654" length="210.93" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="26233470"/>
     <link id="l1458" from="n577" to="n574" length="99.35" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1255426291, 26233078, 26233079]" name="West Washington Boulevard"/>
-    <link id="l1459" from="n578" to="n579" length="272.51" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[26233497, 1023273780]"/>
+    <link id="l1459" from="n578" to="n579" length="272.51" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[26233497, 1023273780]"/>
     <link id="l146" from="n68" to="n222" length="122.89" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[23810320, 1028896256]" name="West Randolph Street"/>
     <link id="l1460" from="n578" to="n1215" length="67.76" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="1119583403" name="Kennedy Expressway"/>
     <link id="l1461" from="n579" to="n192" length="191.1" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[56175732, 24442707, 1153872612]" name="West Monroe Street"/>
@@ -1847,7 +1847,7 @@
     <link id="l1530" from="n601" to="n230" length="122.93" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[23810299, 1275373141, 929942830]" name="West Kinzie Street"/>
     <link id="l1531" from="n601" to="n603" length="91.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1260443998" name="North Franklin Street"/>
     <link id="l1532" from="n601" to="n689" length="102.76" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[929942828, 1086665895]" name="West Kinzie Street"/>
-    <link id="l1533" from="n602" to="n198" length="89.83" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549672, 435549666, 48842222]" name="North Orleans Street"/>
+    <link id="l1533" from="n602" to="n198" length="89.83" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549672, 435549666, 48842222]" name="North Orleans Street"/>
     <link id="l1534" from="n602" to="n252" length="131.93" lanes="2" speed_limit="13.4" highway_type="tertiary" osm_way_id="1491635701" name="West Hubbard Street"/>
     <link id="l1535" from="n602" to="n688" length="18.2" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="24098770" name="West Hubbard Street"/>
     <link id="l1536" from="n602" to="n1027" length="230.64" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[1275993632, 48842209, 79657216, 1086665893, 59678349, 253745134, 79657214]" name="North Orleans Street"/>
@@ -1904,7 +1904,7 @@
     <link id="l1582" from="n620" to="n1040" length="72.91" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="435724073" name="South State Street"/>
     <link id="l1583" from="n621" to="n620" length="15.55" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="434705479" name="South State Street"/>
     <link id="l1584" from="n621" to="n736" length="63.19" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="1228801021" name="East Ida B. Wells Drive"/>
-    <link id="l1585" from="n621" to="n1192" length="112.39" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[1349641698, 435724075, 435724069, 435724063]" name="South State Street"/>
+    <link id="l1585" from="n621" to="n1192" length="112.39" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[1349641698, 435724075, 435724069, 435724063]" name="South State Street"/>
     <link id="l1586" from="n622" to="n37" length="132.11" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[59667619, 1033716708]" name="South Financial Place"/>
     <link id="l1587" from="n622" to="n623" length="17.12" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="793372647" name="South Financial Place"/>
     <link id="l1588" from="n622" to="n624" length="49.8" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="793372646" name="West Ida B. Wells Drive"/>
@@ -1930,7 +1930,7 @@
     <link id="l1605" from="n630" to="n672" length="138.24" lanes="1" speed_limit="8.9" highway_type="tertiary" osm_way_id="[316174517, 1284511590]" name="South Blue Island Avenue"/>
     <link id="l1606" from="n631" to="n290" length="10.12" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="623099270" name="North Halsted Street"/>
     <link id="l1607" from="n631" to="n581" length="66.71" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[433777234, 433777235]" name="North Halsted Street"/>
-    <link id="l1608" from="n631" to="n581" length="209.01" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[35767078, 24070983, 1341900915, 1298789498, 1298789499]" name="West Court Place"/>
+    <link id="l1608" from="n631" to="n581" length="209.01" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[35767078, 24070983, 1341900915, 1298789498, 1298789499]" name="West Randolph Street"/>
     <link id="l1609" from="n632" to="n591" length="131.6" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1444365744" name="North Green Street"/>
     <link id="l161" from="n75" to="n78" length="141.49" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[805924008, 435724033, 932951023]" name="South Clark Street"/>
     <link id="l1610" from="n632" to="n592" length="9.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1013046330" name="North Green Street"/>
@@ -2041,12 +2041,12 @@
     <link id="l1705" from="n678" to="n897" length="74.85" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="133743728" name="Lower Jean Baptiste Point DuSable Lake Shore Drive"/>
     <link id="l1706" from="n679" to="n775" length="27.97" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="616101771" name="East Grand Avenue"/>
     <link id="l1707" from="n680" to="n681" length="84.84" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24084538" name="North Peshtigo Court"/>
-    <link id="l1708" from="n680" to="n748" length="206.15" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[616101768, 616101769, 1049283602, 616101767]" name="East Grand Avenue"/>
+    <link id="l1708" from="n680" to="n748" length="206.15" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[616101768, 616101769, 1049283602, 616101767]" name="East Grand Avenue"/>
     <link id="l1709" from="n681" to="n233" length="81.43" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[624703084, 1481543550]" name="East Illinois Street"/>
     <link id="l171" from="n79" to="n78" length="122.4" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="435724084" name="West Adams Street"/>
     <link id="l1710" from="n681" to="n680" length="84.84" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24084538" name="North Peshtigo Court"/>
     <link id="l1711" from="n682" to="n534" length="158.22" lanes="1" speed_limit="19.4" highway_type="trunk_link" osm_way_id="[48785104, 24954034]"/>
-    <link id="l1712" from="n682" to="n706" length="874.58" lanes="2" speed_limit="13.4" highway_type="trunk" osm_way_id="[373852568, 1175784009, 253716333, 931237143]" name="North Lower Wacker Drive"/>
+    <link id="l1712" from="n682" to="n706" length="874.58" lanes="2" speed_limit="13.4" highway_type="trunk" osm_way_id="[373852568, 1175784009, 253716333, 931237143]" name="South Lower Wacker Drive"/>
     <link id="l1713" from="n683" to="n540" length="86.56" lanes="3" speed_limit="13.4" highway_type="trunk" osm_way_id="[1178693760, 124538337]" name="East Lower Wacker Drive"/>
     <link id="l1714" from="n684" to="n1025" length="21.79" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="1298221997" name="South Wacker Drive"/>
     <link id="l1715" from="n684" to="n1032" length="19.35" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="615900431" name="West Adams Street"/>
@@ -2071,7 +2071,7 @@
     <link id="l1732" from="n691" to="n238" length="90.66" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="416556732" name="North LaSalle Drive"/>
     <link id="l1733" from="n691" to="n253" length="16.21" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="930446697" name="West Hubbard Street"/>
     <link id="l1734" from="n692" to="n330" length="118.28" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="32829266" name="East North Water Street"/>
-    <link id="l1735" from="n692" to="n987" length="107.78" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24090193, 1396191118]" name="East North Water Street"/>
+    <link id="l1735" from="n692" to="n987" length="107.78" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24090193, 1396191118]" name="East Kinzie Street"/>
     <link id="l1736" from="n692" to="n1232" length="86.79" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="79673778" name="Lower North Wabash Avenue"/>
     <link id="l1737" from="n693" to="n231" length="17.93" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="381822562" name="North Columbus Drive"/>
     <link id="l1738" from="n693" to="n551" length="225.45" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[24220275, 1284737908, 230772155]" name="East Randolph Drive"/>
@@ -2083,7 +2083,7 @@
     <link id="l1743" from="n695" to="n830" length="325.07" lanes="3" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[435542926, 56150087]" name="South Clark Street"/>
     <link id="l1744" from="n696" to="n697" length="89.49" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="56150074" name="West Taylor Street"/>
     <link id="l1745" from="n697" to="n696" length="89.49" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="56150074" name="West Taylor Street"/>
-    <link id="l1746" from="n697" to="n831" length="179.44" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[758223625, 95357377, 1031096494]" name="South Clark Street"/>
+    <link id="l1746" from="n697" to="n831" length="179.44" lanes="2" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[758223625, 95357377, 1031096494]" name="South Clark Street"/>
     <link id="l1747" from="n697" to="n1061" length="220.4" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[315828480, 626352350]" name="South Clark Street"/>
     <link id="l1748" from="n697" to="n1150" length="96.35" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[1289134701, 1175745614]" name="South Clark Street"/>
     <link id="l1749" from="n698" to="n695" length="32.19" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="229357208" name="South Clark Street"/>
@@ -2124,7 +2124,7 @@
     <link id="l1780" from="n712" to="n710" length="174.9" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[23825844, 56179894, 435561743]"/>
     <link id="l1781" from="n713" to="n371" length="107.23" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="56180020" name="West 15th Street"/>
     <link id="l1782" from="n714" to="n715" length="206.21" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="316907583" name="South DuSable Lake Shore Drive"/>
-    <link id="l1783" from="n715" to="n263" length="350.15" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[24800368, 56179905, 56179906, 435562007]"/>
+    <link id="l1783" from="n715" to="n263" length="350.15" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[24800368, 56179905, 56179906, 435562007]"/>
     <link id="l1784" from="n715" to="n511" length="639.08" lanes="4" speed_limit="17.9" highway_type="motorway" osm_way_id="[316907585, 435708995, 56179912, 56179917, 56179902]" name="South DuSable Lake Shore Drive"/>
     <link id="l1785" from="n716" to="n310" length="115.13" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="56460698" name="West Fulton Market"/>
     <link id="l1786" from="n716" to="n343" length="70.82" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[24082316, 1205349039]" name="North Union Avenue"/>
@@ -2162,8 +2162,8 @@
     <link id="l1814" from="n728" to="n567" length="308.4" lanes="1" speed_limit="33.3" highway_type="motorway" osm_way_id="56716742" name="Kennedy Express Reversable Lane"/>
     <link id="l1815" from="n728" to="n727" length="157.0" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[56716738, 56716739]"/>
     <link id="l1816" from="n730" to="n728" length="233.05" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[56716746, 56716741]"/>
-    <link id="l1817" from="n730" to="n729" length="578.86" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[56716744, 539192953, 56716743]"/>
-    <link id="l1818" from="n731" to="n200" length="1035.62" lanes="5" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[421091628, 26231854, 1315998481, 23810482, 898010482, 1315998484, 1013537658, 1013537659, 435551676, 639931326]"/>
+    <link id="l1817" from="n730" to="n729" length="578.86" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[56716744, 539192953, 56716743]"/>
+    <link id="l1818" from="n731" to="n200" length="1035.62" lanes="3" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[421091628, 26231854, 1315998481, 23810482, 898010482, 1315998484, 1013537658, 1013537659, 435551676, 639931326]"/>
     <link id="l1819" from="n732" to="n576" length="646.01" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="[998905875, 26233560, 26233561, 997870010, 56629787, 4694846]" name="Kennedy Expressway"/>
     <link id="l182" from="n84" to="n83" length="124.44" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[981135345, 981135346]" name="West Washington Street"/>
     <link id="l1820" from="n733" to="n730" length="359.13" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="26231842"/>
@@ -2193,7 +2193,7 @@
     <link id="l1842" from="n743" to="n1074" length="51.34" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[918605345, 918605341]" name="North Cityfront Plaza Drive"/>
     <link id="l1843" from="n744" to="n615" length="142.07" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1270139805, 24800319]" name="North Cityfront Plaza Drive"/>
     <link id="l1844" from="n744" to="n743" length="39.63" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="32829219" name="North Cityfront Plaza Drive"/>
-    <link id="l1845" from="n745" to="n499" length="92.45" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435717211, 1291911659]" name="East Ohio Street"/>
+    <link id="l1845" from="n745" to="n499" length="92.45" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435717211, 1291911659]" name="East Ohio Street"/>
     <link id="l1846" from="n745" to="n746" length="88.52" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="1091667417" name="North Rush Street"/>
     <link id="l1847" from="n745" to="n1055" length="90.02" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="59430171" name="North Rush Street"/>
     <link id="l1848" from="n746" to="n305" length="109.98" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="255369216" name="East Ontario Street"/>
@@ -2215,7 +2215,7 @@
     <link id="l1862" from="n752" to="n765" length="47.12" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="435657388" name="East Grand Avenue"/>
     <link id="l1863" from="n753" to="n555" length="91.37" lanes="4" speed_limit="11.1" highway_type="unclassified" osm_way_id="23810354" name="East Grand Avenue"/>
     <link id="l1864" from="n753" to="n1073" length="691.59" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[143925555, 913774684, 913774685]" name="East Grand Avenue"/>
-    <link id="l1865" from="n754" to="n1072" length="56.87" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1051254234, 1051254235]" name="North Streeter Drive"/>
+    <link id="l1865" from="n754" to="n1072" length="56.87" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="[1051254234, 1051254235]" name="North Streeter Drive"/>
     <link id="l1866" from="n755" to="n244" length="100.39" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="48842234" name="North Kingsbury Street"/>
     <link id="l1867" from="n755" to="n308" length="106.04" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="48842234" name="North Kingsbury Street"/>
     <link id="l1868" from="n755" to="n372" length="108.05" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24086273" name="West Ohio Street"/>
@@ -2228,7 +2228,7 @@
     <link id="l1874" from="n757" to="n117" length="90.01" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[981559255, 319358167]" name="North Wells Street"/>
     <link id="l1875" from="n757" to="n444" length="115.46" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="57377520" name="West Erie Street"/>
     <link id="l1876" from="n757" to="n477" length="125.48" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="57377520" name="West Erie Street"/>
-    <link id="l1877" from="n758" to="n506" length="329.14" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1168833672, 59419636]" name="East North Water Street"/>
+    <link id="l1877" from="n758" to="n506" length="329.14" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1168833672, 59419636]" name="East Lower North Water Street"/>
     <link id="l1878" from="n758" to="n750" length="93.62" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="133390597" name="North Saint Clair Street"/>
     <link id="l1879" from="n758" to="n890" length="183.78" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="59419636" name="East Lower North Water Street"/>
     <link id="l188" from="n86" to="n1173" length="137.23" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[805911049, 435724021, 134319743]" name="North LaSalle Street"/>
@@ -2240,7 +2240,7 @@
     <link id="l1885" from="n761" to="n772" length="51.15" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="1276264106"/>
     <link id="l1886" from="n762" to="n763" length="219.75" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[133743736, 377866948, 377866950]" name="Lower Jean Baptiste Point DuSable Lake Shore Drive"/>
     <link id="l1887" from="n763" to="n678" length="175.74" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[827643224, 133743728]" name="Lower Jean Baptiste Point DuSable Lake Shore Drive"/>
-    <link id="l1888" from="n763" to="n764" length="306.06" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[59583578, 25027972, 992412468]"/>
+    <link id="l1888" from="n763" to="n764" length="306.06" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[59583578, 25027972, 992412468]"/>
     <link id="l1889" from="n764" to="n780" length="211.89" lanes="4" speed_limit="17.9" highway_type="motorway" osm_way_id="373856148" name="North Jean Baptiste Point DuSable Lake Shore Drive"/>
     <link id="l189" from="n87" to="n88" length="123.2" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435552727, 1276218059, 315828479]" name="West Upper Wacker Drive"/>
     <link id="l1890" from="n765" to="n523" length="43.23" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="59427932" name="East Grand Avenue"/>
@@ -2269,7 +2269,7 @@
     <link id="l1910" from="n777" to="n770" length="810.19" lanes="4" speed_limit="17.9" highway_type="motorway" osm_way_id="[377866952, 59583611, 373856149, 995427059]" name="North Jean Baptiste Point DuSable Lake Shore Drive"/>
     <link id="l1911" from="n777" to="n778" length="164.73" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="59583617"/>
     <link id="l1912" from="n778" to="n775" length="71.98" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="511315579"/>
-    <link id="l1913" from="n778" to="n776" length="77.6" lanes="2" speed_limit="19.4" highway_type="trunk_link" osm_way_id="[59583618, 435657395]"/>
+    <link id="l1913" from="n778" to="n776" length="77.6" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[59583618, 435657395]"/>
     <link id="l1914" from="n779" to="n43" length="118.84" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="24952122"/>
     <link id="l1915" from="n779" to="n777" length="164.2" lanes="5" speed_limit="17.9" highway_type="motorway" osm_way_id="[995427058, 996902367]" name="North Jean Baptiste Point DuSable Lake Shore Drive"/>
     <link id="l1916" from="n780" to="n566" length="356.97" lanes="5" speed_limit="17.9" highway_type="motorway" osm_way_id="[48784593, 1119802435]" name="North Jean Baptiste Point DuSable Lake Shore Drive"/>
@@ -2304,7 +2304,7 @@
     <link id="l1942" from="n791" to="n76" length="69.5" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="134319745" name="South LaSalle Street"/>
     <link id="l1943" from="n791" to="n359" length="70.99" lanes="1" speed_limit="11.1" highway_type="unclassified" osm_way_id="973275640" name="West Arcade Place"/>
     <link id="l1944" from="n792" to="n51" length="97.54" lanes="2" speed_limit="13.4" highway_type="secondary_link" osm_way_id="59672850"/>
-    <link id="l1945" from="n792" to="n52" length="215.23" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[317631431, 59673605, 721925647]" name="South Michigan Avenue"/>
+    <link id="l1945" from="n792" to="n52" length="215.23" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[317631431, 59673605, 721925647]" name="North Michigan Avenue"/>
     <link id="l1946" from="n793" to="n94" length="48.36" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="59678363" name="East Upper Wacker Drive"/>
     <link id="l1947" from="n793" to="n796" length="14.31" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1038617492" name="North State Street"/>
     <link id="l1948" from="n794" to="n504" length="211.1" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[124538330, 59678396, 1021065806]" name="East Upper Wacker Drive"/>
@@ -2373,7 +2373,7 @@
     <link id="l2003" from="n820" to="n1017" length="141.34" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24955648, 1184552142]" name="North Stetson Avenue"/>
     <link id="l2004" from="n821" to="n800" length="97.34" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[435717221, 583081975]" name="North Upper Columbus Drive"/>
     <link id="l2005" from="n821" to="n824" length="12.04" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="89156514" name="East South Water Street"/>
-    <link id="l2006" from="n822" to="n549" length="253.01" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1165302083, 235916944, 618358901, 435657112, 633946076]" name="Upper North Columbus Drive"/>
+    <link id="l2006" from="n822" to="n549" length="253.01" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1165302083, 235916944, 618358901, 435657112, 633946076]" name="North Upper Columbus Drive"/>
     <link id="l2007" from="n822" to="n823" length="12.08" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="583081973" name="East South Water Street"/>
     <link id="l2008" from="n823" to="n677" length="9.23" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="583081974" name="North Upper Columbus Drive"/>
     <link id="l2009" from="n824" to="n676" length="8.15" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="583081977" name="Upper North Columbus Drive"/>
@@ -2395,19 +2395,19 @@
     <link id="l2023" from="n830" to="n832" length="11.43" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="435542927" name="South Clark Street"/>
     <link id="l2024" from="n831" to="n829" length="11.45" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="904944342" name="South Clark Street"/>
     <link id="l2025" from="n831" to="n973" length="162.76" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[626352834, 435542922, 904944343]" name="West Roosevelt Road"/>
-    <link id="l2026" from="n832" to="n697" length="180.42" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[626352352, 1028904753, 238687819, 1175745613]" name="South Clark Street"/>
+    <link id="l2026" from="n832" to="n697" length="180.42" lanes="2" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[626352352, 1028904753, 238687819, 1175745613]" name="South Clark Street"/>
     <link id="l2027" from="n832" to="n831" length="12.14" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="435542923" name="West Roosevelt Road"/>
     <link id="l2028" from="n833" to="n392" length="107.16" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[626246720, 628585390]" name="South Indiana Avenue"/>
     <link id="l2029" from="n833" to="n835" length="14.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="472927560" name="East 15th Place"/>
     <link id="l203" from="n93" to="n101" length="19.53" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="435724128" name="West Washington Street"/>
     <link id="l2030" from="n834" to="n138" length="87.44" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1190666954" name="East 14th Street"/>
     <link id="l2031" from="n835" to="n123" length="321.17" lanes="1" speed_limit="8.9" highway_type="tertiary" osm_way_id="5043581" name="South Indiana Avenue"/>
-    <link id="l2032" from="n835" to="n138" length="454.9" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[472927560, 5109950]" name="East 15th Place"/>
+    <link id="l2032" from="n835" to="n138" length="454.9" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[472927560, 5109950]" name="South Prairie Avenue"/>
     <link id="l2033" from="n835" to="n833" length="14.54" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="472927560" name="East 15th Place"/>
     <link id="l2034" from="n836" to="n134" length="133.96" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1125075909, 1125075910]" name="East 13th Street"/>
     <link id="l2035" from="n837" to="n837" length="87.0" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1351889698, 95486948, 396016830]" name="Harbor Drive"/>
     <link id="l2036" from="n837" to="n838" length="44.88" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="396016829" name="Harbor Drive"/>
-    <link id="l2037" from="n838" to="n232" length="188.85" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[151974781, 24957238]" name="East Randolph Street"/>
+    <link id="l2037" from="n838" to="n232" length="188.85" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[151974781, 24957238]" name="North Harbor Drive"/>
     <link id="l2038" from="n838" to="n837" length="44.88" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="396016829" name="Harbor Drive"/>
     <link id="l2039" from="n838" to="n927" length="71.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="151974780" name="North Harbor Drive"/>
     <link id="l204" from="n93" to="n533" length="23.28" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="319352699" name="North Wacker Drive"/>
@@ -2418,7 +2418,7 @@
     <link id="l2044" from="n841" to="n826" length="127.21" lanes="2" speed_limit="11.1" highway_type="unclassified" osm_way_id="25027279" name="East Solidarity Drive"/>
     <link id="l2045" from="n842" to="n454" length="78.88" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="24229796" name="South Morgan Street"/>
     <link id="l2046" from="n842" to="n869" length="7.85" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="490582859" name="South Morgan Street"/>
-    <link id="l2047" from="n842" to="n879" length="409.29" lanes="1" speed_limit="8.9" highway_type="secondary" osm_way_id="[999476231, 682944104, 999476232, 435709735, 1075344711]" name="West Harrison Street"/>
+    <link id="l2047" from="n842" to="n879" length="409.29" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[999476231, 682944104, 999476232, 435709735, 1075344711]" name="West Harrison Street"/>
     <link id="l2048" from="n843" to="n387" length="89.41" lanes="1" speed_limit="5.6" highway_type="living_street" osm_way_id="1249715059" name="West Maxwell Street"/>
     <link id="l2049" from="n843" to="n845" length="123.14" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1257517130, 1249715058]" name="South Halsted Street"/>
     <link id="l205" from="n94" to="n539" length="82.55" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="8429306" name="East Wacker Place"/>
@@ -2426,7 +2426,7 @@
     <link id="l2051" from="n843" to="n863" length="148.98" lanes="1" speed_limit="5.6" highway_type="living_street" osm_way_id="[654357434, 654357443, 24088510]" name="West Maxwell Street"/>
     <link id="l2052" from="n844" to="n846" length="49.84" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="117576369" name="South Halsted Street"/>
     <link id="l2053" from="n844" to="n849" length="98.44" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="117576369" name="South Halsted Street"/>
-    <link id="l2054" from="n844" to="n1187" length="109.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[36870045, 1236737478]" name="West 15th Street"/>
+    <link id="l2054" from="n844" to="n1187" length="109.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[36870045, 1236737478]" name="South Emerald Avenue"/>
     <link id="l2055" from="n845" to="n843" length="123.14" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1249715058, 1257517130]" name="South Halsted Street"/>
     <link id="l2056" from="n845" to="n1056" length="136.67" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[202375201, 1249715058, 435381815]" name="South Halsted Street"/>
     <link id="l2057" from="n846" to="n608" length="170.72" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="31232180" name="West 15th Place"/>
@@ -2501,10 +2501,10 @@
     <link id="l2119" from="n868" to="n1127" length="23.4" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="117579721" name="South Morgan Street"/>
     <link id="l212" from="n97" to="n297" length="119.34" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="758223624" name="North Clark Street"/>
     <link id="l2120" from="n869" to="n842" length="7.85" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="490582859" name="South Morgan Street"/>
-    <link id="l2121" from="n869" to="n870" length="383.67" lanes="1" speed_limit="8.9" highway_type="secondary" osm_way_id="[1075344722, 1075344723, 1075344726, 117577302, 1005098360, 1075344727]" name="West Harrison Street"/>
+    <link id="l2121" from="n869" to="n870" length="383.67" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[1075344722, 1075344723, 1075344726, 117577302, 1005098360, 1075344727]" name="West Harrison Street"/>
     <link id="l2122" from="n870" to="n872" length="10.43" lanes="3" speed_limit="8.9" highway_type="secondary" osm_way_id="1005098360" name="West Harrison Street"/>
     <link id="l2123" from="n870" to="n905" length="257.8" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[421853945, 491188972, 1490397813, 435724057]" name="South Halsted Street"/>
-    <link id="l2124" from="n871" to="n842" length="383.62" lanes="1" speed_limit="8.9" highway_type="secondary" osm_way_id="[1075344720, 1075344721, 1075344724, 1075344725, 1124454230, 115891574]" name="West Harrison Street"/>
+    <link id="l2124" from="n871" to="n842" length="383.62" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[1075344720, 1075344721, 1075344724, 1075344725, 1124454230, 115891574]" name="West Harrison Street"/>
     <link id="l2125" from="n871" to="n870" length="9.34" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="435724050" name="South Halsted Street"/>
     <link id="l2126" from="n872" to="n871" length="11.25" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="1377417562" name="West Harrison Street"/>
     <link id="l2127" from="n872" to="n884" length="263.41" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[319345474, 433780232, 1287862767, 1287862771, 1287862777, 624682398]" name="West Harrison Street"/>
@@ -2526,7 +2526,7 @@
     <link id="l2141" from="n878" to="n967" length="257.1" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="435324914" name="West Roosevelt Road"/>
     <link id="l2142" from="n878" to="n975" length="10.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1266289625" name="South Morgan Street"/>
     <link id="l2143" from="n879" to="n913" length="114.58" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="151175381" name="South Racine Avenue"/>
-    <link id="l2144" from="n880" to="n869" length="409.15" lanes="1" speed_limit="8.9" highway_type="secondary" osm_way_id="[1075344713, 435709738, 999476230, 435709737]" name="West Harrison Street"/>
+    <link id="l2144" from="n880" to="n869" length="409.15" lanes="2" speed_limit="8.9" highway_type="secondary" osm_way_id="[1075344713, 435709738, 999476230, 435709737]" name="West Harrison Street"/>
     <link id="l2145" from="n880" to="n879" length="8.51" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="1065060842" name="South Racine Avenue"/>
     <link id="l2146" from="n881" to="n672" length="274.39" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="117581807" name="West Roosevelt Road"/>
     <link id="l2147" from="n882" to="n667" length="100.56" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="706407767" name="South Jefferson Street"/>
@@ -2614,7 +2614,7 @@
     <link id="l2220" from="n917" to="n962" length="122.53" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[151428237, 151428246]" name="South Aberdeen Street"/>
     <link id="l2221" from="n918" to="n151" length="43.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="151428234" name="West Polk Street"/>
     <link id="l2222" from="n919" to="n860" length="136.79" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="151428239" name="South Carpenter Street"/>
-    <link id="l2223" from="n919" to="n861" length="220.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[151428253, 151428247]" name="West Arthington Street"/>
+    <link id="l2223" from="n919" to="n861" length="220.69" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[151428253, 151428247]" name="South Aberdeen Street"/>
     <link id="l2224" from="n919" to="n917" length="82.08" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="151428239" name="South Carpenter Street"/>
     <link id="l2225" from="n920" to="n121" length="138.94" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1075206467, 1075206468]" name="East 14th Street"/>
     <link id="l2226" from="n920" to="n196" length="188.07" lanes="3" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1436897270, 1436897271]" name="South Wabash Avenue"/>
@@ -2638,7 +2638,7 @@
     <link id="l2242" from="n929" to="n856" length="184.98" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[152755914, 1047790615]"/>
     <link id="l2243" from="n930" to="n1123" length="37.72" lanes="3" speed_limit="20.1" highway_type="motorway" osm_way_id="152759536" name="Dan Ryan Expressway"/>
     <link id="l2244" from="n930" to="n1231" length="106.94" lanes="1" speed_limit="13.9" highway_type="emergency_bay" osm_way_id="232147247"/>
-    <link id="l2245" from="n931" to="n922" length="410.68" lanes="4" speed_limit="20.1" highway_type="motorway" osm_way_id="[24537963, 1134512293]" name="Kennedy Expressway"/>
+    <link id="l2245" from="n931" to="n922" length="410.68" lanes="4" speed_limit="20.1" highway_type="motorway" osm_way_id="[24537963, 1134512293]" name="Dan Ryan Expressway"/>
     <link id="l2246" from="n931" to="n1087" length="519.16" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[1020374913, 952403852]" name="Kennedy Expressway"/>
     <link id="l2247" from="n932" to="n926" length="435.11" lanes="3" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[152760251, 23809967]"/>
     <link id="l2248" from="n933" to="n159" length="121.54" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="163148369" name="West Roosevelt Road"/>
@@ -2654,7 +2654,7 @@
     <link id="l2257" from="n936" to="n935" length="11.87" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="1042163979" name="South Union Avenue"/>
     <link id="l2258" from="n937" to="n932" length="193.98" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="152761054"/>
     <link id="l2259" from="n937" to="n1117" length="199.85" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="152761055" name="South Ruble Street"/>
-    <link id="l226" from="n104" to="n109" length="121.06" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435556082, 435556091, 435556086]" name="West Chicago Avenue"/>
+    <link id="l226" from="n104" to="n109" length="121.06" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435556082, 435556091, 435556086]" name="West Chicago Avenue"/>
     <link id="l2260" from="n938" to="n936" length="87.66" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[152760456, 1463030651, 152760453]" name="West Roosevelt Road"/>
     <link id="l2261" from="n938" to="n937" length="70.64" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="23811127" name="South Ruble Street"/>
     <link id="l2262" from="n939" to="n938" length="11.48" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="435381819" name="South Ruble Street"/>
@@ -2765,7 +2765,7 @@
     <link id="l2357" from="n982" to="n983" length="89.72" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[435551653, 435551654]" name="North LaSalle Drive"/>
     <link id="l2358" from="n983" to="n110" length="116.22" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="1285040202" name="West Erie Street"/>
     <link id="l2359" from="n983" to="n444" length="12.74" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="24109334" name="West Erie Street"/>
-    <link id="l236" from="n109" to="n104" length="121.06" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435556082, 435556091, 435556086]" name="West Chicago Avenue"/>
+    <link id="l236" from="n109" to="n104" length="121.06" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435556082, 435556091, 435556086]" name="West Chicago Avenue"/>
     <link id="l2360" from="n983" to="n984" length="88.45" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435555344, 435555340, 983237119]" name="North LaSalle Drive"/>
     <link id="l2361" from="n984" to="n445" length="12.35" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="1050971277" name="West Huron Street"/>
     <link id="l2362" from="n984" to="n985" length="89.01" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="435555347" name="North LaSalle Drive"/>
@@ -2774,13 +2774,13 @@
     <link id="l2365" from="n986" to="n109" length="115.24" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[1120565520, 435556081, 435556092]" name="West Chicago Avenue"/>
     <link id="l2366" from="n986" to="n144" length="13.07" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="435556085" name="West Chicago Avenue"/>
     <link id="l2367" from="n987" to="n254" length="89.65" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[435551672, 220407581]" name="North State Street"/>
-    <link id="l2368" from="n987" to="n692" length="107.78" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24090193, 1396191118]" name="East North Water Street"/>
+    <link id="l2368" from="n987" to="n692" length="107.78" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24090193, 1396191118]" name="East Kinzie Street"/>
     <link id="l2369" from="n987" to="n1039" length="130.15" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[145857442, 1272881725]" name="West Kinzie Street"/>
     <link id="l237" from="n109" to="n440" length="110.87" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="1285040194" name="North Clark Street"/>
     <link id="l2370" from="n987" to="n1195" length="67.45" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[1462057154, 1272363162]" name="North State Street"/>
     <link id="l2371" from="n988" to="n447" length="50.96" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="220952647" name="West Gladys Avenue"/>
     <link id="l2372" from="n989" to="n373" length="45.17" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="223510908" name="West Ohio Street"/>
-    <link id="l2373" from="n990" to="n178" length="131.77" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784882, 145846251, 433784884]" name="South Clark Street"/>
+    <link id="l2373" from="n990" to="n178" length="131.77" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784882, 145846251, 433784884]" name="South Clark Street"/>
     <link id="l2374" from="n990" to="n457" length="85.27" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1067743360" name="West Van Buren Street"/>
     <link id="l2375" from="n991" to="n53" length="137.22" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[657508356, 658362325]" name="North Michigan Avenue"/>
     <link id="l2376" from="n991" to="n619" length="65.73" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="1051036580" name="East Randolph Street"/>
@@ -2790,7 +2790,7 @@
     <link id="l238" from="n109" to="n986" length="115.24" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[1120565520, 435556081, 435556092]" name="West Chicago Avenue"/>
     <link id="l2380" from="n994" to="n276" length="142.41" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[435559513, 435559508, 1267644318]" name="South Michigan Avenue"/>
     <link id="l2381" from="n994" to="n564" length="13.64" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="499084044" name="East 9th Street"/>
-    <link id="l2382" from="n995" to="n355" length="166.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1184438668, 477700991]" name="West Chicago Avenue"/>
+    <link id="l2382" from="n995" to="n355" length="166.06" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1184438668, 477700991]" name="West Chicago Avenue"/>
     <link id="l2383" from="n996" to="n163" length="216.08" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[143927256, 26252391, 243832391]" name="South Halsted Street"/>
     <link id="l2384" from="n996" to="n871" length="40.78" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[953072617, 435724053]" name="South Halsted Street"/>
     <link id="l2385" from="n997" to="n998" length="47.5" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="249983217" name="West Gladys Avenue"/>
@@ -2827,7 +2827,7 @@
     <link id="l2412" from="n1008" to="n1233" length="144.35" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[435724065, 255370739, 769733263]" name="South State Street"/>
     <link id="l2413" from="n1009" to="n147" length="12.42" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1055310100" name="East 18th Street"/>
     <link id="l2414" from="n1009" to="n466" length="125.16" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24083797" name="East 18th Street"/>
-    <link id="l2415" from="n1010" to="n370" length="379.03" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[26341799, 1375663538, 1375663539, 320504231]" name="South Prairie Avenue"/>
+    <link id="l2415" from="n1010" to="n370" length="379.03" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[26341799, 1375663538, 1375663539, 320504231]" name="East 16th Street"/>
     <link id="l2416" from="n1010" to="n392" length="13.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="320504231" name="East 16th Street"/>
     <link id="l2417" from="n1010" to="n835" length="108.43" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[626246713, 1154333378]" name="South Indiana Avenue"/>
     <link id="l2418" from="n1011" to="n1121" length="60.2" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="73911354" name="West 9th Street"/>
@@ -2856,9 +2856,9 @@
     <link id="l2439" from="n1020" to="n606" length="40.01" lanes="6" speed_limit="24.6" highway_type="motorway" osm_way_id="152762224" name="Dan Ryan Expressway"/>
     <link id="l244" from="n112" to="n980" length="114.32" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[23891761, 980829990]" name="West Grand Avenue"/>
     <link id="l2440" from="n1021" to="n226" length="112.39" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="305815457" name="West Polk Street"/>
-    <link id="l2441" from="n1022" to="n24" length="122.96" lanes="1" speed_limit="19.4" highway_type="trunk_link" osm_way_id="[1038621720, 48785301]" name="South Wacker Drive"/>
+    <link id="l2441" from="n1022" to="n24" length="122.96" lanes="2" speed_limit="19.4" highway_type="trunk_link" osm_way_id="[1038621720, 48785301]" name="South Wacker Drive"/>
     <link id="l2442" from="n1022" to="n1023" length="45.96" lanes="1" speed_limit="8.9" highway_type="trunk_link" osm_way_id="312901454"/>
-    <link id="l2443" from="n1023" to="n527" length="653.44" lanes="2" speed_limit="8.9" highway_type="trunk" osm_way_id="[373852570, 931237140, 931237141, 337681343]" name="South Lower Wacker Drive"/>
+    <link id="l2443" from="n1023" to="n527" length="653.44" lanes="2" speed_limit="13.4" highway_type="trunk" osm_way_id="[373852570, 931237140, 931237141, 337681343]" name="South Lower Wacker Drive"/>
     <link id="l2444" from="n1024" to="n924" length="326.69" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[884247284, 884247285]" name="Kennedy Expressway"/>
     <link id="l2445" from="n1024" to="n925" length="430.97" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[23825891, 23825885]"/>
     <link id="l2446" from="n1025" to="n1156" length="41.17" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="1298221997" name="South Wacker Drive"/>
@@ -2912,7 +2912,7 @@
     <link id="l249" from="n114" to="n690" length="113.61" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[230177749, 929942838, 929942840, 929942841, 416556733]" name="West Kinzie Street"/>
     <link id="l2490" from="n1047" to="n80" length="73.39" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[315089480, 1376975503]" name="West Washington Street"/>
     <link id="l2491" from="n1047" to="n1168" length="75.04" lanes="1" speed_limit="13.9" highway_type="secondary_link" osm_way_id="[1191328188, 1191328189]"/>
-    <link id="l2492" from="n1048" to="n1086" length="792.41" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="[24537970, 124471131, 963348533]" name="Kennedy Expressway"/>
+    <link id="l2492" from="n1048" to="n1086" length="792.41" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="[24537970, 124471131, 963348533]" name="Dan Ryan Expressway"/>
     <link id="l2493" from="n1049" to="n1027" length="68.29" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1275417196" name="West Wolf Point Plaza"/>
     <link id="l2494" from="n1049" to="n1049" length="193.94" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1151054010, 1151054009, 364218578]" name="West Wolf Point Plaza"/>
     <link id="l2495" from="n1050" to="n1051" length="109.05" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="597591599" name="West 10th Street"/>
@@ -2923,7 +2923,7 @@
     <link id="l25" from="n14" to="n338" length="83.4" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="48785305" name="West Jackson Boulevard"/>
     <link id="l250" from="n114" to="n1039" length="122.82" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1291030898, 918535326]" name="West Kinzie Street"/>
     <link id="l2500" from="n1053" to="n343" length="38.68" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24078513" name="West Wayman Street"/>
-    <link id="l2501" from="n1054" to="n605" length="181.72" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[435709747, 1050980548]"/>
+    <link id="l2501" from="n1054" to="n605" length="181.72" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[435709747, 1050980548]"/>
     <link id="l2502" from="n1054" to="n1212" length="193.33" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[992220019, 459614661]"/>
     <link id="l2503" from="n1055" to="n241" length="110.62" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="48842495" name="East Grand Avenue"/>
     <link id="l2504" from="n1055" to="n332" length="88.52" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[579022065, 59430170, 1033720345]" name="North Rush Street"/>
@@ -2975,7 +2975,7 @@
     <link id="l2546" from="n1077" to="n1103" length="28.27" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1322009584" name="North Halsted Street"/>
     <link id="l2547" from="n1078" to="n868" length="138.63" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="210649427" name="South Morgan Street"/>
     <link id="l2548" from="n1078" to="n1079" length="9.99" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="802422638"/>
-    <link id="l2549" from="n1079" to="n974" length="77.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1075464296, 231308290]" name="South Morgan Street"/>
+    <link id="l2549" from="n1079" to="n974" length="77.12" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[1075464296, 231308290]" name="South Morgan Street"/>
     <link id="l255" from="n116" to="n757" length="88.41" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="316762105" name="North Wells Street"/>
     <link id="l2550" from="n1079" to="n1078" length="9.99" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="802422638"/>
     <link id="l2551" from="n1080" to="n227" length="72.35" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[1217659576, 253737716]" name="North Milwaukee Avenue"/>
@@ -2999,7 +2999,7 @@
     <link id="l2568" from="n1089" to="n258" length="79.14" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1255513750" name="West Adams Street"/>
     <link id="l2569" from="n1090" to="n1091" length="77.21" lanes="3" speed_limit="22.2" highway_type="motorway_link" osm_way_id="952403860" name="Kennedy Expressway"/>
     <link id="l257" from="n117" to="n118" length="87.22" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="59428827" name="North Wells Street"/>
-    <link id="l2570" from="n1091" to="n572" length="160.14" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[433780235, 1124004469]"/>
+    <link id="l2570" from="n1091" to="n572" length="160.14" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[433780235, 1124004469]"/>
     <link id="l2571" from="n1091" to="n1124" length="78.02" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="952403863" name="Kennedy Expressway"/>
     <link id="l2572" from="n1092" to="n354" length="6.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="990135800" name="North Green Street"/>
     <link id="l2573" from="n1092" to="n355" length="45.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="990135800" name="North Green Street"/>
@@ -3056,7 +3056,7 @@
     <link id="l2619" from="n1116" to="n1112" length="14.71" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="992404339" name="North Clinton Street"/>
     <link id="l262" from="n119" to="n756" length="126.94" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[435552712, 1260443999]" name="West Grand Avenue"/>
     <link id="l2620" from="n1117" to="n857" length="52.93" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1490596520, 1490392057]" name="West Taylor Street"/>
-    <link id="l2621" from="n1118" to="n943" length="830.3" lanes="6" speed_limit="24.6" highway_type="motorway" osm_way_id="[152760610, 152761861, 1135682505, 1144265432, 124471097]" name="Dan Ryan Expressway"/>
+    <link id="l2621" from="n1118" to="n943" length="830.3" lanes="5" speed_limit="24.6" highway_type="motorway" osm_way_id="[152760610, 152761861, 1135682505, 1144265432, 124471097]" name="Dan Ryan Expressway"/>
     <link id="l2622" from="n1119" to="n954" length="23.66" lanes="5" speed_limit="33.3" highway_type="motorway" osm_way_id="1007206495" name="West Ida B. Wells Drive"/>
     <link id="l2623" from="n1120" to="n1220" length="101.34" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[1056418850, 440538716]"/>
     <link id="l2624" from="n1120" to="n1220" length="107.51" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[764689650, 440538717]"/>
@@ -3197,7 +3197,7 @@
     <link id="l2746" from="n1186" to="n384" length="121.37" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24096619" name="West Huron Street"/>
     <link id="l2747" from="n1186" to="n408" length="84.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24096619" name="West Huron Street"/>
     <link id="l2748" from="n1186" to="n783" length="138.04" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[32704760, 566479812]" name="North Sangamon Street"/>
-    <link id="l2749" from="n1187" to="n844" length="109.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[36870045, 1236737478]" name="West 15th Street"/>
+    <link id="l2749" from="n1187" to="n844" length="109.61" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[36870045, 1236737478]" name="South Emerald Avenue"/>
     <link id="l275" from="n123" to="n138" length="84.92" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="5109951" name="East 14th Street"/>
     <link id="l2750" from="n1187" to="n1188" length="70.58" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1236737476" name="South Emerald Avenue"/>
     <link id="l2751" from="n1188" to="n850" length="14.6" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1236737481" name="South Emerald Avenue"/>
@@ -3207,11 +3207,11 @@
     <link id="l2755" from="n1190" to="n659" length="14.53" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1236737482" name="South Emerald Avenue"/>
     <link id="l2756" from="n1190" to="n1189" length="107.73" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1236737480" name="South Emerald Avenue"/>
     <link id="l2757" from="n1191" to="n1051" length="299.44" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="590817058" name="South Wells Street"/>
-    <link id="l2758" from="n1192" to="n621" length="112.39" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[1349641698, 435724075, 435724069, 435724063]" name="South State Street"/>
+    <link id="l2758" from="n1192" to="n621" length="112.39" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[1349641698, 435724075, 435724069, 435724063]" name="South State Street"/>
     <link id="l2759" from="n1192" to="n1044" length="89.96" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[1416652910, 24071819, 1287862806, 452182383]" name="West Harrison Street"/>
     <link id="l276" from="n124" to="n516" length="189.66" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="435542915" name="South State Street"/>
     <link id="l2760" from="n1192" to="n1233" length="19.38" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="292339724" name="South State Street"/>
-    <link id="l2761" from="n1193" to="n1199" length="73.43" lanes="1" speed_limit="16.7" highway_type="secondary" osm_way_id="[23810300, 1276540717, 1276540719]" name="West Kinzie Street"/>
+    <link id="l2761" from="n1193" to="n1199" length="73.43" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[23810300, 1276540717, 1276540719]" name="West Kinzie Street"/>
     <link id="l2762" from="n1193" to="n1200" length="14.04" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="449387215" name="West Kinzie Street"/>
     <link id="l2763" from="n1194" to="n508" length="58.19" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[319361504, 1269924356]" name="East North Water Street"/>
     <link id="l2764" from="n1195" to="n795" length="191.04" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[747184063, 59678443, 747184067, 1457214135]" name="North State Street"/>
@@ -3222,7 +3222,7 @@
     <link id="l2769" from="n1198" to="n235" length="31.26" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="1115087055"/>
     <link id="l277" from="n124" to="n1002" length="12.51" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="421101864" name="East 13th Street"/>
     <link id="l2770" from="n1199" to="n229" length="70.27" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="929942823" name="West Kinzie Street"/>
-    <link id="l2771" from="n1199" to="n1193" length="73.16" lanes="1" speed_limit="16.7" highway_type="secondary" osm_way_id="[1276540715, 1276540716, 1276540718]" name="West Kinzie Street"/>
+    <link id="l2771" from="n1199" to="n1193" length="73.16" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1276540715, 1276540716, 1276540718]" name="West Kinzie Street"/>
     <link id="l2772" from="n1200" to="n1155" length="11.47" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1453722939" name="West Kinzie Street"/>
     <link id="l2773" from="n1200" to="n1193" length="14.04" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="449387215" name="West Kinzie Street"/>
     <link id="l2774" from="n1201" to="n211" length="132.85" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="23890930" name="West Lake Street"/>
@@ -3333,10 +3333,10 @@
     <link id="l2869" from="n1247" to="n310" length="117.17" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1499490088, 1499490087]" name="West Fulton Street"/>
     <link id="l287" from="n127" to="n255" length="270.65" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[435657100, 435657101, 435559807]" name="East Jackson Drive"/>
     <link id="l2870" from="n1247" to="n467" length="6.4" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="56460697" name="West Fulton Street"/>
-    <link id="l288" from="n127" to="n788" length="234.69" lanes="8" speed_limit="16.7" highway_type="secondary" osm_way_id="[435559504, 435559499, 435559500]" name="South Columbus Drive"/>
+    <link id="l288" from="n127" to="n788" length="234.69" lanes="7" speed_limit="16.7" highway_type="secondary" osm_way_id="[435559504, 435559499, 435559500]" name="South Columbus Drive"/>
     <link id="l289" from="n128" to="n127" length="282.18" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[914518496, 435657108, 937102727]" name="South Columbus Drive"/>
     <link id="l29" from="n16" to="n15" length="16.99" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="178424385" name="East Jackson Boulevard"/>
-    <link id="l290" from="n128" to="n550" length="389.93" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[171819296, 23889162, 435657103, 235739316, 235739318, 23889144]" name="North Columbus Drive"/>
+    <link id="l290" from="n128" to="n550" length="389.93" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[171819296, 23889162, 435657103, 235739316, 235739318, 23889144]" name="South Columbus Drive"/>
     <link id="l291" from="n128" to="n781" length="272.26" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[1171998657, 1171998659, 620786790]" name="East Monroe Drive"/>
     <link id="l292" from="n128" to="n1235" length="106.83" lanes="6" speed_limit="16.7" highway_type="secondary" osm_way_id="[56176597, 914786038]" name="East Monroe Drive"/>
     <link id="l293" from="n129" to="n240" length="87.52" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435717216, 319352691, 435717218, 435717219]" name="North Columbus Drive"/>
@@ -3346,7 +3346,7 @@
     <link id="l297" from="n130" to="n404" length="123.65" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24111075" name="West 16th Street"/>
     <link id="l298" from="n130" to="n670" length="129.22" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435562592, 435562590, 802393728, 1154476318]" name="South Clark Street"/>
     <link id="l299" from="n131" to="n315" length="83.76" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784891, 315828470]" name="West Polk Street"/>
-    <link id="l3" from="n3" to="n712" length="366.19" lanes="5" speed_limit="17.9" highway_type="motorway" osm_way_id="[80874394, 1000805423]" name="South DuSable Lake Shore Drive"/>
+    <link id="l3" from="n3" to="n712" length="366.19" lanes="5" speed_limit="20.1" highway_type="motorway" osm_way_id="[80874394, 1000805423]" name="South DuSable Lake Shore Drive"/>
     <link id="l30" from="n16" to="n26" length="142.77" lanes="3" speed_limit="13.4" highway_type="secondary" osm_way_id="[372671690, 435559514]" name="South Michigan Avenue"/>
     <link id="l300" from="n131" to="n319" length="252.04" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784883, 315828468, 435724031]" name="South Clark Street"/>
     <link id="l301" from="n131" to="n810" length="163.44" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[433784887, 317318863]" name="South Clark Street"/>
@@ -3371,7 +3371,7 @@
     <link id="l319" from="n138" to="n123" length="84.92" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="5109951" name="East 14th Street"/>
     <link id="l32" from="n17" to="n25" length="142.78" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="4630404" name="South Wabash Avenue"/>
     <link id="l320" from="n138" to="n834" length="87.44" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1190666954" name="East 14th Street"/>
-    <link id="l321" from="n138" to="n835" length="454.9" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[472927560, 5109950]" name="East 15th Place"/>
+    <link id="l321" from="n138" to="n835" length="454.9" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[472927560, 5109950]" name="South Prairie Avenue"/>
     <link id="l322" from="n139" to="n259" length="143.03" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[722265618, 435724051, 433777236, 433777238]" name="South Halsted Street"/>
     <link id="l323" from="n139" to="n295" length="151.02" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[433780224, 313500943]" name="North Halsted Street"/>
     <link id="l324" from="n139" to="n580" length="72.15" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[433777241, 24442647]" name="West Madison Street"/>
@@ -3556,7 +3556,7 @@
     <link id="l486" from="n198" to="n199" length="88.38" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549651, 435549654, 435549662]" name="North Orleans Street"/>
     <link id="l487" from="n198" to="n239" length="186.07" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="33262456" name="West Illinois Street"/>
     <link id="l488" from="n198" to="n424" length="118.53" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="1330337192" name="West Illinois Street"/>
-    <link id="l489" from="n198" to="n602" length="89.83" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549672, 435549666, 48842222]" name="North Orleans Street"/>
+    <link id="l489" from="n198" to="n602" length="89.83" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549672, 435549666, 48842222]" name="North Orleans Street"/>
     <link id="l49" from="n25" to="n28" length="132.51" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1190700429" name="East Van Buren Street"/>
     <link id="l490" from="n199" to="n198" length="88.38" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549651, 435549662, 435549654]" name="North Orleans Street"/>
     <link id="l491" from="n199" to="n200" length="91.76" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435549673, 435549657, 435549677]" name="North Orleans Street"/>
@@ -3644,7 +3644,7 @@
     <link id="l565" from="n226" to="n1021" length="112.39" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="305815457" name="West Polk Street"/>
     <link id="l566" from="n226" to="n1216" length="159.82" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[827659095, 1256096311]" name="South Wells Street"/>
     <link id="l567" from="n227" to="n228" length="120.69" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[1287395421, 23810295]" name="West Kinzie Street"/>
-    <link id="l568" from="n227" to="n310" length="249.71" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[435832508, 56460400, 56460401, 435650704, 253737715, 1124448278, 1284734810, 5120700, 435832510]" name="North Desplaines Street"/>
+    <link id="l568" from="n227" to="n310" length="249.71" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435832508, 56460400, 56460401, 435650704, 253737715, 1124448278, 1284734810, 5120700, 435832510]" name="North Desplaines Street"/>
     <link id="l569" from="n227" to="n720" length="117.44" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="56629623" name="West Kinzie Street"/>
     <link id="l57" from="n28" to="n29" length="89.07" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1194188299, 1190700428]" name="West Van Buren Street"/>
     <link id="l570" from="n227" to="n1080" length="72.35" lanes="3" speed_limit="11.2" highway_type="secondary" osm_way_id="[1217659576, 253737716]" name="North Milwaukee Avenue"/>
@@ -3658,13 +3658,13 @@
     <link id="l578" from="n230" to="n601" length="122.93" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[23810299, 1275373141, 929942830]" name="West Kinzie Street"/>
     <link id="l579" from="n230" to="n687" length="112.27" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[33262482, 1051014078]" name="North Wells Street"/>
     <link id="l58" from="n28" to="n1040" length="64.79" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="24613631" name="South State Street"/>
-    <link id="l580" from="n231" to="n128" length="390.14" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[230771014, 1047851050, 235739315, 235739319, 59682616, 171819294]" name="North Columbus Drive"/>
+    <link id="l580" from="n231" to="n128" length="390.14" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[230771014, 1047851050, 235739315, 235739319, 59682616, 171819294]" name="South Columbus Drive"/>
     <link id="l581" from="n231" to="n550" length="9.02" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="1284737907" name="East Randolph Drive"/>
     <link id="l582" from="n232" to="n278" length="109.6" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1176285241, 48782007]" name="North Field Boulevard"/>
     <link id="l583" from="n232" to="n548" length="264.87" lanes="2" speed_limit="8.9" highway_type="tertiary" osm_way_id="[1176285240, 1049333844, 24956149, 234845045]" name="East Randolph Street"/>
-    <link id="l584" from="n232" to="n838" length="188.85" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[151974781, 24957238]" name="East Randolph Street"/>
+    <link id="l584" from="n232" to="n838" length="188.85" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[151974781, 24957238]" name="North Harbor Drive"/>
     <link id="l585" from="n233" to="n678" length="18.76" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="23810398" name="East Illinois Street"/>
-    <link id="l586" from="n233" to="n1125" length="150.84" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[435657392, 1021843336]" name="Lower Jean Baptiste Point DuSable Lake Shore Drive"/>
+    <link id="l586" from="n233" to="n1125" length="150.84" lanes="2" speed_limit="22.2" highway_type="motorway_link" osm_way_id="[435657392, 1021843336]" name="Lower Lake Shore Drive"/>
     <link id="l587" from="n234" to="n555" length="37.55" lanes="4" speed_limit="11.1" highway_type="unclassified" osm_way_id="23810354" name="East Grand Avenue"/>
     <link id="l588" from="n234" to="n752" length="98.89" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[945710494, 59427935]" name="East Grand Avenue"/>
     <link id="l589" from="n235" to="n753" length="100.63" lanes="1" speed_limit="13.9" highway_type="busway" osm_way_id="[23810377, 880840290, 1260443972]"/>
@@ -3796,8 +3796,8 @@
     <link id="l701" from="n277" to="n629" length="16.84" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="519223975" name="South Plymouth Court"/>
     <link id="l702" from="n277" to="n742" length="42.99" lanes="4" speed_limit="16.7" highway_type="secondary" osm_way_id="[514505608, 435724088]" name="West Ida B. Wells Drive"/>
     <link id="l703" from="n278" to="n232" length="109.6" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1176285241, 48782007]" name="North Field Boulevard"/>
-    <link id="l704" from="n278" to="n281" length="288.23" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[1423245225, 23888586, 89215842, 89215847]" name="East Benton Place"/>
-    <link id="l705" from="n279" to="n278" length="381.82" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[23888586, 89215850, 89215847]" name="East Benton Place"/>
+    <link id="l704" from="n278" to="n281" length="288.23" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[1423245225, 23888586, 89215842, 89215847]" name="North Westshore Drive"/>
+    <link id="l705" from="n279" to="n278" length="381.82" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="[23888586, 89215850, 89215847]" name="North Park Drive"/>
     <link id="l706" from="n280" to="n1164" length="72.45" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="23888611" name="North Field Boulevard"/>
     <link id="l707" from="n281" to="n279" length="17.2" lanes="1" speed_limit="8.9" highway_type="residential" osm_way_id="89215847" name="East South Water Street"/>
     <link id="l708" from="n281" to="n1164" length="57.37" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[23888618, 751528115]" name="North Field Boulevard"/>
@@ -3892,7 +3892,7 @@
     <link id="l789" from="n309" to="n467" length="118.6" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="143926576" name="West Fulton Street"/>
     <link id="l79" from="n37" to="n622" length="132.11" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[59667619, 1033716708]" name="South Financial Place"/>
     <link id="l790" from="n309" to="n1112" length="216.77" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="59145215" name="North Clinton Street"/>
-    <link id="l791" from="n310" to="n227" length="249.71" lanes="5" speed_limit="16.7" highway_type="secondary" osm_way_id="[5120700, 435650704, 56460400, 56460401, 253737715, 1124448278, 1284734810, 435832508, 435832510]" name="North Desplaines Street"/>
+    <link id="l791" from="n310" to="n227" length="249.71" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[5120700, 435650704, 56460400, 56460401, 253737715, 1124448278, 1284734810, 435832508, 435832510]" name="North Desplaines Street"/>
     <link id="l792" from="n310" to="n492" length="61.62" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[1124448277, 435650703]" name="North Desplaines Street"/>
     <link id="l793" from="n310" to="n716" length="115.13" lanes="2" speed_limit="13.4" highway_type="secondary" osm_way_id="56460698" name="West Fulton Market"/>
     <link id="l794" from="n310" to="n1247" length="117.17" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1499490088, 1499490087]" name="West Fulton Street"/>
@@ -4014,7 +4014,7 @@
     <link id="l899" from="n350" to="n143" length="120.26" lanes="7" speed_limit="16.7" highway_type="secondary" osm_way_id="[435556084, 1377424508, 1377424509]" name="West Chicago Avenue"/>
     <link id="l9" from="n6" to="n731" length="303.34" lanes="1" speed_limit="22.2" highway_type="motorway_link" osm_way_id="23825683"/>
     <link id="l90" from="n42" to="n364" length="157.51" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="24093736" name="East Huron Street"/>
-    <link id="l900" from="n350" to="n374" length="111.4" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[24115201, 692898339]" name="North Sedgwick Street"/>
+    <link id="l900" from="n350" to="n374" length="111.4" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24115201, 692898339]" name="North Sedgwick Street"/>
     <link id="l901" from="n350" to="n482" length="111.18" lanes="7" speed_limit="16.7" highway_type="secondary" osm_way_id="[435655139, 1377424510]" name="West Chicago Avenue"/>
     <link id="l902" from="n351" to="n356" length="118.5" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[145799521, 1213410074, 992397427, 992397426]" name="North Green Street"/>
     <link id="l903" from="n351" to="n411" length="98.09" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[145799520, 952707029, 952707030]" name="West Hubbard Street"/>
@@ -4029,7 +4029,7 @@
     <link id="l911" from="n354" to="n1092" length="6.12" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="990135800" name="North Green Street"/>
     <link id="l912" from="n354" to="n1094" length="31.32" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="990135800" name="North Green Street"/>
     <link id="l913" from="n354" to="n1131" length="24.46" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1213414730, 990135799]" name="West Huron Street"/>
-    <link id="l914" from="n355" to="n995" length="166.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[1184438668, 477700991]" name="North Green Street"/>
+    <link id="l914" from="n355" to="n995" length="166.06" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1184438668, 477700991]" name="West Chicago Avenue"/>
     <link id="l915" from="n355" to="n1092" length="45.06" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="990135800" name="North Green Street"/>
     <link id="l916" from="n355" to="n1143" length="60.18" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="1126560633" name="West Superior Street"/>
     <link id="l917" from="n355" to="n1181" length="102.93" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="621625474" name="West Superior Street"/>
@@ -4052,7 +4052,7 @@
     <link id="l932" from="n362" to="n491" length="60.68" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[979987096, 24082316]" name="North Union Avenue"/>
     <link id="l933" from="n362" to="n492" length="102.87" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24101466" name="West Walnut Street"/>
     <link id="l934" from="n362" to="n716" length="64.47" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24082316" name="North Union Avenue"/>
-    <link id="l935" from="n363" to="n44" length="355.77" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[145857412, 1028877605, 24952124]" name="East Ohio Street"/>
+    <link id="l935" from="n363" to="n44" length="355.77" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="[145857412, 1028877605, 24952124]" name="East Ohio Street"/>
     <link id="l936" from="n363" to="n461" length="91.42" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="145857431" name="North McClurg Court"/>
     <link id="l937" from="n363" to="n748" length="88.91" lanes="4" speed_limit="13.9" highway_type="tertiary" osm_way_id="145857419" name="North McClurg Court"/>
     <link id="l938" from="n364" to="n42" length="157.51" lanes="2" speed_limit="13.9" highway_type="tertiary" osm_way_id="24093736" name="East Huron Street"/>
@@ -4067,10 +4067,10 @@
     <link id="l946" from="n368" to="n369" length="89.64" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[24371937, 1125253228]" name="North Larrabee Street"/>
     <link id="l947" from="n368" to="n403" length="118.79" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="187126667" name="West Huron Street"/>
     <link id="l948" from="n369" to="n375" length="119.25" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="187127145" name="West Superior Street"/>
-    <link id="l949" from="n369" to="n481" length="109.48" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[59208010, 692898340]" name="North Larrabee Street"/>
+    <link id="l949" from="n369" to="n481" length="109.48" lanes="2" speed_limit="11.1" highway_type="residential" osm_way_id="[59208010, 692898340]" name="North Larrabee Street"/>
     <link id="l95" from="n45" to="n46" length="112.76" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435556072, 435556070, 435556071]" name="East Chicago Avenue"/>
     <link id="l950" from="n370" to="n147" length="122.96" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="140872470" name="East 18th Street"/>
-    <link id="l951" from="n370" to="n1010" length="379.03" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[320504231, 1375663538, 1375663539, 26341799]" name="South Prairie Avenue"/>
+    <link id="l951" from="n370" to="n1010" length="379.03" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[320504231, 1375663538, 1375663539, 26341799]" name="East 16th Street"/>
     <link id="l952" from="n371" to="n130" length="198.93" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="[1214150032, 229362147, 1214150031]" name="South Clark Street"/>
     <link id="l953" from="n371" to="n695" length="278.29" lanes="2" speed_limit="16.7" highway_type="secondary" osm_way_id="229362147" name="South Clark Street"/>
     <link id="l954" from="n371" to="n713" length="107.23" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="56180020" name="West 15th Street"/>
@@ -4081,7 +4081,7 @@
     <link id="l959" from="n374" to="n202" length="117.73" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="187127145" name="West Superior Street"/>
     <link id="l96" from="n45" to="n336" length="103.97" lanes="3" speed_limit="16.7" highway_type="secondary" osm_way_id="[435717653, 435717654]" name="East Chicago Avenue"/>
     <link id="l960" from="n374" to="n341" length="120.76" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="187127145" name="West Superior Street"/>
-    <link id="l961" from="n374" to="n350" length="111.4" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="[24115201, 692898339]" name="North Sedgwick Street"/>
+    <link id="l961" from="n374" to="n350" length="111.4" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24115201, 692898339]" name="North Sedgwick Street"/>
     <link id="l962" from="n374" to="n414" length="88.15" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="24115201" name="North Sedgwick Street"/>
     <link id="l963" from="n375" to="n142" length="109.46" lanes="1" speed_limit="13.9" highway_type="tertiary" osm_way_id="[24109707, 692898334]" name="North Kingsbury Street"/>
     <link id="l964" from="n375" to="n341" length="121.81" lanes="1" speed_limit="11.1" highway_type="residential" osm_way_id="187127145" name="West Superior Street"/>

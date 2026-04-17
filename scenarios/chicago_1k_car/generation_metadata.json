@@ -7,13 +7,13 @@
   "modes": [
     "car"
   ],
-  "start_time_s": 25200,
-  "end_time_s": 28800,
+  "start_time_s": 0,
+  "end_time_s": 86400,
   "radius_km": 2.0,
   "seed": 42,
   "demand_strategy": "census",
   "node_count": 1248,
   "link_count": 2871,
   "signal_count": 925,
-  "generation_time_s": 27.8
+  "generation_time_s": 28.7
 }

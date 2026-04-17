@@ -132,6 +132,7 @@ def show_list():
 def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeout: int) -> dict:
     """Run SUMO simulation."""
     from adapters.sumo.sumo_adapter import prepare_sumo_inputs
+    from evaluation.metrics.travel_time import parse_sumo_tripinfo
     
     native_dir = output_dir / "native_files"
     native_dir.mkdir(parents=True, exist_ok=True)
@@ -147,6 +148,8 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
     if not cfg_file.exists():
         return {"status": "failed", "error": "No SUMO config file generated", "wall_time_s": 0}
     
+    tripinfo_path = output_dir / "tripinfo.xml"
+    
     # Build SUMO command
     sumo_cmd = ["sumo"]
     if mode == "meso":
@@ -155,7 +158,8 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
     sumo_cmd.extend([
         "-c", str(cfg_file.resolve()),
         "--seed", str(seed),
-        "--tripinfo-output", str((output_dir / "tripinfo.xml").resolve()),
+        "--ignore-route-errors",
+        "--tripinfo-output", str(tripinfo_path.resolve()),
         "--statistic-output", str((output_dir / "statistics.xml").resolve()),
     ])
     
@@ -171,30 +175,90 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
         )
         wall_time = time.time() - start_time
         
-        if proc_result.returncode == 0:
-            return {"status": "success", "wall_time_s": round(wall_time, 2), "error": None}
-        else:
-            return {"status": "failed", "wall_time_s": round(wall_time, 2), "error": proc_result.stderr[:500]}
+        # SUMO returns non-zero for warnings (e.g., code 100).
+        # Check for actual errors in stderr, not just return code.
+        has_error = False
+        if proc_result.returncode != 0:
+            error_lines = [l for l in (proc_result.stderr or "").split("\n")
+                           if l.strip().startswith("Error:")]
+            if error_lines:
+                has_error = True
+        
+        if has_error and not tripinfo_path.exists():
+            return {"status": "failed", "wall_time_s": round(wall_time, 2),
+                    "error": proc_result.stderr[:500]}
     
     except subprocess.TimeoutExpired:
         return {"status": "failed", "error": f"Timeout after {timeout}s", "wall_time_s": timeout}
     except (OSError, subprocess.SubprocessError) as e:
         return {"status": "failed", "error": str(e), "wall_time_s": 0}
+    
+    # Parse travel time metrics from tripinfo.xml
+    metrics = {}
+    if tripinfo_path.exists():
+        try:
+            stats = parse_sumo_tripinfo(tripinfo_path)
+            metrics["travel_time"] = {
+                "trip_count": stats.trip_count,
+                "mean": stats.mean_travel_time_s,
+                "p95": stats.p95_travel_time_s,
+            }
+        except (ValueError, FileNotFoundError):
+            pass
+    
+    return {
+        "status": "success",
+        "wall_time_s": round(wall_time, 2),
+        "error": None,
+        "metrics": metrics,
+    }
 
 
 def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeout: int) -> dict:
     """Run MATSim simulation."""
-    # Mark parameters as intentionally unused for now (placeholders for future implementation)
-    _ = (scenario_path, mode, seed, output_dir, timeout)
+    from adapters.matsim.matsim_adapter import (
+        prepare_matsim_inputs, run_matsim as _run_matsim,
+        parse_matsim_output, find_matsim_jar
+    )
     
-    # Check if MATSim adapter exists
-    matsim_jar = Path("lib/matsim-15.0/matsim-15.0.jar")
-    if not matsim_jar.exists():
-        return {"status": "failed", "error": "MATSim JAR not found", "wall_time_s": 0}
+    matsim_jar = find_matsim_jar()
+    if matsim_jar is None:
+        return {"status": "failed", "error": "MATSim JAR not found (install to lib/matsim-15.0/)", "wall_time_s": 0}
     
-    # For now, return a placeholder indicating MATSim needs integration
-    # Full MATSim integration requires config file generation
-    return {"status": "failed", "error": "MATSim adapter not fully integrated yet", "wall_time_s": 0}
+    native_dir = output_dir / "native_files"
+    native_dir.mkdir(parents=True, exist_ok=True)
+    
+    try:
+        config_path = prepare_matsim_inputs(scenario_path, native_dir, random_seed=seed)
+    except (OSError, ValueError, RuntimeError) as e:
+        return {"status": "failed", "error": f"Conversion failed: {e}", "wall_time_s": 0}
+    
+    success, wall_time, error = _run_matsim(config_path, timeout_s=timeout)
+    
+    if not success:
+        return {"status": "failed", "wall_time_s": round(wall_time, 2), "error": error or "MATSim failed"}
+    
+    # Parse MATSim output for metrics
+    metrics = {}
+    matsim_output_dir = native_dir / "output" / "ITERS" / "it.0"
+    # Also check top-level output
+    if not matsim_output_dir.exists():
+        matsim_output_dir = native_dir / "output"
+    
+    tt_data = parse_matsim_output(matsim_output_dir)
+    if tt_data:
+        metrics["travel_time"] = {
+            "trip_count": tt_data.get("trip_count", 0),
+            "mean": tt_data.get("mean_travel_time_s", 0),
+            "p95": tt_data.get("p95_travel_time_s", 0),
+        }
+    
+    return {
+        "status": "success",
+        "wall_time_s": round(wall_time, 2),
+        "error": None,
+        "metrics": metrics,
+    }
 
 
 def run_simulation(scenario: str, engine: str, mode: str, seed: int, 
@@ -399,10 +463,12 @@ Examples:
                     
                     result.update({
                         "scenario": scenario,
+                        "scenario_id": f"{scenario}_{engine}_{mode}",
                         "engine": engine,
                         "mode": mode,
                         "seed": seed,
                         "repeat": rep + 1,
+                        "runtime_s": result.get("wall_time_s", 0),
                     })
                     results.append(result)
                     

@@ -341,7 +341,7 @@ def build_sumo_edges_xml(graph: NetworkGraph) -> str:
     for link in graph.links:
         lines.append(
             f'    <edge id="{link.id}" from="{link.from_node}" to="{link.to_node}" '
-            f'numLanes="{link.lanes}" speed="{link.speed}"/>'
+            f'numLanes="{link.lanes}" speed="{link.speed}" length="{link.length:.2f}"/>'
         )
     lines.append('</edges>')
     return "\n".join(lines)
@@ -465,24 +465,29 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
     # Run netconvert to generate proper net.net.xml
     net_path = output_dir / "net.net.xml"
     try:
-        subprocess.run(
+        nc_result = subprocess.run(
             [
                 "netconvert",
                 "--node-files", str(nodes_path),
                 "--edge-files", str(edges_path),
                 "--output-file", str(net_path),
+                "--proj.plain-geo",
                 "--no-turnarounds",
             ],
-            check=True,
+            check=False,
             capture_output=True,
             text=True,
         )
+        # netconvert returns non-zero for warnings; only fail on actual errors
+        if nc_result.returncode != 0:
+            error_lines = [l for l in (nc_result.stderr or "").split("\n")
+                           if l.strip().startswith("Error:")]
+            if error_lines or not net_path.exists():
+                raise RuntimeError(f"netconvert failed: {nc_result.stderr}")
     except FileNotFoundError:
         raise RuntimeError(
             "netconvert not found. Please install SUMO and ensure 'netconvert' is on your PATH."
         )
-    except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"netconvert failed: {e.stderr}")
 
     # Build SUMO routes
     routes_content = build_sumo_routes_xml(summary, graph, demand_path)

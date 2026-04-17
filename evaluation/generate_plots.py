@@ -115,7 +115,7 @@ def analyze_results(results: dict) -> list[ScenarioMetrics]:
     
     # Group runs by scenario_id
     by_scenario = {}
-    for run in results.get("results", []):
+    for run in results.get("results", results.get("runs", [])):
         scenario_id = run.get("scenario_id", "unknown")
         if scenario_id not in by_scenario:
             by_scenario[scenario_id] = []
@@ -553,11 +553,12 @@ def generate_all_plots(results_paths: list[Path], output_dir: Path) -> dict:
         print(f"Loading results from: {results_path}")
         results = load_results(results_path)
         
-        print(f"  Benchmark: {results.get('runspec_name', 'unknown')}")
-        print(f"  Runs: {results.get('total_runs', 0)} total, {results.get('successful_runs', 0)} successful")
+        print(f"  Benchmark: {results.get('runspec_name', results.get('timestamp', 'unknown'))}")
+        print(f"  Runs: {results.get('total_runs', len(results.get('results', results.get('runs', []))))} total, "
+              f"{results.get('successful_runs', results.get('summary', {}).get('completed', '?'))} successful")
         
-        total_runs += results.get('total_runs', 0)
-        successful_runs += results.get('successful_runs', 0)
+        total_runs += results.get('total_runs', len(results.get('results', results.get('runs', []))))
+        successful_runs += results.get('successful_runs', results.get('summary', {}).get('completed', 0))
         
         file_metrics = analyze_results(results)
         all_metrics.extend(file_metrics)

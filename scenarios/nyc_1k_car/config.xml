@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <config>
-  <metadata scenario_id="chicago_1k_car" created_by="simforge_generator">
-    <description>Chicago, IL — 1,000 car trips, 00:00–24:00, r=2.0km</description>
+  <metadata scenario_id="nyc_1k_car" created_by="simforge_generator">
+    <description>New York City, NY — 1,000 car trips, 00:00–24:00, r=1.5km</description>
   </metadata>
   <time start_time_s="0" end_time_s="86400" time_step_s="1"/>
   <random seed="42" engine_seed_mode="fixed"/>

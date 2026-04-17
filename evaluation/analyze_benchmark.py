@@ -59,7 +59,7 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
     
     # Group runs by scenario_id (which includes engine info)
     by_scenario = {}
-    for run in results.get("results", []):  # Changed from "runs" to "results"
+    for run in results.get("results", results.get("runs", [])):
         scenario_id = run.get("scenario_id", "unknown")
         if scenario_id not in by_scenario:
             by_scenario[scenario_id] = []
@@ -281,8 +281,8 @@ def main():
     print(f"Loading results from: {args.results}")
     results = load_results(args.results)
     
-    print(f"Benchmark: {results.get('runspec_name', 'unknown')}")
-    print(f"Total runs: {len(results.get('runs', []))}")
+    print(f"Benchmark: {results.get('runspec_name', results.get('timestamp', 'unknown'))}")
+    print(f"Total runs: {len(results.get('results', results.get('runs', [])))}")
     
     stats_list = analyze_results(results)
     
