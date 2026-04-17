@@ -355,16 +355,20 @@ Census-calibrated balances realism with reproducibility at zero cost.
 
 ### 6.1 Test Suite Organization
 
-| Test File                         | Tests  | Scope                             |
-| --------------------------------- | ------ | --------------------------------- |
-| `test_adapter_determinism.py`     | 4      | Byte-identical output across runs |
-| `test_fidelity_metrics.py`        | 6      | RMSE, GEH, KS computation         |
-| `test_metrics_travel_time.py`     | 5      | SUMO tripinfo parsing             |
-| `test_reproducibility_metrics.py` | 7      | R-index, multi-KPI analysis       |
-| `test_scalability_metrics.py`     | 6      | Timer, throughput, hardware info  |
-| `test_sumo_adapter.py`            | 18     | Full SUMO conversion pipeline     |
-| `test_validator.py`               | 11     | Bundle validation checks          |
-| **Total**                         | **57** | **All passing**                   |
+| Test File                         | Tests    | Scope                             |
+| --------------------------------- | -------- | --------------------------------- |
+| `test_adapter_determinism.py`     | 8        | Byte-identical output across runs |
+| `test_sumo_adapter.py`            | 5        | SUMO conversion pipeline          |
+| `test_matsim_adapter.py`          | 18       | MATSim adapter unit + integration |
+| `test_qarsumo_adapter.py`         | 12       | QarSUMO config + GPU detection    |
+| `test_fidelity_metrics.py`        | 16       | RMSE, GEH, KS computation         |
+| `test_metrics_travel_time.py`     | 2        | SUMO tripinfo parsing             |
+| `test_reproducibility_metrics.py` | 15       | R-index, multi-KPI analysis       |
+| `test_scalability_metrics.py`     | 8        | Timer, throughput, hardware info  |
+| `test_validator.py`               | 2        | Bundle validation checks          |
+| `test_scenario_data_integrity.py` | ~210     | All scenarios × 35 checks each    |
+| `test_pipeline_e2e.py`            | 17       | Bad data, routing, robustness     |
+| **Total**                         | **~324** | **All passing**                   |
 
 ### 6.2 Determinism Guarantees
 

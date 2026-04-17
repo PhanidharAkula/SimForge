@@ -37,7 +37,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 ### Prerequisites
 
 - Python 3.10+
-- SUMO 1.18+ (optional, for simulation)
+- SUMO 1.20+ (optional, for simulation)
 - Java 17+ (optional, for MATSim)
 
 ### Installation
@@ -112,8 +112,11 @@ SimForge/
 ├── runspecs/               # Benchmark configurations (YAML)
 ├── scenarios/              # Generated canonical bundles
 │   ├── chicago_1k_car/
-│   ├── nyc_10k_car/
-│   └── la_50k_bike_car_transit/
+│   ├── chicago_200k_car_transit/
+│   ├── la_1k_car/
+│   ├── la_50k_bike_car_transit/
+│   ├── nyc_1k_car/
+│   └── nyc_10k_car/
 ├── lib/matsim-15.0/        # MATSim JAR + libs
 ├── runs/                   # Simulation output (gitignored)
 ├── tests/                  # pytest test suite

@@ -17,12 +17,15 @@ reflect the actual canonical content of the toy scenario.
 from __future__ import annotations
 
 import csv
+import logging
 import subprocess
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Tuple, Set, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -89,7 +92,14 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
 
     # --- Config: scenario_id + time horizon ---
     config_path = paths["config"]
-    config_tree = ET.parse(config_path)
+    try:
+        config_tree = ET.parse(config_path)
+    except ET.ParseError as e:
+        raise ValueError(
+            f"Failed to parse config.xml at {config_path}: {e}\n"
+            f"  Possible causes: file is truncated, has encoding issues, or is not valid XML.\n"
+            f"  Fix: Re-generate the scenario or check the file with 'xmllint {config_path}'."
+        ) from e
     config_root = config_tree.getroot()
     if config_root.tag != "config":
         raise ValueError(f"config.xml root must be <config>, found <{config_root.tag}>")
@@ -111,12 +121,35 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
     if start_time_s_raw is None or end_time_s_raw is None:
         raise ValueError("config.xml <time> must define 'start_time_s' and 'end_time_s'")
 
-    start_time_s = int(start_time_s_raw)
-    end_time_s = int(end_time_s_raw)
+    try:
+        start_time_s = int(float(start_time_s_raw))
+    except (ValueError, TypeError):
+        raise ValueError(
+            f"config.xml <time> start_time_s='{start_time_s_raw}' is not a valid number.\n"
+            f"  Expected an integer (seconds), e.g. start_time_s=\"0\"."
+        )
+    try:
+        end_time_s = int(float(end_time_s_raw))
+    except (ValueError, TypeError):
+        raise ValueError(
+            f"config.xml <time> end_time_s='{end_time_s_raw}' is not a valid number.\n"
+            f"  Expected an integer (seconds), e.g. end_time_s=\"86400\"."
+        )
+    if end_time_s <= start_time_s:
+        raise ValueError(
+            f"config.xml <time> end_time_s ({end_time_s}) must be greater than "
+            f"start_time_s ({start_time_s})."
+        )
 
     # --- Network: node + link counts ---
     network_path = paths["network"]
-    network_tree = ET.parse(network_path)
+    try:
+        network_tree = ET.parse(network_path)
+    except ET.ParseError as e:
+        raise ValueError(
+            f"Failed to parse network.xml at {network_path}: {e}\n"
+            f"  Fix: Re-generate the network or check with 'xmllint {network_path}'."
+        ) from e
     network_root = network_tree.getroot()
     if network_root.tag != "network":
         raise ValueError(f"network.xml root must be <network>, found <{network_root.tag}>")
@@ -130,10 +163,29 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
     # --- Demand: trip count ---
     demand_path = paths["demand"]
     trip_count = 0
-    with demand_path.open(newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        for _row in reader:
-            trip_count += 1
+    try:
+        with demand_path.open(newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            if reader.fieldnames is None:
+                raise ValueError(
+                    f"demand.csv at {demand_path} is empty or has no header row.\n"
+                    f"  Expected columns: trip_id, origin_node_id, destination_node_id, departure_time_s, mode"
+                )
+            required = {"trip_id", "origin_node_id", "destination_node_id", "departure_time_s"}
+            missing = required - set(reader.fieldnames)
+            if missing:
+                raise ValueError(
+                    f"demand.csv at {demand_path} is missing required columns: {', '.join(sorted(missing))}\n"
+                    f"  Found columns: {', '.join(reader.fieldnames)}\n"
+                    f"  Expected: trip_id, origin_node_id, destination_node_id, departure_time_s, mode"
+                )
+            for _row in reader:
+                trip_count += 1
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            f"demand.csv not found at {demand_path}.\n"
+            f"  Check that manifest.xml points to the correct demand file."
+        )
 
     # --- Signals: presence flag ---
     has_signals = False
@@ -189,7 +241,13 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
     """
     Parse canonical network.xml into a simple directed graph representation.
     """
-    tree = ET.parse(network_path)
+    try:
+        tree = ET.parse(network_path)
+    except ET.ParseError as e:
+        raise ValueError(
+            f"Failed to parse network.xml at {network_path}: {e}\n"
+            f"  Fix: Re-generate the network or check with 'xmllint {network_path}'."
+        ) from e
     root = tree.getroot()
     if root.tag != "network":
         raise ValueError(f"network.xml root must be <network>, found <{root.tag}>")
@@ -368,9 +426,13 @@ def build_sumo_routes_xml(
 
     skipped_trips: List[str] = []
 
+    from pipeline.progress import ProgressBar
+    pb = ProgressBar(total=summary.trip_count, desc="Routing trips (BFS)")
+
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row_idx, row in enumerate(reader, start=2):
+            pb.update()
             trip_id = (row.get("trip_id") or "").strip()
             origin = (row.get("origin_node_id") or "").strip()
             dest = (row.get("destination_node_id") or "").strip()
@@ -410,10 +472,24 @@ def build_sumo_routes_xml(
             )
             lines.append("  </vehicle>")
 
+    pb.finish()
+
     if skipped_trips:
         lines.append("  <!-- Skipped trips (no path or bad data): "
                      + ", ".join(skipped_trips)
                      + " -->")
+        total = summary.trip_count
+        skipped = len(skipped_trips)
+        pct = (skipped / total * 100) if total > 0 else 0
+        logger.warning(
+            f"Skipped {skipped}/{total} trips ({pct:.0f}%) — no valid route found. "
+            f"This may indicate a disconnected network."
+        )
+        if total > 0 and pct > 50:
+            logger.error(
+                f"More than 50% of trips have no valid route. "
+                f"The network may be highly disconnected or the demand references nodes outside the network."
+            )
 
     lines.append("</routes>")
     return "\n".join(lines)
@@ -480,13 +556,34 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
         )
         # netconvert returns non-zero for warnings; only fail on actual errors
         if nc_result.returncode != 0:
+            # Detect signal-based crashes (e.g., SIGSEGV on Apple Silicon)
+            if nc_result.returncode < 0:
+                import platform
+                signal_num = -nc_result.returncode
+                msg = (
+                    f"netconvert crashed with signal {signal_num} (e.g., segmentation fault).\n"
+                )
+                if platform.machine() == "arm64":
+                    msg += (
+                        f"  This is a known SUMO bug on Apple Silicon for large networks (>~3000 nodes).\n"
+                        f"  Workarounds:\n"
+                        f"    1. Use a smaller network (reduce --radius in the generation script)\n"
+                        f"    2. Run on Linux/HPC where SUMO's x86_64 binary handles large networks\n"
+                        f"    3. Build SUMO from source with Rosetta 2 (arch -x86_64)"
+                    )
+                raise RuntimeError(msg)
             error_lines = [l for l in (nc_result.stderr or "").split("\n")
                            if l.strip().startswith("Error:")]
             if error_lines or not net_path.exists():
                 raise RuntimeError(f"netconvert failed: {nc_result.stderr}")
     except FileNotFoundError:
         raise RuntimeError(
-            "netconvert not found. Please install SUMO and ensure 'netconvert' is on your PATH."
+            "netconvert not found on PATH.\n"
+            "  Install SUMO and ensure 'netconvert' is accessible:\n"
+            "    macOS:  brew install sumo\n"
+            "    Ubuntu: sudo apt-get install sumo sumo-tools\n"
+            "    Conda:  conda install -c conda-forge sumo\n"
+            "  Then verify: netconvert --version"
         )
 
     # Build SUMO routes

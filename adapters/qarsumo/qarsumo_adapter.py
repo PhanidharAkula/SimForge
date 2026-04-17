@@ -22,7 +22,14 @@ from pathlib import Path
 from typing import Optional
 import logging
 
-from lxml import etree
+try:
+    from lxml import etree
+except ImportError:
+    raise ImportError(
+        "lxml is required for the QarSUMO adapter.\n"
+        "  Install with: pip install lxml\n"
+        "  Or: conda install lxml"
+    )
 
 # Reuse SUMO adapter for base input generation
 from adapters.sumo.sumo_adapter import prepare_sumo_inputs
@@ -138,7 +145,14 @@ def extend_config_for_qarsumo(
     
     Creates a new config file with qarsumo_ prefix.
     """
-    tree = etree.parse(str(config_path))
+    try:
+        tree = etree.parse(str(config_path))
+    except etree.XMLSyntaxError as e:
+        raise ValueError(
+            f"Failed to parse SUMO config at {config_path}: {e}\n"
+            f"  This usually means SUMO input generation failed earlier.\n"
+            f"  Check that 'prepare_sumo_inputs' completed successfully."
+        ) from e
     root = tree.getroot()
     
     # Add QarSUMO-specific section
@@ -304,8 +318,15 @@ def run_qarsumo(
     except subprocess.TimeoutExpired:
         elapsed = time.time() - start_time
         return False, elapsed, f"Timeout after {timeout_s}s"
+    except FileNotFoundError:
+        elapsed = time.time() - start_time
+        return False, elapsed, (
+            f"Simulation binary not found: {qarsumo_bin}. "
+            f"Install SUMO: brew install sumo (macOS) or apt install sumo (Ubuntu)"
+        )
     except Exception as e:
         elapsed = time.time() - start_time
+        logger.exception(f"Unexpected error running simulation: {e}")
         return False, elapsed, str(e)
 
 

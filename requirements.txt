@@ -7,11 +7,18 @@ lxml
 pyyaml
 
 # Network extraction from OSM
-# Pinned for compatibility with HPC Anaconda (pandas 1.5, numpy 1.23)
 osmnx>=1.1,<2
 networkx
 geopandas>=0.9,<1
 shapely>=1.8,<3
+
+# Numerical / data
+numpy
+pandas
+
+# Plotting (evaluation & thesis figures)
+matplotlib>=3.5
+seaborn>=0.12
 
 # Testing
 pytest

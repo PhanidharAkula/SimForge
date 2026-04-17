@@ -51,7 +51,19 @@ def load_network_topology(network_path: Path) -> tuple[dict, dict, dict]:
         - in_links: {node_id: [link_ids entering]}
         - out_links: {node_id: [link_ids leaving]}
     """
-    tree = etree.parse(str(network_path))
+    if not network_path.is_file():
+        raise FileNotFoundError(
+            f"Network file not found: {network_path}\n"
+            f"  Signal generation requires a valid network.xml.\n"
+            f"  Run network generation first."
+        )
+    try:
+        tree = etree.parse(str(network_path))
+    except etree.XMLSyntaxError as e:
+        raise ValueError(
+            f"Failed to parse network.xml at {network_path}: {e}\n"
+            f"  The file may be corrupted or truncated. Re-generate it."
+        ) from e
     root = tree.getroot()
     
     node_coords = {}

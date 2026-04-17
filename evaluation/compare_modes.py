@@ -11,8 +11,10 @@ Usage:
 
 import argparse
 import json
+import statistics
 import sys
 import time
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -154,6 +156,21 @@ def run_mode(
     
     # Run SUMO
     import subprocess
+    import shutil
+    if not shutil.which("sumo"):
+        return ModeResult(
+            mode=mode_name,
+            runtime_s=0,
+            success=False,
+            trip_count=0,
+            mean_travel_time_s=0,
+            p95_travel_time_s=0,
+            error=(
+                "SUMO binary not found on PATH.\n"
+                "  Install: brew install sumo (macOS) or apt install sumo (Ubuntu)\n"
+                "  Then ensure 'sumo' is on your PATH."
+            )
+        )
     start_time = time.time()
     try:
         result = subprocess.run(
@@ -287,8 +304,21 @@ def compare_modes(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare simulation modes")
-    parser.add_argument("scenario", type=Path, help="Path to scenario bundle")
+    parser = argparse.ArgumentParser(
+        description="Compare simulation modes",
+        epilog=(
+            "Examples:\n"
+            "  # Run live micro vs meso comparison on a scenario\n"
+            "  python -m evaluation.compare_modes scenarios/chicago_1k_car\n\n"
+            "  # Analyze from existing benchmark results JSON\n"
+            "  python -m evaluation.compare_modes --from-benchmark runs/benchmark_*/benchmark_results.json\n"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("scenario", type=Path, nargs="?", default=None,
+                        help="Path to scenario bundle directory (e.g. scenarios/chicago_1k_car)")
+    parser.add_argument("--from-benchmark", type=Path, default=None,
+                        help="Analyze micro vs meso from existing benchmark_results.json")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
     parser.add_argument("--output", type=Path, default=Path("runs/mode_comparison"),
                         help="Output directory")
@@ -304,15 +334,39 @@ def main():
     
     args = parser.parse_args()
     
-    if not args.scenario.exists():
-        logger.error(f"Scenario not found: {args.scenario}")
+    # --from-benchmark mode: analyze existing results JSON
+    if args.from_benchmark:
+        return _compare_from_benchmark(args.from_benchmark)
+    
+    if args.scenario is None:
+        parser.error(
+            "Either provide a scenario path or use --from-benchmark.\n"
+            "  Example: python -m evaluation.compare_modes scenarios/chicago_1k_car\n"
+            "  Example: python -m evaluation.compare_modes --from-benchmark runs/benchmark_*/benchmark_results.json"
+        )
+    
+    scenario_path = args.scenario.resolve()
+    if not scenario_path.is_dir():
+        print(f"❌ Error: '{args.scenario}' is not a scenario directory.")
+        if str(args.scenario).endswith(".json"):
+            print(f"   Looks like a JSON file — did you mean --from-benchmark?")
+            print(f"   python -m evaluation.compare_modes --from-benchmark {args.scenario}")
+        else:
+            print(f"   Expected a scenario directory like: scenarios/chicago_1k_car")
+        sys.exit(1)
+    
+    manifest = scenario_path / "manifest.xml"
+    if not manifest.exists():
+        print(f"❌ Error: Not a valid scenario bundle (missing manifest.xml)")
+        print(f"   Path: {scenario_path}")
+        print(f"   Expected files: manifest.xml, network.xml, demand.csv, config.xml")
         sys.exit(1)
     
     run_micro = not args.meso_only
     run_meso = not args.micro_only
     
     result = compare_modes(
-        scenario_path=args.scenario,
+        scenario_path=scenario_path,
         output_dir=args.output,
         seed=args.seed,
         run_microscopic=run_micro,
@@ -329,6 +383,79 @@ def main():
         with open(args.json, "w") as f:
             json.dump(result.to_dict(), f, indent=2)
         logger.info(f"Results saved to: {args.json}")
+
+
+def _compare_from_benchmark(results_path: Path) -> int:
+    """Analyze micro vs meso from an existing benchmark_results.json."""
+    if not results_path.exists():
+        print(f"❌ Error: File not found: {results_path}")
+        return 1
+    
+    with open(results_path) as f:
+        data = json.load(f)
+    
+    results = data.get("results", [])
+    if not results:
+        print("❌ No results found in benchmark file.")
+        return 1
+    
+    # Group by scenario + engine
+    groups = defaultdict(lambda: {"micro": [], "meso": []})
+    for r in results:
+        if r.get("status") != "success":
+            continue
+        key = (r["scenario"], r["engine"])
+        mode = r.get("mode", "meso")
+        groups[key][mode].append(r)
+    
+    print("\n" + "=" * 70)
+    print("  MODE COMPARISON: Microscopic vs Mesoscopic")
+    print("=" * 70)
+    
+    for (scenario, engine), modes in sorted(groups.items()):
+        micro_runs = modes["micro"]
+        meso_runs = modes["meso"]
+        
+        if not micro_runs or not meso_runs:
+            continue
+        
+        # Average metrics
+        micro_rt = statistics.mean([r["runtime_s"] for r in micro_runs])
+        meso_rt = statistics.mean([r["runtime_s"] for r in meso_runs])
+        
+        micro_tt = statistics.mean([
+            r["metrics"]["travel_time"]["mean"] for r in micro_runs
+            if r.get("metrics", {}).get("travel_time", {}).get("mean")
+        ]) if micro_runs else 0
+        meso_tt = statistics.mean([
+            r["metrics"]["travel_time"]["mean"] for r in meso_runs
+            if r.get("metrics", {}).get("travel_time", {}).get("mean")
+        ]) if meso_runs else 0
+        
+        speedup = micro_rt / meso_rt if meso_rt > 0 else 0
+        tt_diff_pct = ((meso_tt - micro_tt) / micro_tt * 100) if micro_tt > 0 else 0
+        
+        print(f"\n  {scenario} | {engine}")
+        print(f"  {'-' * 50}")
+        print(f"  {'':4}{'':12}{'Micro':>12}{'Meso':>12}{'Diff':>12}")
+        print(f"  {'':4}{'Runtime':12}{micro_rt:>11.2f}s{meso_rt:>11.2f}s  {speedup:.1f}x faster")
+        print(f"  {'':4}{'Mean TT':12}{micro_tt:>11.1f}s{meso_tt:>11.1f}s  {tt_diff_pct:+.1f}%")
+        
+        micro_p95 = statistics.mean([
+            r["metrics"]["travel_time"]["p95"] for r in micro_runs
+            if r.get("metrics", {}).get("travel_time", {}).get("p95")
+        ]) if micro_runs else 0
+        meso_p95 = statistics.mean([
+            r["metrics"]["travel_time"]["p95"] for r in meso_runs
+            if r.get("metrics", {}).get("travel_time", {}).get("p95")
+        ]) if meso_runs else 0
+        p95_diff_pct = ((meso_p95 - micro_p95) / micro_p95 * 100) if micro_p95 > 0 else 0
+        print(f"  {'':4}{'P95 TT':12}{micro_p95:>11.1f}s{meso_p95:>11.1f}s  {p95_diff_pct:+.1f}%")
+    
+    print("\n" + "=" * 70)
+    print("  Key: TT = Travel Time, Diff = Meso relative to Micro")
+    print("=" * 70 + "\n")
+    return 0
 
 
 if __name__ == "__main__":

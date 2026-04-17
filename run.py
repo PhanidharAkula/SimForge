@@ -240,10 +240,8 @@ def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, time
     
     # Parse MATSim output for metrics
     metrics = {}
-    matsim_output_dir = native_dir / "output" / "ITERS" / "it.0"
-    # Also check top-level output
-    if not matsim_output_dir.exists():
-        matsim_output_dir = native_dir / "output"
+    # MATSim 15+ puts output_trips.csv.gz in the top-level output dir
+    matsim_output_dir = native_dir / "output"
     
     tt_data = parse_matsim_output(matsim_output_dir)
     if tt_data:
@@ -398,17 +396,8 @@ Examples:
             print(f"  Validating {scenario}...", end=" ", flush=True)
             try:
                 from pipeline.validation.validate_bundle import validate_bundle
-                validation_result = validate_bundle(scenarios_available[scenario]["path"])
-                if isinstance(validation_result, dict) and validation_result.get("valid"):
-                    print("✓")
-                elif isinstance(validation_result, dict):
-                    errors = validation_result.get('errors', [])
-                    print(f"✗ ({len(errors)} errors)")
-                    for err in errors:
-                        print(f"    - {err}")
-                else:
-                    # Handle case where validate_bundle returns bool
-                    print("✓" if validation_result else "✗")
+                is_valid = validate_bundle(scenarios_available[scenario]["path"])
+                print("✓" if is_valid else "✗")
             except (OSError, ValueError, KeyError) as e:
                 print(f"✗ ({e})")
         return 0
@@ -446,6 +435,9 @@ Examples:
     completed = 0
     failed = 0
     
+    from pipeline.progress import ProgressBar
+    pb = ProgressBar(total=total_runs, desc="Benchmark")
+    
     for scenario in scenarios:
         for engine in engines:
             for mode in modes:
@@ -476,6 +468,10 @@ Examples:
                         completed += 1
                     else:
                         failed += 1
+                    
+                    pb.update()
+    
+    pb.finish()
     
     # Save results
     results_file = output_base / "benchmark_results.json"

@@ -33,8 +33,19 @@ class ScenarioStats:
 
 def load_results(results_path: Path) -> dict:
     """Load benchmark results from JSON."""
+    if not results_path.is_file():
+        raise FileNotFoundError(
+            f"Benchmark results file not found: {results_path}\n"
+            f"  Run a benchmark first: python run.py benchmark --runspec <file>"
+        )
     with open(results_path) as f:
-        return json.load(f)
+        try:
+            return json.load(f)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Failed to parse benchmark results at {results_path}: {e}\n"
+                f"  The file may be corrupted or truncated. Re-run the benchmark."
+            ) from e
 
 
 def compute_reproducibility(travel_times: list[float]) -> float:

@@ -59,7 +59,7 @@ SimForge solves these challenges through five interacting subsystems:
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | QarSUMO            | QarSUMO (LLNL)               | —       | GPU-accelerated SUMO variant            |
 | GPU compute        | CUDA                         | 11.8+   | QarSUMO acceleration                    |
-| Testing            | pytest                       | 8.0+    | 57 tests across all subsystems          |
+| Testing            | pytest                       | 8.0+    | 324 tests across all subsystems         |
 
 ---
 
@@ -948,19 +948,23 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **57 tests** across all subsystems:
+The framework includes **324 tests** across all subsystems:
 
-| Test Module                       | Tests | What It Validates                                         |
-| --------------------------------- | ----- | --------------------------------------------------------- |
-| `test_validator.py`               | 7     | Bundle validation: missing files, bad refs, hash mismatch |
-| `test_sumo_adapter.py`            | 9     | SUMO conversion: network, routes, config, BFS routing     |
-| `test_adapter_determinism.py`     | 5     | Byte-identical outputs from identical inputs              |
-| `test_fidelity_metrics.py`        | 10    | RMSE, GEH, KS computation correctness                     |
-| `test_reproducibility_metrics.py` | 8     | R-index computation, edge cases, interpretation           |
-| `test_scalability_metrics.py`     | 7     | Timer, throughput, hardware detection                     |
-| `test_metrics_travel_time.py`     | 11    | SUMO tripinfo parsing, statistics computation             |
+| Test Module                       | Tests | What It Validates                                 |
+| --------------------------------- | ----- | ------------------------------------------------- |
+| `test_adapter_determinism.py`     | 8     | Byte-identical outputs from identical inputs      |
+| `test_sumo_adapter.py`            | 5     | SUMO conversion: network, routes, config          |
+| `test_matsim_adapter.py`          | 18    | MATSim adapter: unit + integration, all scenarios |
+| `test_qarsumo_adapter.py`         | 12    | QarSUMO config, GPU detection, all scenarios      |
+| `test_fidelity_metrics.py`        | 16    | RMSE, GEH, KS computation correctness             |
+| `test_metrics_travel_time.py`     | 2     | SUMO tripinfo parsing                             |
+| `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation   |
+| `test_scalability_metrics.py`     | 8     | Timer, throughput, hardware detection             |
+| `test_validator.py`               | 2     | Bundle validation: valid and invalid bundles      |
+| `test_scenario_data_integrity.py` | ~210  | All scenarios × 35 integrity checks each          |
+| `test_pipeline_e2e.py`            | 17    | Bad data detection, routing, adapter robustness   |
 
-**All 57 tests passing** as of current version.
+**All 324 tests passing** as of current version.
 
 ### 3.7.2 Determinism Guarantees
 

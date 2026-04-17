@@ -149,8 +149,10 @@ HELP TOPICS:
   python help.py modes              Travel modes reference
   python help.py adapters           Simulator adapters (SUMO, MATSim, QarSUMO)
   python help.py metrics            Evaluation metrics
+  python help.py evaluation         Analysis & plotting commands
   python help.py schema             Canonical schema format reference
   python help.py benchmark          Benchmark harness and runspecs
+  python help.py tests              Test suite reference
   python help.py troubleshooting    Common issues and fixes
 
 PROJECT STRUCTURE:
@@ -367,6 +369,48 @@ VALIDATION:
   python -m pipeline.validation.validate_bundle scenarios/<id>
 """
 
+HELP_EVALUATION = """
+====================================================================
+  EVALUATION, ANALYSIS & PLOTTING
+====================================================================
+
+ANALYZE BENCHMARK:
+  python -m evaluation.analyze_benchmark <results.json>
+
+  Produces:
+    Table 5.1 — Runtime comparison (engine × city × mode)
+    Table 5.2 — Reproducibility analysis (R-scores)
+
+COMPARE MICRO vs MESO:
+  python -m evaluation.compare_modes <scenario_path>               # live run
+  python -m evaluation.compare_modes --from-benchmark <results.json>  # from existing results
+
+  Produces:
+    Speedup factors (meso vs micro per engine)
+    Travel time difference (mean delta, %)
+
+GENERATE THESIS PLOTS:
+  python -m evaluation.generate_plots <results.json> [--output DIR] [--clean]
+
+  Generates (PNG + PDF):
+    Fig 5.1 — Runtime comparison (grouped bar: city × engine)
+    Fig 5.2 — Reproducibility heatmap (engine × city R-scores)
+    Fig 5.3 — Travel time comparison (mean ± std by engine)
+    Fig 5.4 — Engine performance summary (runtime, R-score, throughput)
+    Fig 5.5 — Speedup vs MATSim baseline
+    Fig 5.6 — Micro vs Meso runtime comparison (side-by-side)
+    Fig 5.7 — Runtime variability box plot (run-to-run spread)
+    Fig 5.8 — P95 tail latency comparison
+
+  Default output: plots/ next to the results JSON file.
+  Use --clean to delete old plots before regenerating.
+
+EXAMPLES:
+  python -m evaluation.analyze_benchmark runs/benchmark_*/benchmark_results.json
+  python -m evaluation.compare_modes --from-benchmark runs/benchmark_*/benchmark_results.json
+  python -m evaluation.generate_plots runs/benchmark_*/benchmark_results.json --clean
+"""
+
 HELP_BENCHMARK = """
 ====================================================================
   BENCHMARK HARNESS & RUNSPECS
@@ -378,8 +422,112 @@ COMMANDS:
   python -m execution.run_benchmark <runspec.yaml> --dry-run
 
 BUILT-IN RUNSPECS:
-  benchmark_small.yaml   1K–50K trips, 600s timeout (3 scenarios x 3 engines x 3 repeats = 27 runs)
-  benchmark_large.yaml   200K–500K trips, 3600s timeout (2 scenarios x 3 engines x 3 repeats = 18 runs)
+  benchmark_small.yaml   1K–50K trips, 600s timeout
+  benchmark_large.yaml   200K–500K trips, 3600s timeout
+"""
+
+HELP_TESTS = """
+====================================================================
+  TEST SUITE REFERENCE
+====================================================================
+
+RUN ALL TESTS:
+  python -m pytest tests/ -v                    # verbose output
+  python -m pytest tests/ -v --tb=short         # with short tracebacks
+  python -m pytest tests/ -x                    # stop on first failure
+  python -m pytest tests/ -k "fidelity"         # filter by keyword
+
+RUN SPECIFIC TEST FILES:
+  python -m pytest tests/test_fidelity_metrics.py -v
+  python -m pytest tests/test_matsim_adapter.py -v
+  python -m pytest tests/test_sumo_adapter.py -v
+
+TEST FILES (324 tests total):
+
+  test_scenario_data_integrity.py    (210 tests)
+    Parametrized over all scenarios in scenarios/.
+    Classes:
+      TestNetworkIntegrity       — node/link counts, coordinate bounds,
+                                   no duplicate IDs, link refs valid
+      TestDemandIntegrity        — CSV columns, non-negative departures,
+                                   OD node refs exist in network
+      TestSignalsIntegrity       — signal node IDs exist in network
+      TestConfigIntegrity        — time horizon >0, has seed
+      TestManifestIntegrity      — scenario_id matches config, all
+                                   declared files exist on disk
+      TestCrossFileConsistency   — demand time range within config horizon,
+                                   modes match config allowed_modes,
+                                   signal phases vs demand time range
+
+  test_matsim_adapter.py             (24 tests)
+    Classes:
+      TestSecondsToTimeString    — HH:MM:SS conversion edge cases
+      TestMATSimConfig           — config defaults, to_dict round-trip
+      TestBuildVehiclesXml       — valid XML, car type present
+      TestLoadCanonicalNetwork   — nodes/links loaded, coordinates, fields
+      TestBuildMATSimNetwork     — valid XML, nodes & links, car mode
+      TestBuildMATSimPlans       — valid XML, persons, activities
+      TestBuildMATSimConfig      — valid XML, required modules, seed
+      TestPrepareMATSimInputs    — end-to-end: all output files created
+
+  test_fidelity_metrics.py           (21 tests)
+    Classes:
+      TestRMSE                   — identical, known values, edge cases
+      TestGEH                    — identical, acceptable, poor, symmetric
+      TestGEHBatch               — batch computation, mixed results
+      TestKSStatistic            — identical, different, similar distributions
+      TestInterpretGEH           — classification thresholds
+      TestFidelityMetrics        — compute_fidelity_metrics integration
+
+  test_pipeline_e2e.py               (20 tests)
+    End-to-end pipeline tests: network build, demand generation,
+    signal generation, validation, and full scenario assembly.
+    NOTE: These fetch live OSM data — may be slow or flaky.
+
+  test_reproducibility_metrics.py    (15 tests)
+    R-index computation: perfect, near-perfect, degraded,
+    single-run edge case, cross-seed consistency.
+
+  test_qarsumo_adapter.py            (10 tests)
+    QarSUMO input generation, GPU config, CUDA flags,
+    fallback-to-SUMO behavior on CPU-only systems.
+
+  test_scalability_metrics.py        (8 tests)
+    Throughput calculation, SRT ratio, scaling factors.
+
+  test_adapter_determinism.py        (8 tests)
+    Classes:
+      TestSUMOAdapterDeterminism — identical outputs across runs,
+                                   file-level determinism (routes, nodes,
+                                   edges, config)
+      TestHashUtilities          — SHA-256 consistency, exclusion patterns
+
+  test_sumo_adapter.py               (4 tests)
+    SUMO file generation, edge lengths, lane lengths,
+    all-scenarios parametrized test.
+
+  test_metrics_travel_time.py        (2 tests)
+    Travel time extraction and aggregation from output files.
+
+  test_validator.py                  (2 tests)
+    Bundle validation: valid bundle passes, bad demand node fails.
+
+TEST CONVENTIONS:
+  - All tests use pytest fixtures and parametrize decorators
+  - Scenario tests auto-discover scenarios/ directories
+  - Adapter tests use the chicago_1k_car fixture scenario
+  - Metric tests use synthetic data (no external dependencies)
+  - E2E tests require network access (OSM downloads)
+
+COMMON TEST FLAGS:
+  -v, --verbose            Show individual test names
+  --tb=short               Compact tracebacks
+  --tb=long                Full tracebacks
+  -x, --exitfirst          Stop on first failure
+  -k EXPR                  Run tests matching expression
+  --durations=10           Show 10 slowest tests
+  -n auto                  Parallel execution (requires pytest-xdist)
+  --co, --collect-only     List tests without running them
 """
 
 HELP_TROUBLESHOOTING = """
@@ -432,8 +580,13 @@ TOPICS = {
     "modes": HELP_MODES,
     "adapters": HELP_ADAPTERS,
     "metrics": HELP_METRICS,
+    "evaluation": HELP_EVALUATION,
+    "analysis": HELP_EVALUATION,
+    "plots": HELP_EVALUATION,
     "schema": HELP_SCHEMA,
     "benchmark": HELP_BENCHMARK,
+    "tests": HELP_TESTS,
+    "testing": HELP_TESTS,
     "troubleshooting": HELP_TROUBLESHOOTING,
 }
 

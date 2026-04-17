@@ -296,12 +296,12 @@ def report_result(scenario_root: Path, errors: list[str]) -> bool:
     Print validation result and return True (valid) or False (invalid).
     """
     if errors:
-        print(f"[INVALID] Scenario bundle at: {scenario_root}")
+        print(f"  ✗ INVALID  {scenario_root.name}")
         for err in errors:
-            print(f"  - {err}")
+            print(f"    └─ {err}")
         return False
     else:
-        print(f"[VALID] Scenario bundle at: {scenario_root}")
+        print(f"  ✓ VALID    {scenario_root.name}")
         return True
 
 

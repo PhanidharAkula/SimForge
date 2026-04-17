@@ -385,28 +385,34 @@ def generate_scenario(
     out.mkdir(parents=True)
 
     logger.info("Step 1/4: Downloading OSM network (%.1f km radius) ...", radius_km)
+    t_step = time.time()
     net = build_network_from_osm(bbox, out / "network.xml", network_type="drive")
-    logger.info("  Network: %d nodes, %d links", net["node_count"], net["link_count"])
+    logger.info("  Network: %d nodes, %d links  (%.1fs)",
+                net["node_count"], net["link_count"], time.time() - t_step)
 
     # ---- 2. Signals ----
     logger.info("Step 2/4: Inferring traffic signals ...")
+    t_step = time.time()
     sig = build_signals_default(
         network_path=out / "network.xml",
         output_path=out / "signals.xml",
         min_degree=4,
     )
-    logger.info("  Signals: %d controllers", sig["signal_count"])
+    logger.info("  Signals: %d controllers  (%.1fs)",
+                sig["signal_count"], time.time() - t_step)
 
     # ---- 3. Config / Manifest ----
     logger.info("Step 3/4: Writing config and manifest ...")
+    t_step = time.time()
     _write_config_xml(out / "config.xml", scenario_id, description,
                       start_time, end_time, seed)
     _write_manifest_xml(out / "manifest.xml", scenario_id)
+    logger.info("  Done  (%.1fs)", time.time() - t_step)
 
     # ---- 4. Demand ----
     logger.info("Step 4/4: Generating demand (%s) ...",
                 "census" if use_census else "synthetic")
-
+    t_step = time.time()
     if use_census:
         multi_mode = len(modes) > 1
         model_data = parse_model_file(
@@ -438,6 +444,8 @@ def generate_scenario(
             horizon_end=end_time,
             mode=modes[0] if len(modes) == 1 else "car",
         )
+
+    logger.info("  Demand: %d trips  (%.1fs)", dem["trip_count"], time.time() - t_step)
 
     elapsed = round(time.time() - t0, 1)
     strategy = dem.get("strategy", "synthetic")

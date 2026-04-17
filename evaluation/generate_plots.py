@@ -30,6 +30,15 @@ except ImportError:
     MATPLOTLIB_AVAILABLE = False
     print("Warning: matplotlib not installed. Install with: pip install matplotlib")
 
+
+def _require_matplotlib():
+    """Raise a clear error if matplotlib is not available."""
+    if not MATPLOTLIB_AVAILABLE:
+        raise ImportError(
+            "matplotlib is required for plot generation but is not installed.\n"
+            "  Install it with: pip install matplotlib"
+        )
+
 # Optional seaborn for prettier plots
 try:
     import seaborn as sns
@@ -179,6 +188,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics], output_dir: Path) ->
     Generate runtime comparison bar chart (Figure 5.1).
     Grouped by city, colored by engine.
     """
+    _require_matplotlib()
     setup_style()
     
     # Organize data
@@ -251,6 +261,7 @@ def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics], output_dir: Pat
     Generate reproducibility heatmap (Figure 5.2).
     Engine × City matrix showing R-scores.
     """
+    _require_matplotlib()
     setup_style()
     
     cities = sorted(set(m.city for m in metrics))
@@ -314,6 +325,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics], output_dir: Path
     Generate travel time comparison chart (Figure 5.3).
     Shows mean travel time with error bars.
     """
+    _require_matplotlib()
     setup_style()
     
     cities = sorted(set(m.city for m in metrics))
@@ -381,6 +393,7 @@ def plot_engine_summary(metrics: list[ScenarioMetrics], output_dir: Path) -> Pat
     Generate engine performance summary (Figure 5.4).
     Aggregated statistics per engine.
     """
+    _require_matplotlib()
     setup_style()
     
     engines = sorted(set(m.engine for m in metrics))
@@ -411,6 +424,7 @@ def plot_engine_summary(metrics: list[ScenarioMetrics], output_dir: Path) -> Pat
                     edgecolor='black', linewidth=0.5)
     ax1.set_ylabel('Average Runtime (seconds)', fontweight='bold')
     ax1.set_title('Runtime', fontweight='bold')
+    ax1.set_xticks(range(len(engines)))
     ax1.set_xticklabels([e.upper() for e in engines])
     
     # Add value labels
@@ -425,6 +439,7 @@ def plot_engine_summary(metrics: list[ScenarioMetrics], output_dir: Path) -> Pat
                     edgecolor='black', linewidth=0.5)
     ax2.set_ylabel('Average R-Score', fontweight='bold')
     ax2.set_title('Reproducibility', fontweight='bold')
+    ax2.set_xticks(range(len(engines)))
     ax2.set_xticklabels([e.upper() for e in engines])
     ax2.set_ylim(0.98, 1.005)
     
@@ -445,6 +460,7 @@ def plot_engine_summary(metrics: list[ScenarioMetrics], output_dir: Path) -> Pat
                     edgecolor='black', linewidth=0.5)
     ax3.set_ylabel('Throughput (trips/second)', fontweight='bold')
     ax3.set_title('Throughput', fontweight='bold')
+    ax3.set_xticks(range(len(engines)))
     ax3.set_xticklabels([e.upper() for e in engines])
     
     for bar, val in zip(bars3, throughputs):
@@ -464,6 +480,7 @@ def plot_engine_summary(metrics: list[ScenarioMetrics], output_dir: Path) -> Pat
 
 
 def plot_speedup_analysis(metrics: list[ScenarioMetrics], output_dir: Path) -> Path:
+    _require_matplotlib()
     """
     Generate speedup analysis (Figure 5.5).
     Compare SUMO/QarSUMO to MATSim baseline.
@@ -534,6 +551,201 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics], output_dir: Path) -> P
     return output_path
 
 
+def plot_micro_vs_meso(metrics: list[ScenarioMetrics], output_dir: Path) -> Optional[Path]:
+    """
+    Generate micro vs meso runtime comparison (Figure 5.6).
+    Side-by-side bars for each engine showing micro and meso runtimes.
+    """
+    _require_matplotlib()
+    setup_style()
+
+    engines = sorted(set(m.engine for m in metrics))
+    cities = sorted(set(m.city for m in metrics))
+    modes = sorted(set(m.mode for m in metrics))
+
+    if len(modes) < 2:
+        print("    (skipped — only one mode in results)")
+        return None
+
+    mode_colors = {'micro': '#2ca02c', 'meso': '#ff7f0e'}
+
+    fig, axes = plt.subplots(1, len(engines), figsize=(5 * len(engines), 6), sharey=True)
+    if len(engines) == 1:
+        axes = [axes]
+
+    for ax, engine in zip(axes, engines):
+        bar_width = 0.3
+        current_x = 0
+        city_centers = []
+
+        for city in cities:
+            city_start = current_x
+            for i, mode in enumerate(['micro', 'meso']):
+                matching = [m for m in metrics if m.engine == engine and m.city == city and m.mode == mode]
+                if matching:
+                    m = matching[0]
+                    ax.bar(current_x, m.avg_runtime, bar_width,
+                           yerr=m.std_runtime, capsize=3,
+                           color=mode_colors.get(mode, 'gray'),
+                           edgecolor='black', linewidth=0.5)
+                current_x += bar_width
+            city_centers.append((city_start + current_x - bar_width) / 2)
+            current_x += 0.2
+
+        ax.set_title(engine.upper(), fontweight='bold')
+        ax.set_xticks(city_centers)
+        ax.set_xticklabels([c.replace('_', ' ').title() for c in cities], fontsize=9)
+        ax.set_ylim(bottom=0)
+        ax.grid(axis='y', alpha=0.3)
+
+    axes[0].set_ylabel('Runtime (seconds)', fontweight='bold')
+
+    handles = [mpatches.Patch(color=mode_colors[m], label=m.title()) for m in ['micro', 'meso']]
+    fig.legend(handles=handles, title='Mode', loc='upper right', bbox_to_anchor=(0.98, 0.95))
+    fig.suptitle('Figure 5.6: Micro vs Meso Runtime by Engine', fontweight='bold', y=1.02)
+
+    plt.tight_layout()
+
+    output_path = output_dir / "fig_5_6_micro_vs_meso.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "fig_5_6_micro_vs_meso.pdf", bbox_inches='tight')
+    plt.close()
+
+    return output_path
+
+
+def plot_runtime_variability(results_paths: list[Path], output_dir: Path) -> Optional[Path]:
+    """
+    Generate runtime variability box plot (Figure 5.7).
+    Shows run-to-run spread per engine.
+    """
+    _require_matplotlib()
+    setup_style()
+
+    # Collect raw runtimes per engine
+    engine_runtimes: dict[str, list[float]] = {}
+    for rp in results_paths:
+        results = load_results(rp)
+        for run in results.get("results", results.get("runs", [])):
+            if run.get("status") != "success":
+                continue
+            engine = run.get("engine", "unknown")
+            rt = run.get("runtime_s", run.get("wall_time_s", 0))
+            if rt > 0:
+                engine_runtimes.setdefault(engine, []).append(rt)
+
+    if not engine_runtimes:
+        return None
+
+    engines = sorted(engine_runtimes.keys())
+    colors = {'sumo': '#1f77b4', 'qarsumo': '#ff7f0e', 'matsim': '#2ca02c'}
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    bp = ax.boxplot(
+        [engine_runtimes[e] for e in engines],
+        tick_labels=[e.upper() for e in engines],
+        patch_artist=True,
+        showmeans=True,
+        meanprops=dict(marker='D', markerfacecolor='red', markersize=6),
+    )
+
+    for patch, engine in zip(bp['boxes'], engines):
+        patch.set_facecolor(colors.get(engine, 'gray'))
+        patch.set_alpha(0.7)
+
+    ax.set_ylabel('Runtime (seconds)', fontweight='bold')
+    ax.set_title('Figure 5.7: Runtime Variability by Engine\n(box = IQR, diamond = mean, line = median)',
+                 fontweight='bold', pad=20)
+    ax.grid(axis='y', alpha=0.3)
+
+    # Annotate counts
+    for i, engine in enumerate(engines):
+        n = len(engine_runtimes[engine])
+        ax.text(i + 1, ax.get_ylim()[1] * 0.95, f'n={n}', ha='center', fontsize=9, color='gray')
+
+    plt.tight_layout()
+
+    output_path = output_dir / "fig_5_7_runtime_variability.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "fig_5_7_runtime_variability.pdf", bbox_inches='tight')
+    plt.close()
+
+    return output_path
+
+
+def plot_p95_travel_time(metrics: list[ScenarioMetrics], output_dir: Path) -> Optional[Path]:
+    """
+    Generate P95 tail-latency travel time comparison (Figure 5.8).
+    Shows 95th-percentile travel times to highlight worst-case trips.
+    """
+    _require_matplotlib()
+    setup_style()
+
+    cities = sorted(set(m.city for m in metrics))
+    engines = sorted(set(m.engine for m in metrics))
+
+    # Filter to metrics that have p95 data
+    has_p95 = [m for m in metrics if m.p95_travel_time > 0]
+    if not has_p95:
+        print("    (skipped — no P95 data)")
+        return None
+
+    colors = {'sumo': '#1f77b4', 'qarsumo': '#ff7f0e', 'matsim': '#2ca02c'}
+
+    fig, ax = plt.subplots(figsize=(12, 6))
+
+    bar_width = 0.25
+    group_gap = 0.3
+    current_x = 0
+    city_centers = []
+
+    for city in cities:
+        city_metrics = [m for m in has_p95 if m.city == city]
+        city_engines = sorted(set(m.engine for m in city_metrics))
+
+        city_start = current_x
+        for engine in city_engines:
+            engine_data = [m for m in city_metrics if m.engine == engine]
+            if engine_data:
+                m = engine_data[0]
+                ax.bar(current_x, m.p95_travel_time, bar_width,
+                       color=colors.get(engine, 'gray'),
+                       label=engine if city == cities[0] else None,
+                       edgecolor='black', linewidth=0.5)
+                # Show mean as a marker for comparison
+                ax.plot(current_x, m.avg_travel_time, 'k_', markersize=12, markeredgewidth=2)
+            current_x += bar_width
+
+        city_centers.append((city_start + current_x - bar_width) / 2)
+        current_x += group_gap
+
+    ax.set_xlabel('City', fontweight='bold')
+    ax.set_ylabel('Travel Time (seconds)', fontweight='bold')
+    ax.set_title('Figure 5.8: P95 Tail Latency vs Mean Travel Time\n(bar = P95, dash = mean)',
+                 fontweight='bold', pad=20)
+
+    city_labels = [c.replace('_', ' ').title() for c in cities]
+    ax.set_xticks(city_centers)
+    ax.set_xticklabels(city_labels)
+
+    handles = [mpatches.Patch(color=colors.get(e, 'gray'), label=e.upper()) for e in engines]
+    handles.append(plt.Line2D([0], [0], marker='_', color='black', label='Mean', markersize=10, linewidth=0))
+    ax.legend(handles=handles, title='Engine', loc='upper right')
+
+    ax.set_ylim(bottom=0)
+    ax.grid(axis='y', alpha=0.3)
+
+    plt.tight_layout()
+
+    output_path = output_dir / "fig_5_8_p95_tail_latency.png"
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+    plt.savefig(output_dir / "fig_5_8_p95_tail_latency.pdf", bbox_inches='tight')
+    plt.close()
+
+    return output_path
+
+
 def generate_all_plots(results_paths: list[Path], output_dir: Path) -> dict:
     """Generate all thesis plots from benchmark results (supports multiple files)."""
     
@@ -594,6 +806,21 @@ def generate_all_plots(results_paths: list[Path], output_dir: Path) -> dict:
     if speedup_path:
         generated['speedup'] = str(speedup_path)
     
+    print("  → Micro vs Meso comparison (Fig 5.6)...")
+    micro_meso_path = plot_micro_vs_meso(metrics, output_dir)
+    if micro_meso_path:
+        generated['micro_vs_meso'] = str(micro_meso_path)
+    
+    print("  → Runtime variability box plot (Fig 5.7)...")
+    variability_path = plot_runtime_variability(results_paths, output_dir)
+    if variability_path:
+        generated['runtime_variability'] = str(variability_path)
+    
+    print("  → P95 tail latency (Fig 5.8)...")
+    p95_path = plot_p95_travel_time(metrics, output_dir)
+    if p95_path:
+        generated['p95_tail_latency'] = str(p95_path)
+    
     print(f"\n✓ Generated {len(generated)} plots in: {output_dir}")
     
     return generated
@@ -608,8 +835,12 @@ def main():
         help="Path to benchmark results JSON file(s) - supports multiple files"
     )
     parser.add_argument(
-        "--output", "-o", type=Path, default=Path("doc/figures"),
-        help="Output directory for plots (default: doc/figures)"
+        "--output", "-o", type=Path, default=None,
+        help="Output directory for plots (default: plots/ next to the first results file)"
+    )
+    parser.add_argument(
+        "--clean", action="store_true",
+        help="Delete existing plots in output directory before generating"
     )
     
     args = parser.parse_args()
@@ -620,7 +851,21 @@ def main():
             print(f"Error: Results file not found: {results_path}")
             return 1
     
-    generated = generate_all_plots(args.results, args.output)
+    # Default output: plots/ directory next to the first results file
+    output_dir = args.output
+    if output_dir is None:
+        output_dir = args.results[0].resolve().parent / "plots"
+    
+    # Clean existing plots if requested
+    if args.clean and output_dir.exists():
+        import glob
+        old_plots = list(output_dir.glob("*.png")) + list(output_dir.glob("*.pdf"))
+        if old_plots:
+            for p in old_plots:
+                p.unlink()
+            print(f"Cleaned {len(old_plots)} existing plots from {output_dir}")
+    
+    generated = generate_all_plots(args.results, output_dir)
     
     if "error" in generated:
         return 1

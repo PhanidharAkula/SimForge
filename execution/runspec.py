@@ -98,24 +98,56 @@ class RunSpec:
         except ImportError:
             raise ImportError("PyYAML required: pip install pyyaml")
         
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Runspec file not found: {path}\n"
+                f"  See runspecs/ directory for example YAML files."
+            )
         with open(path) as f:
-            data = yaml.safe_load(f)
-        
+            try:
+                data = yaml.safe_load(f)
+            except yaml.YAMLError as e:
+                raise ValueError(
+                    f"Failed to parse YAML runspec at {path}: {e}\n"
+                    f"  Check for indentation errors or invalid YAML syntax."
+                ) from e
+        if not isinstance(data, dict):
+            raise ValueError(
+                f"Runspec YAML must be a mapping (dict), got {type(data).__name__} in {path}"
+            )
         return cls._from_dict(data, path)
     
     @classmethod
     def from_json(cls, path: Path) -> "RunSpec":
         """Load runspec from JSON file."""
+        if not path.is_file():
+            raise FileNotFoundError(
+                f"Runspec file not found: {path}\n"
+                f"  See runspecs/ directory for example files."
+            )
         with open(path) as f:
-            data = json.load(f)
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError as e:
+                raise ValueError(
+                    f"Failed to parse JSON runspec at {path}: {e}\n"
+                    f"  Check for trailing commas or unquoted strings."
+                ) from e
         
         return cls._from_dict(data, path)
     
+    KNOWN_ENGINES = {"sumo", "matsim", "qarsumo"}
+
     @classmethod
     def _from_dict(cls, data: dict, source_path: Path) -> "RunSpec":
         """Parse runspec from dictionary."""
         runs = []
-        for run_data in data.get("runs", []):
+        if "runs" not in data or not data["runs"]:
+            raise ValueError(
+                f"Runspec at {source_path} has no 'runs' list.\n"
+                f"  Add a 'runs:' section with at least one run configuration."
+            )
+        for i, run_data in enumerate(data.get("runs", [])):
             # Parse mode field (supports both 'mode' and legacy 'mesoscopic')
             mode = SimulationMode.MICROSCOPIC
             if "mode" in run_data:
@@ -123,10 +155,23 @@ class RunSpec:
             elif run_data.get("mesoscopic", False):
                 mode = SimulationMode.MESOSCOPIC
             
+            # Validate required keys
+            for key in ("scenario_id", "scenario_path", "engine"):
+                if key not in run_data:
+                    raise ValueError(
+                        f"Run #{i+1} in {source_path} is missing required key '{key}'.\n"
+                        f"  Each run must have: scenario_id, scenario_path, engine"
+                    )
+            engine = run_data["engine"]
+            if engine not in cls.KNOWN_ENGINES:
+                raise ValueError(
+                    f"Unknown engine '{engine}' in run #{i+1} of {source_path}.\n"
+                    f"  Supported engines: {', '.join(sorted(cls.KNOWN_ENGINES))}"
+                )
             runs.append(RunConfig(
                 scenario_id=run_data["scenario_id"],
                 scenario_path=run_data["scenario_path"],
-                engine=run_data["engine"],
+                engine=engine,
                 environment=run_data.get("environment", "local_cpu"),
                 repeats=run_data.get("repeats", 1),
                 seed=run_data.get("seed", 42),

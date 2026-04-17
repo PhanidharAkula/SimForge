@@ -143,7 +143,10 @@ class ProgressTracker:
         print(f"  Total runs:      {self.total_runs}")
         print(f"  Successful:      {self.successful_runs} ✓")
         print(f"  Failed:          {self.failed_runs} ✗")
-        print(f"  Success rate:    {(self.successful_runs/self.total_runs*100):.1f}%")
+        if self.total_runs > 0:
+            print(f"  Success rate:    {(self.successful_runs/self.total_runs*100):.1f}%")
+        else:
+            print(f"  Success rate:    N/A (no runs executed)")
         print(f"{'─'*60}")
         print(f"  Total time:      {self._format_time(elapsed)}")
         print(f"  Avg per run:     {self._format_time(avg_time)}")
@@ -499,7 +502,7 @@ class BenchmarkHarness:
             status=status,
             runtime_s=runtime,
             output_dir=run_dir,
-            tripinfo_path=tripinfo_path if 'tripinfo_path' in dir() else None,
+            tripinfo_path=tripinfo_path,
             error_message=error,
             metrics=metrics
         )

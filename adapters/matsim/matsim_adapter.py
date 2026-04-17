@@ -163,6 +163,94 @@ def load_canonical_network(network_path: Path) -> Tuple[Dict, List]:
     return nodes, links
 
 
+def _largest_strongly_connected_component(nodes: Dict, links: List) -> set:
+    """
+    Find the largest strongly connected component in the network.
+    Returns the set of node IDs in that component.
+    """
+    from collections import deque
+
+    # Build adjacency (forward and reverse)
+    fwd = {}
+    rev = {}
+    for link in links:
+        f, t = link["from"], link["to"]
+        if f == t:
+            continue
+        fwd.setdefault(f, []).append(t)
+        rev.setdefault(t, []).append(f)
+
+    all_nodes = set(nodes.keys())
+    visited = set()
+    finish_order = []
+
+    # Pass 1: DFS on forward graph to get finish order
+    for start in all_nodes:
+        if start in visited:
+            continue
+        stack = [(start, False)]
+        while stack:
+            node, processed = stack.pop()
+            if processed:
+                finish_order.append(node)
+                continue
+            if node in visited:
+                continue
+            visited.add(node)
+            stack.append((node, True))
+            for nb in fwd.get(node, []):
+                if nb not in visited:
+                    stack.append((nb, False))
+
+    # Pass 2: DFS on reverse graph in reverse finish order
+    visited.clear()
+    best_component = set()
+
+    for start in reversed(finish_order):
+        if start in visited:
+            continue
+        component = set()
+        stack = [start]
+        while stack:
+            node = stack.pop()
+            if node in visited:
+                continue
+            visited.add(node)
+            component.add(node)
+            for nb in rev.get(node, []):
+                if nb not in visited:
+                    stack.append(nb)
+        if len(component) > len(best_component):
+            best_component = component
+
+    return best_component
+
+
+def clean_network(nodes: Dict, links: List) -> tuple:
+    """
+    Clean network by keeping only the largest strongly connected component.
+    Returns (filtered_nodes, filtered_links, reachable_node_ids).
+    """
+    reachable = _largest_strongly_connected_component(nodes, links)
+
+    filtered_nodes = {nid: n for nid, n in nodes.items() if nid in reachable}
+    filtered_links = [
+        l for l in links
+        if l["from"] in reachable and l["to"] in reachable and l["from"] != l["to"]
+    ]
+
+    removed_nodes = len(nodes) - len(filtered_nodes)
+    removed_links = len(links) - len(filtered_links)
+    if removed_nodes > 0 or removed_links > 0:
+        logger.info(
+            f"  Network cleaning: kept {len(filtered_nodes)}/{len(nodes)} nodes, "
+            f"{len(filtered_links)}/{len(links)} links "
+            f"(removed {removed_nodes} nodes, {removed_links} links from disconnected components)"
+        )
+
+    return filtered_nodes, filtered_links, reachable
+
+
 def find_link_for_origin(node_id: str, links: List[dict], link_adjacency: dict) -> Optional[str]:
     """
     Find a link for an origin activity.
@@ -268,8 +356,15 @@ def build_matsim_network_xml(nodes: Dict, links: List) -> str:
     return "\n".join(lines)
 
 
-def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
-    """Build MATSim plans.xml from canonical demand.csv."""
+def build_matsim_plans_xml(demand_path: Path, links: List, reachable_nodes: Optional[set] = None) -> str:
+    """Build MATSim plans.xml from canonical demand.csv.
+    
+    Args:
+        demand_path: Path to canonical demand.csv
+        links: List of link dicts (already cleaned)
+        reachable_nodes: Set of node IDs in the largest connected component.
+                         Trips with origin/dest outside this set are skipped.
+    """
     lines = []
     lines.append('<?xml version="1.0" ?>')
     lines.append('<!DOCTYPE plans SYSTEM "http://www.matsim.org/files/dtd/plans_v4.dtd">')
@@ -286,6 +381,9 @@ def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
             link_adjacency[from_node] = []
         link_adjacency[from_node].append(link["to"])
     
+    total_trips = 0
+    skipped_trips = 0
+    
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -298,6 +396,13 @@ def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
             if not trip_id or not origin or not dest:
                 continue
             
+            total_trips += 1
+            
+            # Skip trips where origin or destination is not in the reachable component
+            if reachable_nodes and (origin not in reachable_nodes or dest not in reachable_nodes):
+                skipped_trips += 1
+                continue
+            
             try:
                 depart_seconds = int(float(depart_s))
             except ValueError:
@@ -308,9 +413,7 @@ def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
             dest_link = find_link_for_destination(dest, valid_links, link_adjacency)
             
             if not origin_link or not dest_link:
-                continue
-            
-            if not origin_link or not dest_link:
+                skipped_trips += 1
                 continue
             
             end_time = seconds_to_time_string(depart_seconds)
@@ -324,6 +427,12 @@ def build_matsim_plans_xml(demand_path: Path, links: List) -> str:
             lines.append(f'    <act type="w" link="{dest_link}"/>')
             lines.append('  </plan>')
             lines.append('</person>')
+    
+    if skipped_trips > 0:
+        logger.info(
+            f"  Plans: {total_trips - skipped_trips}/{total_trips} trips included "
+            f"({skipped_trips} skipped — unreachable in cleaned network)"
+        )
     
     lines.append('</plans>')
     return "\n".join(lines)
@@ -487,14 +596,19 @@ def prepare_matsim_inputs(
     # Load and convert network
     logger.info("Converting network to MATSim format...")
     nodes, links = load_canonical_network(network_path)
+    
+    # Clean network: keep only largest strongly connected component
+    # MATSim crashes hard on unroutable trips, unlike SUMO which skips them
+    nodes, links, reachable_nodes = clean_network(nodes, links)
+    
     network_xml = build_matsim_network_xml(nodes, links)
     network_out = output_dir / "network.xml"
     network_out.write_text(network_xml, encoding="utf-8")
     logger.info(f"  Created: {network_out}")
     
-    # Convert demand to plans
+    # Convert demand to plans (using cleaned links only)
     logger.info("Converting demand to MATSim plans...")
-    plans_xml = build_matsim_plans_xml(demand_path, links)
+    plans_xml = build_matsim_plans_xml(demand_path, links, reachable_nodes)
     plans_out = output_dir / "plans.xml"
     plans_out.write_text(plans_xml, encoding="utf-8")
     logger.info(f"  Created: {plans_out}")

@@ -23,7 +23,7 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 | Software | Version | Required For            |
 | -------- | ------- | ----------------------- |
 | Python   | 3.10+   | Framework               |
-| SUMO     | 1.18+   | SUMO/QarSUMO simulation |
+| SUMO     | 1.20+   | SUMO/QarSUMO simulation |
 | Java     | 17+     | MATSim simulation       |
 | Git      | 2.0+    | Repository cloning      |
 
@@ -50,7 +50,7 @@ python scripts/03_medium_multimodal.py # 50K LA multi-mode
 
 # 5. Verify installation
 python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
-# Expected: [VALID] Scenario bundle at: .../scenarios/chicago_1k_car
+# Expected: ✓ VALID    chicago_1k_car
 ```
 
 ---
@@ -109,7 +109,7 @@ python -m pipeline.validation.validate_bundle scenarios/nyc_10k_car
 python -m pipeline.validation.validate_bundle scenarios/la_50k_bike_car_transit
 ```
 
-All should report `[VALID]`.
+All should report `✓ VALID`.
 
 ### Step 2: Quick Sanity Check
 

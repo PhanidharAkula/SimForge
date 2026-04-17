@@ -274,7 +274,12 @@ def parse_model_file(
 
             if line.startswith("bld "):
                 bld_count += 1
-                parts = shlex.split(line, posix=True)
+                try:
+                    parts = shlex.split(line, posix=True)
+                except ValueError:
+                    # Malformed quoting in building line — skip gracefully
+                    logger.debug(f"Skipping bld line with malformed quoting: {line[:80]!r}")
+                    continue
                 bld = _parse_building_line(parts)
                 if bld is None:
                     continue
@@ -361,7 +366,16 @@ def main():
 
     bbox = None
     if args.bbox:
-        parts = [float(x.strip()) for x in args.bbox.split(",")]
+        try:
+            parts = [float(x.strip()) for x in args.bbox.split(",")]
+        except ValueError:
+            print(f"Error: --bbox must be 4 comma-separated numbers, got: '{args.bbox}'")
+            print(f"  Format: --bbox 'south,north,west,east'")
+            print(f"  Example: --bbox '41.8,42.0,-87.7,-87.5'")
+            raise SystemExit(1)
+        if len(parts) != 4:
+            print(f"Error: --bbox expects 4 values (south,north,west,east), got {len(parts)}")
+            raise SystemExit(1)
         bbox = (parts[0], parts[1], parts[2], parts[3])
 
     data = parse_model_file(Path(args.model_path), bbox=bbox)

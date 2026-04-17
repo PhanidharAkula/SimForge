@@ -152,15 +152,39 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
     
     logger.info(f"Downloading OSM network for bbox: {bbox}")
     
-    # osmnx 2.x expects bbox as (left, bottom, right, top) = (west, south, east, north)
-    G = ox.graph_from_bbox(
-        bbox=(bbox.west, bbox.south, bbox.east, bbox.north),
-        network_type=network_type,
-        simplify=True,
-        truncate_by_edge=True
-    )
+    import time as _time
+    t0 = _time.time()
     
-    logger.info(f"Downloaded network: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges")
+    # osmnx 2.x expects bbox as (left, bottom, right, top) = (west, south, east, north)
+    try:
+        G = ox.graph_from_bbox(
+            bbox=(bbox.west, bbox.south, bbox.east, bbox.north),
+            network_type=network_type,
+            simplify=True,
+            truncate_by_edge=True
+        )
+    except Exception as e:
+        error_type = type(e).__name__
+        raise RuntimeError(
+            f"Failed to download OSM network data: {error_type}: {e}\n"
+            f"  Bbox: north={bbox.north}, south={bbox.south}, east={bbox.east}, west={bbox.west}\n"
+            f"  Possible causes:\n"
+            f"    - No internet connection\n"
+            f"    - OSM Overpass API is down or rate-limited (wait and retry)\n"
+            f"    - Bounding box covers an area with no roads (ocean, desert)\n"
+            f"    - Bounding box coordinates are swapped or invalid"
+        ) from e
+    
+    if G.number_of_nodes() == 0:
+        raise ValueError(
+            f"OSM returned an empty road network (0 nodes) for the given bounding box.\n"
+            f"  Bbox: north={bbox.north}, south={bbox.south}, east={bbox.east}, west={bbox.west}\n"
+            f"  This usually means the area has no roads (ocean, park, desert).\n"
+            f"  Try a different center point or larger radius."
+        )
+    
+    elapsed = _time.time() - t0
+    logger.info(f"Downloaded network: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges  ({elapsed:.1f}s)")
     return G
 
 

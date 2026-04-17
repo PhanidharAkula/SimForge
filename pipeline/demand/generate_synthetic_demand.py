@@ -114,7 +114,19 @@ def load_network_for_demand(network_path: Path) -> NetworkStats:
     Returns:
         NetworkStats with node IDs, coordinates, degrees, and adjacency
     """
-    tree = etree.parse(str(network_path))
+    if not network_path.is_file():
+        raise FileNotFoundError(
+            f"Network file not found: {network_path}\n"
+            f"  Run network generation first, e.g.:\n"
+            f"    python -m pipeline.network.build_network_from_osm --help"
+        )
+    try:
+        tree = etree.parse(str(network_path))
+    except etree.XMLSyntaxError as e:
+        raise ValueError(
+            f"Failed to parse network.xml at {network_path}: {e}\n"
+            f"  The file may be corrupted or truncated. Re-generate it."
+        ) from e
     root = tree.getroot()
     
     node_ids = []
@@ -243,6 +255,9 @@ class DemandGenerator:
         attempts = 0
         max_attempts = num_trips * 10  # Avoid infinite loops
         
+        from pipeline.progress import ProgressBar
+        pb = ProgressBar(total=num_trips, desc="Generating trips")
+        
         while len(trips) < num_trips and attempts < max_attempts:
             attempts += 1
             
@@ -254,6 +269,7 @@ class DemandGenerator:
             
             departure = self.generate_departure_time(horizon_start, horizon_end)
             
+            pb.update()
             trips.append({
                 "trip_id": f"t{len(trips)}",
                 "origin_node_id": origin,
@@ -263,6 +279,7 @@ class DemandGenerator:
             })
         
         # Sort by departure time
+        pb.finish()
         trips.sort(key=lambda t: t["departure_time_s"])
         
         # Renumber trip IDs after sorting

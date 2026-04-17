@@ -20,7 +20,7 @@
 | ---------- | ------- | ------------------------------------------------------------------------- |
 | **Python** | 3.10+   | `brew install python@3.13` or system package manager                      |
 | **Java**   | 17+     | `brew install openjdk@17` (required for MATSim)                           |
-| **SUMO**   | 1.18+   | `brew install sumo` or [download](https://sumo.dlr.de/docs/Downloads.php) |
+| **SUMO**   | 1.20+   | `brew install sumo` or [download](https://sumo.dlr.de/docs/Downloads.php) |
 | **Git**    | 2.30+   | Usually pre-installed                                                     |
 
 ### Verify Prerequisites
@@ -28,7 +28,7 @@
 ```bash
 python3 --version   # Should be 3.10+
 java -version       # Should be 17+
-sumo --version      # Should be 1.18+
+sumo --version      # Should be 1.20+
 ```
 
 ---
@@ -93,11 +93,14 @@ python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MA
 
 ### Current Scenarios
 
-| Scenario                  | City    | Trips  | Modes              |
-| ------------------------- | ------- | ------ | ------------------ |
-| `chicago_1k_car`          | Chicago | 1,000  | car                |
-| `nyc_10k_car`             | NYC     | 10,000 | car                |
-| `la_50k_bike_car_transit` | LA      | 50,000 | bike, car, transit |
+| Scenario                   | City    | Trips   | Modes              |
+| -------------------------- | ------- | ------- | ------------------ |
+| `chicago_1k_car`           | Chicago | 1,000   | car                |
+| `chicago_200k_car_transit` | Chicago | 200,000 | car, transit       |
+| `la_1k_car`                | LA      | 1,000   | car                |
+| `la_50k_bike_car_transit`  | LA      | 50,000  | bike, car, transit |
+| `nyc_1k_car`               | NYC     | 1,000   | car                |
+| `nyc_10k_car`              | NYC     | 10,000  | car                |
 
 ### Data Sources
 
