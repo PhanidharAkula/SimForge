@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 """
 Comprehensive data integrity tests for ALL generated scenarios.
 

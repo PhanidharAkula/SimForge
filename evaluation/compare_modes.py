@@ -86,7 +86,7 @@ class ComparisonResult:
         print("=" * 60)
         
         if self.microscopic and self.microscopic.success:
-            print(f"\n📊 MICROSCOPIC (accurate)")
+            print("\n📊 MICROSCOPIC (accurate)")
             print(f"   Runtime:        {self.microscopic.runtime_s:.2f} s")
             print(f"   Trips completed: {self.microscopic.trip_count:,}")
             print(f"   Mean travel time: {self.microscopic.mean_travel_time_s:.2f} s")
@@ -95,7 +95,7 @@ class ComparisonResult:
             print(f"\n❌ MICROSCOPIC: Failed - {self.microscopic.error}")
         
         if self.mesoscopic and self.mesoscopic.success:
-            print(f"\n⚡ MESOSCOPIC (fast)")
+            print("\n⚡ MESOSCOPIC (fast)")
             print(f"   Runtime:        {self.mesoscopic.runtime_s:.2f} s")
             print(f"   Trips completed: {self.mesoscopic.trip_count:,}")
             print(f"   Mean travel time: {self.mesoscopic.mean_travel_time_s:.2f} s")
@@ -104,7 +104,7 @@ class ComparisonResult:
             print(f"\n❌ MESOSCOPIC: Failed - {self.mesoscopic.error}")
         
         if self.speedup_factor:
-            print(f"\n📈 TRADE-OFF ANALYSIS")
+            print("\n📈 TRADE-OFF ANALYSIS")
             print(f"   Speedup factor:     {self.speedup_factor:.1f}x faster")
             print(f"   Trip count diff:    {self.trip_count_diff:+,} trips")
             print(f"   Travel time MAPE:   {self.travel_time_mape:.2f}%")
@@ -128,13 +128,13 @@ def run_mode(
     mode_dir = output_dir / mode_name
     mode_dir.mkdir(parents=True, exist_ok=True)
     
-    logger.info(f"Running {mode_name} mode...")
+    logger.info("Running %s mode...", mode_name)
     
     # Prepare SUMO inputs
     try:
-        summary = prepare_sumo_inputs(scenario_path, mode_dir)
+        prepare_sumo_inputs(scenario_path, mode_dir)
         config_path = mode_dir / "toy.sumocfg"
-    except Exception as e:
+    except (OSError, ValueError, RuntimeError) as e:
         return ModeResult(
             mode=mode_name,
             runtime_s=0,
@@ -178,7 +178,8 @@ def run_mode(
             capture_output=True,
             text=True,
             timeout=timeout_s,
-            cwd=mode_dir
+            cwd=mode_dir,
+            check=False
         )
         runtime = time.time() - start_time
         
@@ -225,7 +226,7 @@ def run_mode(
                 mean_travel_time_s=stats.mean_travel_time_s,
                 p95_travel_time_s=stats.p95_travel_time_s
             )
-        except Exception as e:
+        except (OSError, ValueError) as e:
             return ModeResult(
                 mode=mode_name,
                 runtime_s=runtime,
@@ -349,17 +350,17 @@ def main():
     if not scenario_path.is_dir():
         print(f"❌ Error: '{args.scenario}' is not a scenario directory.")
         if str(args.scenario).endswith(".json"):
-            print(f"   Looks like a JSON file — did you mean --from-benchmark?")
+            print("   Looks like a JSON file — did you mean --from-benchmark?")
             print(f"   python -m evaluation.compare_modes --from-benchmark {args.scenario}")
         else:
-            print(f"   Expected a scenario directory like: scenarios/chicago_1k_car")
+            print("   Expected a scenario directory like: scenarios/chicago_1k_car")
         sys.exit(1)
     
     manifest = scenario_path / "manifest.xml"
     if not manifest.exists():
-        print(f"❌ Error: Not a valid scenario bundle (missing manifest.xml)")
+        print("❌ Error: Not a valid scenario bundle (missing manifest.xml)")
         print(f"   Path: {scenario_path}")
-        print(f"   Expected files: manifest.xml, network.xml, demand.csv, config.xml")
+        print("   Expected files: manifest.xml, network.xml, demand.csv, config.xml")
         sys.exit(1)
     
     run_micro = not args.meso_only
@@ -380,9 +381,9 @@ def main():
     # Save JSON if requested
     if args.json:
         args.json.parent.mkdir(parents=True, exist_ok=True)
-        with open(args.json, "w") as f:
+        with open(args.json, "w", encoding="utf-8") as f:
             json.dump(result.to_dict(), f, indent=2)
-        logger.info(f"Results saved to: {args.json}")
+        logger.info("Results saved to: %s", args.json)
 
 
 def _compare_from_benchmark(results_path: Path) -> int:
@@ -391,7 +392,7 @@ def _compare_from_benchmark(results_path: Path) -> int:
         print(f"❌ Error: File not found: {results_path}")
         return 1
     
-    with open(results_path) as f:
+    with open(results_path, encoding="utf-8") as f:
         data = json.load(f)
     
     results = data.get("results", [])

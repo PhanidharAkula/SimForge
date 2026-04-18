@@ -10,14 +10,12 @@ Usage:
     python setup_simforge.py
 """
 
-import os
 import sys
 import shutil
 import subprocess
 import platform
 import urllib.request
 import zipfile
-import textwrap
 from pathlib import Path
 
 # ── Configuration ────────────────────────────────────────────────────
@@ -58,7 +56,7 @@ def _fail(msg: str):
 
 
 def _run(cmd: list[str], **kwargs) -> subprocess.CompletedProcess:
-    return subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+    return subprocess.run(cmd, capture_output=True, text=True, check=False, **kwargs)
 
 
 # ── Step functions ───────────────────────────────────────────────────
@@ -126,11 +124,11 @@ def install_dependencies():
     print(f"  Installing from {REQUIREMENTS.name} ...")
     result = subprocess.run(
         [pip_python, "-m", "pip", "install", "--upgrade", "pip"],
-        capture_output=True, text=True,
+        capture_output=True, text=True, check=False,
     )
     result = subprocess.run(
         [pip_python, "-m", "pip", "install", "-r", str(REQUIREMENTS)],
-        capture_output=True, text=True,
+        capture_output=True, text=True, check=False,
     )
     if result.returncode != 0:
         _fail("pip install failed:")
@@ -152,7 +150,7 @@ def download_matsim() -> bool:
 
     try:
         urllib.request.urlretrieve(MATSIM_ZIP_URL, str(zip_path))
-    except Exception as e:
+    except (OSError, urllib.error.URLError) as e:
         _warn(f"Download failed: {e}")
         _warn("You can manually download from:")
         _warn(f"  {MATSIM_ZIP_URL}")

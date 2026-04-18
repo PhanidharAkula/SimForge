@@ -18,7 +18,7 @@ import json
 import argparse
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import statistics
 
 # Check for matplotlib availability
@@ -67,7 +67,7 @@ class ScenarioMetrics:
 
 def load_results(results_path: Path) -> dict:
     """Load benchmark results from JSON."""
-    with open(results_path) as f:
+    with open(results_path, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -202,9 +202,8 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics], output_dir: Path) ->
         'matsim': '#2ca02c',    # Green
     }
     
-    fig, ax = plt.subplots(figsize=(12, 6))
+    _, ax = plt.subplots(figsize=(12, 6))
     
-    x_positions = []
     bar_width = 0.25
     group_gap = 0.3
     
@@ -216,11 +215,11 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics], output_dir: Path) ->
         city_engines = sorted(set(m.engine for m in city_metrics))
         
         city_start = current_x
-        for i, engine in enumerate(city_engines):
+        for _idx, engine in enumerate(city_engines):
             engine_data = [m for m in city_metrics if m.engine == engine]
             if engine_data:
                 m = engine_data[0]
-                bar = ax.bar(current_x, m.avg_runtime, bar_width,
+                ax.bar(current_x, m.avg_runtime, bar_width,
                             yerr=m.std_runtime, capsize=3,
                             color=colors.get(engine, 'gray'),
                             label=engine if city == cities[0] else None,
@@ -279,7 +278,7 @@ def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics], output_dir: Pat
                 row.append(0)
         matrix.append(row)
     
-    fig, ax = plt.subplots(figsize=(10, 6))
+    _, ax = plt.subplots(figsize=(10, 6))
     
     # Create heatmap
     if SEABORN_AVAILABLE:
@@ -294,7 +293,7 @@ def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics], output_dir: Pat
         # Add text annotations
         for i in range(len(engines)):
             for j in range(len(cities)):
-                text = ax.text(j, i, f'{matrix[i][j]:.4f}',
+                ax.text(j, i, f'{matrix[i][j]:.4f}',
                               ha='center', va='center', color='black', fontsize=10)
         
         ax.set_xticks(range(len(cities)))
@@ -337,7 +336,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics], output_dir: Path
         'matsim': '#2ca02c',
     }
     
-    fig, ax = plt.subplots(figsize=(12, 6))
+    _, ax = plt.subplots(figsize=(12, 6))
     
     bar_width = 0.25
     group_gap = 0.3
@@ -349,7 +348,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics], output_dir: Path
         city_engines = sorted(set(m.engine for m in city_metrics))
         
         city_start = current_x
-        for i, engine in enumerate(city_engines):
+        for _idx, engine in enumerate(city_engines):
             engine_data = [m for m in city_metrics if m.engine == engine]
             if engine_data:
                 m = engine_data[0]
@@ -480,11 +479,8 @@ def plot_engine_summary(metrics: list[ScenarioMetrics], output_dir: Path) -> Pat
 
 
 def plot_speedup_analysis(metrics: list[ScenarioMetrics], output_dir: Path) -> Path:
+    """Generate speedup analysis (Figure 5.5). Compare SUMO/QarSUMO to MATSim baseline."""
     _require_matplotlib()
-    """
-    Generate speedup analysis (Figure 5.5).
-    Compare SUMO/QarSUMO to MATSim baseline.
-    """
     setup_style()
     
     cities = sorted(set(m.city for m in metrics))
@@ -512,7 +508,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics], output_dir: Path) -> P
         print("No MATSim baseline for speedup comparison")
         return None
     
-    fig, ax = plt.subplots(figsize=(10, 6))
+    _, ax = plt.subplots(figsize=(10, 6))
     
     x = range(len(city_labels))
     width = 0.35
@@ -580,7 +576,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics], output_dir: Path) -> Opti
 
         for city in cities:
             city_start = current_x
-            for i, mode in enumerate(['micro', 'meso']):
+            for _idx, mode in enumerate(['micro', 'meso']):
                 matching = [m for m in metrics if m.engine == engine and m.city == city and m.mode == mode]
                 if matching:
                     m = matching[0]
@@ -640,7 +636,7 @@ def plot_runtime_variability(results_paths: list[Path], output_dir: Path) -> Opt
     engines = sorted(engine_runtimes.keys())
     colors = {'sumo': '#1f77b4', 'qarsumo': '#ff7f0e', 'matsim': '#2ca02c'}
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    _, ax = plt.subplots(figsize=(8, 6))
 
     bp = ax.boxplot(
         [engine_runtimes[e] for e in engines],
@@ -693,7 +689,7 @@ def plot_p95_travel_time(metrics: list[ScenarioMetrics], output_dir: Path) -> Op
 
     colors = {'sumo': '#1f77b4', 'qarsumo': '#ff7f0e', 'matsim': '#2ca02c'}
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    _, ax = plt.subplots(figsize=(12, 6))
 
     bar_width = 0.25
     group_gap = 0.3
@@ -858,7 +854,6 @@ def main():
     
     # Clean existing plots if requested
     if args.clean and output_dir.exists():
-        import glob
         old_plots = list(output_dir.glob("*.png")) + list(output_dir.glob("*.pdf"))
         if old_plots:
             for p in old_plots:

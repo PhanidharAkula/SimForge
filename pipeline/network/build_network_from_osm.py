@@ -144,13 +144,13 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
     """
     try:
         import osmnx as ox
-    except ImportError:
+    except ImportError as exc:
         raise ImportError(
             "osmnx is required for OSM network building. "
             "Install with: pip install osmnx"
-        )
+        ) from exc
     
-    logger.info(f"Downloading OSM network for bbox: {bbox}")
+    logger.info("Downloading OSM network for bbox: %s", bbox)
     
     import time as _time
     t0 = _time.time()
@@ -184,7 +184,8 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
         )
     
     elapsed = _time.time() - t0
-    logger.info(f"Downloaded network: {G.number_of_nodes()} nodes, {G.number_of_edges()} edges  ({elapsed:.1f}s)")
+    logger.info("Downloaded network: %d nodes, %d edges  (%.1fs)",
+                G.number_of_nodes(), G.number_of_edges(), elapsed)
     return G
 
 
@@ -202,10 +203,7 @@ def extract_canonical_network(
     Returns:
         Tuple of (nodes, links)
     """
-    try:
-        import osmnx as ox
-    except ImportError:
-        raise ImportError("osmnx required")
+    _ = crs  # reserved for future CRS projection support
     
     nodes = []
     links = []
@@ -307,7 +305,7 @@ def extract_canonical_network(
         ))
         link_counter += 1
     
-    logger.info(f"Extracted {len(nodes)} nodes, {len(links)} links")
+    logger.info("Extracted %d nodes, %d links", len(nodes), len(links))
     return nodes, links
 
 
@@ -402,7 +400,7 @@ def build_network_from_osm(
     tree = etree.ElementTree(root)
     tree.write(str(output_path), pretty_print=True, xml_declaration=True, encoding="UTF-8")
     
-    logger.info(f"Wrote network to {output_path}")
+    logger.info("Wrote network to %s", output_path)
     
     return {
         "node_count": len(nodes),
@@ -494,9 +492,10 @@ def main():
         bbox = BoundingBox.from_string(args.bbox)
     elif args.city:
         bbox = get_city_bbox(args.city)
-        logger.info(f"Using predefined city: {PREDEFINED_CITIES[args.city]['name']}")
+        logger.info("Using predefined city: %s", PREDEFINED_CITIES[args.city]['name'])
     else:
         parser.error("Either --bbox or --city is required")
+        return  # unreachable but satisfies linter
     
     result = build_network_from_osm(
         bbox=bbox,
@@ -505,7 +504,7 @@ def main():
         crs=args.crs
     )
     
-    print(f"\nNetwork built successfully:")
+    print("\nNetwork built successfully:")
     print(f"  Nodes: {result['node_count']}")
     print(f"  Links: {result['link_count']}")
     print(f"  Output: {result['output_path']}")

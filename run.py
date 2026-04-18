@@ -216,6 +216,7 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
 
 def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeout: int) -> dict:
     """Run MATSim simulation."""
+    _ = mode  # MATSim mode is configured via its own config, not via CLI flag
     from adapters.matsim.matsim_adapter import (
         prepare_matsim_inputs, run_matsim as _run_matsim,
         parse_matsim_output, find_matsim_jar

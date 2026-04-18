@@ -15,17 +15,14 @@ Usage:
 """
 
 import json
-import shutil
 import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 import logging
-
-from lxml import etree
 
 logging.basicConfig(
     level=logging.INFO,
@@ -117,7 +114,7 @@ class ProgressTracker:
         eta = self._estimate_remaining()
         
         # Status indicators
-        success_icon = "✓" if self.failed_runs == 0 else "⚠"
+        _ = "✓" if self.failed_runs == 0 else "⚠"
         
         # Print progress line
         status_line = (
@@ -138,7 +135,7 @@ class ProgressTracker:
         avg_time = sum(self.run_times) / len(self.run_times) if self.run_times else 0
         
         print(f"\n\n{'='*60}")
-        print(f"📊 BENCHMARK COMPLETE")
+        print("📊 BENCHMARK COMPLETE")
         print(f"{'='*60}")
         print(f"  Total runs:      {self.total_runs}")
         print(f"  Successful:      {self.successful_runs} ✓")
@@ -146,7 +143,7 @@ class ProgressTracker:
         if self.total_runs > 0:
             print(f"  Success rate:    {(self.successful_runs/self.total_runs*100):.1f}%")
         else:
-            print(f"  Success rate:    N/A (no runs executed)")
+            print("  Success rate:    N/A (no runs executed)")
         print(f"{'─'*60}")
         print(f"  Total time:      {self._format_time(elapsed)}")
         print(f"  Avg per run:     {self._format_time(avg_time)}")
@@ -156,7 +153,7 @@ class ProgressTracker:
 def print_banner(runspec_name: str, total_runs: int, scenarios: int, configs: int, engines: list[str]):
     """Print startup banner with benchmark info."""
     print(f"\n{'═'*60}")
-    print(f"🚀 SimForge Benchmark Runner")
+    print("🚀 SimForge Benchmark Runner")
     print(f"{'═'*60}")
     print(f"  Runspec:      {runspec_name}")
     print(f"  Scenarios:    {scenarios} bundles")
@@ -220,7 +217,7 @@ class BenchmarkResult:
     
     def save(self, path: Path) -> None:
         """Save results to JSON file."""
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(self.to_dict(), f, indent=2)
 
 
@@ -240,10 +237,10 @@ class BenchmarkHarness:
             # and prints errors to stdout
             valid = validate_bundle(scenario_path)
             if not valid:
-                logger.error(f"Validation failed for {scenario_path}")
+                logger.error("Validation failed for %s", scenario_path)
             return valid
-        except Exception as e:
-            logger.error(f"Validation error for {scenario_path}: {e}")
+        except (OSError, ValueError) as e:
+            logger.error("Validation error for %s: %s", scenario_path, e)
             return False
     
     def prepare_sumo_inputs(
@@ -253,6 +250,7 @@ class BenchmarkHarness:
         seed: int
     ) -> dict:
         """Prepare SUMO inputs from canonical bundle."""
+        _ = seed  # SUMO adapter handles seeds at runtime, not during input prep
         from adapters.sumo.sumo_adapter import prepare_sumo_inputs
         
         return prepare_sumo_inputs(scenario_path, output_dir)
@@ -292,7 +290,7 @@ class BenchmarkHarness:
             cmd.extend(["--mesosim"])
             logger.info("Using mesoscopic simulation mode (faster)")
         
-        logger.info(f"Running: {' '.join(cmd)}")
+        logger.info("Running: %s", ' '.join(cmd))
         
         start_time = time.time()
         try:
@@ -301,7 +299,8 @@ class BenchmarkHarness:
                 capture_output=True,
                 text=True,
                 timeout=timeout_s,
-                cwd=config_path.parent
+                cwd=config_path.parent,
+                check=False
             )
             runtime = time.time() - start_time
             
@@ -319,7 +318,7 @@ class BenchmarkHarness:
         except subprocess.TimeoutExpired:
             runtime = time.time() - start_time
             return False, runtime, f"Timeout after {timeout_s}s"
-        except Exception as e:
+        except OSError as e:
             runtime = time.time() - start_time
             return False, runtime, str(e)
     
@@ -339,8 +338,8 @@ class BenchmarkHarness:
                     "p95": stats.p95_travel_time_s,
                     "trip_count": stats.trip_count
                 }
-            except Exception as e:
-                logger.warning(f"Failed to parse tripinfo: {e}")
+            except (OSError, ValueError) as e:
+                logger.warning("Failed to parse tripinfo: %s", e)
         
         return metrics
     
@@ -362,7 +361,7 @@ class BenchmarkHarness:
         run_dir.mkdir(parents=True, exist_ok=True)
         
         mode_str = " (mesoscopic)" if mesoscopic else ""
-        logger.info(f"Starting run: {scenario_id} / {engine} / seed={seed}{mode_str}")
+        logger.info("Starting run: %s / %s / seed=%d%s", scenario_id, engine, seed, mode_str)
         
         # Handle different engines
         supported_engines = ["sumo", "qarsumo", "matsim"]
@@ -401,7 +400,7 @@ class BenchmarkHarness:
             else:
                 # SUMO
                 self.prepare_sumo_inputs(scenario_path, run_dir, seed)
-        except Exception as e:
+        except (OSError, ValueError, RuntimeError) as e:
             return RunResult(
                 scenario_id=scenario_id,
                 engine=engine,
@@ -598,7 +597,7 @@ class BenchmarkHarness:
                 status = "✓" if valid else "✗"
                 print(f"  {status} {run_config.scenario_id}")
         
-        print(f"\n🏃 Starting benchmark runs...\n")
+        print("\n🏃 Starting benchmark runs...\n")
         
         # Execute runs
         run_index = 0
@@ -718,8 +717,8 @@ def compute_reproducibility_from_results(results: list[RunResult]) -> dict:
                 "n_runs": len(runs),
                 "values": mean_travel_times
             }
-        except Exception as e:
-            logger.warning(f"Could not compute reproducibility for {scenario_id}: {e}")
+        except (ValueError, ZeroDivisionError) as e:
+            logger.warning("Could not compute reproducibility for %s: %s", scenario_id, e)
     
     return reproducibility
 
@@ -769,7 +768,7 @@ def main():
     if result.successful_runs > 0:
         repro = compute_reproducibility_from_results(result.results)
         if repro:
-            print(f"\n📈 Reproducibility Analysis:")
+            print("\n📈 Reproducibility Analysis:")
             for scenario_id, metrics in repro.items():
                 r_val = metrics['R_index']
                 interp = metrics['interpretation']
@@ -777,7 +776,7 @@ def main():
                 print(f"  {icon} {scenario_id}: R={r_val:.4f} ({interp})")
     
     if result.failed_runs > 0:
-        print(f"\n❌ Failed runs:")
+        print("\n❌ Failed runs:")
         for r in result.results:
             if r.status != "success":
                 print(f"  • {r.scenario_id} seed={r.seed}: {r.error_message[:70]}...")

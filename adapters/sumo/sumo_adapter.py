@@ -123,18 +123,18 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
 
     try:
         start_time_s = int(float(start_time_s_raw))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as exc:
         raise ValueError(
             f"config.xml <time> start_time_s='{start_time_s_raw}' is not a valid number.\n"
             f"  Expected an integer (seconds), e.g. start_time_s=\"0\"."
-        )
+        ) from exc
     try:
         end_time_s = int(float(end_time_s_raw))
-    except (ValueError, TypeError):
+    except (ValueError, TypeError) as exc:
         raise ValueError(
             f"config.xml <time> end_time_s='{end_time_s_raw}' is not a valid number.\n"
             f"  Expected an integer (seconds), e.g. end_time_s=\"86400\"."
-        )
+        ) from exc
     if end_time_s <= start_time_s:
         raise ValueError(
             f"config.xml <time> end_time_s ({end_time_s}) must be greater than "
@@ -181,11 +181,11 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
                 )
             for _row in reader:
                 trip_count += 1
-    except FileNotFoundError:
+    except FileNotFoundError as exc:
         raise FileNotFoundError(
             f"demand.csv not found at {demand_path}.\n"
             f"  Check that manifest.xml points to the correct demand file."
-        )
+        ) from exc
 
     # --- Signals: presence flag ---
     has_signals = False
@@ -482,13 +482,14 @@ def build_sumo_routes_xml(
         skipped = len(skipped_trips)
         pct = (skipped / total * 100) if total > 0 else 0
         logger.warning(
-            f"Skipped {skipped}/{total} trips ({pct:.0f}%) — no valid route found. "
-            f"This may indicate a disconnected network."
+            "Skipped %d/%d trips (%.0f%%) — no valid route found. "
+            "This may indicate a disconnected network.",
+            skipped, total, pct
         )
         if total > 0 and pct > 50:
             logger.error(
-                f"More than 50% of trips have no valid route. "
-                f"The network may be highly disconnected or the demand references nodes outside the network."
+                "More than 50%% of trips have no valid route. "
+                "The network may be highly disconnected or the demand references nodes outside the network."
             )
 
     lines.append("</routes>")
@@ -565,18 +566,18 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
                 )
                 if platform.machine() == "arm64":
                     msg += (
-                        f"  This is a known SUMO bug on Apple Silicon for large networks (>~3000 nodes).\n"
-                        f"  Workarounds:\n"
-                        f"    1. Use a smaller network (reduce --radius in the generation script)\n"
-                        f"    2. Run on Linux/HPC where SUMO's x86_64 binary handles large networks\n"
-                        f"    3. Build SUMO from source with Rosetta 2 (arch -x86_64)"
+                        "  This is a known SUMO bug on Apple Silicon for large networks (>~3000 nodes).\n"
+                        "  Workarounds:\n"
+                        "    1. Use a smaller network (reduce --radius in the generation script)\n"
+                        "    2. Run on Linux/HPC where SUMO's x86_64 binary handles large networks\n"
+                        "    3. Build SUMO from source with Rosetta 2 (arch -x86_64)"
                     )
                 raise RuntimeError(msg)
             error_lines = [l for l in (nc_result.stderr or "").split("\n")
                            if l.strip().startswith("Error:")]
             if error_lines or not net_path.exists():
                 raise RuntimeError(f"netconvert failed: {nc_result.stderr}")
-    except FileNotFoundError:
+    except FileNotFoundError as exc:
         raise RuntimeError(
             "netconvert not found on PATH.\n"
             "  Install SUMO and ensure 'netconvert' is accessible:\n"
@@ -584,7 +585,7 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
             "    Ubuntu: sudo apt-get install sumo sumo-tools\n"
             "    Conda:  conda install -c conda-forge sumo\n"
             "  Then verify: netconvert --version"
-        )
+        ) from exc
 
     # Build SUMO routes
     routes_content = build_sumo_routes_xml(summary, graph, demand_path)

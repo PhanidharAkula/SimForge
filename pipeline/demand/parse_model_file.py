@@ -33,7 +33,6 @@ JWTRNS codes (ACS/PUMS):
 """
 
 import logging
-import re
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -278,7 +277,7 @@ def parse_model_file(
                     parts = shlex.split(line, posix=True)
                 except ValueError:
                     # Malformed quoting in building line — skip gracefully
-                    logger.debug(f"Skipping bld line with malformed quoting: {line[:80]!r}")
+                    logger.debug("Skipping bld line with malformed quoting: %r", line[:80])
                     continue
                 bld = _parse_building_line(parts)
                 if bld is None:
@@ -368,11 +367,11 @@ def main():
     if args.bbox:
         try:
             parts = [float(x.strip()) for x in args.bbox.split(",")]
-        except ValueError:
+        except ValueError as exc:
             print(f"Error: --bbox must be 4 comma-separated numbers, got: '{args.bbox}'")
-            print(f"  Format: --bbox 'south,north,west,east'")
-            print(f"  Example: --bbox '41.8,42.0,-87.7,-87.5'")
-            raise SystemExit(1)
+            print("  Format: --bbox 'south,north,west,east'")
+            print("  Example: --bbox '41.8,42.0,-87.7,-87.5'")
+            raise SystemExit(1) from exc
         if len(parts) != 4:
             print(f"Error: --bbox expects 4 values (south,north,west,east), got {len(parts)}")
             raise SystemExit(1)

@@ -17,9 +17,8 @@ Usage:
 """
 
 import csv
-import shutil
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from xml.etree import ElementTree as ET
@@ -106,7 +105,8 @@ def check_java_available() -> Tuple[bool, str]:
             ["java", "-version"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
+            check=False
         )
         # Java version is typically in stderr
         version_output = result.stderr or result.stdout
@@ -168,7 +168,6 @@ def _largest_strongly_connected_component(nodes: Dict, links: List) -> set:
     Find the largest strongly connected component in the network.
     Returns the set of node IDs in that component.
     """
-    from collections import deque
 
     # Build adjacency (forward and reverse)
     fwd = {}
@@ -243,9 +242,10 @@ def clean_network(nodes: Dict, links: List) -> tuple:
     removed_links = len(links) - len(filtered_links)
     if removed_nodes > 0 or removed_links > 0:
         logger.info(
-            f"  Network cleaning: kept {len(filtered_nodes)}/{len(nodes)} nodes, "
-            f"{len(filtered_links)}/{len(links)} links "
-            f"(removed {removed_nodes} nodes, {removed_links} links from disconnected components)"
+            "  Network cleaning: kept %d/%d nodes, %d/%d links "
+            "(removed %d nodes, %d links from disconnected components)",
+            len(filtered_nodes), len(nodes), len(filtered_links), len(links),
+            removed_nodes, removed_links
         )
 
     return filtered_nodes, filtered_links, reachable
@@ -286,6 +286,7 @@ def find_link_for_destination(node_id: str, links: List[dict], link_adjacency: d
     In MATSim, routing goes from origin TO-node to destination FROM-node.
     So we need a link whose FROM-node is our destination (or TO-node as fallback).
     """
+    _ = link_adjacency  # reserved for future adjacency-based routing
     # First priority: link starting from destination (FROM=destination)
     for link in links:
         if link["from"] == node_id:
@@ -430,8 +431,8 @@ def build_matsim_plans_xml(demand_path: Path, links: List, reachable_nodes: Opti
     
     if skipped_trips > 0:
         logger.info(
-            f"  Plans: {total_trips - skipped_trips}/{total_trips} trips included "
-            f"({skipped_trips} skipped — unreachable in cleaned network)"
+            "  Plans: %d/%d trips included (%d skipped — unreachable in cleaned network)",
+            total_trips - skipped_trips, total_trips, skipped_trips
         )
     
     lines.append('</plans>')
@@ -581,7 +582,7 @@ def prepare_matsim_inputs(
     if config is None:
         config = MATSimConfig()
     
-    logger.info(f"Preparing MATSim inputs for: {scenario_path}")
+    logger.info("Preparing MATSim inputs for: %s", scenario_path)
     
     # Load canonical files
     paths = load_canonical_paths(scenario_path)
@@ -604,21 +605,21 @@ def prepare_matsim_inputs(
     network_xml = build_matsim_network_xml(nodes, links)
     network_out = output_dir / "network.xml"
     network_out.write_text(network_xml, encoding="utf-8")
-    logger.info(f"  Created: {network_out}")
+    logger.info("  Created: %s", network_out)
     
     # Convert demand to plans (using cleaned links only)
     logger.info("Converting demand to MATSim plans...")
     plans_xml = build_matsim_plans_xml(demand_path, links, reachable_nodes)
     plans_out = output_dir / "plans.xml"
     plans_out.write_text(plans_xml, encoding="utf-8")
-    logger.info(f"  Created: {plans_out}")
+    logger.info("  Created: %s", plans_out)
     
     # Create vehicles definition
     logger.info("Creating MATSim vehicles definition...")
     vehicles_xml = build_matsim_vehicles_xml()
     vehicles_out = output_dir / "vehicles.xml"
     vehicles_out.write_text(vehicles_xml, encoding="utf-8")
-    logger.info(f"  Created: {vehicles_out}")
+    logger.info("  Created: %s", vehicles_out)
     
     # Create output directory for MATSim
     matsim_output = output_dir / "output"
@@ -636,9 +637,9 @@ def prepare_matsim_inputs(
     )
     config_out = output_dir / "config.xml"
     config_out.write_text(config_xml, encoding="utf-8")
-    logger.info(f"  Created: {config_out}")
+    logger.info("  Created: %s", config_out)
     
-    logger.info(f"MATSim inputs ready at: {output_dir}")
+    logger.info("MATSim inputs ready at: %s", output_dir)
     return config_out
 
 
@@ -667,14 +668,14 @@ def run_matsim(
     if not java_ok:
         return False, 0.0, f"Java not available: {java_version}"
     
-    logger.info(f"Java version: {java_version}")
+    logger.info("Java version: %s", java_version)
     
     # Find MATSim JAR
     matsim_jar = find_matsim_jar()
     if matsim_jar is None:
         return False, 0.0, "MATSim JAR not found. Please install MATSim or set MATSIM_HOME"
     
-    logger.info(f"Using MATSim: {matsim_jar}")
+    logger.info("Using MATSim: %s", matsim_jar)
     
     # Build classpath including all dependencies in libs/ folder
     matsim_dir = matsim_jar.parent
@@ -697,7 +698,7 @@ def run_matsim(
         str(config_path)
     ]
     
-    logger.debug(f"Running: {' '.join(cmd)}")
+    logger.debug("Running: %s", ' '.join(cmd))
     
     start_time = time.time()
     try:
@@ -706,7 +707,8 @@ def run_matsim(
             capture_output=True,
             text=True,
             timeout=timeout_s,
-            cwd=config_path.parent
+            cwd=config_path.parent,
+            check=False
         )
         elapsed = time.time() - start_time
         
@@ -719,7 +721,7 @@ def run_matsim(
     except subprocess.TimeoutExpired:
         elapsed = time.time() - start_time
         return False, elapsed, f"Timeout after {timeout_s}s"
-    except Exception as e:
+    except OSError as e:
         elapsed = time.time() - start_time
         return False, elapsed, str(e)
 
@@ -743,7 +745,7 @@ def parse_matsim_output(output_dir: Path) -> dict:
         trips_file = output_dir / "output_trips.csv"
     
     if not trips_file.exists():
-        logger.warning(f"No trips output found in {output_dir}")
+        logger.warning("No trips output found in %s", output_dir)
         return {}
     
     travel_times = []
@@ -767,8 +769,8 @@ def parse_matsim_output(output_dir: Path) -> dict:
                             travel_times.append(h * 3600 + m * 60 + s)
                     except ValueError:
                         pass
-    except Exception as e:
-        logger.warning(f"Failed to parse MATSim output: {e}")
+    except (OSError, csv.Error, KeyError) as e:
+        logger.warning("Failed to parse MATSim output: %s", e)
         return {}
     
     if not travel_times:
@@ -803,46 +805,46 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     # Check Java
-    java_ok, java_version = check_java_available()
-    if java_ok:
-        print(f"✓ Java available: {java_version}")
+    _java_ok, _java_version = check_java_available()
+    if _java_ok:
+        print(f"✓ Java available: {_java_version}")
     else:
-        print(f"⚠ Java not found - MATSim requires Java 11+")
+        print("⚠ Java not found - MATSim requires Java 11+")
     
     # Check MATSim
-    matsim_jar = find_matsim_jar()
-    if matsim_jar:
-        print(f"✓ MATSim found: {matsim_jar}")
+    _matsim_jar = find_matsim_jar()
+    if _matsim_jar:
+        print(f"✓ MATSim found: {_matsim_jar}")
     else:
         print("⚠ MATSim JAR not found - set MATSIM_HOME or place matsim.jar in working directory")
     
     # Create config
-    config = MATSimConfig(iterations=args.iterations)
+    _config = MATSimConfig(iterations=args.iterations)
     
     # Prepare inputs
-    print(f"\nPreparing MATSim inputs...")
-    config_path = prepare_matsim_inputs(args.scenario, args.output, config, args.seed)
-    print(f"✓ MATSim config: {config_path}")
+    print("\nPreparing MATSim inputs...")
+    _config_path = prepare_matsim_inputs(args.scenario, args.output, _config, args.seed)
+    print(f"✓ MATSim config: {_config_path}")
     
     # Optionally run
     if args.run:
-        if not java_ok:
+        if not _java_ok:
             print("\n✗ Cannot run without Java")
-        elif not matsim_jar:
+        elif not _matsim_jar:
             print("\n✗ Cannot run without MATSim JAR")
         else:
             print("\nRunning MATSim...")
-            success, runtime, error = run_matsim(config_path, java_heap_gb=args.heap)
-            if success:
-                print(f"✓ Completed in {runtime:.2f}s")
+            _success, _runtime, _error = run_matsim(_config_path, java_heap_gb=args.heap)
+            if _success:
+                print(f"✓ Completed in {_runtime:.2f}s")
                 
                 # Parse output
-                output_dir = Path(args.output) / "output"
-                stats = parse_matsim_output(output_dir)
+                _output_dir = Path(args.output) / "output"
+                stats = parse_matsim_output(_output_dir)
                 if stats:
-                    print(f"\nTravel Time Statistics:")
+                    print("\nTravel Time Statistics:")
                     print(f"  Trips: {stats['trip_count']}")
                     print(f"  Mean: {stats['mean_travel_time_s']:.1f}s")
                     print(f"  P95: {stats['p95_travel_time_s']:.1f}s")
             else:
-                print(f"✗ Failed: {error}")
+                print(f"✗ Failed: {_error}")

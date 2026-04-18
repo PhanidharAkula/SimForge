@@ -7,6 +7,7 @@ and returns a well-formed ScenarioSummary for a real OSM-derived scenario.
 
 from __future__ import annotations
 
+import pytest
 from pathlib import Path
 
 from adapters.sumo.sumo_adapter import prepare_sumo_inputs
@@ -34,8 +35,8 @@ def test_prepare_sumo_inputs_creates_expected_files(tmp_path) -> None:
       - reference the correct net and routes files in the config
     """
     assert SCENARIO is not None and SCENARIO.is_dir(), (
-        f"No generated scenario found in scenarios/. "
-        f"Run the generation scripts first."
+        "No generated scenario found in scenarios/. "
+        "Run the generation scripts first."
     )
 
     out_dir = tmp_path / "sumo_out"

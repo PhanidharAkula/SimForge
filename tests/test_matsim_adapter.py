@@ -12,15 +12,12 @@ from __future__ import annotations
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
-import pytest
-
 from adapters.matsim.matsim_adapter import (
     MATSimConfig,
     build_matsim_config_xml,
     build_matsim_network_xml,
     build_matsim_plans_xml,
     build_matsim_vehicles_xml,
-    check_java_available,
     load_canonical_network,
     prepare_matsim_inputs,
     seconds_to_time_string,
@@ -101,7 +98,7 @@ class TestLoadCanonicalNetwork:
     def test_node_has_coordinates(self):
         assert SCENARIO is not None
         nodes, _ = load_canonical_network(SCENARIO / "network.xml")
-        for node_id, node in list(nodes.items())[:5]:
+        for _node_id, node in list(nodes.items())[:5]:
             assert "x" in node
             assert "y" in node
             assert isinstance(node["x"], float)

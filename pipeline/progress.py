@@ -67,7 +67,7 @@ class ProgressBar:
     def finish(self, message: str = "") -> None:
         self.current = self.total
         self._draw()
-        elapsed = time.time() - self.start_time
+        _ = time.time() - self.start_time  # elapsed, reserved for future use
         if message:
             sys.stderr.write(f"  {message}")
         sys.stderr.write("\n")

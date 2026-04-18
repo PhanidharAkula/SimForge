@@ -9,7 +9,6 @@ Usage:
 import json
 import argparse
 from pathlib import Path
-from typing import Optional
 from dataclasses import dataclass
 import statistics
 
@@ -38,7 +37,7 @@ def load_results(results_path: Path) -> dict:
             f"Benchmark results file not found: {results_path}\n"
             f"  Run a benchmark first: python run.py benchmark --runspec <file>"
         )
-    with open(results_path) as f:
+    with open(results_path, encoding="utf-8") as f:
         try:
             return json.load(f)
         except json.JSONDecodeError as e:

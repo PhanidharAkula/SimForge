@@ -95,15 +95,15 @@ class RunSpec:
         """Load runspec from YAML file."""
         try:
             import yaml
-        except ImportError:
-            raise ImportError("PyYAML required: pip install pyyaml")
+        except ImportError as exc:
+            raise ImportError("PyYAML required: pip install pyyaml") from exc
         
         if not path.is_file():
             raise FileNotFoundError(
                 f"Runspec file not found: {path}\n"
                 f"  See runspecs/ directory for example YAML files."
             )
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             try:
                 data = yaml.safe_load(f)
             except yaml.YAMLError as e:
@@ -125,7 +125,7 @@ class RunSpec:
                 f"Runspec file not found: {path}\n"
                 f"  See runspecs/ directory for example files."
             )
-        with open(path) as f:
+        with open(path, encoding="utf-8") as f:
             try:
                 data = json.load(f)
             except json.JSONDecodeError as e:
@@ -205,17 +205,17 @@ class RunSpec:
         """Save runspec to YAML file."""
         try:
             import yaml
-        except ImportError:
-            raise ImportError("PyYAML required: pip install pyyaml")
+        except ImportError as exc:
+            raise ImportError("PyYAML required: pip install pyyaml") from exc
         
         data = self._to_dict()
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             yaml.dump(data, f, default_flow_style=False, sort_keys=False)
     
     def to_json(self, path: Path) -> None:
         """Save runspec to JSON file."""
         data = self._to_dict()
-        with open(path, "w") as f:
+        with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
     
     def _to_dict(self) -> dict:
@@ -272,5 +272,5 @@ def create_example_runspec(output_path: Path) -> RunSpec:
     )
     
     spec.to_yaml(output_path)
-    logger.info(f"Created example runspec: {output_path}")
+    logger.info("Created example runspec: %s", output_path)
     return spec

@@ -35,26 +35,26 @@ def main() -> None:
 
     if not scenario_root.is_dir():
         print(f"Error: Scenario directory not found: {scenario_root}")
-        print(f"  Check that the path exists and contains manifest.xml.")
+        print("  Check that the path exists and contains manifest.xml.")
         raise SystemExit(1)
 
     if not (scenario_root / "manifest.xml").is_file():
         print(f"Error: No manifest.xml found in {scenario_root}")
-        print(f"  This directory does not appear to be a valid SimForge scenario bundle.")
-        print(f"  Expected files: manifest.xml, network.xml, demand.csv, config.xml")
+        print("  This directory does not appear to be a valid SimForge scenario bundle.")
+        print("  Expected files: manifest.xml, network.xml, demand.csv, config.xml")
         raise SystemExit(1)
 
     try:
         summary = prepare_sumo_inputs(scenario_root, output_dir)
     except FileNotFoundError as e:
         print(f"Error: {e}")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
     except ValueError as e:
         print(f"Error: Invalid scenario data — {e}")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
     except RuntimeError as e:
         print(f"Error: {e}")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
     print(f"[SUMO ADAPTER] Prepared SUMO inputs at: {output_dir.resolve()}")
     print(f"  Scenario ID : {summary.scenario_id}")

@@ -478,7 +478,7 @@ def generate_scenario(
         "signal_count": sig["signal_count"],
         "generation_time_s": elapsed,
     }
-    with open(out / "generation_metadata.json", "w") as f:
+    with open(out / "generation_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 
     return metadata

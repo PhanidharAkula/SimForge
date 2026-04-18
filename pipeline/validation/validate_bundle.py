@@ -43,7 +43,7 @@ def validate_bundle(scenario_root: Path) -> bool:
     try:
         manifest_tree = ET.parse(manifest_path)
         manifest_root = manifest_tree.getroot()
-    except Exception as e:
+    except ET.ParseError as e:
         errors.append(f"Failed to parse manifest.xml: {e}")
         return report_result(scenario_root, errors)
 
@@ -120,7 +120,7 @@ def validate_bundle(scenario_root: Path) -> bool:
     try:
         config_tree = ET.parse(config_path)
         config_root = config_tree.getroot()
-    except Exception as e:
+    except ET.ParseError as e:
         errors.append(f"Failed to parse config.xml: {e}")
         return report_result(scenario_root, errors)
 
@@ -171,7 +171,7 @@ def validate_bundle(scenario_root: Path) -> bool:
     try:
         network_tree = ET.parse(network_path)
         network_root = network_tree.getroot()
-    except Exception as e:
+    except ET.ParseError as e:
         errors.append(f"Failed to parse network.xml: {e}")
         return report_result(scenario_root, errors)
 
@@ -282,7 +282,7 @@ def validate_bundle(scenario_root: Path) -> bool:
 
     except FileNotFoundError:
         errors.append(f"demand.csv file not found at {demand_path}")
-    except Exception as e:
+    except (OSError, csv.Error) as e:
         errors.append(f"Failed to read or parse demand.csv: {e}")
 
     # -------------------------------------------------------------------------

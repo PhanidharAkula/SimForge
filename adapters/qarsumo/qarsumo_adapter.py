@@ -17,19 +17,19 @@ Usage:
 
 import shutil
 import subprocess
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 import logging
 
 try:
     from lxml import etree
-except ImportError:
+except ImportError as exc:
     raise ImportError(
         "lxml is required for the QarSUMO adapter.\n"
         "  Install with: pip install lxml\n"
         "  Or: conda install lxml"
-    )
+    ) from exc
 
 # Reuse SUMO adapter for base input generation
 from adapters.sumo.sumo_adapter import prepare_sumo_inputs
@@ -89,11 +89,12 @@ def check_gpu_available() -> bool:
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
+            check=False
         )
         if result.returncode == 0 and result.stdout.strip():
             gpus = result.stdout.strip().split("\n")
-            logger.info(f"Found {len(gpus)} GPU(s): {', '.join(gpus)}")
+            logger.info("Found %d GPU(s): %s", len(gpus), ', '.join(gpus))
             return True
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
@@ -116,7 +117,8 @@ def get_gpu_info() -> dict:
              "--format=csv,noheader"],
             capture_output=True,
             text=True,
-            timeout=5
+            timeout=5,
+            check=False
         )
         if result.returncode == 0:
             info["available"] = True
@@ -186,7 +188,7 @@ def extend_config_for_qarsumo(
     with open(qarsumo_config_path, "wb") as f:
         tree.write(f, pretty_print=True, xml_declaration=True, encoding="UTF-8")
     
-    logger.info(f"Created QarSUMO config: {qarsumo_config_path}")
+    logger.info("Created QarSUMO config: %s", qarsumo_config_path)
     return qarsumo_config_path
 
 
@@ -216,7 +218,7 @@ def prepare_qarsumo_inputs(
     if qarsumo_config is None:
         qarsumo_config = QarSUMOConfig()
     
-    logger.info(f"Preparing QarSUMO inputs for: {scenario_path}")
+    logger.info("Preparing QarSUMO inputs for: %s", scenario_path)
     
     # Step 1: Generate SUMO inputs (network, routes, base config)
     # prepare_sumo_inputs returns a ScenarioSummary, not a path
@@ -232,7 +234,7 @@ def prepare_qarsumo_inputs(
     logger.info("Step 2: Adding QarSUMO configuration...")
     qarsumo_config_path = extend_config_for_qarsumo(sumo_config_path, qarsumo_config)
     
-    logger.info(f"QarSUMO inputs ready at: {output_dir}")
+    logger.info("QarSUMO inputs ready at: %s", output_dir)
     return qarsumo_config_path
 
 
@@ -276,7 +278,7 @@ def run_qarsumo(
         base_config = config_path.parent / "toy.sumocfg"
         if base_config.exists():
             config_path = base_config
-            logger.info(f"Using base SUMO config: {config_path}")
+            logger.info("Using base SUMO config: %s", config_path)
     
     # Build command with absolute path
     cmd = [
@@ -296,7 +298,7 @@ def run_qarsumo(
         cmd.append("--mesosim")
         logger.info("Using mesoscopic simulation mode (faster)")
     
-    logger.debug(f"Running: {' '.join(cmd)}")
+    logger.debug("Running: %s", ' '.join(cmd))
     
     start_time = time.time()
     try:
@@ -305,7 +307,8 @@ def run_qarsumo(
             capture_output=True,
             text=True,
             timeout=timeout_s,
-            cwd=config_path.parent  # Run from config directory
+            cwd=config_path.parent,
+            check=False
         )
         elapsed = time.time() - start_time
         
@@ -324,9 +327,9 @@ def run_qarsumo(
             f"Simulation binary not found: {qarsumo_bin}. "
             f"Install SUMO: brew install sumo (macOS) or apt install sumo (Ubuntu)"
         )
-    except Exception as e:
+    except OSError as e:
         elapsed = time.time() - start_time
-        logger.exception(f"Unexpected error running simulation: {e}")
+        logger.exception("Unexpected error running simulation: %s", e)
         return False, elapsed, str(e)
 
 
@@ -360,18 +363,18 @@ if __name__ == "__main__":
     )
     
     # Prepare inputs
-    config_path = prepare_qarsumo_inputs(args.scenario, args.output, config)
-    print(f"Generated QarSUMO config: {config_path}")
+    _config_path = prepare_qarsumo_inputs(args.scenario, args.output, config)
+    print(f"Generated QarSUMO config: {_config_path}")
     
     # Optionally run
     if args.run:
         print("\nRunning simulation...")
-        success, runtime, error = run_qarsumo(
-            config_path, 
+        _success, _runtime, _error = run_qarsumo(
+            _config_path, 
             seed=args.seed,
             gpu_device=args.gpu_device
         )
-        if success:
-            print(f"✓ Completed in {runtime:.2f}s")
+        if _success:
+            print(f"✓ Completed in {_runtime:.2f}s")
         else:
-            print(f"✗ Failed: {error}")
+            print(f"✗ Failed: {_error}")

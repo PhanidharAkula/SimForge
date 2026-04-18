@@ -21,7 +21,6 @@ import random
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 import logging
 
 from lxml import etree
@@ -166,7 +165,7 @@ def load_network_for_demand(network_path: Path) -> NetworkStats:
     scc = compute_strongly_connected_component(
         dict(adjacency), dict(reverse_adjacency), node_ids
     )
-    logger.info(f"Strongly connected component: {len(scc)} of {len(node_ids)} nodes")
+    logger.info("Strongly connected component: %d of %d nodes", len(scc), len(node_ids))
     
     # Compute reachability only within the SCC for routable OD pairs
     logger.info("Computing node reachability for routable OD pairs...")
@@ -175,7 +174,7 @@ def load_network_for_demand(network_path: Path) -> NetworkStats:
     scc_adjacency = {n: [dest for dest in adjacency.get(n, []) if dest in scc] 
                      for n in scc}
     reachable_from = compute_reachability(scc_adjacency, scc_list)
-    logger.info(f"Reachability computed for {len(scc_list)} strongly connected nodes")
+    logger.info("Reachability computed for %d strongly connected nodes", len(scc_list))
     
     return NetworkStats(
         node_ids=sorted(node_ids),
@@ -286,7 +285,7 @@ class DemandGenerator:
         for i, trip in enumerate(trips):
             trip["trip_id"] = f"t{i}"
         
-        logger.info(f"Generated {len(trips)} trips in {attempts} attempts")
+        logger.info("Generated %d trips in %d attempts", len(trips), attempts)
         return trips
 
 
@@ -464,12 +463,12 @@ def write_demand_csv(trips: list[dict], output_path: Path) -> None:
     
     fieldnames = ["trip_id", "origin_node_id", "destination_node_id", "departure_time_s", "mode"]
     
-    with open(output_path, "w", newline="") as f:
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(trips)
     
-    logger.info(f"Wrote {len(trips)} trips to {output_path}")
+    logger.info("Wrote %d trips to %s", len(trips), output_path)
 
 
 def generate_synthetic_demand(
@@ -502,7 +501,7 @@ def generate_synthetic_demand(
     """
     # Load network
     network = load_network_for_demand(network_path)
-    logger.info(f"Loaded network: {network.total_nodes} nodes, {network.total_links} links")
+    logger.info("Loaded network: %d nodes, %d links", network.total_nodes, network.total_links)
     
     # Select generator
     if strategy == "uniform":
@@ -593,7 +592,7 @@ def main():
         mode=args.mode
     )
     
-    print(f"\nDemand generated successfully:")
+    print("\nDemand generated successfully:")
     print(f"  Trips: {result['trip_count']}")
     print(f"  Unique origins: {result['unique_origins']}")
     print(f"  Unique destinations: {result['unique_destinations']}")

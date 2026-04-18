@@ -436,7 +436,7 @@ def generate_census_demand(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["trip_id", "origin_node_id", "destination_node_id",
                   "departure_time_s", "mode"]
-    with open(output_path, "w", newline="") as f:
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(trips)
@@ -446,7 +446,6 @@ def generate_census_demand(
     # Compute statistics
     unique_origins = len(set(t["origin_node_id"] for t in trips))
     unique_dests = len(set(t["destination_node_id"] for t in trips))
-    deps = [t["departure_time_s"] for t in trips]
 
     return {
         "trip_count": len(trips),
@@ -503,7 +502,7 @@ def main():
         seed=args.seed,
     )
 
-    print(f"\nCensus-calibrated demand generated:")
+    print("\nCensus-calibrated demand generated:")
     print(f"  Trips:            {result['trip_count']}")
     print(f"  Unique origins:   {result['unique_origins']}")
     print(f"  Unique dests:     {result['unique_destinations']}")

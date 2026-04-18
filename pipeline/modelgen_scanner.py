@@ -10,7 +10,6 @@ Re-scan triggers: file added/removed, file size changed, mtime changed.
 
 import json
 import logging
-import os
 from collections import defaultdict
 from pathlib import Path
 from typing import Optional
@@ -126,7 +125,7 @@ def scan_modelgen_dir(
     cached = {}
     if cache_path.exists() and not force:
         try:
-            with open(cache_path, "r") as f:
+            with open(cache_path, "r", encoding="utf-8") as f:
                 cached = json.load(f)
         except (json.JSONDecodeError, OSError):
             cached = {}
@@ -183,7 +182,7 @@ def scan_modelgen_dir(
             "scan_timestamp": datetime.datetime.now().isoformat(),
         }
         try:
-            with open(cache_path, "w") as f:
+            with open(cache_path, "w", encoding="utf-8") as f:
                 json.dump(cache_data, f, indent=2)
             logger.info("Cache updated: %s", cache_path)
         except OSError as e:
@@ -194,23 +193,23 @@ def scan_modelgen_dir(
 
 def get_city_stats(city_key: str, modelgen_dir: Optional[Path] = None) -> Optional[dict]:
     """Get stats for a single city. Returns None if not found."""
-    data = scan_modelgen_dir(modelgen_dir=modelgen_dir)
-    return data["cities"].get(city_key)
+    result = scan_modelgen_dir(modelgen_dir=modelgen_dir)
+    return result["cities"].get(city_key)
 
 
 if __name__ == "__main__":
-    """Quick test: scan and print results."""
+    # Quick test: scan and print results.
     logging.basicConfig(level=logging.INFO)
-    data = scan_modelgen_dir(force="--force" in __import__("sys").argv)
-    for city, stats in sorted(data["cities"].items()):
-        car = stats["mode_counts"].get("car", 0)
-        total = stats["commuters"]
+    _data = scan_modelgen_dir(force="--force" in __import__("sys").argv)
+    for city, _stats in sorted(_data["cities"].items()):
+        car = _stats["mode_counts"].get("car", 0)
+        total = _stats["commuters"]
         print(f"\n{city}:")
-        print(f"  File:       {stats['file']} ({stats['size_mb']} MB)")
-        print(f"  Buildings:  {stats['total_buildings']:,}")
-        print(f"  Households: {stats['total_households']:,}")
-        print(f"  Persons:    {stats['total_persons']:,}")
+        print(f"  File:       {_stats['file']} ({_stats['size_mb']} MB)")
+        print(f"  Buildings:  {_stats['total_buildings']:,}")
+        print(f"  Households: {_stats['total_households']:,}")
+        print(f"  Persons:    {_stats['total_persons']:,}")
         print(f"  Commuters:  {total:,}")
-        print(f"  By mode:    {stats['mode_counts']}")
+        print(f"  By mode:    {_stats['mode_counts']}")
         print(f"  Car-only:   ~{car:,} trips")
         print(f"  All modes:  ~{total:,} trips")

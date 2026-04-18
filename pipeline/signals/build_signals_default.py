@@ -133,7 +133,7 @@ def identify_signalized_intersections(
     
     signalized = [nid for nid, _ in candidates]
     
-    logger.info(f"Identified {len(signalized)} nodes for signalization")
+    logger.info("Identified %d nodes for signalization", len(signalized))
     return signalized
 
 
@@ -151,9 +151,7 @@ def group_links_by_direction(
     Returns:
         Tuple of (phase1_links, phase2_links)
     """
-    import math
-    
-    node_x, node_y = node_coords[node_id]
+    _, _ = node_coords[node_id]  # coords reserved for angle-based grouping
     incoming = in_links.get(node_id, [])
     
     if not incoming:
@@ -201,6 +199,7 @@ def build_signal_controller(
         SignalController object
     """
     # Group links into phases
+    _ = out_links  # reserved for future directional logic
     phase1_links, phase2_links = group_links_by_direction(node_id, node_coords, in_links)
     
     # Calculate green times
@@ -325,7 +324,7 @@ def build_signals_default(
     """
     # Load network
     node_coords, in_links, out_links = load_network_topology(network_path)
-    logger.info(f"Loaded {len(node_coords)} nodes")
+    logger.info("Loaded %d nodes", len(node_coords))
     
     # Identify intersections
     signalized_nodes = identify_signalized_intersections(
@@ -351,7 +350,7 @@ def build_signals_default(
     tree = etree.ElementTree(root)
     tree.write(str(output_path), pretty_print=True, xml_declaration=True, encoding="UTF-8")
     
-    logger.info(f"Wrote {len(controllers)} signal controllers to {output_path}")
+    logger.info("Wrote %d signal controllers to %s", len(controllers), output_path)
     
     return {
         "signal_count": len(controllers),
@@ -399,7 +398,7 @@ def main():
         cycle_length_s=args.cycle_length
     )
     
-    print(f"\nSignals built successfully:")
+    print("\nSignals built successfully:")
     print(f"  Controllers: {result['signal_count']}")
     print(f"  Min degree: {result['min_degree']}")
     print(f"  Cycle length: {result['cycle_length_s']}s")
