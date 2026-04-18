@@ -397,7 +397,7 @@ Examples:
             print(f"  Validating {scenario}...", end=" ", flush=True)
             try:
                 from pipeline.validation.validate_bundle import validate_bundle
-                is_valid = validate_bundle(scenarios_available[scenario]["path"])
+                is_valid = validate_bundle(Path(scenarios_available[scenario]["path"]))
                 print("✓" if is_valid else "✗")
             except (OSError, ValueError, KeyError) as e:
                 print(f"✗ ({e})")

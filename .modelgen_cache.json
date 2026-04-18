@@ -1,0 +1,61 @@
+{
+  "cities": {
+    "chicago": {
+      "file": "chicago_model.txt",
+      "size_mb": 279,
+      "total_persons": 2420896,
+      "total_buildings": 832750,
+      "total_households": 1050353,
+      "commuters": 1136449,
+      "mode_counts": {
+        "car": 1044084,
+        "walk": 18277,
+        "transit": 73621,
+        "bike": 467
+      }
+    },
+    "la": {
+      "file": "la_model.txt",
+      "size_mb": 310,
+      "total_persons": 2614904,
+      "total_buildings": 921602,
+      "total_households": 1101835,
+      "commuters": 1301249,
+      "mode_counts": {
+        "car": 1267611,
+        "walk": 9984,
+        "transit": 20654,
+        "bike": 3000
+      }
+    },
+    "nyc": {
+      "file": "nyc_model.txt",
+      "size_mb": 608,
+      "total_persons": 6801148,
+      "total_buildings": 968848,
+      "total_households": 2799367,
+      "commuters": 2979596,
+      "mode_counts": {
+        "car": 1691552,
+        "transit": 1233428,
+        "bike": 3173,
+        "walk": 51443
+      }
+    }
+  },
+  "_fingerprints": {
+    "chicago": {
+      "size": 292664476,
+      "mtime": 1771595319.8604794
+    },
+    "la": {
+      "size": 324723664,
+      "mtime": 1770163407.4686635
+    },
+    "nyc": {
+      "size": 637875207,
+      "mtime": 1770163445.4189286
+    }
+  },
+  "scan_timestamp": "2026-04-17T23:23:34.822311"
+}

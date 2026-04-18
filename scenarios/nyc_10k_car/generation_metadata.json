@@ -9,11 +9,11 @@
   ],
   "start_time_s": 25200,
   "end_time_s": 32400,
-  "radius_km": 4.0,
+  "radius_km": 2.5,
   "seed": 42,
   "demand_strategy": "census",
-  "node_count": 4041,
-  "link_count": 8625,
-  "signal_count": 3005,
-  "generation_time_s": 64.9
+  "node_count": 1376,
+  "link_count": 2740,
+  "signal_count": 1023,
+  "generation_time_s": 236.7
 }

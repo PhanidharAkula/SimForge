@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <config>
-  <metadata scenario_id="chicago_1k_car" created_by="simforge_generator">
-    <description>Chicago, IL — 1,000 car trips, 07:00–08:00, r=2.0km</description>
+  <metadata scenario_id="la_10k_car" created_by="simforge_generator">
+    <description>Los Angeles, CA — 10,000 car trips, 00:00–01:00, r=3.0km</description>
   </metadata>
-  <time start_time_s="25200" end_time_s="28800" time_step_s="1"/>
+  <time start_time_s="0" end_time_s="3600" time_step_s="1"/>
   <random seed="42" engine_seed_mode="fixed"/>
   <units length="meters" speed="m/s" time="seconds"/>
   <simulation warmup_time_s="0" aggregation_interval_s="300"/>

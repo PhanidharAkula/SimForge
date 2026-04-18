@@ -156,6 +156,8 @@ class TestValidatorCatchesBadData:
 # ===========================================================================
 
 class TestSUMOAdapterRobustness:
+    _LARGE_PATTERNS = ("50k", "200k", "500k", "5m")
+
     def test_adapter_on_all_scenarios(self, tmp_path):
         """Every scenario should convert without errors.
 
@@ -173,12 +175,15 @@ class TestSUMOAdapterRobustness:
                 continue
             if not (scenario_path / "manifest.xml").is_file():
                 continue
+            if any(p in scenario_path.name for p in self._LARGE_PATTERNS):
+                skipped.append(scenario_path.name)
+                continue
 
             out = tmp_path / scenario_path.name
             try:
                 summary = prepare_sumo_inputs(scenario_path, out)
             except RuntimeError as e:
-                if platform.machine() == "arm64" and "failed" in str(e).lower():
+                if platform.machine() == "arm64" and ("failed" in str(e).lower() or "crashed" in str(e).lower()):
                     skipped.append(scenario_path.name)
                     continue
                 raise

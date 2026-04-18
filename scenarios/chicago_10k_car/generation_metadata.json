@@ -1,0 +1,19 @@
+{
+  "scenario_id": "chicago_10k_car",
+  "city": "chicago",
+  "city_name": "Chicago, IL",
+  "trips_requested": 10000,
+  "trips_generated": 10000,
+  "modes": [
+    "car"
+  ],
+  "start_time_s": 0,
+  "end_time_s": 3600,
+  "radius_km": 3.0,
+  "seed": 42,
+  "demand_strategy": "census",
+  "node_count": 2270,
+  "link_count": 5508,
+  "signal_count": 1738,
+  "generation_time_s": 48.3
+}
