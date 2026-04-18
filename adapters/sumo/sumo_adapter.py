@@ -25,6 +25,8 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Tuple, Set, Optional
 
+from adapters.common import feasibility as _feasibility
+
 logger = logging.getLogger(__name__)
 
 
@@ -409,14 +411,13 @@ def build_sumo_routes_xml(
     summary: ScenarioSummary,
     graph: NetworkGraph,
     demand_path: Path,
+    feasible: Set[str],
 ) -> str:
     """
     Build a SUMO routes file based on canonical demand.csv and the network graph.
 
-    For each trip:
-      - Run BFS on the node graph to find a path from origin_node_id to destination_node_id.
-      - Map node-to-node steps to canonical links, then to edge ids.
-      - Create one <vehicle> with a nested <route edges="..."/>.
+    Only trips in ``feasible`` (the shared cross-engine feasibility set) are
+    routed. For each feasible trip we BFS on the node graph for a path.
     """
     lines: List[str] = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
@@ -424,30 +425,27 @@ def build_sumo_routes_xml(
     lines.append(f"<!-- Scenario: {summary.scenario_id}, trips: {summary.trip_count} -->")
     lines.append("<routes>")
 
-    skipped_trips: List[str] = []
+    route_failures: List[str] = []
 
     from pipeline.progress import ProgressBar
-    pb = ProgressBar(total=summary.trip_count, desc="Routing trips (BFS)")
+    pb = ProgressBar(total=len(feasible), desc="Routing trips (BFS)")
 
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        for row_idx, row in enumerate(reader, start=2):
-            pb.update()
+        for row in reader:
             trip_id = (row.get("trip_id") or "").strip()
+            if trip_id not in feasible:
+                continue
+            pb.update()
             origin = (row.get("origin_node_id") or "").strip()
             dest = (row.get("destination_node_id") or "").strip()
             depart = (row.get("departure_time_s") or "").strip()
 
-            if not trip_id or not origin or not dest or not depart:
-                skipped_trips.append(f"row {row_idx} (missing fields)")
-                continue
-
             path_nodes = shortest_path_nodes(graph.adjacency, origin, dest)
             if not path_nodes or len(path_nodes) < 2:
-                skipped_trips.append(trip_id)
+                route_failures.append(trip_id)
                 continue
 
-            # Convert node path to edge ids
             edge_ids: List[str] = []
             ok = True
             for u, v in zip(path_nodes[:-1], path_nodes[1:]):
@@ -457,40 +455,33 @@ def build_sumo_routes_xml(
                     break
                 edge_ids.append(link.id)
             if not ok or not edge_ids:
-                skipped_trips.append(trip_id)
+                route_failures.append(trip_id)
                 continue
 
             edges_str = " ".join(edge_ids)
             veh_id = f"veh_{trip_id}"
             route_id = f"r_{trip_id}"
 
-            lines.append(
-                f'  <vehicle id="{veh_id}" depart="{depart}">'
-            )
-            lines.append(
-                f'    <route id="{route_id}" edges="{edges_str}"/>'
-            )
+            lines.append(f'  <vehicle id="{veh_id}" depart="{depart}">')
+            lines.append(f'    <route id="{route_id}" edges="{edges_str}"/>')
             lines.append("  </vehicle>")
 
     pb.finish()
 
-    if skipped_trips:
-        lines.append("  <!-- Skipped trips (no path or bad data): "
-                     + ", ".join(skipped_trips)
-                     + " -->")
-        total = summary.trip_count
-        skipped = len(skipped_trips)
-        pct = (skipped / total * 100) if total > 0 else 0
-        logger.warning(
-            "Skipped %d/%d trips (%.0f%%) — no valid route found. "
-            "This may indicate a disconnected network.",
-            skipped, total, pct
+    # Any failure here means the shared SCC filter disagrees with SUMO's BFS —
+    # that should never happen, so loudly surface it instead of silently dropping.
+    if route_failures:
+        logger.error(
+            "SUMO could not route %d feasible trips — this contradicts the "
+            "shared SCC filter (%s). First IDs: %s",
+            len(route_failures),
+            _feasibility.__name__,
+            ", ".join(route_failures[:5]),
         )
-        if total > 0 and pct > 50:
-            logger.error(
-                "More than 50%% of trips have no valid route. "
-                "The network may be highly disconnected or the demand references nodes outside the network."
-            )
+        lines.append(
+            "  <!-- SCC-feasible trips that SUMO failed to route: "
+            + ", ".join(route_failures) + " -->"
+        )
 
     lines.append("</routes>")
     return "\n".join(lines)
@@ -587,8 +578,13 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
             "  Then verify: netconvert --version"
         ) from exc
 
+    # Compute the shared feasibility set — every engine must simulate exactly this subset.
+    feasible, feas_report = _feasibility.feasible_trip_ids(network_path, demand_path)
+    _feasibility.log_report(feas_report, engine="sumo")
+    _feasibility.write_feasibility_report(feas_report, output_dir / "feasibility_report.json")
+
     # Build SUMO routes
-    routes_content = build_sumo_routes_xml(summary, graph, demand_path)
+    routes_content = build_sumo_routes_xml(summary, graph, demand_path, feasible)
     routes_path = output_dir / "routes.rou.xml"
     routes_path.write_text(routes_content, encoding="utf-8")
 

@@ -32,12 +32,19 @@ SCENARIOS_DIR = REPO_ROOT / "scenarios"
 
 
 def _all_scenarios() -> list[Path]:
-    """Discover all scenario directories with a manifest.xml."""
+    """Discover all complete scenario bundles.
+
+    An iCloud-synced project occasionally restores orphan scenario folders
+    (manifest present, demand.csv deleted). Those are not real scenarios and
+    should not be data-integrity tested, so we require the full canonical
+    5-file bundle before picking a directory up.
+    """
     if not SCENARIOS_DIR.is_dir():
         return []
+    required = ("manifest.xml", "network.xml", "demand.csv", "config.xml")
     return sorted(
         p for p in SCENARIOS_DIR.iterdir()
-        if p.is_dir() and (p / "manifest.xml").is_file()
+        if p.is_dir() and all((p / name).is_file() for name in required)
     )
 
 

@@ -146,14 +146,18 @@ class TestBuildMATSimPlans:
     def test_valid_xml_output(self):
         assert SCENARIO is not None
         _, links = load_canonical_network(SCENARIO / "network.xml")
-        xml_str = build_matsim_plans_xml(SCENARIO / "demand.csv", links)
+        from adapters.common import feasible_trip_ids
+        feasible, _ = feasible_trip_ids(SCENARIO / "network.xml", SCENARIO / "demand.csv")
+        xml_str = build_matsim_plans_xml(SCENARIO / "demand.csv", links, feasible)
         root = ET.fromstring(xml_str)
         assert root.tag == "plans"
 
     def test_contains_persons(self):
         assert SCENARIO is not None
         _, links = load_canonical_network(SCENARIO / "network.xml")
-        xml_str = build_matsim_plans_xml(SCENARIO / "demand.csv", links)
+        from adapters.common import feasible_trip_ids
+        feasible, _ = feasible_trip_ids(SCENARIO / "network.xml", SCENARIO / "demand.csv")
+        xml_str = build_matsim_plans_xml(SCENARIO / "demand.csv", links, feasible)
         root = ET.fromstring(xml_str)
         persons = root.findall("person")
         assert len(persons) > 0, "Plans should contain at least one person"
@@ -161,7 +165,9 @@ class TestBuildMATSimPlans:
     def test_person_has_plan_with_activities(self):
         assert SCENARIO is not None
         _, links = load_canonical_network(SCENARIO / "network.xml")
-        xml_str = build_matsim_plans_xml(SCENARIO / "demand.csv", links)
+        from adapters.common import feasible_trip_ids
+        feasible, _ = feasible_trip_ids(SCENARIO / "network.xml", SCENARIO / "demand.csv")
+        xml_str = build_matsim_plans_xml(SCENARIO / "demand.csv", links, feasible)
         root = ET.fromstring(xml_str)
         person = root.find("person")
         assert person is not None

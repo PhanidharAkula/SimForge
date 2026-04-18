@@ -131,16 +131,62 @@ DEFAULT_LANES = {
 }
 
 
+_OSM_CACHE_CONFIGURED = False
+
+
+def _configure_osmnx_cache():
+    """
+    Point osmnx's built-in HTTP cache at a project-local directory.
+
+    Overpass responses are large (tens of MB for a city) and the same bbox is
+    often fetched multiple times during development, stress-testing, and CI.
+    Pinning the cache folder to ``<repo>/cache/osm`` makes hits deterministic
+    across machines and lets us warn the user about slow first-time downloads
+    with a concrete path to inspect afterwards.
+    """
+    global _OSM_CACHE_CONFIGURED
+    if _OSM_CACHE_CONFIGURED:
+        return
+    try:
+        import osmnx as ox
+    except ImportError:
+        return
+
+    repo_root = Path(__file__).resolve().parents[2]
+    cache_dir = repo_root / "cache"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    ox.settings.use_cache = True
+    ox.settings.cache_folder = str(cache_dir)
+    # Give one clear, slow-path message rather than osmnx's multi-line logs.
+    ox.settings.log_console = False
+    _OSM_CACHE_CONFIGURED = True
+
+
+def _cache_files_for_bbox(bbox: BoundingBox) -> list[Path]:
+    """Best-effort check: look for any cached osmnx responses that match bbox."""
+    import hashlib
+    import json as _json
+
+    repo_root = Path(__file__).resolve().parents[2]
+    cache_dir = repo_root / "cache"
+    if not cache_dir.is_dir():
+        return []
+
+    # osmnx's cache keys are the SHA1 of the normalised request body, so we
+    # can't recover a bbox from disk. We simply report presence/absence of any
+    # cached files so the user knows whether this run will hit the network.
+    _ = (hashlib, _json, bbox)
+    return list(cache_dir.glob("*.json"))
+
+
 def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "networkx.MultiDiGraph":
     """
     Download road network from OSM using osmnx.
-    
-    Args:
-        bbox: Geographic bounding box
-        network_type: OSM network type ('drive', 'walk', 'bike', 'all')
-    
-    Returns:
-        NetworkX MultiDiGraph with OSM data
+
+    Uses osmnx's built-in HTTP cache (pinned to ``<repo>/cache/osm`` via
+    :func:`_configure_osmnx_cache`). A first-time download for a ~1km urban bbox
+    takes roughly 10-30s; a cached fetch is typically <1s. We log both the
+    cache location and the elapsed time so users can tell which path ran.
     """
     try:
         import osmnx as ox
@@ -149,12 +195,29 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
             "osmnx is required for OSM network building. "
             "Install with: pip install osmnx"
         ) from exc
-    
+
+    _configure_osmnx_cache()
+    cache_dir = Path(ox.settings.cache_folder)
+    existing_cache = _cache_files_for_bbox(bbox)
+
     logger.info("Downloading OSM network for bbox: %s", bbox)
-    
+    if not existing_cache:
+        logger.warning(
+            "OSM cache at %s is empty — first-time fetch contacts the Overpass API "
+            "and may take 10s-2min depending on bbox size and network latency. "
+            "Subsequent runs with the same bbox will be served from this cache.",
+            cache_dir,
+        )
+    else:
+        logger.info(
+            "OSM cache has %d prior responses at %s; this fetch will reuse cached "
+            "data if the bbox matches.",
+            len(existing_cache), cache_dir,
+        )
+
     import time as _time
     t0 = _time.time()
-    
+
     # osmnx 2.x expects bbox as (left, bottom, right, top) = (west, south, east, north)
     try:
         G = ox.graph_from_bbox(
@@ -168,13 +231,14 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
         raise RuntimeError(
             f"Failed to download OSM network data: {error_type}: {e}\n"
             f"  Bbox: north={bbox.north}, south={bbox.south}, east={bbox.east}, west={bbox.west}\n"
+            f"  Cache dir: {cache_dir}\n"
             f"  Possible causes:\n"
             f"    - No internet connection\n"
             f"    - OSM Overpass API is down or rate-limited (wait and retry)\n"
             f"    - Bounding box covers an area with no roads (ocean, desert)\n"
             f"    - Bounding box coordinates are swapped or invalid"
         ) from e
-    
+
     if G.number_of_nodes() == 0:
         raise ValueError(
             f"OSM returned an empty road network (0 nodes) for the given bounding box.\n"
@@ -182,10 +246,16 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
             f"  This usually means the area has no roads (ocean, park, desert).\n"
             f"  Try a different center point or larger radius."
         )
-    
+
     elapsed = _time.time() - t0
-    logger.info("Downloaded network: %d nodes, %d edges  (%.1fs)",
-                G.number_of_nodes(), G.number_of_edges(), elapsed)
+    cache_hit = elapsed < 2.0 and bool(existing_cache)
+    logger.info(
+        "Downloaded network: %d nodes, %d edges  (%.1fs, %s)",
+        G.number_of_nodes(),
+        G.number_of_edges(),
+        elapsed,
+        "cache hit" if cache_hit else "fresh fetch",
+    )
     return G
 
 

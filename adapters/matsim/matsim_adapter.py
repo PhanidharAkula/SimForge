@@ -20,9 +20,11 @@ import csv
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from xml.etree import ElementTree as ET
 import logging
+
+from adapters.common import feasibility as _feasibility
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -357,70 +359,57 @@ def build_matsim_network_xml(nodes: Dict, links: List) -> str:
     return "\n".join(lines)
 
 
-def build_matsim_plans_xml(demand_path: Path, links: List, reachable_nodes: Optional[set] = None) -> str:
+def build_matsim_plans_xml(
+    demand_path: Path,
+    links: List,
+    feasible: Set[str],
+) -> str:
     """Build MATSim plans.xml from canonical demand.csv.
-    
-    Args:
-        demand_path: Path to canonical demand.csv
-        links: List of link dicts (already cleaned)
-        reachable_nodes: Set of node IDs in the largest connected component.
-                         Trips with origin/dest outside this set are skipped.
+
+    Only trips in ``feasible`` (the shared cross-engine feasibility set) are
+    emitted. This keeps MATSim's trip set identical to every other engine.
     """
     lines = []
     lines.append('<?xml version="1.0" ?>')
     lines.append('<!DOCTYPE plans SYSTEM "http://www.matsim.org/files/dtd/plans_v4.dtd">')
     lines.append('<plans>')
-    
-    # Filter out self-loops (they're not included in MATSim network)
+
     valid_links = [link for link in links if link["from"] != link["to"]]
-    
-    # Build adjacency from valid links (for finding good origin links)
-    link_adjacency = {}
+
+    link_adjacency: Dict[str, List[str]] = {}
     for link in valid_links:
-        from_node = link["from"]
-        if from_node not in link_adjacency:
-            link_adjacency[from_node] = []
-        link_adjacency[from_node].append(link["to"])
-    
-    total_trips = 0
-    skipped_trips = 0
-    
+        link_adjacency.setdefault(link["from"], []).append(link["to"])
+
+    missing_link = 0
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             trip_id = row.get("trip_id", "").strip()
+            if trip_id not in feasible:
+                continue
+
             origin = row.get("origin_node_id", "").strip()
             dest = row.get("destination_node_id", "").strip()
             depart_s = row.get("departure_time_s", "0").strip()
             mode = row.get("mode", "car").strip()
-            
-            if not trip_id or not origin or not dest:
-                continue
-            
-            total_trips += 1
-            
-            # Skip trips where origin or destination is not in the reachable component
-            if reachable_nodes and (origin not in reachable_nodes or dest not in reachable_nodes):
-                skipped_trips += 1
-                continue
-            
+
             try:
                 depart_seconds = int(float(depart_s))
             except ValueError:
                 depart_seconds = 0
-            
-            # Find links near origin and destination (using valid_links to exclude self-loops)
+
             origin_link = find_link_for_origin(origin, valid_links, link_adjacency)
             dest_link = find_link_for_destination(dest, valid_links, link_adjacency)
-            
+
+            # Both endpoints are in the SCC, so a valid link must exist; surface
+            # the symmetry violation loudly if somehow it doesn't.
             if not origin_link or not dest_link:
-                skipped_trips += 1
+                missing_link += 1
                 continue
-            
+
             end_time = seconds_to_time_string(depart_seconds)
             person_id = f"person_{trip_id}"
-            
-            # Use short activity types: h=home, w=work
+
             lines.append(f'<person id="{person_id}">')
             lines.append('  <plan>')
             lines.append(f'    <act type="h" link="{origin_link}" end_time="{end_time}"/>')
@@ -428,13 +417,14 @@ def build_matsim_plans_xml(demand_path: Path, links: List, reachable_nodes: Opti
             lines.append(f'    <act type="w" link="{dest_link}"/>')
             lines.append('  </plan>')
             lines.append('</person>')
-    
-    if skipped_trips > 0:
-        logger.info(
-            "  Plans: %d/%d trips included (%d skipped — unreachable in cleaned network)",
-            total_trips - skipped_trips, total_trips, skipped_trips
+
+    if missing_link:
+        logger.error(
+            "MATSim could not attach links for %d feasible trips — "
+            "this contradicts the shared SCC filter.",
+            missing_link,
         )
-    
+
     lines.append('</plans>')
     return "\n".join(lines)
 
@@ -594,22 +584,29 @@ def prepare_matsim_inputs(
     if not demand_path or not demand_path.exists():
         raise FileNotFoundError(f"Demand file not found: {demand_path}")
     
+    # Compute the shared feasibility set — same trip subset every engine simulates.
+    feasible, feas_report = _feasibility.feasible_trip_ids(network_path, demand_path)
+    _feasibility.log_report(feas_report, engine="matsim")
+    _feasibility.write_feasibility_report(feas_report, output_dir / "feasibility_report.json")
+
     # Load and convert network
     logger.info("Converting network to MATSim format...")
     nodes, links = load_canonical_network(network_path)
-    
-    # Clean network: keep only largest strongly connected component
-    # MATSim crashes hard on unroutable trips, unlike SUMO which skips them
-    nodes, links, reachable_nodes = clean_network(nodes, links)
-    
+
+    # MATSim's network input must itself be SCC — its mobsim crashes on
+    # dangling links — so we still prune the network to the largest SCC.
+    # The SCC we prune to is the same one the shared feasibility filter uses,
+    # which keeps trip feasibility and emitted network consistent.
+    nodes, links, _reachable = clean_network(nodes, links)
+
     network_xml = build_matsim_network_xml(nodes, links)
     network_out = output_dir / "network.xml"
     network_out.write_text(network_xml, encoding="utf-8")
     logger.info("  Created: %s", network_out)
-    
-    # Convert demand to plans (using cleaned links only)
+
+    # Convert demand to plans (only feasible trips; subset matches every engine)
     logger.info("Converting demand to MATSim plans...")
-    plans_xml = build_matsim_plans_xml(demand_path, links, reachable_nodes)
+    plans_xml = build_matsim_plans_xml(demand_path, links, feasible)
     plans_out = output_dir / "plans.xml"
     plans_out.write_text(plans_xml, encoding="utf-8")
     logger.info("  Created: %s", plans_out)
