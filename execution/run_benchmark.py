@@ -167,29 +167,44 @@ def print_banner(runspec_name: str, total_runs: int, scenarios: int, configs: in
 @dataclass
 class RunResult:
     """Result of a single simulation run."""
-    scenario_id: str
-    engine: str
+    scenario: str                       # Base scenario name (e.g. "chicago_1k_car")
+    engine: str                         # "sumo", "matsim", "qarsumo"
+    mode: str                           # "micro" or "meso"
     seed: int
-    repeat_index: int
-    status: str  # "success", "failed", "timeout"
+    repeat_index: int                   # 0-based
+    status: str                         # "success", "failed", "timeout"
     runtime_s: float
     output_dir: Path
     tripinfo_path: Optional[Path] = None
     error_message: Optional[str] = None
     metrics: dict = field(default_factory=dict)
-    
+
+    @property
+    def scenario_id(self) -> str:
+        """Composite unique ID: <scenario>_<engine>_<mode>."""
+        return f"{self.scenario}_{self.engine}_{self.mode}"
+
+    @property
+    def repeat(self) -> int:
+        """1-based repeat number for display/compat with run.py output."""
+        return self.repeat_index + 1
+
     def to_dict(self) -> dict:
         return {
+            "scenario": self.scenario,
             "scenario_id": self.scenario_id,
             "engine": self.engine,
+            "mode": self.mode,
             "seed": self.seed,
+            "repeat": self.repeat,
             "repeat_index": self.repeat_index,
             "status": self.status,
             "runtime_s": self.runtime_s,
+            "wall_time_s": self.runtime_s,
             "output_dir": str(self.output_dir),
             "tripinfo_path": str(self.tripinfo_path) if self.tripinfo_path else None,
             "error_message": self.error_message,
-            "metrics": self.metrics
+            "metrics": self.metrics,
         }
 
 
@@ -203,7 +218,15 @@ class BenchmarkResult:
     successful_runs: int
     failed_runs: int
     results: list[RunResult] = field(default_factory=list)
-    
+
+    @property
+    def summary(self) -> dict:
+        return {
+            "total": self.total_runs,
+            "completed": self.successful_runs,
+            "failed": self.failed_runs,
+        }
+
     def to_dict(self) -> dict:
         return {
             "runspec_name": self.runspec_name,
@@ -212,9 +235,10 @@ class BenchmarkResult:
             "total_runs": self.total_runs,
             "successful_runs": self.successful_runs,
             "failed_runs": self.failed_runs,
+            "summary": self.summary,
             "results": [r.to_dict() for r in self.results]
         }
-    
+
     def save(self, path: Path) -> None:
         """Save results to JSON file."""
         with open(path, "w", encoding="utf-8") as f:
@@ -355,20 +379,22 @@ class BenchmarkHarness:
         mesoscopic: bool = False
     ) -> RunResult:
         """Execute a single simulation run."""
-        
+
+        mode = "meso" if mesoscopic else "micro"
         # Create output directory
         run_dir = self.output_base / scenario_id / engine / f"seed_{seed}"
         run_dir.mkdir(parents=True, exist_ok=True)
-        
+
         mode_str = " (mesoscopic)" if mesoscopic else ""
         logger.info("Starting run: %s / %s / seed=%d%s", scenario_id, engine, seed, mode_str)
-        
+
         # Handle different engines
         supported_engines = ["sumo", "qarsumo", "matsim"]
         if engine not in supported_engines:
             return RunResult(
-                scenario_id=scenario_id,
+                scenario=scenario_id,
                 engine=engine,
+                mode=mode,
                 seed=seed,
                 repeat_index=repeat_index,
                 status="failed",
@@ -402,8 +428,9 @@ class BenchmarkHarness:
                 self.prepare_sumo_inputs(scenario_path, run_dir, seed)
         except (OSError, ValueError, RuntimeError) as e:
             return RunResult(
-                scenario_id=scenario_id,
+                scenario=scenario_id,
                 engine=engine,
+                mode=mode,
                 seed=seed,
                 repeat_index=repeat_index,
                 status="failed",
@@ -418,8 +445,9 @@ class BenchmarkHarness:
             config_path = run_dir / "config.xml"
             if not config_path.exists():
                 return RunResult(
-                    scenario_id=scenario_id,
+                    scenario=scenario_id,
                     engine=engine,
+                    mode=mode,
                     seed=seed,
                     repeat_index=repeat_index,
                     status="failed",
@@ -453,8 +481,9 @@ class BenchmarkHarness:
             config_files = list(run_dir.glob("*.sumocfg"))
             if not config_files:
                 return RunResult(
-                    scenario_id=scenario_id,
+                    scenario=scenario_id,
                     engine=engine,
+                    mode=mode,
                     seed=seed,
                     repeat_index=repeat_index,
                     status="failed",
@@ -492,10 +521,11 @@ class BenchmarkHarness:
         
         # Determine status
         status = "success" if success else ("timeout" if "Timeout" in (error or "") else "failed")
-        
+
         return RunResult(
-            scenario_id=scenario_id,
+            scenario=scenario_id,
             engine=engine,
+            mode=mode,
             seed=seed,
             repeat_index=repeat_index,
             status=status,
@@ -607,10 +637,12 @@ class BenchmarkHarness:
             # Check pre-validation result
             if not validation_status.get(str(scenario_path), False):
                 print(f"\n⚠️  Skipping {run_config.scenario_id} - validation failed")
+                mode = "meso" if (force_mesoscopic or run_config.is_mesoscopic) else "micro"
                 for i, seed in enumerate(run_config.get_seeds()):
                     results.append(RunResult(
-                        scenario_id=run_config.scenario_id,
+                        scenario=run_config.scenario_id,
                         engine=run_config.engine,
+                        mode=mode,
                         seed=seed,
                         repeat_index=i,
                         status="failed",

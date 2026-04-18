@@ -400,14 +400,31 @@ def _compare_from_benchmark(results_path: Path) -> int:
         print("❌ No results found in benchmark file.")
         return 1
     
-    # Group by scenario + engine
+    # Group by scenario + engine (fall back to scenario_id parsing)
     groups = defaultdict(lambda: {"micro": [], "meso": []})
     for r in results:
         if r.get("status") != "success":
             continue
-        key = (r["scenario"], r["engine"])
+        scenario = r.get("scenario")
+        engine = r.get("engine")
+        sid = r.get("scenario_id", "")
+        if not engine:
+            for eng in ("sumo", "qarsumo", "matsim"):
+                if sid.endswith(f"_{eng}") or f"_{eng}_" in sid:
+                    engine = eng
+                    break
+            engine = engine or "unknown"
+        if not scenario:
+            scenario = (
+                sid.replace(f"_{engine}_meso", "")
+                   .replace(f"_{engine}_micro", "")
+                   .replace(f"_{engine}", "")
+                or sid
+            )
         mode = r.get("mode", "meso")
-        groups[key][mode].append(r)
+        if mode not in ("micro", "meso"):
+            mode = "meso" if "meso" in mode else "micro"
+        groups[(scenario, engine)][mode].append(r)
     
     print("\n" + "=" * 70)
     print("  MODE COMPARISON: Microscopic vs Mesoscopic")

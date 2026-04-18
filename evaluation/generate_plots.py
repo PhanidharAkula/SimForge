@@ -118,20 +118,34 @@ def compute_reproducibility(values: list[float]) -> float:
     return max(0.0, 1.0 - cv)
 
 
+def _identify(run: dict) -> tuple[str, str, str]:
+    """Return (city/scenario, engine, mode), preferring explicit fields."""
+    scenario = run.get("scenario")
+    engine = run.get("engine")
+    mode = run.get("mode")
+    sid = run.get("scenario_id", "")
+    if not (scenario and engine and mode):
+        parsed_scenario, parsed_engine, parsed_mode = extract_city_engine(sid)
+        scenario = scenario or parsed_scenario
+        engine = engine or parsed_engine
+        mode = mode or parsed_mode
+    if mode not in ("micro", "meso"):
+        mode = "meso" if "meso" in (mode or "") else "micro"
+    return scenario, engine, mode
+
+
 def analyze_results(results: dict) -> list[ScenarioMetrics]:
     """Analyze benchmark results into scenario metrics."""
     metrics_list = []
-    
-    # Group runs by scenario_id
-    by_scenario = {}
+
+    # Group runs by (scenario, engine, mode) using explicit fields when present
+    by_group: dict[tuple[str, str, str], list[dict]] = {}
     for run in results.get("results", results.get("runs", [])):
-        scenario_id = run.get("scenario_id", "unknown")
-        if scenario_id not in by_scenario:
-            by_scenario[scenario_id] = []
-        by_scenario[scenario_id].append(run)
-    
-    for scenario_id, runs in by_scenario.items():
-        city, engine, mode = extract_city_engine(scenario_id)
+        key = _identify(run)
+        by_group.setdefault(key, []).append(run)
+
+    for (city, engine, mode), runs in by_group.items():
+        scenario_id = f"{city}_{engine}_{mode}"
         
         successful = [r for r in runs if r.get("status") == "success"]
         if not successful:

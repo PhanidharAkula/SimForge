@@ -63,33 +63,44 @@ def compute_reproducibility(travel_times: list[float]) -> float:
     return max(0.0, 1.0 - cv)
 
 
+def _resolve_identity(run: dict) -> tuple[str, str]:
+    """
+    Return (scenario, engine) for a run dict, preferring explicit fields
+    and falling back to scenario_id string parsing for backward compat.
+    """
+    engine = run.get("engine")
+    scenario = run.get("scenario")
+    scenario_id = run.get("scenario_id", "")
+
+    if not engine or not scenario:
+        parsed_engine = "unknown"
+        parsed_scenario = scenario_id or "unknown"
+        for eng in ("sumo", "qarsumo", "matsim"):
+            if scenario_id.endswith(f"_{eng}") or f"_{eng}_" in scenario_id:
+                parsed_engine = eng
+                parsed_scenario = (
+                    scenario_id
+                    .replace(f"_{eng}_meso", "")
+                    .replace(f"_{eng}_micro", "")
+                    .replace(f"_{eng}", "")
+                )
+                break
+        engine = engine or parsed_engine
+        scenario = scenario or parsed_scenario
+    return scenario, engine
+
+
 def analyze_results(results: dict) -> list[ScenarioStats]:
     """Analyze benchmark results and compute statistics."""
     stats_list = []
-    
-    # Group runs by scenario_id (which includes engine info)
-    by_scenario = {}
+
+    # Group runs by (scenario, engine) using explicit fields when present
+    by_group: dict[tuple[str, str], list[dict]] = {}
     for run in results.get("results", results.get("runs", [])):
-        scenario_id = run.get("scenario_id", "unknown")
-        if scenario_id not in by_scenario:
-            by_scenario[scenario_id] = []
-        by_scenario[scenario_id].append(run)
-    
-    for scenario_id, runs in by_scenario.items():
-        # Parse scenario and engine from scenario_id
-        parts = scenario_id.rsplit("_", 2)  # e.g., "sioux_falls_sumo_meso"
-        if len(parts) >= 2:
-            # Try to identify engine
-            engine = "unknown"
-            scenario = scenario_id
-            for eng in ["sumo", "qarsumo", "matsim"]:
-                if f"_{eng}" in scenario_id or scenario_id.endswith(f"_{eng}"):
-                    engine = eng
-                    scenario = scenario_id.replace(f"_{eng}_meso", "").replace(f"_{eng}", "")
-                    break
-        else:
-            scenario = scenario_id
-            engine = "unknown"
+        scenario, engine = _resolve_identity(run)
+        by_group.setdefault((scenario, engine), []).append(run)
+
+    for (scenario, engine), runs in by_group.items():
         
         # Use "status" field instead of "success"
         successful_runs = [r for r in runs if r.get("status") == "success"]
