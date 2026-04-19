@@ -30,8 +30,11 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import TYPE_CHECKING, Iterable, List, Optional
 from xml.etree import ElementTree as ET
+
+if TYPE_CHECKING:
+    from pipeline.network.build_network_from_osm import BoundingBox
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
 logger = logging.getLogger(__name__)
@@ -48,7 +51,7 @@ class WarmupTarget:
 
     scenario_id: str
     source: str  # "generation_metadata" | "network_bbox"
-    bbox: "BoundingBox"  # noqa: F821 — forward-ref to keep import light
+    bbox: "BoundingBox"
 
 
 def _load_cities_registry() -> dict:

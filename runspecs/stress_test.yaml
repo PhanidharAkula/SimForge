@@ -45,6 +45,22 @@ runs:
 
   - scenario_id: nyc_1k_car
     scenario_path: scenarios/nyc_1k_car
+    engine: sumo
+    mode: microscopic
+    repeats: 3
+    seed: 42
+    timeout_s: 300
+
+  - scenario_id: nyc_1k_car
+    scenario_path: scenarios/nyc_1k_car
+    engine: qarsumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    timeout_s: 300
+
+  - scenario_id: nyc_1k_car
+    scenario_path: scenarios/nyc_1k_car
     engine: matsim
     mode: mesoscopic
     repeats: 2

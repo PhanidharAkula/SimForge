@@ -214,6 +214,69 @@ def print_reproducibility_table(stats_list: list[ScenarioStats]) -> str:
     return "\n".join(lines)
 
 
+def print_coverage_report(stats_list: list[ScenarioStats]) -> str:
+    """Surface cells with thin samples or asymmetric coverage across scenarios.
+
+    Silent undercoverage is a real risk: R-score from n=2 is just |a-b|/mean,
+    and a missing (scenario, engine, mode) cell can skew cross-engine plots
+    without any visual cue. This prints both so the user notices before
+    drawing conclusions.
+    """
+    lines = []
+    lines.append("\n" + "=" * 80)
+    lines.append("COVERAGE DIAGNOSTIC")
+    lines.append("=" * 80)
+
+    # Low-sample cells: any successful cell with fewer than 3 good runs.
+    thin = [s for s in stats_list if 0 < s.successes < 3]
+    if thin:
+        lines.append("\n  Low-sample cells (n < 3 — R-score is statistically weak):")
+        for s in sorted(thin, key=lambda x: (x.scenario, x.engine, x.mode)):
+            lines.append(
+                f"    • {s.scenario:<20} {s.engine:<8} {s.mode:<7}  "
+                f"n={s.successes}/{s.runs}  R={s.reproducibility_score:.4f}"
+            )
+    else:
+        lines.append("\n  Low-sample cells: none (all successful cells have n ≥ 3)")
+
+    # Asymmetric coverage: (engine, mode) tuples present in some scenarios but
+    # not others. Reference set = union across scenarios.
+    by_scenario: dict[str, set[tuple[str, str]]] = {}
+    for s in stats_list:
+        by_scenario.setdefault(s.scenario, set()).add((s.engine, s.mode))
+    reference = set().union(*by_scenario.values()) if by_scenario else set()
+
+    asymmetric = []
+    for scenario, present in sorted(by_scenario.items()):
+        missing = reference - present
+        if missing:
+            for engine, mode in sorted(missing):
+                asymmetric.append((scenario, engine, mode))
+    if asymmetric:
+        lines.append(
+            "\n  Asymmetric coverage — present for some scenarios, missing for others:"
+        )
+        for scenario, engine, mode in asymmetric:
+            lines.append(
+                f"    • {scenario:<20} missing: {engine}/{mode}"
+            )
+    else:
+        lines.append("\n  Asymmetric coverage: none (every scenario covers the same cells)")
+
+    # Failed cells: ran but all runs failed.
+    failed = [s for s in stats_list if s.runs > 0 and s.successes == 0]
+    if failed:
+        lines.append("\n  Fully-failed cells (ran but 0 successes):")
+        for s in sorted(failed, key=lambda x: (x.scenario, x.engine, x.mode)):
+            lines.append(
+                f"    • {s.scenario:<20} {s.engine:<8} {s.mode:<7}  "
+                f"0/{s.runs} runs succeeded"
+            )
+
+    lines.append("=" * 80)
+    return "\n".join(lines)
+
+
 def print_summary_table(stats_list: list[ScenarioStats]) -> str:
     """Generate summary table for thesis."""
     lines = []
@@ -321,6 +384,7 @@ def main():
     output_parts = []
     
     output_parts.append(print_summary_table(stats_list))
+    output_parts.append(print_coverage_report(stats_list))
     output_parts.append(print_runtime_table(stats_list))
     output_parts.append(print_reproducibility_table(stats_list))
     
