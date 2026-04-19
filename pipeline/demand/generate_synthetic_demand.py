@@ -43,42 +43,22 @@ class NetworkStats:
     strongly_connected_nodes: set[str]  # nodes in the main strongly connected component
 
 
-def compute_strongly_connected_component(adjacency: dict[str, list[str]], 
+def compute_strongly_connected_component(adjacency: dict[str, list[str]],
                                          reverse_adjacency: dict[str, list[str]],
                                          node_ids: list[str]) -> set[str]:
+    """Largest strongly-connected component, via the canonical Kosaraju.
+
+    The previous single-source forward/backward BFS only found the SCC
+    containing one chosen seed node — wrong whenever the seed sat outside
+    the largest component, which produced unroutable demand.
     """
-    Find the largest strongly connected component of the network.
-    Returns the set of nodes in that component.
-    """
-    from collections import deque
-    
-    if not node_ids:
-        return set()
-    
-    def bfs_reachable(start: str, adj: dict) -> set[str]:
-        visited = set()
-        queue = deque([start])
-        visited.add(start)
-        while queue:
-            node = queue.popleft()
-            for neighbor in adj.get(node, []):
-                if neighbor not in visited:
-                    visited.add(neighbor)
-                    queue.append(neighbor)
-        return visited
-    
-    # Find a good starting node (highest degree)
-    degrees = {n: len(adjacency.get(n, [])) + len(reverse_adjacency.get(n, [])) 
-               for n in node_ids}
-    start_node = max(degrees, key=degrees.get) if degrees else node_ids[0]
-    
-    # Forward and backward reachability
-    forward = bfs_reachable(start_node, adjacency)
-    backward = bfs_reachable(start_node, reverse_adjacency)
-    
-    # Strongly connected = intersection
-    scc = forward & backward
-    return scc
+    from pipeline.network.scc import compute_largest_scc
+
+    edges: list[tuple[str, str]] = []
+    for u, neighbors in adjacency.items():
+        for v in neighbors:
+            edges.append((u, v))
+    return compute_largest_scc(set(node_ids), edges)
 
 
 def compute_reachability(adjacency: dict[str, list[str]], node_ids: list[str]) -> dict[str, set[str]]:

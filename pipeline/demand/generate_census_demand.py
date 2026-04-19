@@ -37,6 +37,7 @@ import logging
 from lxml import etree
 
 from pipeline.demand.parse_model_file import ModelData, Building, JWTRNS_TO_MODE
+from pipeline.network.scc import compute_largest_scc
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -53,10 +54,11 @@ class NetworkInfo:
     node_coords: dict[str, tuple[float, float]]  # id → (lon, lat)
     node_degrees: dict[str, int]
     adjacency: dict[str, list[str]]
+    scc_nodes: set[str]  # nodes in the largest strongly-connected component
 
 
 def _load_network_nodes(network_path: Path) -> NetworkInfo:
-    """Load node coordinates and adjacency from canonical network.xml."""
+    """Load node coordinates, adjacency, and the largest SCC from network.xml."""
     if not network_path.is_file():
         raise FileNotFoundError(
             f"Network file not found: {network_path}\n"
@@ -76,6 +78,7 @@ def _load_network_nodes(network_path: Path) -> NetworkInfo:
     node_coords = {}
     node_degrees: dict[str, int] = defaultdict(int)
     adjacency: dict[str, list[str]] = defaultdict(list)
+    edges: list[tuple[str, str]] = []
 
     for node in root.findall(".//node"):
         nid = node.get("id")
@@ -91,12 +94,21 @@ def _load_network_nodes(network_path: Path) -> NetworkInfo:
             adjacency[from_node].append(to_node)
             node_degrees[from_node] += 1
             node_degrees[to_node] += 1
+            edges.append((from_node, to_node))
+
+    scc = compute_largest_scc(set(node_ids), edges)
+    logger.info(
+        "Network largest SCC: %d/%d nodes (%.1f%%) — demand will be sampled within it",
+        len(scc), len(node_ids),
+        (100.0 * len(scc) / len(node_ids)) if node_ids else 0.0,
+    )
 
     return NetworkInfo(
         node_ids=sorted(node_ids),
         node_coords=node_coords,
         node_degrees=dict(node_degrees),
         adjacency=dict(adjacency),
+        scc_nodes=scc,
     )
 
 
@@ -276,10 +288,14 @@ def generate_census_demand(
         model_data.buildings, network, max_distance_km=max_snap_distance_km
     )
 
-    # 3. Build origin weights — residential buildings only
-    #    Weight = building population (from model file)
+    # 3. Build origin weights — residential buildings only, restricted to SCC.
+    #    Weight = building population (from model file). Buildings whose nearest
+    #    node lies outside the largest strongly-connected component are dropped
+    #    here so every emitted trip is routable in both directions (matching the
+    #    feasibility filter every adapter applies before simulation).
     origin_node_pop: dict[str, int] = defaultdict(int)
     origin_node_buildings: dict[str, list[Building]] = defaultdict(list)
+    origins_outside_scc = 0
 
     for bld in model_data.buildings:
         if bld.bld_id not in bld_to_node:
@@ -287,6 +303,9 @@ def generate_census_demand(
         if bld.population <= 0:
             continue
         node_id = bld_to_node[bld.bld_id]
+        if node_id not in network.scc_nodes:
+            origins_outside_scc += 1
+            continue
         origin_node_pop[node_id] += bld.population
         origin_node_buildings[node_id].append(bld)
 
@@ -294,24 +313,29 @@ def generate_census_demand(
         n_bld = len(model_data.buildings)
         n_per = len(model_data.persons)
         raise ValueError(
-            f"No residential buildings mapped to network nodes.\n"
+            f"No residential buildings mapped to network nodes inside the largest SCC.\n"
             f"  Model file contained {n_bld:,} buildings and {n_per:,} persons "
-            f"within the bounding box.\n"
-            f"  If both are 0, the model file likely covers a different city "
-            f"than this scenario's bounding box.\n"
-            f"  Check that the model file matches the target city."
+            f"within the bounding box; {origins_outside_scc} buildings mapped to "
+            f"nodes outside the routable component.\n"
+            f"  If totals are 0, the model file likely covers a different city "
+            f"than this scenario's bounding box."
         )
 
     origin_nodes = list(origin_node_pop.keys())
     origin_weights = [origin_node_pop[n] for n in origin_nodes]
 
+    if origins_outside_scc:
+        logger.info(
+            "Dropped %d residential buildings whose nearest node was outside the SCC",
+            origins_outside_scc,
+        )
     logger.info("Origin nodes: %d (total pop weight: %d)",
                 len(origin_nodes), sum(origin_weights))
 
-    # 4. Build destination weights — degree-based (all nodes eligible)
-    #    Nodes with higher connectivity attract more trips
+    # 4. Build destination weights — degree-based, restricted to SCC.
     dest_nodes = [n for n in network.node_ids
-                  if network.node_degrees.get(n, 0) > 0]
+                  if n in network.scc_nodes
+                  and network.node_degrees.get(n, 0) > 0]
     dest_weights = [network.node_degrees.get(n, 1) + 1 for n in dest_nodes]
 
     # Pre-compute coordinate lookup for distance calculations

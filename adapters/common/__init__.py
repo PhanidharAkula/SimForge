@@ -2,10 +2,10 @@
 
 from adapters.common.feasibility import (
     FeasibilityReport,
-    compute_largest_scc,
     feasible_trip_ids,
     write_feasibility_report,
 )
+from pipeline.network.scc import compute_largest_scc
 
 __all__ = [
     "FeasibilityReport",

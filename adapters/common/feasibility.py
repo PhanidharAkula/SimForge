@@ -46,8 +46,13 @@ import json
 import logging
 from dataclasses import dataclass, asdict, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Set, Tuple
 from xml.etree import ElementTree as ET
+
+from pipeline.network.scc import (
+    compute_largest_scc,
+    parse_network as _parse_network,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -85,97 +90,6 @@ class FeasibilityReport:
         d = asdict(self)
         d["feasible_fraction"] = self.feasible_fraction
         return d
-
-
-def _parse_network(network_path: Path) -> Tuple[Set[str], List[Tuple[str, str]]]:
-    """Parse canonical network.xml into (node_ids, directed_edges)."""
-    try:
-        tree = ET.parse(network_path)
-    except ET.ParseError as exc:
-        raise ValueError(
-            f"Failed to parse network.xml at {network_path}: {exc}"
-        ) from exc
-    root = tree.getroot()
-    if root.tag != "network":
-        raise ValueError(
-            f"network.xml root must be <network>, found <{root.tag}>"
-        )
-
-    nodes: Set[str] = set()
-    nodes_elem = root.find("nodes")
-    if nodes_elem is not None:
-        for node_elem in nodes_elem.findall("node"):
-            node_id = node_elem.get("id")
-            if node_id:
-                nodes.add(node_id)
-
-    edges: List[Tuple[str, str]] = []
-    links_elem = root.find("links")
-    if links_elem is not None:
-        for link_elem in links_elem.findall("link"):
-            f = link_elem.get("from")
-            t = link_elem.get("to")
-            if f and t and f != t:
-                edges.append((f, t))
-
-    return nodes, edges
-
-
-def compute_largest_scc(
-    nodes: Set[str],
-    edges: List[Tuple[str, str]],
-) -> Set[str]:
-    """
-    Return the node IDs of the largest strongly-connected component.
-
-    Implemented iteratively (Kosaraju) to avoid Python recursion limits on
-    metropolitan-scale networks.
-    """
-    fwd: Dict[str, List[str]] = {}
-    rev: Dict[str, List[str]] = {}
-    for u, v in edges:
-        fwd.setdefault(u, []).append(v)
-        rev.setdefault(v, []).append(u)
-
-    visited: Set[str] = set()
-    finish_order: List[str] = []
-
-    for start in nodes:
-        if start in visited:
-            continue
-        stack: List[Tuple[str, bool]] = [(start, False)]
-        while stack:
-            node, processed = stack.pop()
-            if processed:
-                finish_order.append(node)
-                continue
-            if node in visited:
-                continue
-            visited.add(node)
-            stack.append((node, True))
-            for nb in fwd.get(node, ()):
-                if nb not in visited:
-                    stack.append((nb, False))
-
-    visited.clear()
-    best: Set[str] = set()
-    for start in reversed(finish_order):
-        if start in visited:
-            continue
-        component: Set[str] = set()
-        stk: List[str] = [start]
-        while stk:
-            node = stk.pop()
-            if node in visited:
-                continue
-            visited.add(node)
-            component.add(node)
-            for nb in rev.get(node, ()):
-                if nb not in visited:
-                    stk.append(nb)
-        if len(component) > len(best):
-            best = component
-    return best
 
 
 def feasible_trip_ids(

@@ -15,9 +15,10 @@ import statistics
 
 @dataclass
 class ScenarioStats:
-    """Statistics for a scenario-engine combination."""
+    """Statistics for a scenario-engine-mode combination."""
     scenario: str
     engine: str
+    mode: str
     runs: int
     successes: int
     avg_runtime: float
@@ -63,21 +64,27 @@ def compute_reproducibility(travel_times: list[float]) -> float:
     return max(0.0, 1.0 - cv)
 
 
-def _resolve_identity(run: dict) -> tuple[str, str]:
+def _resolve_identity(run: dict) -> tuple[str, str, str]:
     """
-    Return (scenario, engine) for a run dict, preferring explicit fields
+    Return (scenario, engine, mode) for a run dict, preferring explicit fields
     and falling back to scenario_id string parsing for backward compat.
     """
     engine = run.get("engine")
     scenario = run.get("scenario")
+    mode = run.get("mode")
     scenario_id = run.get("scenario_id", "")
 
-    if not engine or not scenario:
+    if not engine or not scenario or not mode:
         parsed_engine = "unknown"
         parsed_scenario = scenario_id or "unknown"
+        parsed_mode = "unknown"
         for eng in ("sumo", "qarsumo", "matsim"):
             if scenario_id.endswith(f"_{eng}") or f"_{eng}_" in scenario_id:
                 parsed_engine = eng
+                if f"_{eng}_meso" in scenario_id:
+                    parsed_mode = "meso"
+                elif f"_{eng}_micro" in scenario_id:
+                    parsed_mode = "micro"
                 parsed_scenario = (
                     scenario_id
                     .replace(f"_{eng}_meso", "")
@@ -87,29 +94,33 @@ def _resolve_identity(run: dict) -> tuple[str, str]:
                 break
         engine = engine or parsed_engine
         scenario = scenario or parsed_scenario
-    return scenario, engine
+        mode = mode or parsed_mode
+    return scenario, engine, mode
 
 
 def analyze_results(results: dict) -> list[ScenarioStats]:
     """Analyze benchmark results and compute statistics."""
     stats_list = []
 
-    # Group runs by (scenario, engine) using explicit fields when present
-    by_group: dict[tuple[str, str], list[dict]] = {}
+    # Group runs by (scenario, engine, mode) — meso and micro are different
+    # simulators behaviorally, so collapsing them inflates std and crushes the
+    # R-score. Keeping mode in the key preserves an apples-to-apples comparison.
+    by_group: dict[tuple[str, str, str], list[dict]] = {}
     for run in results.get("results", results.get("runs", [])):
-        scenario, engine = _resolve_identity(run)
-        by_group.setdefault((scenario, engine), []).append(run)
+        scenario, engine, mode = _resolve_identity(run)
+        by_group.setdefault((scenario, engine, mode), []).append(run)
 
-    for (scenario, engine), runs in by_group.items():
-        
+    for (scenario, engine, mode), runs in by_group.items():
+
         # Use "status" field instead of "success"
         successful_runs = [r for r in runs if r.get("status") == "success"]
-        
+
         if not successful_runs:
             # Record failed scenario
             stats_list.append(ScenarioStats(
                 scenario=scenario,
                 engine=engine,
+                mode=mode,
                 runs=len(runs),
                 successes=0,
                 avg_runtime=0,
@@ -122,19 +133,20 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
                 reproducibility_score=0
             ))
             continue
-        
+
         # Compute statistics from successful runs - use "runtime_s" not "runtime_seconds"
         runtimes = [r.get("runtime_s", 0) for r in successful_runs]
         # Metrics structure: metrics.travel_time.trip_count, metrics.travel_time.mean
         trip_counts = [r.get("metrics", {}).get("travel_time", {}).get("trip_count", 0) for r in successful_runs]
         travel_times = [r.get("metrics", {}).get("travel_time", {}).get("mean", 0) for r in successful_runs]
-        
+
         # Filter out zero travel times (might indicate metric computation failure)
         valid_travel_times = [tt for tt in travel_times if tt > 0]
-        
+
         stats = ScenarioStats(
             scenario=scenario,
             engine=engine,
+            mode=mode,
             runs=len(runs),
             successes=len(successful_runs),
             avg_runtime=statistics.mean(runtimes) if runtimes else 0,
@@ -154,39 +166,37 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
 def print_runtime_table(stats_list: list[ScenarioStats]) -> str:
     """Generate runtime comparison table (Table 5.1 in thesis)."""
     lines = []
-    lines.append("\n" + "=" * 80)
+    lines.append("\n" + "=" * 90)
     lines.append("TABLE 5.1: Runtime Performance Comparison (seconds)")
-    lines.append("=" * 80)
-    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10}")
-    lines.append("-" * 80)
-    
-    # Sort by scenario then engine
-    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine))
-    
+    lines.append("=" * 90)
+    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mode':<7} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10}")
+    lines.append("-" * 90)
+
+    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
+
     for s in sorted_stats:
         if s.successes > 0:
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.avg_runtime:>8.2f}s {s.std_runtime:>8.3f}s {s.min_runtime:>8.2f}s {s.max_runtime:>8.2f}s")
+            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {s.avg_runtime:>8.2f}s {s.std_runtime:>8.3f}s {s.min_runtime:>8.2f}s {s.max_runtime:>8.2f}s")
         else:
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {'FAILED':<10} {'-':<10} {'-':<10} {'-':<10}")
-    
-    lines.append("=" * 80)
+            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {'FAILED':<10} {'-':<10} {'-':<10} {'-':<10}")
+
+    lines.append("=" * 90)
     return "\n".join(lines)
 
 
 def print_reproducibility_table(stats_list: list[ScenarioStats]) -> str:
     """Generate reproducibility table (Table 5.2 in thesis)."""
     lines = []
-    lines.append("\n" + "=" * 80)
+    lines.append("\n" + "=" * 95)
     lines.append("TABLE 5.2: Reproducibility Analysis (Travel Time)")
-    lines.append("=" * 80)
-    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Avg TT (s)':<12} {'Std TT (s)':<12} {'R-Score':<10} {'Rating':<15}")
-    lines.append("-" * 80)
-    
-    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine))
-    
+    lines.append("=" * 95)
+    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mode':<7} {'Avg TT (s)':<12} {'Std TT (s)':<12} {'R-Score':<10} {'Rating':<15}")
+    lines.append("-" * 95)
+
+    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
+
     for s in sorted_stats:
         if s.successes > 0 and s.avg_travel_time > 0:
-            # Rating based on R-score
             if s.reproducibility_score >= 0.99:
                 rating = "Excellent"
             elif s.reproducibility_score >= 0.95:
@@ -195,12 +205,12 @@ def print_reproducibility_table(stats_list: list[ScenarioStats]) -> str:
                 rating = "Acceptable"
             else:
                 rating = "Poor"
-            
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.avg_travel_time:>10.1f} {s.std_travel_time:>10.1f} {s.reproducibility_score:>8.4f} {rating:<15}")
+
+            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {s.avg_travel_time:>10.1f} {s.std_travel_time:>10.1f} {s.reproducibility_score:>8.4f} {rating:<15}")
         else:
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {'FAILED':<12} {'-':<12} {'-':<10} {'-':<15}")
-    
-    lines.append("=" * 80)
+            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {'FAILED':<12} {'-':<12} {'-':<10} {'-':<15}")
+
+    lines.append("=" * 95)
     return "\n".join(lines)
 
 
@@ -249,9 +259,9 @@ def generate_latex_table(stats_list: list[ScenarioStats]) -> str:
     lines.append("Scenario & Engine & Runtime (s) & Trips & R-Score \\\\")
     lines.append("\\midrule")
     
-    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine))
+    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
     current_scenario = None
-    
+
     for s in sorted_stats:
         if s.successes > 0:
             scenario_name = s.scenario.replace("_", "\\_")
@@ -259,8 +269,8 @@ def generate_latex_table(stats_list: list[ScenarioStats]) -> str:
                 if current_scenario is not None:
                     lines.append("\\midrule")
                 current_scenario = s.scenario
-            
-            lines.append(f"{scenario_name} & {s.engine} & {s.avg_runtime:.2f} & {int(s.avg_trips)} & {s.reproducibility_score:.4f} \\\\")
+
+            lines.append(f"{scenario_name} & {s.engine}/{s.mode} & {s.avg_runtime:.2f} & {int(s.avg_trips)} & {s.reproducibility_score:.4f} \\\\")
     
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
@@ -273,16 +283,16 @@ def generate_markdown_table(stats_list: list[ScenarioStats]) -> str:
     """Generate Markdown table for documentation."""
     lines = []
     lines.append("\n## Benchmark Results\n")
-    lines.append("| Scenario | Engine | Runtime (s) | Trips | Avg TT (s) | R-Score |")
-    lines.append("|----------|--------|-------------|-------|------------|---------|")
-    
-    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine))
-    
+    lines.append("| Scenario | Engine | Mode | Runtime (s) | Trips | Avg TT (s) | R-Score |")
+    lines.append("|----------|--------|------|-------------|-------|------------|---------|")
+
+    sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
+
     for s in sorted_stats:
         if s.successes > 0:
-            lines.append(f"| {s.scenario} | {s.engine} | {s.avg_runtime:.2f} | {int(s.avg_trips)} | {s.avg_travel_time:.1f} | {s.reproducibility_score:.4f} |")
+            lines.append(f"| {s.scenario} | {s.engine} | {s.mode} | {s.avg_runtime:.2f} | {int(s.avg_trips)} | {s.avg_travel_time:.1f} | {s.reproducibility_score:.4f} |")
         else:
-            lines.append(f"| {s.scenario} | {s.engine} | FAILED | - | - | - |")
+            lines.append(f"| {s.scenario} | {s.engine} | {s.mode} | FAILED | - | - | - |")
     
     return "\n".join(lines)
 
