@@ -59,7 +59,7 @@ SimForge solves these challenges through five interacting subsystems:
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | QarSUMO            | QarSUMO (LLNL)               | —       | GPU-accelerated SUMO variant            |
 | GPU compute        | CUDA                         | 11.8+   | QarSUMO acceleration                    |
-| Testing            | pytest                       | 8.0+    | 324 tests across all subsystems         |
+| Testing            | pytest                       | 8.0+    | 284 tests across all subsystems         |
 
 ---
 
@@ -140,14 +140,14 @@ The network schema defines the static road infrastructure as a **directed graph*
 - **Speed in m/s**: SI units throughout. OSM `maxspeed` tags in mph/km/h are converted at extraction time.
 - **Capacity optional**: Not all simulators use capacity directly. SUMO derives it from lane count and speed; MATSim uses flow capacity per link.
 
-**Typical scale (Chicago 5K, 4km radius):**
+**Typical scale (bundled `chicago_1k_car`, 2 km radius):**
 
 | Metric          | Value                            |
 | --------------- | -------------------------------- |
-| Nodes           | 1,248                            |
-| Links           | 2,871                            |
-| Total road km   | ~180                             |
-| Avg link length | 62.7 m                           |
+| Nodes           | 1,245                            |
+| Links           | 2,862                            |
+| Signal controllers | 922                           |
+| Largest SCC     | 1,204 nodes (96.7 %), 2,796 links |
 | Road types      | 7 (motorway through residential) |
 
 ### 3.2.4 Demand Schema (`demand.csv`)
@@ -235,7 +235,7 @@ Simulation parameters that control execution behavior.
 
 ```xml
 <config>
-  <metadata scenario_id="chicago_5k_car" version="v0" created="2025-01-15T10:30:00"/>
+  <metadata scenario_id="chicago_1k_car" version="v0" created="2025-01-15T10:30:00"/>
   <time start_time_s="0" end_time_s="3600"/>
   <parameters random_seed="42"/>
   <schema version="0"/>
@@ -260,7 +260,7 @@ File inventory with integrity verification via SHA-256 hashes.
 
 ```xml
 <manifest>
-  <scenario id="chicago_5k_car" schema_version="0"/>
+  <scenario id="chicago_1k_car" schema_version="0"/>
   <canonical_files>
     <file type="network" path="network.xml" sha256="a1b2c3..."/>
     <file type="demand" path="demand.csv" sha256="d4e5f6..."/>
@@ -311,7 +311,7 @@ def validate_bundle(scenario_path: Path) -> ValidationResult:
         assert compute_sha256(file_entry.path) == file_entry.sha256
 ```
 
-**Test coverage**: 7 dedicated validation tests covering missing files, invalid references, hash mismatches, and edge cases.
+**Test coverage**: `test_validator.py` provides the 2 core valid/invalid-bundle unit tests; `test_scenario_data_integrity.py` adds 70 per-bundle integrity checks; `test_pipeline_e2e.py` adds 20 end-to-end pipeline checks (see §3.7.1).
 
 ---
 
@@ -711,23 +711,26 @@ All adapters enforce deterministic output through:
 Benchmark runs are defined via YAML runspec files that specify the experimental matrix:
 
 ```yaml
-name: thesis_benchmark_5k
-description: "5K-tier benchmark across 3 cities × 3 engines"
+name: stress_test
+description: End-to-end stress test across all engines and modes.
+output_dir: runs/stress_test
 
 runs:
-  - scenario_id: chicago_5k_car
-    scenario_path: scenarios/chicago_5k_car
+  - scenario_id: chicago_1k_car
+    scenario_path: scenarios/chicago_1k_car
     engine: sumo
     mode: mesoscopic
     repeats: 3
     seed: 42
-    timeout_s: 3600
+    timeout_s: 300
 
-  - scenario_id: chicago_5k_car
-    scenario_path: scenarios/chicago_5k_car
+  - scenario_id: chicago_1k_car
+    scenario_path: scenarios/chicago_1k_car
     engine: matsim
-    repeats: 3
+    mode: mesoscopic
+    repeats: 2
     seed: 42
+    timeout_s: 600
 ```
 
 **RunConfig fields:**
@@ -775,42 +778,48 @@ For each (scenario, engine, mode, seed):
 ```
 runs/
 └── benchmark_20250615_143022/
-    ├── chicago_5k_car_sumo_meso_seed42/
+    ├── chicago_1k_car_sumo_meso_seed42/
     │   ├── net.net.xml
     │   ├── routes.rou.xml
     │   ├── scenario.sumocfg
     │   └── output/
     │       ├── tripinfo.xml
     │       └── summary.xml
-    ├── chicago_5k_car_matsim_meso_seed42/
+    ├── chicago_1k_car_matsim_meso_seed42/
     │   ├── network.xml
     │   ├── plans.xml
     │   ├── config.xml
     │   └── output/
     │       └── output_events.xml.gz
-    └── benchmark_results.json
+    └── benchmark_results_<runspec>.json
 ```
 
 ### 3.5.3 Result Aggregation
 
-All run results are serialized to `benchmark_results.json`:
+All run results are serialized to `benchmark_results_<runspec>.json`:
 
 ```json
 {
-  "runspec_name": "thesis_benchmark_5k",
-  "started_at": "2025-06-15T14:30:22Z",
-  "completed_at": "2025-06-15T14:42:47Z",
-  "runs": [
+  "runspec_name": "stress_test",
+  "started_at": "2026-04-19T02:05:28+00:00",
+  "completed_at": "2026-04-19T02:06:19+00:00",
+  "total_runs": 22,
+  "successful_runs": 22,
+  "failed_runs": 0,
+  "results": [
     {
-      "scenario_id": "chicago_5k_car",
+      "scenario": "chicago_1k_car",
       "engine": "sumo",
+      "mode": "meso",
       "seed": 42,
       "status": "success",
-      "runtime_s": 3.47,
+      "runtime_s": 0.279,
       "metrics": {
-        "mean_travel_time_s": 245.3,
-        "p95_travel_time_s": 512.7,
-        "trip_count": 4892
+        "travel_time": {
+          "mean": 204.18,
+          "p95": 406.0,
+          "trip_count": 996
+        }
       }
     }
   ]
@@ -948,23 +957,32 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **324 tests** across all subsystems:
+The framework includes **284 tests** across all subsystems:
 
-| Test Module                       | Tests | What It Validates                                 |
-| --------------------------------- | ----- | ------------------------------------------------- |
-| `test_adapter_determinism.py`     | 8     | Byte-identical outputs from identical inputs      |
-| `test_sumo_adapter.py`            | 5     | SUMO conversion: network, routes, config          |
-| `test_matsim_adapter.py`          | 18    | MATSim adapter: unit + integration, all scenarios |
-| `test_qarsumo_adapter.py`         | 12    | QarSUMO config, GPU detection, all scenarios      |
-| `test_fidelity_metrics.py`        | 16    | RMSE, GEH, KS computation correctness             |
-| `test_metrics_travel_time.py`     | 2     | SUMO tripinfo parsing                             |
-| `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation   |
-| `test_scalability_metrics.py`     | 8     | Timer, throughput, hardware detection             |
-| `test_validator.py`               | 2     | Bundle validation: valid and invalid bundles      |
-| `test_scenario_data_integrity.py` | ~210  | All scenarios × 35 integrity checks each          |
-| `test_pipeline_e2e.py`            | 17    | Bad data detection, routing, adapter robustness   |
+| Test Module                       | Tests | What It Validates                                       |
+| --------------------------------- | ----- | ------------------------------------------------------- |
+| `test_adapter_determinism.py`     | 8     | Byte-identical outputs from identical inputs            |
+| `test_sumo_adapter.py`            | 4     | SUMO conversion: network, routes, config                |
+| `test_matsim_adapter.py`          | 24    | MATSim adapter: unit + integration, all scenarios       |
+| `test_qarsumo_adapter.py`         | 10    | QarSUMO config, GPU detection, all scenarios            |
+| `test_fidelity_metrics.py`        | 21    | RMSE, GEH, KS computation correctness                   |
+| `test_metrics_travel_time.py`     | 2     | SUMO tripinfo parsing                                   |
+| `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation         |
+| `test_scalability_metrics.py`     | 8     | Timer, throughput, hardware detection                   |
+| `test_validator.py`               | 2     | Bundle validation: valid and invalid bundles            |
+| `test_scenario_data_integrity.py` | 70    | Per-scenario × 35 integrity checks                      |
+| `test_pipeline_e2e.py`            | 20    | Bad data detection, routing, adapter robustness         |
+| `test_scc.py`                     | 16    | Iterative Kosaraju + parsing                            |
+| `test_feasibility.py`             | 16    | Shared cross-engine trip filter                         |
+| `test_analyze_benchmark.py`       | 25    | Mode-aware grouping + identity fallback + renderers     |
+| `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
+| `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
+| `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/QarSUMO                |
 
-**All 324 tests passing** as of current version.
+**All 284 tests passing** as of current version. Marker registry in
+`pyproject.toml`; shared fixtures in `tests/conftest.py`.  Line coverage
+sits at **76 %** across the adapter, pipeline, and evaluation packages;
+CI enforces ≥70 % on every PR via `pytest --cov --cov-fail-under=70`.
 
 ### 3.7.2 Determinism Guarantees
 

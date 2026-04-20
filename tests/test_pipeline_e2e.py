@@ -1,58 +1,44 @@
 """
 End-to-end pipeline stress tests.
 
-Tests the full workflow that a new user would follow:
-  generate scenario → validate → convert to SUMO → run simulation
-
-Also tests edge cases: bad inputs, missing files, corrupt data.
+Covers the full new-user workflow (generate → validate → adapt → simulate)
+plus negative testing of each corruption mode the validator must catch.
 """
 
 from __future__ import annotations
 
 import csv
 import shutil
-from pathlib import Path
 import xml.etree.ElementTree as ET
+from pathlib import Path
 
 import pytest
 
-from pipeline.validation.validate_bundle import validate_bundle
 from adapters.sumo.sumo_adapter import (
-    prepare_sumo_inputs,
     parse_canonical_network,
+    prepare_sumo_inputs,
     shortest_path_nodes,
+)
+from pipeline.validation.validate_bundle import validate_bundle
+
+from .conftest import (
+    is_arm64_netconvert_crash,
+    is_large_scenario,
+    warn_skipped,
 )
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
-SCENARIOS_DIR = REPO_ROOT / "scenarios"
-
-
-def _first_scenario() -> Path | None:
-    if not SCENARIOS_DIR.is_dir():
-        return None
-    for name in ["chicago_1k_car", "nyc_1k_car", "la_1k_car"]:
-        p = SCENARIOS_DIR / name
-        if p.is_dir():
-            return p
-    return None
-
-
-SCENARIO = _first_scenario()
-
-
 # ===========================================================================
-# Validation tests — catching bad data before simulation
+# Validation tests — every corruption mode the validator must catch
 # ===========================================================================
 
+
+@pytest.mark.integration
 class TestValidatorCatchesBadData:
-    """Ensure the validator catches every type of data corruption."""
-
     @pytest.fixture
-    def good_scenario(self, tmp_path) -> Path:
-        assert SCENARIO is not None, "No scenario available"
+    def good_scenario(self, bundled_scenario, tmp_path) -> Path:
         dst = tmp_path / "good"
-        shutil.copytree(SCENARIO, dst)
+        shutil.copytree(bundled_scenario, dst)
         return dst
 
     def test_valid_scenario_passes(self, good_scenario):
@@ -86,60 +72,30 @@ class TestValidatorCatchesBadData:
         (good_scenario / "demand.csv").write_text("col_a,col_b\n1,2\n")
         assert validate_bundle(good_scenario) is False
 
-    def test_demand_with_nonexistent_origin(self, good_scenario):
-        demand_path = good_scenario / "demand.csv"
-        rows = []
+    def _rewrite_first_row(self, demand_path: Path, key: str, value: str) -> None:
         with demand_path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             fieldnames = reader.fieldnames
-            for row in reader:
-                rows.append(row)
-
-        # Inject a bogus origin node
-        rows[0]["origin_node_id"] = "FAKE_NODE_999"
+            rows = list(reader)
+        rows[0][key] = value
         with demand_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(rows)
 
+    def test_demand_with_nonexistent_origin(self, good_scenario):
+        self._rewrite_first_row(good_scenario / "demand.csv", "origin_node_id", "FAKE_NODE_999")
         assert validate_bundle(good_scenario) is False
 
     def test_demand_with_nonexistent_destination(self, good_scenario):
-        demand_path = good_scenario / "demand.csv"
-        rows = []
-        with demand_path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames
-            for row in reader:
-                rows.append(row)
-
-        rows[0]["destination_node_id"] = "FAKE_DEST_999"
-        with demand_path.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-
+        self._rewrite_first_row(good_scenario / "demand.csv", "destination_node_id", "FAKE_DEST_999")
         assert validate_bundle(good_scenario) is False
 
     def test_demand_with_negative_departure(self, good_scenario):
-        demand_path = good_scenario / "demand.csv"
-        rows = []
-        with demand_path.open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames
-            for row in reader:
-                rows.append(row)
-
-        rows[0]["departure_time_s"] = "-100"
-        with demand_path.open("w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
-
+        self._rewrite_first_row(good_scenario / "demand.csv", "departure_time_s", "-100")
         assert validate_bundle(good_scenario) is False
 
     def test_scenario_id_mismatch(self, good_scenario):
-        """Config scenario_id must match manifest scenario id."""
         config_path = good_scenario / "config.xml"
         tree = ET.parse(config_path)
         meta = tree.getroot().find("metadata")
@@ -152,38 +108,30 @@ class TestValidatorCatchesBadData:
 
 
 # ===========================================================================
-# SUMO adapter robustness tests
+# SUMO adapter robustness
 # ===========================================================================
 
+
+@pytest.mark.integration
 class TestSUMOAdapterRobustness:
-    _LARGE_PATTERNS = ("50k", "200k", "500k", "5m")
-
-    def test_adapter_on_all_scenarios(self, tmp_path):
-        """Every scenario should convert without errors.
-
-        Large scenarios may segfault netconvert on Apple Silicon (arm64).
-        """
-        import platform
-
-        if not SCENARIOS_DIR.is_dir():
-            pytest.skip("No scenarios directory")
+    @pytest.mark.slow
+    @pytest.mark.requires_sumo
+    def test_adapter_on_all_scenarios(self, small_bundled_scenarios, tmp_path):
+        """Every small scenario must convert without errors."""
+        if not small_bundled_scenarios:
+            pytest.skip("No bundled scenarios available")
 
         tested = 0
-        skipped = []
-        for scenario_path in sorted(SCENARIOS_DIR.iterdir()):
-            if not scenario_path.is_dir():
-                continue
-            if not (scenario_path / "manifest.xml").is_file():
-                continue
-            if any(p in scenario_path.name for p in self._LARGE_PATTERNS):
+        skipped: list[str] = []
+        for scenario_path in small_bundled_scenarios:
+            if is_large_scenario(scenario_path.name):
                 skipped.append(scenario_path.name)
                 continue
-
             out = tmp_path / scenario_path.name
             try:
                 summary = prepare_sumo_inputs(scenario_path, out)
             except RuntimeError as e:
-                if platform.machine() == "arm64" and ("failed" in str(e).lower() or "crashed" in str(e).lower()):
+                if is_arm64_netconvert_crash(e):
                     skipped.append(scenario_path.name)
                     continue
                 raise
@@ -194,88 +142,63 @@ class TestSUMOAdapterRobustness:
             assert (out / "routes.rou.xml").is_file()
             tested += 1
 
-        if skipped:
-            import warnings
-            warnings.warn(f"Skipped {len(skipped)} scenarios (netconvert arm64): {skipped}")
-
+        warn_skipped("E2E SUMO sweep", skipped)
         assert tested > 0
 
-    def test_output_routes_have_valid_edges(self, tmp_path):
-        """Routes in routes.rou.xml should reference edges that exist."""
-        assert SCENARIO is not None
+    def test_output_routes_have_valid_edges(self, bundled_scenario, tmp_path):
         out = tmp_path / "route_check"
-        prepare_sumo_inputs(SCENARIO, out)
+        prepare_sumo_inputs(bundled_scenario, out)
 
-        # Get edge IDs from edges.edg.xml
-        edge_tree = ET.parse(out / "edges.edg.xml")
-        edge_ids = {e.get("id") for e in edge_tree.findall(".//edge")}
+        edge_ids = {e.get("id") for e in ET.parse(out / "edges.edg.xml").findall(".//edge")}
+        for route in ET.parse(out / "routes.rou.xml").iter("route"):
+            for eid in route.get("edges", "").split():
+                assert eid in edge_ids, f"Route references missing edge '{eid}'"
 
-        # Check route edges
-        routes_tree = ET.parse(out / "routes.rou.xml")
-        for route in routes_tree.iter("route"):
-            edges_str = route.get("edges", "")
-            for eid in edges_str.split():
-                assert eid in edge_ids, (
-                    f"Route references edge '{eid}' not in edges.edg.xml"
-                )
-
-    def test_tripinfo_output_configured(self, tmp_path):
-        """SUMO config must enable tripinfo output for metric collection."""
-        assert SCENARIO is not None
+    def test_tripinfo_output_configured(self, bundled_scenario, tmp_path):
         out = tmp_path / "cfg_check"
-        prepare_sumo_inputs(SCENARIO, out)
-
+        prepare_sumo_inputs(bundled_scenario, out)
         cfg_text = (out / "toy.sumocfg").read_text()
-        assert "tripinfo" in cfg_text, (
-            "SUMO config must include tripinfo-output for metrics"
-        )
+        assert "tripinfo" in cfg_text, "SUMO config must enable tripinfo-output"
 
 
 # ===========================================================================
-# Network graph routing tests
+# Network routing
 # ===========================================================================
+
 
 class TestNetworkRouting:
     def test_bfs_finds_paths(self):
-        """BFS should find paths in a simple graph."""
         adj = {"A": ["B"], "B": ["C"], "C": []}
-        path = shortest_path_nodes(adj, "A", "C")
-        assert path == ["A", "B", "C"]
+        assert shortest_path_nodes(adj, "A", "C") == ["A", "B", "C"]
 
     def test_bfs_returns_none_for_unreachable(self):
         adj = {"A": ["B"], "B": [], "C": ["D"], "D": []}
-        path = shortest_path_nodes(adj, "A", "C")
-        assert path is None
+        assert shortest_path_nodes(adj, "A", "C") is None
 
     def test_bfs_same_node(self):
         adj = {"A": ["B"]}
-        path = shortest_path_nodes(adj, "A", "A")
-        assert path == ["A"]
+        assert shortest_path_nodes(adj, "A", "A") == ["A"]
 
-    def test_real_network_has_paths(self):
-        """Real scenario network should have routeable paths."""
-        assert SCENARIO is not None
-        graph = parse_canonical_network(SCENARIO / "network.xml")
+    def test_real_network_has_paths(self, bundled_scenario):
+        graph = parse_canonical_network(bundled_scenario / "network.xml")
+        with (bundled_scenario / "demand.csv").open(newline="", encoding="utf-8") as f:
+            rows = list(csv.DictReader(f))
 
-        # Check a sample of demand trips can route
-        rows = []
-        with (SCENARIO / "demand.csv").open(newline="", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                rows.append(row)
-
-        routeable = 0
         total = min(50, len(rows))
-        for row in rows[:total]:
-            origin = row["origin_node_id"].strip()
-            dest = row["destination_node_id"].strip()
-            path = shortest_path_nodes(graph.adjacency, origin, dest)
-            if path and len(path) >= 2:
-                routeable += 1
+        routeable = sum(
+            1
+            for row in rows[:total]
+            if (
+                path := shortest_path_nodes(
+                    graph.adjacency,
+                    row["origin_node_id"].strip(),
+                    row["destination_node_id"].strip(),
+                )
+            ) is not None and len(path) >= 2
+        )
 
-        # At least 80% should be routeable
-        ratio = routeable / total if total > 0 else 0
+        ratio = routeable / total if total else 0
         assert ratio >= 0.8, (
-            f"Only {routeable}/{total} ({ratio:.0%}) trips are routeable — "
-            f"network may have connectivity issues"
+            f"Only {routeable}/{total} ({ratio:.0%}) trips routeable — "
+            "network may have connectivity issues"
         )

@@ -1,181 +1,266 @@
 # SimForge Test Suite
 
-**324 tests** across **11 test files** covering adapters, metrics, validation, data integrity, and end-to-end pipeline stress tests.
+**284 tests** across **17 test files** covering adapters, metrics, validation,
+data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
+feasibility filter, the mode-aware benchmark analyser, OSM network fetching
+(mocked), demand generators, and real-binary engine smoke tests.
 
-## Quick Start
+Pytest configuration lives in `pyproject.toml` (`[tool.pytest.ini_options]`)
+with strict-marker enforcement, `testpaths = ["tests"]`, and `--tb=short`.
+Coverage thresholds are enforced by `pytest-cov` (≥70 % in CI, currently
+**76 %** — see `[tool.coverage]` in `pyproject.toml`).  Shared
+scenario-discovery, hashing, and arm64-skip helpers live in
+`tests/conftest.py`.
+
+CI runs on every push (`.github/workflows/test.yml`) across
+macOS + Ubuntu × Python 3.10/3.11/3.13; the slow tier (full suite +
+real-binary smoke) runs on Ubuntu only to sidestep the Apple Silicon
+`netconvert` segfault documented below.  Mutation testing against the
+two cross-engine-fairness modules is documented in
+[`doc/MUTATION_BASELINE.md`](doc/MUTATION_BASELINE.md).
+
+---
+
+## Quick start
 
 ```bash
 source .venv/bin/activate
-python -m pytest tests/ -v            # full suite (~9 min)
-python -m pytest tests/ -v -x         # stop on first failure
-python -m pytest tests/test_scenario_data_integrity.py -v   # data checks only
+
+# Fast tier — everything except whole-suite adapter sweeps and real-binary
+# smoke.  ~12 s including coverage.
+python -m pytest -m "not slow"
+
+# Full suite (includes slow sweeps and any available real-binary smoke).
+# ~22 s on M-series.
+python -m pytest
+
+# Stop on first failure, verbose output.
+python -m pytest -v -x
+
+# One file or one class.
+python -m pytest tests/test_feasibility.py
+python -m pytest tests/test_scenario_data_integrity.py::TestNetworkIntegrity
+
+# Substring filter on test names.
+python -m pytest -k "scc or feasibility"
+
+# Marker filters (registered in pyproject.toml).
+python -m pytest -m slow
+python -m pytest -m determinism
+python -m pytest -m "integration and not slow"
+python -m pytest -m "not requires_sumo"   # skip tests needing the SUMO binary
+
+# Coverage. Dev deps (pytest-cov, pytest-xdist, mutmut) are installed
+# automatically by setup_simforge.py; on a manual venv run
+# `pip install -r requirements-dev.txt` once before these commands.
+# Source/omit lists and the report format are configured in pyproject.toml.
+python -m pytest --cov --cov-report=term-missing
+
+# CI-style: enforce the 70 % floor.
+python -m pytest --cov --cov-fail-under=70
+
+# Parallel execution (pytest-xdist ships in requirements-dev.txt).
+python -m pytest -n auto
+
+# Mutation testing against the cross-engine-fairness modules (mutmut in dev deps).
+mutmut run
+mutmut results
 ```
 
 ---
 
-## Test Files
+## Markers
 
-### 1. `test_adapter_determinism.py` — Determinism (8 tests)
+Registered in `pyproject.toml`. `--strict-markers` rejects unknown markers.
 
-Verifies the SUMO adapter produces **byte-identical** outputs across repeated runs.
+| Marker            | Meaning                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| `slow`            | Test takes > 2 s or sweeps every bundled scenario            |
+| `integration`    | Exercises multiple subsystems end-to-end                      |
+| `determinism`    | Verifies byte-identical adapter outputs across re-runs        |
+| `requires_sumo`  | Needs the SUMO `netconvert` / `sumo` binaries on PATH         |
+| `requires_java`  | Needs Java + the MATSim JAR (`lib/matsim-15.0/`)              |
+| `requires_gpu`   | Needs an NVIDIA GPU (otherwise the QarSUMO CPU fallback path) |
 
-| Test                             | What it checks                               |
-| -------------------------------- | -------------------------------------------- |
-| `test_hash_file_*`               | SHA-256 hashing utility correctness          |
-| `test_deterministic_full_output` | Full adapter output is identical across runs |
-| `test_deterministic_routes`      | Route files match exactly                    |
-| `test_deterministic_nodes`       | Node XML matches exactly                     |
-| `test_deterministic_edges`       | Edge XML matches exactly                     |
-| `test_deterministic_config`      | SUMO config matches exactly                  |
+The `requires_*` markers are advisory today (no auto-skip plumbing yet) — they
+let contributors filter explicitly with `-m "not requires_java"`.
 
-### 2. `test_sumo_adapter.py` — SUMO Adapter (5 tests)
+---
 
-Tests the core SUMO adapter's file generation and correctness.
+## Test files
 
-| Test                                              | What it checks                                    |
-| ------------------------------------------------- | ------------------------------------------------- |
-| `test_prepare_sumo_inputs_creates_expected_files` | Creates net.net.xml, routes, config               |
-| `test_edges_have_length_attribute`                | Every edge in nodes/edges XML has `length` ≥ 0.1m |
-| `test_net_xml_has_realistic_lane_lengths`         | Geo projection produces mean lane length > 10m    |
-| `test_sumo_adapter_all_scenarios`                 | Runs adapter on **every** available scenario      |
+### 1. `test_adapter_determinism.py` — Determinism (8 tests, `@determinism`)
 
-### 3. `test_matsim_adapter.py` — MATSim Adapter (18 tests)
+Two runs of `prepare_sumo_inputs` on the same scenario must produce
+byte-identical output (modulo netconvert's embedded timestamp on `net.net.xml`).
+Catches hash-randomised dict iteration, float summation order, and timestamp
+leaks into XML.
 
-Tests the MATSim adapter (file generation only — no Java/JAR required).
+### 2. `test_sumo_adapter.py` — SUMO Adapter (4 tests; sweep `@slow`)
 
-| Test                             | What it checks                                       |
-| -------------------------------- | ---------------------------------------------------- |
-| `test_seconds_to_time_string_*`  | Time conversion: 0 → "00:00:00", 45296 → "12:34:56"  |
-| `test_matsim_config_defaults`    | Default config values (iterations=10, etc.)          |
-| `test_build_matsim_vehicles_xml` | Valid vehicles XML with car vehicleType              |
-| `test_load_canonical_network`    | Loads nodes/links from canonical network XML         |
-| `test_build_matsim_network_xml`  | Valid MATSim network XML with nodes and links        |
-| `test_build_matsim_plans_xml`    | Valid MATSim plans with person/activity/leg elements |
-| `test_build_matsim_config_xml`   | Config has module elements for network, plans, etc.  |
-| `test_prepare_matsim_inputs`     | Full pipeline: generates all 4 output files          |
-| `test_all_scenarios`             | Runs adapter on every available scenario             |
+Validates the SUMO input bundle (`net.net.xml`, `routes.rou.xml`,
+`toy.sumocfg`), edge-length attribution, and lane-length sanity (catches
+missing geo projection). The all-scenarios sweep is `@slow`.
 
-### 4. `test_qarsumo_adapter.py` — QarSUMO Adapter (12 tests)
+### 3. `test_matsim_adapter.py` — MATSim Adapter (24 tests; sweep `@slow`)
 
-Tests the QarSUMO GPU-accelerated SUMO adapter.
+Tests the MATSim adapter's helpers (`seconds_to_time_string`, `MATSimConfig`,
+vehicles XML, network XML, plans XML, config XML) and the full
+`prepare_matsim_inputs` pipeline. No Java/JAR required.
 
-| Test                                      | What it checks                                       |
-| ----------------------------------------- | ---------------------------------------------------- |
-| `test_default_config`                     | Default batch_size=1024, precision=float32           |
-| `test_custom_config`                      | Custom config values are accepted                    |
-| `test_config_to_dict`                     | Config serializes to dictionary correctly            |
-| `test_gpu_detection_safe`                 | GPU detection returns bool without crashing          |
-| `test_gpu_info_safe`                      | GPU info returns dict without crashing               |
-| `test_extend_config_adds_qarsumo_section` | Adds `<qarsumo>` XML section with GPU settings       |
-| `test_qarsumo_section_values`             | gpu-device, batch-size, precision are correct        |
-| `test_prepare_qarsumo_inputs`             | Full pipeline: generates SUMO files + QarSUMO config |
-| `test_all_scenarios`                      | Runs adapter on every available scenario             |
+### 4. `test_qarsumo_adapter.py` — QarSUMO Adapter (10 tests; sweep `@slow`)
 
-### 5. `test_fidelity_metrics.py` — Fidelity Metrics (16 tests)
+Tests `QarSUMOConfig`, the `<qarsumo>` config-extension XML surgery, GPU
+detection (always returns a dict — falls back gracefully on CPU-only hosts),
+and the full prepare path.
 
-Tests statistical fidelity metrics used to compare simulation outputs.
+### 5. `test_fidelity_metrics.py` — Fidelity Metrics (21 tests)
 
-| Test              | What it checks                                                |
-| ----------------- | ------------------------------------------------------------- |
-| `test_rmse_*`     | Root Mean Squared Error: zeros, known values, single elements |
-| `test_geh_*`      | GEH statistic for traffic volumes                             |
-| `test_ks_*`       | Kolmogorov-Smirnov test for distribution comparison           |
-| `test_fidelity_*` | Combined fidelity score computation                           |
+RMSE, GEH (single + batch), KS statistic, and `compute_fidelity_metrics`.
 
-### 6. `test_metrics_travel_time.py` — Travel Time Metrics (2 tests)
+### 6. `test_metrics_travel_time.py` — Travel Time (2 tests)
 
-Tests parsing of SUMO tripinfo XML output.
+`parse_sumo_tripinfo` over a hand-written tripinfo XML.
 
-| Test                        | What it checks                                       |
-| --------------------------- | ---------------------------------------------------- |
-| `test_parse_tripinfo`       | Correct extraction of travel times from tripinfo.xml |
-| `test_parse_tripinfo_empty` | Handles empty tripinfo gracefully                    |
+### 7. `test_reproducibility_metrics.py` — Reproducibility (15 tests)
 
-### 7. `test_reproducibility_metrics.py` — Reproducibility Metrics (15 tests)
+R = 1 − σ/μ scoring, multi-KPI rollup, threshold checks.
 
-Tests metrics for measuring run-to-run consistency.
+### 8. `test_scalability_metrics.py` — Scalability (8 tests)
 
-| Test                              | What it checks                                       |
-| --------------------------------- | ---------------------------------------------------- |
-| `test_coefficient_of_variation_*` | CV computation for identical, varying, single values |
-| `test_hash_match_fraction_*`      | File hash comparison across runs                     |
-| `test_reproducibility_score_*`    | Combined reproducibility score                       |
-
-### 8. `test_scalability_metrics.py` — Scalability Metrics (8 tests)
-
-Tests metrics for measuring performance at scale.
-
-| Test                 | What it checks              |
-| -------------------- | --------------------------- |
-| `test_speedup_*`     | Speedup ratio calculation   |
-| `test_throughput_*`  | Trips-per-second throughput |
-| `test_scalability_*` | Combined scalability score  |
+`SimulationTimer` (now using `time.monotonic()` reference for deterministic
+bounds), `HardwareInfo`, `compute_scalability_metrics`, scalability comparison.
 
 ### 9. `test_validator.py` — Bundle Validator (2 tests)
 
-Tests the pipeline validator on real scenario bundles.
+Real-bundle round-trip: a clean scenario passes; a scenario with a bogus
+origin node fails.
 
-| Test                                             | What it checks                            |
-| ------------------------------------------------ | ----------------------------------------- |
-| `test_generated_bundle_is_valid`                 | A generated scenario passes validation    |
-| `test_bundle_with_bad_node_in_demand_is_invalid` | Validator catches invalid node references |
+### 10. `test_scenario_data_integrity.py` — Data Integrity (70 tests)
 
-### 10. `test_scenario_data_integrity.py` — Data Integrity (35+ tests × N scenarios)
+**Critical.** Parametrized over every complete scenario in `scenarios/`. With
+the two bundled scenarios this expands to 70 tests across:
 
-**The most critical test file.** Parametrized over ALL available scenarios. Catches data errors before any simulation runs.
+| Class                  | What it checks                                                     |
+| ---------------------- | ------------------------------------------------------------------ |
+| `TestFileExistence`    | All 5 canonical files exist                                         |
+| `TestXMLParsing`       | All XML files are well-formed                                       |
+| `TestNetworkIntegrity` | Unique node/link IDs, valid WGS84 coords, valid endpoints, +length/speed/lanes |
+| `TestDemandIntegrity`  | Required columns, unique trip IDs, all OD nodes exist, sane departures, valid modes |
+| `TestConfigIntegrity`  | Metadata, scenario_id matches dir, valid time horizon, units, seed |
+| `TestManifestIntegrity`| Manifest ID matches config, all declared files exist               |
+| `TestSignalsIntegrity` | All junction node references exist in the network                  |
 
-| Test Class              | What it checks                                                                                                                                                                     |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TestFileExistence`     | All 5 required files exist (manifest, network, demand, config, signals)                                                                                                            |
-| `TestXMLParsing`        | All XML files are well-formed                                                                                                                                                      |
-| `TestNetworkIntegrity`  | No duplicate node/link IDs, valid WGS84 coordinates (lon ∈ [-180,180], lat ∈ [-90,90]), link endpoints reference existing nodes, positive length/speed/lanes                       |
-| `TestDemandIntegrity`   | Required CSV columns, no duplicate trip IDs, all origins/destinations exist in network, non-negative departures, departures within time horizon, origin ≠ destination, valid modes |
-| `TestConfigIntegrity`   | Has metadata, scenario_id matches directory name, valid time horizon (>0), valid units (meters, m/s, seconds), has seed                                                            |
-| `TestManifestIntegrity` | Manifest ID matches config scenario_id, all declared files physically exist                                                                                                        |
-| `TestSignalsIntegrity`  | All junction node references exist in the network                                                                                                                                  |
+### 11. `test_pipeline_e2e.py` — End-to-End Pipeline (20 tests; some `@integration` + `@slow`)
 
-### 11. `test_pipeline_e2e.py` — End-to-End Pipeline (17 tests)
+| Class                         | What it checks                                                         |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| `TestValidatorCatchesBadData` | 13 corruption scenarios — missing/corrupt files, bad columns, bogus nodes, etc. |
+| `TestSUMOAdapterRobustness`   | All-scenarios sweep, route-edge consistency, tripinfo configured       |
+| `TestNetworkRouting`          | BFS correctness on synthetic graphs and ≥80 % real-network routability |
 
-Stress tests for the full pipeline, including negative testing (bad data detection).
+### 12. `test_scc.py` — Canonical SCC (16 tests, NEW)
 
-| Test Class                    | What it checks                                                                                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TestValidatorCatchesBadData` | 11 tests: missing files, corrupt XML, empty demand, missing columns, nonexistent nodes, negative departure, scenario ID mismatch, nonexistent directory |
-| `TestSUMOAdapterRobustness`   | All-scenarios conversion, valid route edges, tripinfo output configured                                                                                 |
-| `TestNetworkRouting`          | BFS pathfinding, unreachable paths return None, same-node paths, real network >80% routeable                                                            |
+Iterative Kosaraju on synthetic graphs (empty, singleton, 2-cycle, chain,
+multiple components, classic Cormen example, 5 000-node deep chain) plus
+`parse_network` (well-formed, self-loop drop, malformed XML rejection) and
+real bundled-network coverage (≥95 %).
+
+### 13. `test_feasibility.py` — Cross-engine feasibility filter (16 tests, NEW)
+
+The shared SCC-based filter that makes SUMO/MATSim/QarSUMO simulate the
+**same** trip subset (CHANGELOG 1.0.0 fix). Covers feasible-trip computation,
+all four drop reasons (outside-SCC, unknown-node, missing-fields, missing-column-in-CSV),
+`FeasibilityReport` math (`feasible_fraction`, `summary_line`, `to_dict`),
+JSON persistence, log-level routing, manifest path resolution, and
+end-to-end ≥99 % feasibility on the bundled scenario.
+
+### 14. `test_analyze_benchmark.py` — Benchmark analyser (25 tests)
+
+The mode-aware grouping and identity-resolution logic that prevents the
+silent R-score collapse that was fixed in [1.0.0]. Covers `_resolve_identity`
+explicit + scenario_id-fallback paths for all engines, `compute_reproducibility`
+edge cases (single-value, identical, low/high variance, zero-mean), and the
+mode-aware grouping itself (meso vs micro stay separate, failed runs recorded,
+zero-TT outliers filtered, both `runs` and `results` keys accepted).  Also
+exercises every renderer — `print_runtime_table`, `print_reproducibility_table`,
+`print_summary_table`, `print_coverage_report` (asymmetric + thin-cell
+diagnostics), and the LaTeX/Markdown table generators.
+
+### 15. `test_osm_fetch.py` — OSM network fetching (20 tests, NEW)
+
+Fully mocked Overpass/osmnx pipeline.  `BoundingBox` validation (inverted
+lat/lon, from_string arity, from_center geometry), cache folder pinning to
+`<repo>/cache`, error translation (ConnectionError → RuntimeError with a
+"possible causes" block), empty-result guard (`ValueError`), missing-osmnx
+guard (`ImportError`), and the `PREDEFINED_CITIES` catalogue.  Also
+round-trips `extract_canonical_network` and the full
+`build_network_from_osm` end-to-end against a stub graph so XML output is
+verified without touching the network.
+
+### 16. `test_demand_generators.py` — Demand generators (21 tests, NEW)
+
+`UniformRandomGenerator`, `GravityModelGenerator`, `PeakHourGenerator`,
+`load_network_for_demand`, and the top-level `generate_synthetic_demand`
+dispatch.  Proves SCC restriction on synthetic grids (dead-end nodes
+excluded from OD sampling), deterministic seeding (byte-identical
+demand.csv across runs), canonical CSV header, and the peak-hour temporal
+profile.  Complements the adapter-level feasibility filter — the two
+tests together prove that every emitted trip is routable in the engine.
+
+### 17. `test_engine_smoke.py` — Real-binary smoke (4 tests, NEW)
+
+Actually invokes `sumo`, `netconvert`, and the MATSim JAR on the bundled
+scenario and asserts the engine produced non-empty artefacts
+(`tripinfo.xml`, `output_trips.csv.gz`).  All three smoke tests
+`pytest.skip` gracefully when the binary is missing so `pytest -m "not
+slow"` stays green on a developer laptop without SUMO/Java installed; CI
+runs them on the Linux slow-tier job where the binaries are installed.
+Catches the class of regression where the adapter writes files the engine
+refuses to parse — something no amount of XML-structure assertions can
+see.
 
 ---
 
-## Platform Notes
+## Platform notes
 
-### Apple Silicon (arm64) — netconvert segfault
+### Apple Silicon (arm64) — `netconvert` segfault
 
-SUMO 1.20.0's `netconvert` binary can segfault on large networks (>3000 nodes) on Apple Silicon Macs. This is a **SUMO platform bug**, not a SimForge issue.
+SUMO 1.20's `netconvert` can segfault on networks above ~3 000 nodes on
+arm64. This is a **SUMO platform bug**, not a SimForge issue.
 
-**Affected scenarios:** `chicago_200k_car_transit` (27,536 nodes), `nyc_10k_car` (4,041 nodes)
-
-The `test_*_all_scenarios` tests automatically detect arm64 and skip scenarios that crash netconvert, emitting a warning:
-
-```
-UserWarning: Skipped 2 scenarios (netconvert crash on arm64): ['chicago_200k_car_transit', 'nyc_10k_car']
-```
-
-These scenarios work correctly on Linux/HPC.
+Adapter sweeps detect arm64 + recognisable crash signals via
+`tests/conftest.py::is_arm64_netconvert_crash` and skip those scenarios with
+a single `UserWarning` summarising what was skipped. The two bundled small
+scenarios are well below the threshold and never skip.
 
 ---
 
-## Test Coverage Summary
+## Coverage summary
 
-| Area             | Tests    | Coverage                                                    |
-| ---------------- | -------- | ----------------------------------------------------------- |
-| SUMO Adapter     | 13       | File generation, determinism, geo projection, all scenarios |
-| MATSim Adapter   | 18       | Unit + integration, all scenarios                           |
-| QarSUMO Adapter  | 12       | Config, GPU detection, all scenarios                        |
-| Fidelity Metrics | 16       | RMSE, GEH, KS, combined score                               |
-| Travel Time      | 2        | Tripinfo parsing                                            |
-| Reproducibility  | 15       | CV, hash matching, combined score                           |
-| Scalability      | 8        | Speedup, throughput, combined score                         |
-| Validator        | 2        | Valid/invalid bundles                                       |
-| Data Integrity   | ~210     | All scenarios × 35 checks each                              |
-| E2E Pipeline     | 17       | Bad data detection, routing, adapter robustness             |
-| **Total**        | **~324** |                                                             |
+| Area                   | Tests   | Notes                                                       |
+| ---------------------- | ------- | ----------------------------------------------------------- |
+| SUMO Adapter           | 12      | File generation, determinism, geo projection, sweep         |
+| MATSim Adapter         | 24      | Helpers, builders, prepare path, sweep                      |
+| QarSUMO Adapter        | 10      | Config, GPU detection, extend, sweep                        |
+| Fidelity Metrics       | 21      | RMSE, GEH, KS, combined                                     |
+| Travel Time            | 2       | Tripinfo parser                                             |
+| Reproducibility        | 15      | R-score core, multi-KPI, thresholds                         |
+| Scalability            | 8       | Monotonic timer, throughput, comparison                     |
+| Validator              | 2       | Real-bundle pass + corruption fail                          |
+| Data Integrity         | 70      | 7 classes × every bundled scenario                          |
+| E2E Pipeline           | 20      | 13 corruption modes, 3 robustness, 4 routing                |
+| SCC algorithm          | 16      | Iterative Kosaraju + bundled-network coverage               |
+| Feasibility filter     | 16      | Shared cross-engine trip filter                             |
+| Benchmark analyser     | 25      | Mode-aware grouping + identity fallback + renderers         |
+| **OSM fetch**          | **20**  | Mocked Overpass, bbox validation, cache pin (NEW)           |
+| **Demand generators**  | **21**  | Synthetic generators + SCC restriction + seed (NEW)         |
+| **Engine smoke**       | **4**   | Real-binary SUMO/MATSim smoke, skip-gracefully (NEW)        |
+| **Total**              | **284** | **22 s** full suite on M-series; **12 s** with `-m "not slow"` |
+
+Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
+**76.3 %** (pytest-cov + `branch = true`).  The CI threshold is **70 %**
+to leave headroom for ongoing refactoring; the uncovered lines are
+concentrated in the subprocess-invoking `run_matsim` / `run_qarsumo`
+paths and the PUMS/modelgen parsers (tested instead by the slow-tier
+integration sweep and the engine-smoke job).

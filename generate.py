@@ -66,7 +66,7 @@ CITIES = {
         "name": "Chicago, IL",
         "lat": 41.8781,
         "lon": -87.6298,
-        "default_radius_km": 4.0,
+        "default_radius_km": 2.0,
         "model_file": "modelgen/chicago_model.txt",
         "description": "Chicago urban core — The Loop and surrounding neighbourhoods",
     },
@@ -74,7 +74,7 @@ CITIES = {
         "name": "New York City, NY",
         "lat": 40.7580,
         "lon": -73.9855,
-        "default_radius_km": 3.0,
+        "default_radius_km": 2.0,
         "model_file": "modelgen/nyc_model.txt",
         "description": "Manhattan Midtown and surrounding boroughs",
     },
@@ -549,10 +549,10 @@ Census limit:      ~500K car trips per city without --allow-oversample
                              "(default: car)")
     parser.add_argument("--start-time", type=int, default=None,
                         help="Simulation start time in seconds from midnight "
-                             "(default: 0)")
+                             "(default: 25200, i.e. 07:00 AM)")
     parser.add_argument("--end-time", type=int, default=None,
                         help="Simulation end time in seconds from midnight "
-                             "(default: 3600)")
+                             "(default: 28800, i.e. 08:00 AM)")
 
     # Control
     parser.add_argument("--seed", "-s", type=int, default=None,
@@ -605,8 +605,11 @@ def main() -> None:
         city = args.city
         trips = args.trips if args.trips is not None else 5_000
         modes = args.modes.split(",") if args.modes else ["car"]
-        start_time = args.start_time if args.start_time is not None else 0
-        end_time = args.end_time if args.end_time is not None else 3600
+        # Default to the 7–8 AM rush-hour window used by the bundled scenarios
+        # so `generate.py --city <X> --trips 1000` reproduces chicago_1k_car /
+        # nyc_1k_car exactly (seed 42, radius 2 km, 25200–28800 s).
+        start_time = args.start_time if args.start_time is not None else 25200
+        end_time = args.end_time if args.end_time is not None else 28800
         radius_km = (args.radius if args.radius is not None
                      else CITIES[city]["default_radius_km"])
         seed = args.seed if args.seed is not None else 42

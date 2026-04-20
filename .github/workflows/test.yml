@@ -1,0 +1,107 @@
+name: tests
+
+on:
+  push:
+    branches: [main, Version_2]
+  pull_request:
+    branches: [main, Version_2]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Fast tier — runs on every push across OS × Python matrix. No external
+  # binaries required (SUMO / MATSim skipped via the `requires_sumo` /
+  # `requires_java` markers and the engine-smoke `shutil.which` guards).
+  # ---------------------------------------------------------------------------
+  fast:
+    name: fast (${{ matrix.os }} / py${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python: ["3.10", "3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run fast tier (not slow, no coverage)
+        run: python -m pytest -m "not slow"
+
+      - name: Coverage (ubuntu + py3.11 only — one representative cell)
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
+        run: |
+          python -m pytest -m "not slow" \
+            --cov --cov-report=term-missing --cov-report=xml \
+            --cov-fail-under=70
+
+      - name: Upload coverage report
+        if: matrix.os == 'ubuntu-latest' && matrix.python == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn
+
+  # ---------------------------------------------------------------------------
+  # Slow tier — full suite including all-scenarios adapter sweeps.
+  # Runs on Linux only: the Apple Silicon `netconvert` segfault (see
+  # TESTING.md → Platform notes) is out of our hands and would make arm64 CI
+  # flaky. x86 Ubuntu is stable.
+  # ---------------------------------------------------------------------------
+  slow:
+    name: slow (ubuntu / py3.11, real SUMO + MATSim)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install SUMO from apt (no third-party PPA to keep CI deterministic)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sumo sumo-tools
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Download MATSim 15.0 JAR
+        run: |
+          mkdir -p lib
+          curl -L -o matsim.zip \
+            https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0.zip
+          unzip -q matsim.zip -d lib/
+          rm matsim.zip
+
+      - name: Run full suite (including slow sweeps + real-binary smoke)
+        run: python -m pytest --durations=15

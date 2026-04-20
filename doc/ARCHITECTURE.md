@@ -73,11 +73,12 @@ Stage 3: Demand         pipeline/demand/generate_census_demand.py
          (fallback)     pipeline/demand/generate_synthetic_demand.py
          No ModelGen → uniform random sampling → demand.csv
 
-Stage 4: Config         pipeline/scenariobuilder/
+Stage 4: Config         generate.py::_write_config_xml
          Parameters + metadata → config.xml
 
-Stage 5: Manifest       pipeline/validation/validate_bundle.py
-         Bundle → SHA-256 hashes → manifest.xml → integrity check
+Stage 5: Manifest       generate.py::_write_manifest_xml
+         Bundle file inventory → manifest.xml
+         (validation lives separately in pipeline/validation/validate_bundle.py)
 ```
 
 **Data flow (census-calibrated path):**
@@ -168,18 +169,25 @@ BenchmarkResult (JSON)
     └── hardware info (CPU, cores, memory, GPU)
 ```
 
-**RunSpec example** (`runspecs/benchmark_5k.yaml`):
+**RunSpec example** (`runspecs/stress_test.yaml`):
 
 ```yaml
-name: benchmark_5k
-scenarios:
-  - chicago_5k
-  - nyc_5k
-  - la_5k
-engines: [sumo, qarsumo, matsim]
-modes: [micro, meso]
-seeds: [42, 43, 44]
+name: stress_test
+description: End-to-end stress test across all engines and modes.
+output_dir: runs/stress_test
+
+runs:
+  - scenario_id: chicago_1k_car
+    scenario_path: scenarios/chicago_1k_car
+    engine: sumo
+    mode: mesoscopic
+    repeats: 3
+    seed: 42
+    timeout_s: 300
+  # ... eight cells total: 2 scenarios × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}
 ```
+
+The harness expands each `runs[]` entry into `repeats` individual runs, monotonically incrementing seeds when `seed_increment` is enabled. After execution, `analyze_benchmark.py` and `generate_plots.py` consume the resulting `runs/<name>/benchmark_results_<name>.json`.
 
 ### 2.5 Evaluation Metrics
 
@@ -253,50 +261,57 @@ evaluation/metrics/travel_time.py   (xml.etree — SUMO tripinfo parser)
 ### 4.1 Scenario Generation Flow
 
 ```
-User: python generate.py --city chicago --trips 5000 --seed 42
+User: python generate.py --city chicago --trips 1000 --seed 42
         │
         ▼
-[1] Download OSM network (Overpass API, bbox from city center + radius)
+[1] Download OSM network (Overpass API, bbox from city center + radius;
+    cache pinned to <repo>/cache via _configure_osmnx_cache)
         │ → raw OSM XML
         ▼
-[2] Clean + convert (osmnx → netconvert → simplified graph)
-        │ → network.xml (1,248 nodes, 2,871 links for Chicago)
+[2] Clean + convert (osmnx → simplified directed graph)
+        │ → network.xml (1,245 nodes, 2,862 links for chicago_1k_car)
         ▼
-[3] Detect signals (OSM highway=traffic_signals nodes)
-        │ → signals.xml (925 controllers, 2-phase, 90s cycle)
+[3] Compute largest SCC (pipeline/network/scc.py — iterative Kosaraju)
+        │ → SCC node set (1,204/1,245 nodes for chicago_1k_car)
         ▼
-[4] Parse ModelGen (chicago_model.txt → buildings/households/persons)
-        │ → 832,750 buildings, ~15K-25K commuters in bbox
+[4] Detect signals (OSM highway=traffic_signals nodes)
+        │ → signals.xml (2-phase fixed-time controllers)
         ▼
-[5] Generate demand (census-calibrated gravity model)
-        │ → demand.csv (5,000 trips, Gaussian departures)
+[5] Parse ModelGen (chicago_model.txt → buildings/households/persons)
+        │ → buildings restricted to SCC; non-SCC residential dropped
         ▼
-[6] Write config + manifest (SHA-256 hashes)
+[6] Generate demand (census-calibrated gravity model on SCC subgraph)
+        │ → demand.csv (1,000 trips, Gaussian departures)
+        ▼
+[7] Write config + manifest (SHA-256 hashes)
         │ → config.xml, manifest.xml
         ▼
-[7] Validate bundle (referential integrity + hash check)
-        │ → scenarios/chicago_5k/ (complete, validated)
+[8] Validate bundle (referential integrity + hash check)
+        │ → scenarios/chicago_1k_car/ (complete, validated)
 ```
 
 ### 4.2 Simulation Flow
 
 ```
-User: python run.py --scenario chicago_5k --engine sumo --mode meso --seed 42
+User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 42
         │
         ▼
 [1] Load manifest → verify file hashes
         │
         ▼
-[2] SUMO adapter: parse network.xml → BFS route each trip → write SUMO files
-        │ → runs/chicago_5k_sumo_meso_42/{.net.xml, .rou.xml, .sumocfg}
+[2] adapters/common/feasibility.py: compute SCC, write feasibility_report.json
+        │ → on a correctly-generated bundle the filter is a no-op (defence in depth)
         ▼
-[3] Launch: sumo -c scenario.sumocfg --seed 42 --mesosim
+[3] SUMO adapter: parse network.xml → BFS route each trip → write SUMO files
+        │ → runs/<name>/chicago_1k_car/sumo/seed_42/{.net.xml, .rou.xml, .sumocfg}
+        ▼
+[4] Launch: sumo -c scenario.sumocfg --seed 42 --mesosim
         │ → tripinfo.xml, summary.xml
         ▼
-[4] Parse outputs → TripTimeStats(mean, p95, completion)
+[5] Parse outputs → TripTimeStats(mean, p95, completion)
         │
         ▼
-[5] Compute metrics → RunResult(runtime, throughput, travel_times)
+[6] Compute metrics → RunResult(runtime, throughput, travel_times)
 ```
 
 ---
@@ -311,8 +326,10 @@ User: python run.py --scenario chicago_5k --engine sumo --mode meso --seed 42
 
 | Approach        | Adapters Needed | Maintenance |
 | --------------- | --------------- | ----------- |
-| Direct N↔N      | N(N-1) = 20     | Quadratic   |
-| Canonical (hub) | N = 5           | Linear      |
+| Direct N↔N      | N(N-1) = 6      | Quadratic   |
+| Canonical (hub) | N = 3           | Linear      |
+
+(SimForge currently ships 3 adapters — SUMO, QarSUMO, MATSim. The pattern continues to scale linearly as adapters are added.)
 
 ### 5.2 Why BFS at Conversion Time?
 
@@ -355,20 +372,20 @@ Census-calibrated balances realism with reproducibility at zero cost.
 
 ### 6.1 Test Suite Organization
 
-| Test File                         | Tests    | Scope                             |
-| --------------------------------- | -------- | --------------------------------- |
-| `test_adapter_determinism.py`     | 8        | Byte-identical output across runs |
-| `test_sumo_adapter.py`            | 5        | SUMO conversion pipeline          |
-| `test_matsim_adapter.py`          | 18       | MATSim adapter unit + integration |
-| `test_qarsumo_adapter.py`         | 12       | QarSUMO config + GPU detection    |
-| `test_fidelity_metrics.py`        | 16       | RMSE, GEH, KS computation         |
-| `test_metrics_travel_time.py`     | 2        | SUMO tripinfo parsing             |
-| `test_reproducibility_metrics.py` | 15       | R-index, multi-KPI analysis       |
-| `test_scalability_metrics.py`     | 8        | Timer, throughput, hardware info  |
-| `test_validator.py`               | 2        | Bundle validation checks          |
-| `test_scenario_data_integrity.py` | ~210     | All scenarios × 35 checks each    |
-| `test_pipeline_e2e.py`            | 17       | Bad data, routing, robustness     |
-| **Total**                         | **~324** | **All passing**                   |
+| Test File                         | Tests   | Scope                             |
+| --------------------------------- | ------- | --------------------------------- |
+| `test_adapter_determinism.py`     | 8       | Byte-identical output across runs |
+| `test_sumo_adapter.py`            | 4       | SUMO conversion pipeline          |
+| `test_matsim_adapter.py`          | 24      | MATSim adapter unit + integration |
+| `test_qarsumo_adapter.py`         | 10      | QarSUMO config + GPU detection    |
+| `test_fidelity_metrics.py`        | 21      | RMSE, GEH, KS computation         |
+| `test_metrics_travel_time.py`     | 2       | SUMO tripinfo parsing             |
+| `test_reproducibility_metrics.py` | 15      | R-index, multi-KPI analysis       |
+| `test_scalability_metrics.py`     | 8       | Timer, throughput, hardware info  |
+| `test_validator.py`               | 2       | Bundle validation checks          |
+| `test_scenario_data_integrity.py` | 70      | All scenarios × 35 checks each    |
+| `test_pipeline_e2e.py`            | 20      | Bad data, routing, robustness     |
+| **Total**                         | **184** | **All passing**                   |
 
 ### 6.2 Determinism Guarantees
 
@@ -385,25 +402,25 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Development (Local)                             │
-│  macOS / Apple Silicon / 16 GB                   │
-│  → 5K scenarios (< 30s generation)               │
-│  → Unit tests (57/57)                            │
-│  → SUMO + MATSim execution                       │
-└───────────────────┬─────────────────────────────┘
+│  Development (Local)                              │
+│  macOS / Apple Silicon / 16 GB                    │
+│  → 1K scenarios (< 60 s generation)               │
+│  → Full unit suite (184/184)                      │
+│  → SUMO meso + micro, MATSim, QarSUMO (CPU)       │
+└───────────────────┬──────────────────────────────┘
                     │ git push
                     ▼
 ┌─────────────────────────────────────────────────┐
-│  GitHub (github.com/PhanidharAkula/SimForge)     │
-│  Branch: modelgen                                │
-└───────────────────┬─────────────────────────────┘
+│  GitHub                                           │
+│  Branch: Version_2 (active), main                 │
+└───────────────────┬──────────────────────────────┘
                     │ git clone
                     ▼
 ┌─────────────────────────────────────────────────┐
-│  HPC (OSC Pitzer Cluster)                        │
-│  48-core Intel Xeon / 192 GB / V100 GPU          │
-│  → 50K-5M scenarios                              │
-│  → Full benchmark matrix                         │
-│  → QarSUMO GPU experiments                       │
-└─────────────────────────────────────────────────┘
+│  HPC (OSC Pitzer Cluster)                         │
+│  48-core Intel Xeon / 192 GB / V100 GPU           │
+│  → 50K – 500K scenarios                           │
+│  → Full benchmark matrix                          │
+│  → QarSUMO GPU experiments                        │
+└──────────────────────────────────────────────────┘
 ```

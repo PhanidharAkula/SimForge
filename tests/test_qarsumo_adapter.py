@@ -1,15 +1,17 @@
 """
 Tests for the QarSUMO adapter.
 
-QarSUMO reuses SUMO inputs and extends the config with GPU options.
-These tests validate config extension and the fallback-to-SUMO logic
-without requiring NVIDIA hardware.
+QarSUMO reuses the SUMO inputs and extends the config with a `<qarsumo>`
+GPU section. These tests cover the config extension and the prepare-inputs
+path without requiring NVIDIA hardware (the adapter falls back to SUMO
+on CPU-only hosts).
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from lxml import etree
 
 from adapters.qarsumo.qarsumo_adapter import (
@@ -20,21 +22,17 @@ from adapters.qarsumo.qarsumo_adapter import (
     prepare_qarsumo_inputs,
 )
 
-
-REPO_ROOT = Path(__file__).resolve().parents[1]
-
-_CANDIDATES = ["chicago_1k_car", "nyc_1k_car", "la_1k_car"]
-SCENARIO: Path | None = None
-for _name in _CANDIDATES:
-    _path = REPO_ROOT / "scenarios" / _name
-    if _path.is_dir():
-        SCENARIO = _path
-        break
+from .conftest import (
+    is_arm64_netconvert_crash,
+    is_large_scenario,
+    warn_skipped,
+)
 
 
 # ---------------------------------------------------------------------------
-# Unit tests for QarSUMOConfig
+# QarSUMOConfig
 # ---------------------------------------------------------------------------
+
 
 class TestQarSUMOConfig:
     def test_defaults(self):
@@ -52,9 +50,7 @@ class TestQarSUMOConfig:
 
     def test_custom_config(self):
         cfg = QarSUMOConfig(
-            stream_count=8,
-            min_batch_threshold=50,
-            max_pending_vehicles=100000
+            stream_count=8, min_batch_threshold=50, max_pending_vehicles=100000
         )
         assert cfg.stream_count == 8
         assert cfg.min_batch_threshold == 50
@@ -62,20 +58,19 @@ class TestQarSUMOConfig:
 
 
 # ---------------------------------------------------------------------------
-# GPU detection (always safe — returns False if no GPU)
+# GPU detection — must not crash on hosts without an NVIDIA card.
 # ---------------------------------------------------------------------------
+
 
 class TestGPUDetection:
     def test_check_gpu_returns_bool(self):
-        result = check_gpu_available()
-        assert isinstance(result, bool)
+        assert isinstance(check_gpu_available(), bool)
 
     def test_get_gpu_info_returns_dict(self):
         info = get_gpu_info()
         assert isinstance(info, dict)
-        assert "available" in info
-        assert "count" in info
-        assert "devices" in info
+        for key in ("available", "count", "devices"):
+            assert key in info
         assert isinstance(info["devices"], list)
 
 
@@ -83,9 +78,9 @@ class TestGPUDetection:
 # Config extension
 # ---------------------------------------------------------------------------
 
+
 class TestExtendConfig:
     def test_adds_qarsumo_section(self, tmp_path):
-        """Extending a SUMO config should add a <qarsumo> XML section."""
         cfg_content = """<?xml version="1.0" encoding="UTF-8"?>
 <configuration>
   <input>
@@ -96,92 +91,59 @@ class TestExtendConfig:
         cfg_path = tmp_path / "toy.sumocfg"
         cfg_path.write_text(cfg_content, encoding="utf-8")
 
-        qarsumo_cfg = QarSUMOConfig(gpu_device=2, batch_size=20000)
-        result_path = extend_config_for_qarsumo(cfg_path, qarsumo_cfg)
-
+        result_path = extend_config_for_qarsumo(
+            cfg_path, QarSUMOConfig(gpu_device=2, batch_size=20000)
+        )
         assert result_path.is_file()
         assert result_path.name.startswith("qarsumo_")
 
-        tree = etree.parse(str(result_path))
-        root = tree.getroot()
-
-        qarsumo_elem = root.find("qarsumo")
-        assert qarsumo_elem is not None, "Missing <qarsumo> section"
-
-        gpu_dev = qarsumo_elem.find("gpu-device")
-        assert gpu_dev is not None
-        assert gpu_dev.get("value") == "2"
-
-        batch = qarsumo_elem.find("batch-size")
-        assert batch is not None
-        assert batch.get("value") == "20000"
+        root = etree.parse(str(result_path)).getroot()
+        qarsumo = root.find("qarsumo")
+        assert qarsumo is not None, "Missing <qarsumo> section"
+        assert qarsumo.find("gpu-device").get("value") == "2"
+        assert qarsumo.find("batch-size").get("value") == "20000"
 
     def test_preserves_original_config(self, tmp_path):
-        """Original SUMO config should remain unchanged."""
         cfg_content = """<?xml version="1.0" encoding="UTF-8"?>
-<configuration>
-  <input>
-    <net-file value="net.net.xml" />
-  </input>
-</configuration>"""
+<configuration><input><net-file value="net.net.xml" /></input></configuration>"""
         cfg_path = tmp_path / "toy.sumocfg"
         cfg_path.write_text(cfg_content, encoding="utf-8")
-
-        original_text = cfg_path.read_text()
+        original = cfg_path.read_text()
         extend_config_for_qarsumo(cfg_path, QarSUMOConfig())
-
-        # Original file should be untouched
-        assert cfg_path.read_text() == original_text
+        assert cfg_path.read_text() == original
 
 
 # ---------------------------------------------------------------------------
-# Full input preparation
+# Full prepare path
 # ---------------------------------------------------------------------------
+
 
 class TestPrepareQarSUMOInputs:
-    def test_generates_sumo_plus_qarsumo_config(self, tmp_path):
-        assert SCENARIO is not None, "No scenario available"
+    def test_generates_sumo_plus_qarsumo_config(self, bundled_scenario, tmp_path):
         out = tmp_path / "qarsumo_out"
-        config_path = prepare_qarsumo_inputs(SCENARIO, out)
+        config_path = prepare_qarsumo_inputs(bundled_scenario, out)
+        assert config_path.is_file()
+        assert "qarsumo_" in config_path.name
+        for name in ("net.net.xml", "routes.rou.xml", "toy.sumocfg"):
+            assert (out / name).is_file(), f"Missing base SUMO file: {name}"
 
-        assert config_path.is_file(), "Should return path to QarSUMO config"
-        assert "qarsumo_" in config_path.name, "Config should have qarsumo_ prefix"
-
-        # Base SUMO files should also exist
-        assert (out / "net.net.xml").is_file()
-        assert (out / "routes.rou.xml").is_file()
-        assert (out / "toy.sumocfg").is_file()
-
-    def test_qarsumo_config_has_gpu_settings(self, tmp_path):
-        assert SCENARIO is not None
-        out = tmp_path / "qarsumo_gpu"
+    def test_qarsumo_config_has_gpu_settings(self, bundled_scenario, tmp_path):
         cfg = QarSUMOConfig(gpu_device=0, batch_size=8000, precision="float16")
-        config_path = prepare_qarsumo_inputs(SCENARIO, out, qarsumo_config=cfg)
+        config_path = prepare_qarsumo_inputs(bundled_scenario, tmp_path / "qarsumo_gpu", qarsumo_config=cfg)
+        qarsumo = etree.parse(str(config_path)).getroot().find("qarsumo")
+        assert qarsumo is not None
+        assert qarsumo.find("precision").get("value") == "float16"
 
-        tree = etree.parse(str(config_path))
-        root = tree.getroot()
-        qarsumo_elem = root.find("qarsumo")
-        assert qarsumo_elem is not None
+    @pytest.mark.slow
+    @pytest.mark.requires_sumo
+    def test_all_scenarios(self, small_bundled_scenarios, tmp_path):
+        if not small_bundled_scenarios:
+            pytest.skip("No bundled scenarios to sweep")
 
-        prec = qarsumo_elem.find("precision")
-        assert prec is not None
-        assert prec.get("value") == "float16"
-
-    def test_all_scenarios(self, tmp_path):
-        """Run QarSUMO adapter on all available scenarios."""
-        import platform
-
-        scenarios_dir = REPO_ROOT / "scenarios"
-        # Skip large scenarios that cause timeouts or ARM64 segfaults
-        _LARGE_PATTERNS = ("50k", "200k", "500k", "5m")
         tested = 0
-        skipped = []
-        for scenario_path in sorted(scenarios_dir.iterdir()):
-            if not scenario_path.is_dir():
-                continue
-            if not (scenario_path / "manifest.xml").is_file():
-                continue
-            if any(p in scenario_path.name for p in _LARGE_PATTERNS):
+        skipped: list[str] = []
+        for scenario_path in small_bundled_scenarios:
+            if is_large_scenario(scenario_path.name):
                 skipped.append(scenario_path.name)
                 continue
 
@@ -189,7 +151,7 @@ class TestPrepareQarSUMOInputs:
             try:
                 config_path = prepare_qarsumo_inputs(scenario_path, out)
             except RuntimeError as e:
-                if platform.machine() == "arm64" and ("failed" in str(e).lower() or "crashed" in str(e).lower()):
+                if is_arm64_netconvert_crash(e):
                     skipped.append(scenario_path.name)
                     continue
                 raise
@@ -198,8 +160,5 @@ class TestPrepareQarSUMOInputs:
             assert (out / "net.net.xml").is_file()
             tested += 1
 
-        if skipped:
-            import warnings
-            warnings.warn(f"Skipped {len(skipped)} scenarios (netconvert arm64): {skipped}")
-
+        warn_skipped("QarSUMO sweep", skipped)
         assert tested > 0

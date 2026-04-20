@@ -1,4 +1,4 @@
-# 📦 Canonical Manifest Schema v0
+# Canonical Manifest Schema v0
 
 ## Purpose
 

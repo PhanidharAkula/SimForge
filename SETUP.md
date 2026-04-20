@@ -9,6 +9,8 @@
 5. [Understanding the Output](#understanding-the-output)
 6. [GPU Acceleration](#gpu-acceleration)
 7. [Command Reference](#command-reference)
+8. [Project Structure](#project-structure)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -35,30 +37,35 @@ sumo --version      # Should be 1.20+
 
 ## Installation
 
-### 1. Clone the Repository
+### Option A — One-Command Bootstrap (recommended)
 
 ```bash
 git clone <repo-url>
 cd SimForge
+python3 setup_simforge.py
 ```
 
-### 2. Create Python Virtual Environment
+`setup_simforge.py` checks Python/Java/SUMO, creates `.venv/`, installs `requirements.txt`, downloads the MATSim 15.0 JAR into `lib/matsim-15.0/`, and runs a sanity import. After it finishes:
 
 ```bash
+source .venv/bin/activate
+```
+
+### Option B — Manual
+
+```bash
+git clone <repo-url>
+cd SimForge
+
 python3 -m venv .venv
-source .venv/bin/activate   # macOS/Linux
-```
+source .venv/bin/activate
 
-### 3. Install Python Dependencies
-
-```bash
 pip install --upgrade pip
 pip install -r requirements.txt
+pip install -r requirements-dev.txt   # pytest-cov, pytest-xdist, mutmut
 ```
 
-### 4. Install MATSim JAR
-
-MATSim is a Java application — download and extract it into `lib/`:
+Then download the MATSim JAR (gitignored under `lib/`):
 
 ```bash
 mkdir -p lib
@@ -67,13 +74,10 @@ unzip matsim-15.0.zip -d lib/
 rm matsim-15.0.zip
 ```
 
-> **Note:** `lib/` is gitignored (downloaded dependency). Each developer must
-> run this step after cloning.
-
-### 5. Verify Installation
+### Verify Installation
 
 ```bash
-python -m pytest tests/ -v
+python -m pytest tests/ -q                              # 284 tests should pass
 python -c "from adapters.sumo.sumo_adapter import SUMOAdapter; print('SUMO: OK')"
 python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MATSim:', find_matsim_jar())"
 ```
@@ -82,60 +86,71 @@ python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MA
 
 ## Scenario Data
 
-### Available Tiers
+### Bundled Scenarios
 
-| Tier | Trips     | Horizon | Use Case                   |
-| ---- | --------- | ------- | -------------------------- |
-| 5K   | 5,000     | 1 hr    | Development, quick tests   |
-| 50K  | 50,000    | 2 hr    | Medium-scale benchmarks    |
-| 500K | 500,000   | 4 hr    | Large-scale evaluation     |
-| 5M   | 5,000,000 | 8 hr    | Extreme scale (GPU needed) |
+Two small scenarios are committed to the repo so the test suite and the default `run.py` invocation work out of the box:
 
-### Current Scenarios
+| Scenario          | City    | Trips | Modes | Bundle size |
+| ----------------- | ------- | ----- | ----- | ----------- |
+| `chicago_1k_car`  | Chicago | 1,000 | car   | ~1 MB       |
+| `nyc_1k_car`      | NYC     | 1,000 | car   | ~1 MB       |
 
-| Scenario                   | City    | Trips   | Modes              |
-| -------------------------- | ------- | ------- | ------------------ |
-| `chicago_1k_car`           | Chicago | 1,000   | car                |
-| `chicago_200k_car_transit` | Chicago | 200,000 | car, transit       |
-| `la_1k_car`                | LA      | 1,000   | car                |
-| `la_50k_bike_car_transit`  | LA      | 50,000  | bike, car, transit |
-| `nyc_1k_car`               | NYC     | 1,000   | car                |
-| `nyc_10k_car`              | NYC     | 10,000  | car                |
+Larger scenarios are not committed — generate them locally with the helper scripts below.
+
+### Generation Tiers
+
+| Preset             | Trips   | Horizon  | Helper script                       |
+| ------------------ | ------- | -------- | ----------------------------------- |
+| `quick_test`       | 1,000   | 7–8 AM   | `scripts/01_quick_test.py`          |
+| `small_commute`    | 10,000  | 7–9 AM   | `scripts/02_small_commute.py`       |
+| `medium_multimodal`| 50,000  | 6–10 AM  | `scripts/03_medium_multimodal.py`   |
+| `large_full_day`   | 200,000 | 24 h     | `scripts/04_large_full_day.py`      |
+| `stress_test`      | 500,000 | 6–10 AM  | `scripts/05_stress_test.py`         |
 
 ### Data Sources
 
 | File         | Source                      | Description                                |
 | ------------ | --------------------------- | ------------------------------------------ |
 | network.xml  | **OpenStreetMap (OSM)**     | Real road network topology                 |
-| demand.csv   | **Synthetic** or **Census** | Gravity model (default) or PUMS-calibrated |
-| signals.xml  | **Generated/Estimated**     | Inferred signal timing from OSM nodes      |
+| demand.csv   | **Census** (default) or **Synthetic** | PUMS-calibrated or gravity model |
+| signals.xml  | **Inferred from OSM**       | Signal timing inferred from intersection geometry |
 | config.xml   | **Created**                 | Simulation parameters (seed, duration)     |
 | manifest.xml | **Created**                 | SHA-256 checksums and metadata             |
 
 ### Demand Modes
 
-Each generation script supports two demand modes:
-
-- **Synthetic (default):** Gravity model with degree-weighted origins and distance-decayed destinations.
-- **Census-calibrated (`--model`):** Uses ModelGen PUMS microdata for population-weighted origins and commute-time-calibrated trip distances.
+`generate.py` uses **census-calibrated demand by default** (ModelGen PUMS microdata for population-weighted origins and commute-time-calibrated trip distances). Pass `--synthetic` to fall back to the gravity model.
 
 ### Generating Scenarios
 
 ```bash
-# Run preset scripts
-python scripts/01_quick_test.py       # 1K Chicago car
-python scripts/02_small_commute.py    # 10K NYC car
-python scripts/03_medium_multimodal.py # 50K LA multi-mode
+# Preset scripts (one-shot)
+python scripts/01_quick_test.py        # 1K car, Chicago
+python scripts/02_small_commute.py     # 10K car, NYC
+python scripts/03_medium_multimodal.py # 50K car+transit+bike, LA
+python scripts/04_large_full_day.py    # 200K car+transit, Chicago
+python scripts/05_stress_test.py       # 500K car, NYC
 
-# Or use generate.py directly
-python generate.py --city chicago --trips 1000 --modes car
+# Or generate.py directly
 python generate.py --preset quick_test
+python generate.py --city chicago --trips 5000 --modes car
+python generate.py --city nyc --trips 10000 --synthetic
+python generate.py --list              # Show cities, presets, modes
 ```
+
+See [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) for what each tier produces and how realism is measured.
 
 ### Validating Scenarios
 
 ```bash
 python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
+```
+
+### Cleaning Caches
+
+```bash
+scripts/clean.sh           # Wipe Python bytecode (__pycache__, *.pyc, .pytest_cache)
+scripts/clean.sh --all     # Also wipe cache/ (OSM Overpass HTTP cache)
 ```
 
 ---
@@ -145,33 +160,35 @@ python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 ### Quick Start
 
 ```bash
-# Run a specific scenario with SUMO (mesoscopic)
 python run.py --scenario chicago_1k_car --engine sumo --mode meso
-
-# Run all scenarios with all engines
-python run.py
-
-# List available options
 python run.py --list
+python run.py                                 # All bundled scenarios × all installed engines
 ```
 
-### Run Benchmark from Runspec
+### Run Benchmark from RunSpec
 
 ```bash
-# Small benchmark (3 scenarios × 3 engines × meso × 3 repeats = 27 runs)
-python -m execution.run_benchmark runspecs/benchmark_small.yaml
+# Canonical 8-cell stress test (matches the thesis figures)
+python -m execution.run_benchmark runspecs/stress_test.yaml
 
 # Dry run (validate without executing)
-python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
+python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
 
 # Filter to one scenario
-python -m execution.run_benchmark runspecs/benchmark_small.yaml --scenario chicago_1k_car
+python -m execution.run_benchmark runspecs/stress_test.yaml --scenario chicago_1k_car
+```
+
+After the benchmark finishes:
+
+```bash
+python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
 ```
 
 ### Run Individual Adapter CLI
 
 ```bash
-python -m adapters.sumo.cli scenarios/chicago_1k_car runs/chicago_sumo
+python -m adapters.sumo.cli   scenarios/chicago_1k_car runs/chicago_sumo
 python -m adapters.matsim.cli scenarios/chicago_1k_car runs/chicago_matsim
 ```
 
@@ -189,6 +206,8 @@ python -m adapters.matsim.cli scenarios/chicago_1k_car runs/chicago_matsim
 | **Scalability**     | Runtime    | Wall-clock seconds       | How fast it runs         |
 | **Scalability**     | Throughput | vehicles/sec/core        | Efficiency per core      |
 | **Reproducibility** | R          | 1 − σ/μ                  | Run-to-run consistency   |
+
+For a tour of every figure produced by `generate_plots.py`, see [doc/RESULTS_GUIDE.md](doc/RESULTS_GUIDE.md).
 
 ---
 
@@ -210,13 +229,17 @@ Falls back to CPU SUMO automatically when no GPU is available.
 
 | Command                                                | Description                                |
 | ------------------------------------------------------ | ------------------------------------------ |
+| `python setup_simforge.py`                             | One-command bootstrap (venv + deps + JAR) |
 | `python run.py`                                        | Main CLI — run all or filtered simulations |
 | `python run.py --list`                                 | Show available scenarios/engines/modes     |
 | `python run.py --validate-only`                        | Validate scenario bundles only             |
 | `python -m execution.run_benchmark <runspec>`          | Run benchmark from YAML spec               |
 | `python -m pipeline.validation.validate_bundle <path>` | Validate a single bundle                   |
-| `python scripts/generate_<city>_<tier>.py`             | Generate a scenario bundle                 |
-| `python -m pytest tests/ -v`                           | Run test suite                             |
+| `python generate.py --preset <name>`                   | Generate a scenario from a preset         |
+| `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
+| `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
+| `scripts/clean.sh [--all]`                             | Wipe regenerable caches                    |
+| `python -m pytest tests/ -v`                           | Run the 284-test suite                     |
 
 ---
 
@@ -225,11 +248,12 @@ Falls back to CPU SUMO automatically when no GPU is available.
 ```
 SimForge/
 ├── adapters/               # Simulator-specific converters
-│   ├── sumo/               #   SUMO / QarSUMO adapter
+│   ├── sumo/               #   SUMO adapter (micro + meso)
 │   ├── matsim/             #   MATSim adapter
 │   └── qarsumo/            #   QarSUMO (GPU) adapter
-├── canonical/              # Schema documentation
-├── evaluation/             # Metrics computation
+├── canonical/              # Schema documentation (v0)
+├── doc/                    # Architecture, reproduction, thesis chapters
+├── evaluation/             # Metrics, analysis, plots
 │   └── metrics/            #   Fidelity, scalability, reproducibility
 ├── execution/              # Benchmark harness
 │   ├── run_benchmark.py    #   Orchestrates full benchmark runs
@@ -240,24 +264,26 @@ SimForge/
 │   ├── demand/             #   Synthetic + census demand generation
 │   ├── signals/            #   Traffic signal inference
 │   └── validation/         #   Bundle validators
-├── scripts/                # Per-city generation scripts (12 total)
+├── scripts/                # Per-tier generation scripts + clean.sh
 ├── runspecs/               # Benchmark YAML configurations
-├── scenarios/              # Generated scenario bundles
-├── tests/                  # Unit & integration tests
+├── scenarios/              # Bundled canonical scenarios
+├── tests/                  # 284 unit & integration tests
 ├── run.py                  # Convenience CLI
+├── generate.py             # Scenario generator entry point
+├── setup_simforge.py       # One-command bootstrap
 ├── requirements.txt        # Python dependencies
-├── SETUP.md                # This file
-└── TODO.md                 # Development roadmap
+└── SETUP.md                # This file
 ```
 
 ---
 
 ## Troubleshooting
 
-| Problem                | Solution                           |
-| ---------------------- | ---------------------------------- |
-| `MATSim JAR not found` | Run MATSim download commands above |
-| `SUMO not found`       | `brew install sumo`                |
-| `Java not found`       | `brew install openjdk@17`          |
-| OSM download timeout   | Check internet connection, retry   |
-| `No scenarios found`   | Run generation scripts first       |
+| Problem                | Solution                                                          |
+| ---------------------- | ----------------------------------------------------------------- |
+| `MATSim JAR not found` | Re-run `python setup_simforge.py`, or run the manual `curl` above |
+| `SUMO not found`       | `brew install sumo`                                               |
+| `Java not found`       | `brew install openjdk@17`                                         |
+| OSM download timeout   | Check internet connection, retry; cache is in `cache/`            |
+| `No scenarios found`   | Run a script in `scripts/` first, or check `python run.py --list` |
+| Large `cache/` folder  | `scripts/clean.sh --all` to wipe the OSM Overpass cache           |

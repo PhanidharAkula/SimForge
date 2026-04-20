@@ -30,8 +30,8 @@ from pipeline.modelgen_scanner import scan_modelgen_dir
 # =============================================================================
 
 CITY_META = {
-    "chicago": {"name": "Chicago, IL", "lat": 41.878, "lon": -87.630, "radius": 4.0},
-    "nyc":     {"name": "New York City, NY", "lat": 40.758, "lon": -73.986, "radius": 3.0},
+    "chicago": {"name": "Chicago, IL", "lat": 41.878, "lon": -87.630, "radius": 2.0},
+    "nyc":     {"name": "New York City, NY", "lat": 40.758, "lon": -73.986, "radius": 2.0},
     "la":      {"name": "Los Angeles, CA", "lat": 34.052, "lon": -118.244, "radius": 5.0},
 }
 
@@ -136,12 +136,14 @@ U.S. Census microdata, converts it to multiple simulator formats,
 and provides unified evaluation metrics.
 
 QUICK START:
-  1. Generate data:   python generate.py --city chicago --trips 5000
+  0. Install:         python setup_simforge.py && source .venv/bin/activate
+  1. Generate data:   python generate.py --city chicago --trips 1000
   2. Validate:        python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   3. Run simulation:  python run.py --scenario chicago_1k_car --engine sumo --mode meso
-  4. Run benchmark:   python -m execution.run_benchmark runspecs/benchmark_small.yaml
+  4. Run benchmark:   python -m execution.run_benchmark runspecs/stress_test.yaml
 
 HELP TOPICS:
+  python help.py setup              Install and bootstrap
   python help.py generate           Data generation (generate.py)
   python help.py run                Simulation execution (run.py)
   python help.py scripts            Built-in preset scripts
@@ -187,8 +189,13 @@ REQUIRED FLAGS:
 DEMAND FLAGS:
   --trips, -t <count>      Number of OD trips (default: 5000)
   --modes <list>           Comma-separated: car,transit,bike,walk (default: car)
-  --start-time <seconds>   Start time, seconds from midnight (default: 0)
-  --end-time <seconds>     End time, seconds from midnight (default: 3600)
+  --start-time <seconds>   Start time, seconds from midnight (default: 25200 = 07:00 AM)
+  --end-time <seconds>     End time, seconds from midnight   (default: 28800 = 08:00 AM)
+
+  The default 07:00–08:00 AM rush-hour window matches the bundled
+  chicago_1k_car / nyc_1k_car scenarios. Together with --radius 2.0 (default
+  for chicago and nyc) and --seed 42, `generate.py --city chicago --trips 1000`
+  reproduces the bundled scenario exactly.
 
 NETWORK FLAGS:
   --radius, -r <km>        Network extraction radius (default: city-specific)
@@ -248,8 +255,9 @@ EXAMPLES:
   python run.py --validate-only
 
 BENCHMARK HARNESS:
+  python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical 22-run matrix
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
+  python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
 """
 
 HELP_SCRIPTS = """
@@ -314,14 +322,24 @@ HELP_ADAPTERS = """
 ====================================================================
 
 SUPPORTED SIMULATORS:
-  SUMO     1.18+     Microscopic/mesoscopic vehicle simulation
-  QarSUMO  Latest    GPU-accelerated SUMO (CUDA required)
+  SUMO     1.20+     Microscopic/mesoscopic vehicle simulation
+  QarSUMO  Latest    GPU-accelerated SUMO (falls back to SUMO without CUDA)
   MATSim   15.0      Activity-based mesoscopic multi-agent sim
 
 ADAPTER CLI:
-  python -m adapters.sumo.cli <scenario_path> <output_dir>
+  python -m adapters.sumo.cli    <scenario_path> <output_dir>          # convert only
+  python -m adapters.sumo.cli    <scenario_path> <output_dir> --run --mesoscopic
   python -m adapters.qarsumo.cli <scenario_path> <output_dir> --run
-  python -m adapters.matsim.cli <scenario_path> <output_dir> --run
+  python -m adapters.matsim.cli  <scenario_path> <output_dir> --run
+
+SUMO NOTES:
+  * `--run` invokes `sumo` with `--ignore-route-errors`. That flag is required:
+    SimForge pre-computes routes by BFS on the canonical node graph, which can
+    disagree with SUMO's edge-level lane connectivity on real-world networks.
+    If you drive `sumo` by hand, always pass `--ignore-route-errors`:
+        sumo -c toy.sumocfg --ignore-route-errors
+  * Add `--mesosim true` (or use our `--mesoscopic` flag) for the faster
+    mesoscopic model; omit for the default microscopic simulation.
 
 PREREQUISITES:
   SUMO:    brew install sumo  (verify: sumo --version)
@@ -376,14 +394,19 @@ HELP_EVALUATION = """
 
 ANALYZE BENCHMARK:
   python -m evaluation.analyze_benchmark <results.json>
+  python -m evaluation.analyze_benchmark <results.json> --latex --markdown
 
   Produces:
-    Table 5.1 — Runtime comparison (engine × city × mode)
+    Table 5.1 — Runtime comparison (engine x city x mode)
     Table 5.2 — Reproducibility analysis (R-scores)
+    Coverage diagnostic — flags low-sample (n<3), asymmetric, silently-failed cells
+
+  --latex       emit LaTeX tables (ready for thesis inclusion)
+  --markdown    emit Markdown tables (for docs / GitHub)
 
 COMPARE MICRO vs MESO:
-  python -m evaluation.compare_modes <scenario_path>               # live run
-  python -m evaluation.compare_modes --from-benchmark <results.json>  # from existing results
+  python -m evaluation.compare_modes <scenario_path>                  # live run
+  python -m evaluation.compare_modes --from-benchmark <results.json>  # from existing
 
   Produces:
     Speedup factors (meso vs micro per engine)
@@ -393,22 +416,27 @@ GENERATE THESIS PLOTS:
   python -m evaluation.generate_plots <results.json> [--output DIR] [--clean]
 
   Generates (PNG + PDF):
-    Fig 5.1 — Runtime comparison (grouped bar: city × engine)
-    Fig 5.2 — Reproducibility heatmap (engine × city R-scores)
-    Fig 5.3 — Travel time comparison (mean ± std by engine)
+    Fig 5.1 — Runtime comparison (grouped bar: city x engine)
+    Fig 5.2 — Reproducibility heatmap (engine x city R-scores)
+    Fig 5.3 — Travel time comparison (mean +/- std by engine)
     Fig 5.4 — Engine performance summary (runtime, R-score, throughput)
     Fig 5.5 — Speedup vs MATSim baseline
-    Fig 5.6 — Micro vs Meso runtime comparison (side-by-side)
-    Fig 5.7 — Runtime variability box plot (run-to-run spread)
+    Fig 5.6 — Micro vs Meso runtime comparison
+    Fig 5.7 — Runtime variability box plot
     Fig 5.8 — P95 tail latency comparison
+    Fig 5.9 — Trip-count parity (engine-internal drop reasons)
 
   Default output: plots/ next to the results JSON file.
   Use --clean to delete old plots before regenerating.
 
-EXAMPLES:
-  python -m evaluation.analyze_benchmark runs/benchmark_*/benchmark_results.json
-  python -m evaluation.compare_modes --from-benchmark runs/benchmark_*/benchmark_results.json
-  python -m evaluation.generate_plots runs/benchmark_*/benchmark_results.json --clean
+EXAMPLES (using the canonical stress-test runspec):
+  python -m evaluation.analyze_benchmark \\
+         runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+  python -m evaluation.compare_modes --from-benchmark \\
+         runs/stress_test/benchmark_results_stress_test.json
+  python -m evaluation.generate_plots \\
+         runs/stress_test/benchmark_results_stress_test.json \\
+         --output doc/figures --clean
 """
 
 HELP_BENCHMARK = """
@@ -422,8 +450,27 @@ COMMANDS:
   python -m execution.run_benchmark <runspec.yaml> --dry-run
 
 BUILT-IN RUNSPECS:
-  benchmark_small.yaml   1K–50K trips, 600s timeout
-  benchmark_large.yaml   200K–500K trips, 3600s timeout
+  stress_test.yaml       Canonical 22-run matrix: {chicago,nyc}_1k_car x
+                         {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso},
+                         3 repeats per stochastic cell (2 for MATSim).
+                         ~55 s on Apple M4 Pro. All thesis Chapter 5 numbers
+                         come from this runspec.
+  benchmark_small.yaml   1K-50K trips, 600 s per-run timeout (laptop tier).
+  benchmark_large.yaml   200K-500K trips, 3600 s per-run timeout (HPC tier).
+
+REPRODUCE THE THESIS NUMBERS END-TO-END (about one minute):
+  python -m execution.run_benchmark runspecs/stress_test.yaml
+  python -m evaluation.analyze_benchmark \\
+         runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+  python -m evaluation.generate_plots \\
+         runs/stress_test/benchmark_results_stress_test.json --output doc/figures
+
+OUTPUT SHAPE:
+  runs/<runspec_name>/
+    benchmark_results_<runspec_name>.json   # canonical result schema
+    run_<i>/                                # per-run engine artefacts
+      feasibility_report.json               # SCC filter audit trail
+      tripinfo.xml / output_trips.csv.gz    # engine-native outputs
 """
 
 HELP_TESTS = """
@@ -431,103 +478,131 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-RUN ALL TESTS:
-  python -m pytest tests/ -v                    # verbose output
-  python -m pytest tests/ -v --tb=short         # with short tracebacks
-  python -m pytest tests/ -x                    # stop on first failure
-  python -m pytest tests/ -k "fidelity"         # filter by keyword
+SimForge ships 284 tests across 17 files. The fast tier (~12 s) is
+what developers run locally; the full suite (~22 s on M-series) adds
+adapter sweeps and real-binary smoke tests.
 
-RUN SPECIFIC TEST FILES:
-  python -m pytest tests/test_fidelity_metrics.py -v
-  python -m pytest tests/test_matsim_adapter.py -v
-  python -m pytest tests/test_sumo_adapter.py -v
+Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
+--strict-markers + --tb=short. Shared fixtures and platform-skip
+helpers live in tests/conftest.py.
 
-TEST FILES (324 tests total):
+RUN COMMANDS:
+  python -m pytest                              # Full suite (~22 s)
+  python -m pytest -m "not slow"                # Fast tier (~12 s)
+  python -m pytest -v                           # Verbose — named lines per test
+  python -m pytest -v -x                        # Verbose, stop on first failure
+  python -m pytest tests/test_feasibility.py    # One file
+  python -m pytest tests/test_feasibility.py -v # One file, verbose
+  python -m pytest tests/test_scc.py -k "kosaraju"      # Substring filter
+  python -m pytest --cov --cov-report=term-missing      # With coverage
+  python -m pytest --cov --cov-fail-under=70            # CI-style threshold
+  python -m pytest -n auto                      # Parallel (needs pytest-xdist)
+  python -m pytest --collect-only               # List tests without running
 
-  test_scenario_data_integrity.py    (210 tests)
-    Parametrized over all scenarios in scenarios/.
-    Classes:
-      TestNetworkIntegrity       — node/link counts, coordinate bounds,
-                                   no duplicate IDs, link refs valid
-      TestDemandIntegrity        — CSV columns, non-negative departures,
-                                   OD node refs exist in network
-      TestSignalsIntegrity       — signal node IDs exist in network
-      TestConfigIntegrity        — time horizon >0, has seed
-      TestManifestIntegrity      — scenario_id matches config, all
-                                   declared files exist on disk
-      TestCrossFileConsistency   — demand time range within config horizon,
-                                   modes match config allowed_modes,
-                                   signal phases vs demand time range
+MARKERS (registered in pyproject.toml; --strict-markers enforced):
+  slow            Test takes > 2 s or sweeps every bundled scenario
+  integration     Exercises multiple subsystems end-to-end
+  determinism     Verifies byte-identical adapter outputs across re-runs
+  requires_sumo   Needs sumo / netconvert on PATH
+  requires_java   Needs Java 17+ and the MATSim JAR
+  requires_gpu    Needs NVIDIA GPU (otherwise QarSUMO CPU fallback)
 
-  test_matsim_adapter.py             (24 tests)
-    Classes:
-      TestSecondsToTimeString    — HH:MM:SS conversion edge cases
-      TestMATSimConfig           — config defaults, to_dict round-trip
-      TestBuildVehiclesXml       — valid XML, car type present
-      TestLoadCanonicalNetwork   — nodes/links loaded, coordinates, fields
-      TestBuildMATSimNetwork     — valid XML, nodes & links, car mode
-      TestBuildMATSimPlans       — valid XML, persons, activities
-      TestBuildMATSimConfig      — valid XML, required modules, seed
-      TestPrepareMATSimInputs    — end-to-end: all output files created
+  Filter examples:
+    python -m pytest -m slow
+    python -m pytest -m determinism
+    python -m pytest -m "integration and not slow"
+    python -m pytest -m "not requires_sumo"
 
-  test_fidelity_metrics.py           (21 tests)
-    Classes:
-      TestRMSE                   — identical, known values, edge cases
-      TestGEH                    — identical, acceptable, poor, symmetric
-      TestGEHBatch               — batch computation, mixed results
-      TestKSStatistic            — identical, different, similar distributions
-      TestInterpretGEH           — classification thresholds
-      TestFidelityMetrics        — compute_fidelity_metrics integration
+TEST FILES (17 files / 284 tests):
 
-  test_pipeline_e2e.py               (20 tests)
-    End-to-end pipeline tests: network build, demand generation,
-    signal generation, validation, and full scenario assembly.
-    NOTE: These fetch live OSM data — may be slow or flaky.
+  test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
+  test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
+  test_matsim_adapter.py          (24)  MATSim helpers + end-to-end [slow sweep]
+  test_qarsumo_adapter.py         (10)  QarSUMO + CPU fallback [slow sweep]
+  test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
+  test_metrics_travel_time.py     (2)   tripinfo.xml parser
+  test_reproducibility_metrics.py (15)  R-score core + edge cases
+  test_scalability_metrics.py     (8)   SimulationTimer, throughput
+  test_validator.py               (2)   Bundle pass + corruption fail
+  test_scenario_data_integrity.py (70)  7 classes x every bundled scenario
+  test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
+  test_scc.py                     (16)  Iterative Kosaraju + parser
+  test_feasibility.py             (16)  Shared cross-engine trip filter
+  test_analyze_benchmark.py       (25)  Mode-aware grouping + all renderers
+  test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
+  test_demand_generators.py       (21)  Uniform / gravity / peak-hour
+  test_engine_smoke.py            (4)   Real-binary SUMO/MATSim [skips if missing]
 
-  test_reproducibility_metrics.py    (15 tests)
-    R-index computation: perfect, near-perfect, degraded,
-    single-run edge case, cross-seed consistency.
+test_scenario_data_integrity.py classes (7, parametrized over every scenario):
+  TestFileExistence       All 5 canonical files exist
+  TestXMLParsing          All XML files are well-formed
+  TestNetworkIntegrity    Unique node/link IDs, WGS84 coords, valid endpoints
+  TestDemandIntegrity     Required columns, unique trip IDs, OD nodes exist
+  TestConfigIntegrity     Metadata, scenario_id matches dir, valid horizon
+  TestManifestIntegrity   Manifest ID matches config, all declared files exist
+  TestSignalsIntegrity    Signal junction references exist in the network
 
-  test_qarsumo_adapter.py            (10 tests)
-    QarSUMO input generation, GPU config, CUDA flags,
-    fallback-to-SUMO behavior on CPU-only systems.
+WHAT THE OUTPUT LOOKS LIKE:
+  Default (quiet) — one dot per passing test:
+    tests/test_feasibility.py ................             [100%]
+    =================== 16 passed in 0.03s ===================
 
-  test_scalability_metrics.py        (8 tests)
-    Throughput calculation, SRT ratio, scaling factors.
+  With -v — a named line per test (useful for learning the suite):
+    tests/test_feasibility.py::test_drops_outside_scc PASSED    [  6%]
+    tests/test_feasibility.py::test_drops_unknown_nodes PASSED  [ 12%]
+    ...
 
-  test_adapter_determinism.py        (8 tests)
-    Classes:
-      TestSUMOAdapterDeterminism — identical outputs across runs,
-                                   file-level determinism (routes, nodes,
-                                   edges, config)
-      TestHashUtilities          — SHA-256 consistency, exclusion patterns
+  With --cov — a coverage table is appended:
+    Name                              Stmts   Miss  Cover   Missing
+    adapters/common/feasibility.py       94      8    91%   42-49
+    ...
+    TOTAL                              2847    677    76%
 
-  test_sumo_adapter.py               (4 tests)
-    SUMO file generation, edge lengths, lane lengths,
-    all-scenarios parametrized test.
+COVERAGE:
+  python -m pytest --cov                        # Terminal summary
+  python -m pytest --cov --cov-report=html      # HTML report in htmlcov/
+  python -m pytest --cov --cov-fail-under=70    # CI-style threshold
 
-  test_metrics_travel_time.py        (2 tests)
-    Travel time extraction and aggregation from output files.
+  Current line coverage: ~76 % (branch coverage enabled). Source set and
+  omit list configured in pyproject.toml [tool.coverage]. Dev tools install
+  via: pip install -r requirements-dev.txt
 
-  test_validator.py                  (2 tests)
-    Bundle validation: valid bundle passes, bad demand node fails.
+MUTATION TESTING:
+  mutmut run                                    # Run against the cross-engine
+  mutmut results                                # fairness modules only.
+  Scope defined in pyproject.toml [tool.mutmut]; documented in
+  doc/MUTATION_BASELINE.md.
 
-TEST CONVENTIONS:
-  - All tests use pytest fixtures and parametrize decorators
-  - Scenario tests auto-discover scenarios/ directories
-  - Adapter tests use the chicago_1k_car fixture scenario
-  - Metric tests use synthetic data (no external dependencies)
-  - E2E tests require network access (OSM downloads)
+SHARED FIXTURES (tests/conftest.py):
+  bundled_scenario           Canonical chicago_1k_car scenario path
+  all_bundled_scenarios      Every complete scenarios/ entry
+  small_bundled_scenarios    Scenarios under the arm64 netconvert threshold
+  repo_root                  Absolute path to the project root
+  file_sha256, directory_sha256           Deterministic hashing helpers
+  is_arm64_netconvert_crash               Platform skip detector
+  warn_skipped                            Emits a single UserWarning summary
+
+CONTINUOUS INTEGRATION:
+  .github/workflows/test.yml runs on every push:
+    fast     macOS + Ubuntu x Python 3.10, 3.11, 3.13  —  pytest -m "not slow"
+    coverage Ubuntu + Python 3.11                      —  --cov-fail-under=70
+    slow     Ubuntu only (SUMO via apt + Java 17 + MATSim JAR download)
 
 COMMON TEST FLAGS:
   -v, --verbose            Show individual test names
-  --tb=short               Compact tracebacks
-  --tb=long                Full tracebacks
+  -vv                      Verbose + full assertion diffs
+  --tb=short / --tb=long   Compact / full tracebacks
   -x, --exitfirst          Stop on first failure
+  -s                       Don't swallow print() output
   -k EXPR                  Run tests matching expression
   --durations=10           Show 10 slowest tests
-  -n auto                  Parallel execution (requires pytest-xdist)
-  --co, --collect-only     List tests without running them
+  -n auto                  Parallel execution (needs pytest-xdist)
+  --collect-only           List tests without running them
+
+SEE ALSO:
+  TESTING.md                Full per-file reference + markers + CI matrix
+  CONTRIBUTING.md           Test-writing conventions + determinism rules
+  doc/MUTATION_BASELINE.md  Mutation testing scope and baseline
 """
 
 HELP_TROUBLESHOOTING = """
@@ -535,36 +610,145 @@ HELP_TROUBLESHOOTING = """
   TROUBLESHOOTING
 ====================================================================
 
-1. "No residential buildings mapped to network nodes"
+1. "command not found: python" / "No module named 'pytest'"
+   -> You forgot to activate the venv. Run: source .venv/bin/activate
+      (On Windows: .venv\\Scripts\\activate)
+
+2. "ModuleNotFoundError: No module named 'pipeline'"
+   -> Run from project root: cd SimForge (not from scripts/ or tests/).
+
+3. "No residential buildings mapped to network nodes"
    -> Increase --radius to capture more buildings.
 
-2. "Requested N trips but only M raw census commuters available"
-   -> --allow-oversample, --synthetic, or increase --radius
+4. "Requested N trips but only M raw census commuters available"
+   -> Use --allow-oversample, --synthetic, or increase --radius
 
-3. "No scenarios found"
-   -> Generate first: python generate.py --city chicago --trips 5000
+5. "No scenarios found"
+   -> Generate first: python generate.py --city chicago --trips 1000
 
-4. "SUMO not found"
-   -> brew install sumo
+6. "SUMO not found" / "netconvert: command not found"
+   -> macOS: brew install sumo
+      Linux: apt-get install sumo
+      If installed but still not found:
+        export SUMO_HOME=$(brew --prefix sumo)/share/sumo
 
-5. "MATSim JAR not found"
+7. "MATSim JAR not found"
    -> Download to lib/matsim-15.0/, needs Java 17+
+      setup_simforge.py does this automatically.
 
-6. "netconvert: command not found"
-   -> export SUMO_HOME=$(brew --prefix sumo)/share/sumo
+8. "netconvert segfaults on arm64 with networks > ~3000 nodes"
+   -> SUMO platform bug, not SimForge. Adapter sweeps auto-skip
+      affected scenarios on arm64 with a summary UserWarning.
+      The bundled 1K scenarios are safely below the threshold.
+      Full-suite CI runs on Ubuntu only for this reason.
 
-7. "ModuleNotFoundError: No module named 'pipeline'"
-   -> Run from project root: cd SimForge
+9. "OSM download timeout / ConnectionError to Overpass"
+   -> Wait and retry. Large radii may timeout. Pre-warm the cache:
+        python -m pipeline.network.warmup
+      Fresh fetches are logged with "first-time fetch" WARNING.
 
-8. OSM download timeout
-   -> Wait and retry. Large radii may timeout.
+10. "Pytest passes nothing visible — I see only dots"
+   -> Add -v for one line per test:
+        python -m pytest tests/test_feasibility.py -v
+      Add -vv for full assertion diffs on failures.
+
+11. "Tests fail with 'binary not found' errors"
+   -> test_engine_smoke.py needs real SUMO / MATSim / Java on PATH.
+      Skip them with: python -m pytest -m "not slow"
+
+12. "Coverage numbers look low (~40 %)"
+   -> setup_simforge.py installs the dev deps; if you used a manual venv,
+      install them yourself:
+        pip install -r requirements-dev.txt
+      and make sure you're running from the project root.
+
+13. "sumo: Error: No connection between edge 'lX' and edge 'lY'"
+   -> Drive sumo with --ignore-route-errors. SimForge pre-computes routes by
+      BFS on the canonical node graph; on real-world networks some of those
+      edge-level transitions lack a valid lane connection. The benchmark
+      harness, run.py, and `python -m adapters.sumo.cli --run` all pass the
+      flag automatically. Example direct invocation:
+        sumo -c toy.sumocfg --ignore-route-errors
 
 GETTING HELP:
-  python help.py             Full help overview
-  python help.py <topic>     Topic-specific help
-  python generate.py --help  Generator CLI help
-  python -m pytest tests/ -v Run test suite
+  python help.py                    Full help overview
+  python help.py <topic>            Topic-specific help
+  python help.py setup              Install + bootstrap
+  python generate.py --help         Generator CLI help
+  python run.py --help              Run CLI help
+  python -m pytest tests/ -v        Run test suite (verbose)
+
+DIAGNOSTIC INFO TO INCLUDE WHEN REPORTING BUGS:
+  python -c "import sys, platform; print(sys.version, platform.platform())"
+  sumo --version
+  java -version
+  git rev-parse HEAD
 """
+
+HELP_SETUP = """
+====================================================================
+  SETUP & INSTALLATION
+====================================================================
+
+ONE-COMMAND BOOTSTRAP:
+  python setup_simforge.py
+
+  This creates .venv/, installs runtime dependencies (requirements.txt)
+  AND developer tooling (requirements-dev.txt: pytest-cov, pytest-xdist,
+  mutmut), and downloads the MATSim 15.0 JAR to lib/matsim-15.0/.
+  Re-running is idempotent.
+
+ACTIVATE THE VENV (REQUIRED IN EVERY NEW SHELL):
+  source .venv/bin/activate                     # macOS / Linux
+  .venv\\Scripts\\activate                       # Windows (CMD)
+  .venv\\Scripts\\Activate.ps1                   # Windows (PowerShell)
+
+  After activation, 'python' and 'pytest' resolve to the venv's copy.
+  If you see 'command not found: python', the venv is not active.
+
+EXTERNAL DEPENDENCIES:
+  SUMO 1.20+        macOS:  brew install sumo
+                    Linux:  apt-get install sumo
+                    Verify: sumo --version
+  Java 17+          macOS:  brew install openjdk@17
+                    Linux:  apt-get install openjdk-17-jdk
+                    Verify: java -version
+  QarSUMO           Optional — GPU path only. Falls back to SUMO without
+                    CUDA, so most developers can skip this.
+
+DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
+  setup_simforge.py installs these automatically. To install manually:
+    pip install -r requirements-dev.txt
+
+VERIFY THE INSTALL (full sanity check):
+  source .venv/bin/activate
+  python -m pytest -m "not slow"                # Fast tier, ~12 s
+  python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
+  python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
+  python -m execution.run_benchmark runspecs/stress_test.yaml      # ~55 s
+
+MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
+  python3.10+ -m venv .venv
+  source .venv/bin/activate
+  pip install --upgrade pip
+  pip install -r requirements.txt
+  pip install -r requirements-dev.txt
+
+  # MATSim JAR (needed only for MATSim runs):
+  mkdir -p lib/matsim-15.0
+  # Download matsim-15.0.jar from the official MATSim GitHub release
+  # and place it in lib/matsim-15.0/
+
+FIRST RUN (after install):
+  python generate.py --city chicago --trips 1000        # generate bundle
+  python run.py --scenario chicago_1k_car --engine sumo --mode meso
+
+SEE ALSO:
+  SETUP.md          Full install guide + per-OS details
+  CONTRIBUTING.md   Dev workflow + test conventions
+  python help.py troubleshooting     Common install errors
+"""
+
 
 # =============================================================================
 # TOPIC REGISTRY
@@ -572,6 +756,9 @@ GETTING HELP:
 
 TOPICS = {
     "overview": HELP_OVERVIEW,
+    "setup": HELP_SETUP,
+    "install": HELP_SETUP,
+    "bootstrap": HELP_SETUP,
     "generate": HELP_GENERATE,
     "run": HELP_RUN,
     "scripts": HELP_SCRIPTS,

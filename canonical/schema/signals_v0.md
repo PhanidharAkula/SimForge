@@ -1,4 +1,4 @@
-# 🚦 Canonical Signals Schema v0
+# Canonical Signals Schema v0
 
 ## Purpose
 

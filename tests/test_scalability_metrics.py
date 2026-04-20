@@ -23,12 +23,16 @@ class TestSimulationTimer:
     """Tests for the SimulationTimer context manager."""
     
     def test_timer_measures_time(self):
-        """Timer should measure elapsed time."""
+        """Timer should report elapsed time consistent with a monotonic-clock
+        reference. Loose upper bound — tightened lower bound — so the test
+        passes on loaded CI runners without going flaky in either direction.
+        """
+        ref_start = time.monotonic()
         with SimulationTimer() as timer:
-            time.sleep(0.1)  # Sleep 100ms
-        
-        # Should be approximately 0.1 seconds (allow some tolerance)
-        assert 0.05 < timer.elapsed_seconds < 0.3
+            time.sleep(0.1)
+        ref_elapsed = time.monotonic() - ref_start
+        assert timer.elapsed_seconds >= 0.09
+        assert timer.elapsed_seconds <= ref_elapsed + 0.05
     
     def test_timer_zero_time(self):
         """Timer should handle instant operations."""

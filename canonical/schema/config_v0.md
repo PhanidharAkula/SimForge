@@ -1,4 +1,4 @@
-# ⚙️ Canonical Config Schema v0
+# Canonical Config Schema v0
 
 ## Purpose
 

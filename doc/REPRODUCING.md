@@ -6,17 +6,17 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 ### Hardware Requirements
 
-**Minimum (development/testing):**
+**Minimum (for the bundled 1K scenarios + full unit suite):**
 
 - Any modern laptop/desktop
 - 8 GB RAM
-- 10 GB disk space
+- 5 GB disk space (caches included)
 
-**Recommended (full experiments):**
+**Recommended (regenerating the larger 50K – 500K tiers):**
 
 - 16+ GB RAM
 - 50+ GB disk space
-- NVIDIA GPU with CUDA 11+ (for QarSUMO)
+- NVIDIA GPU with CUDA 11+ (only needed if you want true GPU-accelerated QarSUMO; the framework falls back to SUMO otherwise)
 
 ### Software Requirements
 
@@ -32,25 +32,27 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 ## Quick Setup (5 minutes)
 
 ```bash
-# 1. Clone repository
 git clone <repo-url>
 cd SimForge
 
-# 2. Create virtual environment
-python3 -m venv .venv
+python3 setup_simforge.py     # checks prereqs, creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
 
-# 3. Install Python dependencies
-pip install -r requirements.txt
-
-# 4. Generate scenario data
-python scripts/01_quick_test.py       # 1K Chicago car
-python scripts/02_small_commute.py    # 10K NYC car
-python scripts/03_medium_multimodal.py # 50K LA multi-mode
-
-# 5. Verify installation
+# Confirm the bundled scenarios validate cleanly
 python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
-# Expected: ✓ VALID    chicago_1k_car
+python -m pipeline.validation.validate_bundle scenarios/nyc_1k_car
+# Expected: ✓ VALID for each
+```
+
+(For a manual install path, see [SETUP.md](../SETUP.md).)
+
+### Optional: pre-warm the OSM cache
+
+If the network XMLs are present but `cache/` is empty, the first benchmark run still triggers an Overpass fetch. Pre-warm it:
+
+```bash
+python -m pipeline.network.warmup            # warm every scenarios/* bundle
+python -m pipeline.network.warmup --dry-run  # report only
 ```
 
 ---
@@ -61,8 +63,7 @@ python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 
 ```bash
 brew install sumo
-sumo --version
-# Expected: SUMO 1.20.0 or higher
+sumo --version    # Expect 1.20.0+
 ```
 
 ### SUMO (Ubuntu/Debian)
@@ -75,178 +76,156 @@ sudo apt-get install sumo sumo-tools
 
 ### MATSim
 
-MATSim is pre-installed in this repository:
-
-```
-lib/matsim-15.0/
-├── matsim-15.0.jar
-└── libs/   # Dependencies
-```
-
-Verify Java:
+`setup_simforge.py` downloads the MATSim 15.0 release JAR into `lib/matsim-15.0/`. Verify Java is on PATH:
 
 ```bash
-java -version
-# Expected: openjdk 17.x or higher
+java -version    # Expect openjdk 17.x or higher
 ```
 
-### QarSUMO (Optional — GPU only)
+### QarSUMO (optional — GPU only)
 
-QarSUMO requires NVIDIA GPU with CUDA. Download from:
-https://github.com/LLNL/QarSUMO
-
-If QarSUMO is not available, the framework automatically falls back to standard SUMO.
+QarSUMO requires NVIDIA GPU with CUDA. Without it, the QarSUMO adapter falls back to standard SUMO and emits identical output. Source: <https://github.com/LLNL/QarSUMO>.
 
 ---
 
-## Running Experiments
+## Running the Canonical Stress Test
 
-### Step 1: Validate All Scenarios
-
-```bash
-python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
-python -m pipeline.validation.validate_bundle scenarios/nyc_10k_car
-python -m pipeline.validation.validate_bundle scenarios/la_50k_bike_car_transit
-```
-
-All should report `✓ VALID`.
-
-### Step 2: Quick Sanity Check
+The thesis figures are produced by `runspecs/stress_test.yaml` — an 8-cell matrix of `{chicago_1k_car, nyc_1k_car} × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}` with 3 repeats each (MATSim runs 2 repeats since it is deterministic).
 
 ```bash
-# Run a single scenario with SUMO mesoscopic
+# 1. Sanity check (one run, ~30 s)
 python run.py --scenario chicago_1k_car --engine sumo --mode meso --repeats 1
+
+# 2. Full benchmark (~1 minute on a laptop, ~2 minutes on cluster CPU)
+python -m execution.run_benchmark runspecs/stress_test.yaml
+
+# 3. Generate analysis tables
+python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
+
+# 4. Render the 9 thesis figures
+python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
 ```
 
-Expected: completes in under 30 seconds.
+---
 
-### Step 3: Run Full 5K Benchmark
+## Generating the Larger Tiers (Optional)
+
+The repo only commits the two 1K scenarios. To recreate the 10K/50K/200K/500K tiers used for scalability discussion:
 
 ```bash
-# Full benchmark: 3 cities × 3 engines × mesoscopic × 3 repeats = 27 runs
-python -m execution.run_benchmark runspecs/benchmark_small.yaml
+python scripts/02_small_commute.py     # 10K NYC car, 7–9 AM
+python scripts/03_medium_multimodal.py # 50K LA car+transit+bike, 6–10 AM
+python scripts/04_large_full_day.py    # 200K Chicago car+transit, 24 h
+python scripts/05_stress_test.py       # 500K NYC car, 6–10 AM
 ```
 
-Expected: 10–30 minutes depending on hardware.
+Each writes a fresh bundle into `scenarios/<id>/` and is then runnable through `run.py` or by adding it to a runspec.
 
-### Step 4: Run via CLI (Alternative)
-
-```bash
-# Run all combinations using the main CLI
-python run.py --mode meso --repeats 3
-```
+> **Apple Silicon caveat:** SUMO 1.20's `netconvert` crashes on networks above ~3,000 nodes on arm64 (a SUMO bug, not SimForge's). The 1K bundles run cleanly; the 200K and 500K tiers must be run on Linux/HPC.
 
 ---
 
 ## Collecting Results
 
-### Output Location
-
-Results are stored in:
+### Output Layout
 
 ```
-runs/
-├── benchmark_<timestamp>/
-│   ├── <scenario>_<engine>_<mode>_seed<N>/
-│   │   ├── native_files/     # Simulator-native input files
-│   │   ├── tripinfo.xml      # SUMO trip-level output
-│   │   └── statistics.xml    # SUMO summary statistics
-│   └── benchmark_results.json
+runs/stress_test/
+├── benchmark_results_stress_test.json
+├── chicago_1k_car/
+│   ├── sumo/
+│   │   ├── seed_42/
+│   │   │   ├── feasibility_report.json
+│   │   │   ├── tripinfo.xml
+│   │   │   ├── statistics.xml
+│   │   │   └── (SUMO native files)
+│   │   ├── seed_43/
+│   │   └── seed_44/
+│   ├── qarsumo/
+│   ├── matsim/
+│   └── ...
+└── nyc_1k_car/
 ```
+
+`feasibility_report.json` is the audit trail proving every engine was fed the same trip set (see [CHANGELOG.md](../CHANGELOG.md), Addenda 1–2).
 
 ### Extracting Metrics
 
 ```bash
-# Analyze benchmark results
-python -m evaluation.analyze_benchmark runs/benchmark_<timestamp>/benchmark_results.json
+python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --markdown --latex
 ```
 
-### Generating Thesis Plots
+Produces:
+
+- Summary table (one row per `(scenario, engine, mode)` cell)
+- Runtime performance table
+- Reproducibility table (R = 1 − σ/μ across repeats)
+- **Coverage diagnostic** — flags low-sample (`n < 3`) cells, asymmetric coverage, and silently-failed cells
+
+### Generating Plots
 
 ```bash
-python -m evaluation.generate_plots runs/benchmark_<timestamp>/benchmark_results.json
+python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
 ```
+
+Renders Fig 5.1 – Fig 5.9 (PNG + PDF) into `runs/stress_test/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
 
 ---
 
-## Expected Results (5K Tier)
+## Expected Results (1K Tier — measured on Apple M4 Pro)
 
-### Chicago 5K (5,000 trips, 3,343 nodes, 8,362 links)
+These are the numbers from the most recent canonical stress test (see CHANGELOG.md → Addendum 3):
 
-| Engine    | Mode | Expected Runtime |
-| --------- | ---- | ---------------- |
-| SUMO      | meso | ~2–5s            |
-| QarSUMO\* | meso | ~2–5s            |
-| MATSim    | meso | ~10–15s          |
+| Scenario       | Engine  | Mode  | Trips simulated | Avg TT (s)  | Runtime (s)  | R-Score |
+| -------------- | ------- | ----- | --------------- | ----------- | ------------ | ------- |
+| chicago_1k_car | matsim  | meso  | **1000 (100 %)** | 195.7 ± 0.0 | 10.19 ± 0.16 | 1.0000  |
+| chicago_1k_car | qarsumo | meso  | 995 (99.5 %)    | 204.1 ± 0.4 |  0.28 ± 0.01 | 0.9981  |
+| chicago_1k_car | sumo    | meso  | 995 (99.5 %)    | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
+| chicago_1k_car | sumo    | micro | 940 (94.0 %)    | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
+| nyc_1k_car     | matsim  | meso  | **1000 (100 %)** | 249.3 ± 0.0 |  9.99 ± 0.06 | 1.0000  |
+| nyc_1k_car     | sumo    | meso  | 995 (99.5 %)    | 253.4 ± 0.3 |  0.26 ± 0.06 | 0.9988  |
 
-### NYC 5K (5,000 trips, 1,913 nodes, 3,877 links)
+Total wall-clock for the 16-run matrix: ~52 s.
 
-| Engine    | Mode | Expected Runtime |
-| --------- | ---- | ---------------- |
-| SUMO      | meso | ~1–3s            |
-| QarSUMO\* | meso | ~1–3s            |
-| MATSim    | meso | ~8–12s           |
-
-### LA 5K (5,000 trips, 6,333 nodes, 17,685 links)
-
-| Engine    | Mode | Expected Runtime |
-| --------- | ---- | ---------------- |
-| SUMO      | meso | ~3–8s            |
-| QarSUMO\* | meso | ~3–8s            |
-| MATSim    | meso | ~12–20s          |
-
-\*Falls back to SUMO without GPU
+The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses). It is the simulation outcome we want to *measure*, not an input asymmetry — every `feasibility_report.json` records `feasible_trips == total_trips == 1000`.
 
 ---
 
 ## Troubleshooting
 
-### "MATSim ClassNotFoundException"
-
-**Solution:** The classpath needs all JARs from `libs/` folder. This is handled automatically by the adapter.
-
-### "QarSUMO not found"
-
-**Expected:** QarSUMO requires NVIDIA GPU. Falls back to SUMO automatically.
-
-### "SUMO command not found"
-
-**Solution:**
-
-```bash
-# macOS
-brew install sumo
-
-# Linux
-sudo apt-get install sumo
-```
-
-### "Java version too old"
-
-**Solution:** Install Java 17+:
-
-```bash
-# macOS
-brew install openjdk@17
-
-# Linux
-sudo apt-get install openjdk-17-jdk
-```
-
-### Slow MATSim runs
-
-MATSim has JVM startup overhead (~5–7s). This is normal for small scenarios.
+| Problem                          | Solution                                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `MATSim ClassNotFoundException`  | The classpath includes everything in `libs/` automatically. Re-run `setup_simforge.py` to repair the JAR. |
+| `QarSUMO not found`              | Expected without an NVIDIA GPU — the adapter falls back to SUMO and emits a log line saying so.          |
+| `SUMO command not found`         | `brew install sumo` (macOS) or `apt-get install sumo` (Linux).                                           |
+| `Java version too old`           | `brew install openjdk@17` (macOS) or `apt-get install openjdk-17-jdk` (Linux).                            |
+| Slow MATSim runs                 | MATSim has ~5 – 7 s JVM startup overhead per run; this dominates wall-clock for the 1K tier.              |
+| Overpass fetch hangs the first run | Run `python -m pipeline.network.warmup` once.                                                             |
+| `cache/` grows large             | `scripts/clean.sh --all` to wipe both Python bytecode and the OSM HTTP cache.                            |
 
 ---
 
 ## Reproducing Specific Figures
 
+All nine thesis figures are emitted by a single command:
+
 ```bash
-# Generate all thesis figures from benchmark results
-python -m evaluation.generate_plots runs/<benchmark_dir>/benchmark_results.json
+python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
 ```
 
-Individual plot scripts are available in `evaluation/generate_plots.py`.
+| Figure   | What it shows                                              |
+| -------- | ---------------------------------------------------------- |
+| Fig 5.1  | Cross-engine runtime bar chart (mean + error bars)         |
+| Fig 5.2  | Reproducibility heatmap (R-Score per cell)                 |
+| Fig 5.3  | Travel-time comparison (mean + error bars)                 |
+| Fig 5.4  | Engine summary panel                                       |
+| Fig 5.5  | Speedup analysis (relative to mesoscopic baseline)         |
+| Fig 5.6  | Micro vs meso comparison                                   |
+| Fig 5.7  | Runtime variability (boxplot per cell)                     |
+| Fig 5.8  | P95 tail-latency analysis                                  |
+| Fig 5.9  | Throughput (vehicles per second per core)                  |
+
+See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for each figure's full interpretation.
 
 ---
 
@@ -256,7 +235,7 @@ This thesis was produced with:
 
 | Component | Version |
 | --------- | ------- |
-| SimForge  | v1.0.0  |
+| SimForge  | Version_2 (commit `537ae75` or later) |
 | Python    | 3.13.2  |
 | SUMO      | 1.20.0  |
 | MATSim    | 15.0    |

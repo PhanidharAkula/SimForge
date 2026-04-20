@@ -1,0 +1,18 @@
+# ==============================================
+# SimForge — Development / test dependencies
+# ==============================================
+# Runtime deps come from requirements.txt. Anything below is only needed
+# for running the test suite, measuring coverage, or bootstrapping the
+# mutation-testing baseline.
+
+# Core runtime is still required for the tests to import SimForge modules.
+-r requirements.txt
+
+# Test orchestration
+pytest>=7.0
+pytest-cov>=4.1        # --cov / --cov-fail-under
+pytest-xdist>=3.5      # optional parallelism (`pytest -n auto`)
+
+# Mutation testing (see doc/MUTATION_BASELINE.md).  Pin to a known-working
+# minor series so re-running `mutmut run` gives comparable scores.
+mutmut>=2.5,<3

@@ -23,6 +23,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent
 VENV_DIR = PROJECT_ROOT / ".venv"
 REQUIREMENTS = PROJECT_ROOT / "requirements.txt"
+REQUIREMENTS_DEV = PROJECT_ROOT / "requirements-dev.txt"
 MATSIM_DIR = PROJECT_ROOT / "lib" / "matsim-15.0"
 MATSIM_JAR = MATSIM_DIR / "matsim-15.0.jar"
 MATSIM_ZIP_URL = "https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0.zip"
@@ -119,13 +120,13 @@ def get_venv_python() -> str:
 
 
 def install_dependencies():
-    """Install Python packages from requirements.txt."""
+    """Install Python packages from requirements.txt + requirements-dev.txt."""
     pip_python = get_venv_python()
-    print(f"  Installing from {REQUIREMENTS.name} ...")
-    result = subprocess.run(
+    subprocess.run(
         [pip_python, "-m", "pip", "install", "--upgrade", "pip"],
         capture_output=True, text=True, check=False,
     )
+    print(f"  Installing from {REQUIREMENTS.name} ...")
     result = subprocess.run(
         [pip_python, "-m", "pip", "install", "-r", str(REQUIREMENTS)],
         capture_output=True, text=True, check=False,
@@ -134,7 +135,22 @@ def install_dependencies():
         _fail("pip install failed:")
         print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
         return False
-    _ok("All Python dependencies installed")
+    _ok("Runtime dependencies installed")
+
+    # Dev deps (coverage, mutation testing, parallel pytest) are required for
+    # the documented `pytest -n auto` and `mutmut run` flows to work.
+    if REQUIREMENTS_DEV.exists():
+        print(f"  Installing from {REQUIREMENTS_DEV.name} ...")
+        dev_result = subprocess.run(
+            [pip_python, "-m", "pip", "install", "-r", str(REQUIREMENTS_DEV)],
+            capture_output=True, text=True, check=False,
+        )
+        if dev_result.returncode != 0:
+            _warn(f"{REQUIREMENTS_DEV.name} install failed — "
+                  "coverage / mutation tools will be unavailable.")
+            print(dev_result.stderr[-500:] if dev_result.stderr else dev_result.stdout[-500:])
+        else:
+            _ok("Dev dependencies installed (pytest-cov, pytest-xdist, mutmut)")
     return True
 
 

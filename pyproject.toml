@@ -1,0 +1,66 @@
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+]
+filterwarnings = [
+    "error::pytest.PytestUnraisableExceptionWarning",
+    "ignore::DeprecationWarning:lxml.*",
+]
+markers = [
+    "slow: tests that take > 2 s or sweep every bundled scenario",
+    "integration: tests that exercise multiple subsystems end-to-end",
+    "requires_sumo: tests that require the SUMO `netconvert` / `sumo` binaries",
+    "requires_java: tests that require Java + the MATSim JAR",
+    "requires_gpu: tests that require an NVIDIA GPU (otherwise a CPU fallback path)",
+    "determinism: tests that verify byte-identical adapter outputs across re-runs",
+]
+
+# ---------------------------------------------------------------------------
+# Coverage — see requirements-dev.txt for the pytest-cov pin.
+# Run locally with:
+#   python -m pytest --cov=adapters --cov=evaluation --cov=pipeline
+# CI enforces --cov-fail-under=80 on one matrix cell (see .github/workflows/test.yml).
+# ---------------------------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["adapters", "evaluation", "pipeline"]
+omit = [
+    "*/__init__.py",
+    "*/cli.py",                                    # thin argparse wrappers
+    "*/progress.py",                               # tqdm wrapper
+    "pipeline/network/warmup.py",                  # one-shot bootstrap script
+    "evaluation/generate_plots.py",                # pure rendering; needs real benchmark output
+    "evaluation/compare_modes.py",                 # CLI reporter; covered by analyze_benchmark tests
+    "pipeline/demand/generate_census_demand.py",   # requires PUMS model files (external data)
+    "pipeline/demand/parse_model_file.py",         # requires PUMS model files
+    "pipeline/modelgen_scanner.py",                # requires modelgen binary + real data
+    "pipeline/signals/build_signals_default.py",   # signal inference exercised via full-bundle tests
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+precision = 1
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+[tool.coverage.xml]
+output = "coverage.xml"
+
+# ---------------------------------------------------------------------------
+# Mutation testing — see doc/MUTATION_BASELINE.md for the procedure.
+# Kept narrow on purpose: only the [1.0.0] cross-engine-fairness modules.
+# ---------------------------------------------------------------------------
+[tool.mutmut]
+paths_to_mutate = "adapters/common/feasibility.py,pipeline/network/scc.py"
+tests_dir = "tests/"
+runner = "python -m pytest -x -q tests/test_feasibility.py tests/test_scc.py"

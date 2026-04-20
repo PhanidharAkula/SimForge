@@ -1,4 +1,4 @@
-# 🛣️ Canonical Network Schema v0
+# Canonical Network Schema v0
 
 ## Purpose
 

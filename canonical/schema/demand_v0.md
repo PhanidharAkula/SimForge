@@ -1,4 +1,4 @@
-# 🚗 Canonical Demand Schema v0
+# Canonical Demand Schema v0
 
 ## Purpose
 

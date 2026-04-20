@@ -238,7 +238,7 @@ per 1963621 2021HU0097114 4 54 106000 -1 11 ""
 
 ## 4. Step-by-Step Pipeline Walkthrough
 
-When you run `python generate.py --city chicago --trips 5000`, here's exactly what happens:
+When you run `python generate.py --city chicago --trips 1000`, here's exactly what happens:
 
 ### Step 1: Network from OpenStreetMap
 
@@ -246,7 +246,7 @@ When you run `python generate.py --city chicago --trips 5000`, here's exactly wh
 
 ```
 Input:  City center coordinates (41.8781, -87.6298) + radius (4 km)
-Output: scenarios/chicago_5k_car/network.xml
+Output: scenarios/chicago_1k_car/network.xml
 ```
 
 **What happens**:
@@ -286,7 +286,7 @@ Output: scenarios/chicago_5k_car/network.xml
 
 ```
 Input:  network.xml
-Output: scenarios/chicago_5k_car/signals.xml
+Output: scenarios/chicago_1k_car/signals.xml
 ```
 
 **What happens**:
@@ -317,7 +317,7 @@ Output: config.xml, manifest.xml
 
 **config.xml** specifies:
 
-- Scenario ID (`chicago_5k_car`)
+- Scenario ID (`chicago_1k_car`)
 - Time window (e.g., 25200–28800 seconds = 7:00–8:00 AM)
 - Random seed (42)
 - Units (meters, m/s, seconds)
@@ -336,7 +336,7 @@ This is the most complex step and the most important for realism.
 
 ```
 Input:  modelgen/chicago_model.txt + network.xml
-Output: scenarios/chicago_5k_car/demand.csv
+Output: scenarios/chicago_1k_car/demand.csv
 ```
 
 **What happens** (detailed in Section 5 below):
@@ -357,7 +357,7 @@ Used when `--synthetic` flag is passed or no model file exists.
 
 ```
 Input:  network.xml only
-Output: scenarios/chicago_5k_car/demand.csv
+Output: scenarios/chicago_1k_car/demand.csv
 ```
 
 **What happens**:
@@ -662,7 +662,7 @@ The thesis goal is **not** to replicate real traffic perfectly, but to **compare
   ┌──────────────────────────────────────────────────┐
   │               Scenario Bundle                     │
   │                                                    │
-  │   scenarios/chicago_5k_car/                        │
+  │   scenarios/chicago_1k_car/                        │
   │     ├── network.xml    (real road network)         │
   │     ├── demand.csv     (census-calibrated trips)   │
   │     ├── signals.xml    (inferred signals)          │
