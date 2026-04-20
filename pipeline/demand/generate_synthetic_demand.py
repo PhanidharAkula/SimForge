@@ -275,7 +275,8 @@ class UniformRandomGenerator(DemandGenerator):
     def generate_od_pair(self) -> tuple[str, str]:
         """Pick random origin and destination from strongly connected component."""
         # Use only nodes in the strongly connected component
-        scc_nodes = list(self.network.strongly_connected_nodes)
+        # Sort to ensure deterministic ordering (set iteration order is non-deterministic)
+        scc_nodes = sorted(self.network.strongly_connected_nodes)
         if not scc_nodes:
             # Fallback if SCC not computed
             origin = self.rng.choice(self.network.node_ids)
@@ -284,7 +285,7 @@ class UniformRandomGenerator(DemandGenerator):
         
         origin = self.rng.choice(scc_nodes)
         # Pick destination from reachable nodes (within SCC)
-        reachable = list(self.network.reachable_from.get(origin, set()))
+        reachable = sorted(self.network.reachable_from.get(origin, set()))
         if reachable:
             destination = self.rng.choice(reachable)
         else:
@@ -317,7 +318,8 @@ class GravityModelGenerator(DemandGenerator):
         self.max_distance_km = max_distance_km
         
         # Use only nodes in strongly connected component
-        scc_nodes = list(network.strongly_connected_nodes)
+        # Sort to ensure deterministic ordering (set iteration order is non-deterministic)
+        scc_nodes = sorted(network.strongly_connected_nodes)
         
         # Precompute node weights based on degree (only for SCC nodes)
         total_degree = sum(network.node_degrees.get(n, 0) for n in scc_nodes) or 1
@@ -351,7 +353,8 @@ class GravityModelGenerator(DemandGenerator):
         origin_coord = self.network.node_coords[origin]
         
         # Compute destination weights only for reachable nodes
-        reachable_list = list(reachable)
+        # Sort to ensure deterministic ordering (set iteration order is non-deterministic)
+        reachable_list = sorted(reachable)
         dest_weights = []
         for dest in reachable_list:
             dest_coord = self.network.node_coords[dest]
@@ -401,14 +404,15 @@ class PeakHourGenerator(DemandGenerator):
     def generate_od_pair(self) -> tuple[str, str]:
         """Pick random routable OD pair from strongly connected component."""
         # Use only nodes in the strongly connected component
-        scc_nodes = list(self.network.strongly_connected_nodes)
+        # Sort to ensure deterministic ordering (set iteration order is non-deterministic)
+        scc_nodes = sorted(self.network.strongly_connected_nodes)
         if not scc_nodes:
             origin = self.rng.choice(self.network.node_ids)
             destination = self.rng.choice(self.network.node_ids)
             return origin, destination
         
         origin = self.rng.choice(scc_nodes)
-        reachable = list(self.network.reachable_from.get(origin, set()))
+        reachable = sorted(self.network.reachable_from.get(origin, set()))
         if reachable:
             destination = self.rng.choice(reachable)
         else:

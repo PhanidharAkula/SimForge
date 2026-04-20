@@ -1,0 +1,19 @@
+{
+  "scenario_id": "la_1k_car",
+  "city": "la",
+  "city_name": "Los Angeles, CA",
+  "trips_requested": 1000,
+  "trips_generated": 1000,
+  "modes": [
+    "car"
+  ],
+  "start_time_s": 25200,
+  "end_time_s": 32400,
+  "radius_km": 2.0,
+  "seed": 42,
+  "demand_strategy": "census",
+  "node_count": 1199,
+  "link_count": 3104,
+  "signal_count": 915,
+  "generation_time_s": 354.5
+}

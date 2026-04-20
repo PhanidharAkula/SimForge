@@ -398,11 +398,16 @@ ANALYZE BENCHMARK:
 
   Produces:
     Table 5.1 — Runtime comparison (engine x city x mode)
-    Table 5.2 — Reproducibility analysis (R-scores)
+    Table 5.2 — Reproducibility analysis (R-scores + Adj TT column*)
     Coverage diagnostic — flags low-sample (n<3), asymmetric, silently-failed cells
 
   --latex       emit LaTeX tables (ready for thesis inclusion)
   --markdown    emit Markdown tables (for docs / GitHub)
+
+  * Adj TT: intersection-corrected mean travel time, computed over the trip-ID
+    set completed by ALL engines for a given (scenario, mode, seed).  Eliminates
+    the sample bias from SUMO dropping ~5 trips that MATSim always completes.
+    Populated automatically when run-artifact directories exist next to the JSON.
 
 COMPARE MICRO vs MESO:
   python -m evaluation.compare_modes <scenario_path>                  # live run
@@ -766,6 +771,8 @@ TOPICS = {
     "cities": None,  # dynamic -- built at runtime
     "modes": HELP_MODES,
     "adapters": HELP_ADAPTERS,
+    "engines": HELP_ADAPTERS,
+    "scenarios": HELP_GENERATE,
     "metrics": HELP_METRICS,
     "evaluation": HELP_EVALUATION,
     "analysis": HELP_EVALUATION,

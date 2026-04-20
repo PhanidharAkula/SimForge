@@ -1,0 +1,19 @@
+{
+  "scenario_id": "synthetic_nyc_5k_car",
+  "city": "nyc",
+  "city_name": "New York City, NY",
+  "trips_requested": 5000,
+  "trips_generated": 5000,
+  "modes": [
+    "car"
+  ],
+  "start_time_s": 25200,
+  "end_time_s": 32400,
+  "radius_km": 2.0,
+  "seed": 99,
+  "demand_strategy": "gravity",
+  "node_count": 1066,
+  "link_count": 2078,
+  "signal_count": 777,
+  "generation_time_s": 3.3
+}

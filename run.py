@@ -403,6 +403,14 @@ Examples:
                 print(f"✗ ({e})")
         return 0
     
+    # Validate repeats and timeout
+    if args.repeats < 1:
+        print(f"\u274c --repeats must be \u2265 1, got {args.repeats}")
+        return 1
+    if args.timeout < 1:
+        print(f"\u274c --timeout must be \u2265 1 second, got {args.timeout}")
+        return 1
+
     # Calculate total runs
     repeats = args.repeats
     total_runs = len(scenarios) * len(engines) * len(modes) * repeats
