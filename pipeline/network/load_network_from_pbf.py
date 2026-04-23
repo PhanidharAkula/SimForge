@@ -168,13 +168,20 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
     # when long ways (interstates, arterials) pass through the corner.
     # truncate_graph_bbox removes those stub extensions so the simulated
     # footprint matches what Overpass's graph_from_bbox would have returned.
+    #
+    # osmnx 2.x takes bbox=(W,S,E,N); 1.x takes positional north,south,east,west.
+    # Feature-detect rather than pinning a version — Pitzer runs 1.9.x, the
+    # dev box runs 2.x, and either is a valid pipeline for the thesis.
     try:
         G = ox.truncate.truncate_graph_bbox(
             G, bbox=(bbox.west, bbox.south, bbox.east, bbox.north),
             truncate_by_edge=True,
         )
-    except Exception as exc:  # older osmnx versions expose a different signature
-        logger.warning("bbox truncation skipped (%s): using unclipped graph", exc)
+    except TypeError:
+        G = ox.truncate.truncate_graph_bbox(
+            G, bbox.north, bbox.south, bbox.east, bbox.west,
+            truncate_by_edge=True,
+        )
 
     if G.number_of_nodes() == 0:
         raise ValueError(
