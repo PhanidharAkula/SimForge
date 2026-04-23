@@ -34,6 +34,7 @@ from pathlib import Path
 from typing import Optional
 import logging
 
+import numpy as np
 from lxml import etree
 
 from pipeline.demand.parse_model_file import ModelData, Building, JWTRNS_TO_MODE
@@ -341,6 +342,17 @@ def generate_census_demand(
     # Pre-compute coordinate lookup for distance calculations
     dest_coords = {n: network.node_coords[n] for n in dest_nodes}
 
+    # Vectorised arrays for the per-trip dest-scoring hot loop.
+    # node_coords stores (lon, lat); the vectorised haversine below assumes
+    # lon = column 0, lat = column 1.
+    _dest_lons = np.array([dest_coords[n][0] for n in dest_nodes], dtype=np.float64)
+    _dest_lats = np.array([dest_coords[n][1] for n in dest_nodes], dtype=np.float64)
+    _dest_lats_rad = np.radians(_dest_lats)
+    _dest_cos_lat = np.cos(_dest_lats_rad)
+    _dest_weights_arr = np.asarray(dest_weights, dtype=np.float64)
+    _node_idx = {n: i for i, n in enumerate(dest_nodes)}
+    _R_KM = 6371.0
+
     # 5. Build a person pool — census persons for commute-time sampling
     #    Grouped by building for origin-correlated sampling
     bld_persons: dict[int, list] = defaultdict(list)
@@ -410,24 +422,40 @@ def generate_census_demand(
         target_km = person.commute_min * 0.5  # rough: 30 km/h avg → 0.5 km/min
         target_km = max(0.5, min(target_km, 15.0))
 
-        # Score each candidate destination
-        candidate_scores = []
-        for i, dn in enumerate(dest_nodes):
-            if dn == origin:
-                continue
-            dist = _haversine_km(origin_coord, dest_coords[dn])
-            if dist < 0.1:  # skip very close nodes
-                continue
-            # Gaussian fit around target distance
-            dist_score = math.exp(-0.5 * ((dist - target_km) / (target_km * 0.7 + 0.5)) ** 2)
-            score = dest_weights[i] * dist_score
-            candidate_scores.append((dn, score))
+        # Vectorised haversine + Gaussian over all candidate destinations.
+        # Replaces a per-trip Python loop that scaled as O(trips × dest_nodes)
+        # and was the dominant cost at the 100K+ node tier.
+        origin_lon, origin_lat = origin_coord
+        origin_lat_rad = math.radians(origin_lat)
+        cos_orig = math.cos(origin_lat_rad)
+        dlat = _dest_lats_rad - origin_lat_rad
+        dlon = np.radians(_dest_lons - origin_lon)
+        a = (np.sin(dlat * 0.5) ** 2
+             + cos_orig * _dest_cos_lat * np.sin(dlon * 0.5) ** 2)
+        distances = _R_KM * 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
 
-        if not candidate_scores:
+        sigma = target_km * 0.7 + 0.5
+        scores = _dest_weights_arr * np.exp(
+            -0.5 * ((distances - target_km) / sigma) ** 2
+        )
+        # Drop too-close candidates and the origin itself (matches old loop).
+        scores = np.where(distances < 0.1, 0.0, scores)
+        origin_idx = _node_idx.get(origin)
+        if origin_idx is not None:
+            scores[origin_idx] = 0.0
+
+        # Cumulative-sum + binary-search sampling — preserves determinism via
+        # the existing `rng` (single rng.random() call per trip, same as the
+        # old rng.choices(k=1) accounting).
+        csum = np.cumsum(scores)
+        total = csum[-1]
+        if total <= 0.0:
             continue
-
-        dest_names, dest_scores = zip(*candidate_scores)
-        destination = rng.choices(dest_names, weights=dest_scores, k=1)[0]
+        r = rng.random() * total
+        idx = int(np.searchsorted(csum, r, side="right"))
+        if idx >= len(dest_nodes):
+            idx = len(dest_nodes) - 1
+        destination = dest_nodes[idx]
 
         if destination == origin:
             continue
