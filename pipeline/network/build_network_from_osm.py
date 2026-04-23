@@ -163,9 +163,10 @@ def _configure_osmnx_cache():
     # several orders of magnitude (NYC 20km bbox shows up as ~10^14 m² rather
     # than the true ~2×10^9). The default 2.5×10^9 ceiling then triggers tens
     # of thousands of Overpass sub-queries that the public endpoint cannot
-    # service. Lift the ceiling well past the inflated value so a city-scale
-    # fetch runs as a single query.
-    ox.settings.max_query_area_size = 10**15
+    # service. Setting the ceiling above the inflated value (10^15) sends one
+    # query that Overpass refuses as too large; 10^13 splits the same NYC bbox
+    # into ~10 manageable chunks (each Manhattan-sized in real area).
+    ox.settings.max_query_area_size = 10**13
     _OSM_CACHE_CONFIGURED = True
 
 
