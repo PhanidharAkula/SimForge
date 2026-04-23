@@ -450,36 +450,49 @@ def build_network_from_osm(
     bbox: BoundingBox,
     output_path: Path,
     network_type: str = "drive",
-    crs: str = "EPSG:4326"
+    crs: str = "EPSG:4326",
+    *,
+    pbf_path: Optional[Path] = None,
 ) -> dict:
     """
-    Main entry point: download OSM and build canonical network.xml.
-    
+    Main entry point: build canonical network.xml from OSM data.
+
+    If ``pbf_path`` is provided, the network is parsed from a local
+    Geofabrik snapshot (reproducible, offline). Otherwise the function
+    falls back to a live Overpass download, which is kept only for bboxes
+    that no local PBF covers.
+
     Args:
         bbox: Geographic bounding box
         output_path: Path to write network.xml
         network_type: OSM network type
         crs: Coordinate reference system
-    
+        pbf_path: Optional path to a local ``.osm.pbf`` (preferred source).
+
     Returns:
-        Summary dict with node_count, link_count, etc.
+        Summary dict with node_count, link_count, osm_source, etc.
     """
-    # Download
-    G = download_osm_network(bbox, network_type)
-    
+    if pbf_path is not None:
+        from pipeline.network.load_network_from_pbf import load_osm_from_pbf
+        G = load_osm_from_pbf(pbf_path, bbox, network_type)
+        osm_source = {"type": "pbf", "path": str(pbf_path), "name": Path(pbf_path).name}
+    else:
+        G = download_osm_network(bbox, network_type)
+        osm_source = {"type": "overpass", "endpoint": "https://overpass-api.de/api/"}
+
     # Extract
     nodes, links = extract_canonical_network(G, crs)
-    
+
     # Build XML
     root = build_network_xml(nodes, links, crs)
-    
+
     # Write
     output_path.parent.mkdir(parents=True, exist_ok=True)
     tree = etree.ElementTree(root)
     tree.write(str(output_path), pretty_print=True, xml_declaration=True, encoding="UTF-8")
-    
+
     logger.info("Wrote network to %s", output_path)
-    
+
     return {
         "node_count": len(nodes),
         "link_count": len(links),
@@ -490,7 +503,8 @@ def build_network_from_osm(
             "south": bbox.south,
             "east": bbox.east,
             "west": bbox.west
-        }
+        },
+        "osm_source": osm_source,
     }
 
 

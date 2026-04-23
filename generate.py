@@ -68,6 +68,7 @@ CITIES = {
         "lon": -87.6298,
         "default_radius_km": 2.0,
         "model_file": "modelgen/chicago_model.txt",
+        "pbf_file": "osm_data/illinois-2026-04-22.osm.pbf",
         "description": "Chicago urban core — The Loop and surrounding neighbourhoods",
     },
     "nyc": {
@@ -76,6 +77,7 @@ CITIES = {
         "lon": -73.9855,
         "default_radius_km": 2.0,
         "model_file": "modelgen/nyc_model.txt",
+        "pbf_file": "osm_data/new-york-2026-04-22.osm.pbf",
         "description": "Manhattan Midtown and surrounding boroughs",
     },
     "la": {
@@ -84,6 +86,7 @@ CITIES = {
         "lon": -118.2437,
         "default_radius_km": 5.0,
         "model_file": "modelgen/la_model.txt",
+        "pbf_file": "osm_data/california-2026-04-22.osm.pbf",
         "description": "Downtown LA and surrounding urban area",
     },
 }
@@ -384,9 +387,21 @@ def generate_scenario(
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    logger.info("Step 1/4: Downloading OSM network (%.1f km radius) ...", radius_km)
+    # Resolve hash-pinned PBF for this city (required; see osm_data/manifest.json).
+    pbf_rel = city_info.get("pbf_file")
+    pbf_path = project_root / pbf_rel if pbf_rel else None
+    if pbf_path is None or not pbf_path.exists():
+        raise FileNotFoundError(
+            f"OSM PBF required for city '{city}' but not found: {pbf_path}\n"
+            f"  Download it with:  python scripts/download_osm.py\n"
+            f"  Provenance lives in osm_data/manifest.json (URL + SHA256)."
+        )
+
+    logger.info("Step 1/4: Loading OSM network (%.1f km radius) from local PBF ...", radius_km)
     t_step = time.time()
-    net = build_network_from_osm(bbox, out / "network.xml", network_type="drive")
+    net = build_network_from_osm(
+        bbox, out / "network.xml", network_type="drive", pbf_path=pbf_path
+    )
     logger.info("  Network: %d nodes, %d links  (%.1fs)",
                 net["node_count"], net["link_count"], time.time() - t_step)
 
@@ -460,7 +475,8 @@ def generate_scenario(
     logger.info("  Demand (%s): %d trips", strategy, dem["trip_count"])
     logger.info("=" * 65)
 
-    # Save generation metadata
+    # Save generation metadata (includes OSM provenance so any scenario can be
+    # traced back to the exact PBF snapshot it was built from).
     metadata = {
         "scenario_id": scenario_id,
         "city": city,
@@ -477,6 +493,7 @@ def generate_scenario(
         "link_count": net["link_count"],
         "signal_count": sig["signal_count"],
         "generation_time_s": elapsed,
+        "osm_source": net.get("osm_source"),
     }
     with open(out / "generation_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
