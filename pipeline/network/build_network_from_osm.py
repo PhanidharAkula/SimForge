@@ -159,10 +159,13 @@ def _configure_osmnx_cache():
     ox.settings.cache_folder = str(cache_dir)
     # Give one clear, slow-path message rather than osmnx's multi-line logs.
     ox.settings.log_console = False
-    # City-scale bboxes (e.g. NYC 20km radius ≈ 1,950 km²) blow past osmnx's
-    # 50 km² default and get split into tens of thousands of Overpass sub-queries,
-    # which the public endpoint will not service in any reasonable time.
-    ox.settings.max_query_area_size = 2_500_000_000
+    # osmnx's projected-area calculation overestimates city-scale bboxes by
+    # several orders of magnitude (NYC 20km bbox shows up as ~10^14 m² rather
+    # than the true ~2×10^9). The default 2.5×10^9 ceiling then triggers tens
+    # of thousands of Overpass sub-queries that the public endpoint cannot
+    # service. Lift the ceiling well past the inflated value so a city-scale
+    # fetch runs as a single query.
+    ox.settings.max_query_area_size = 10**15
     _OSM_CACHE_CONFIGURED = True
 
 
