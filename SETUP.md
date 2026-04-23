@@ -69,9 +69,9 @@ Then download the MATSim JAR (gitignored under `lib/`):
 
 ```bash
 mkdir -p lib
-curl -L -o matsim-15.0.zip https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0.zip
-unzip matsim-15.0.zip -d lib/
-rm matsim-15.0.zip
+curl -L -o matsim-15.0-release.zip https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip
+unzip matsim-15.0-release.zip -d lib/       # extracts to lib/matsim-15.0/
+rm matsim-15.0-release.zip
 ```
 
 ### Verify Installation

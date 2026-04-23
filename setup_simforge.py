@@ -26,7 +26,7 @@ REQUIREMENTS = PROJECT_ROOT / "requirements.txt"
 REQUIREMENTS_DEV = PROJECT_ROOT / "requirements-dev.txt"
 MATSIM_DIR = PROJECT_ROOT / "lib" / "matsim-15.0"
 MATSIM_JAR = MATSIM_DIR / "matsim-15.0.jar"
-MATSIM_ZIP_URL = "https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0.zip"
+MATSIM_ZIP_URL = "https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip"
 MIN_PYTHON = (3, 10)
 MIN_JAVA = 17
 

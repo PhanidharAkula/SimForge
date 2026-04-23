@@ -98,7 +98,7 @@ jobs:
         run: |
           mkdir -p lib
           curl -L -o matsim.zip \
-            https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0.zip
+            https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip
           unzip -q matsim.zip -d lib/
           rm matsim.zip
 
