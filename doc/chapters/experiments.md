@@ -170,18 +170,19 @@ Total wall-clock on Apple M4 Pro: ~52 s. Every cell completes successfully and e
 
 ### 4.3.2 HPC Environment (OSC Pitzer)
 
-Used for the larger tiers (50K – 500K) that exceed the arm64 `netconvert` threshold and benefit from QarSUMO's GPU path.
+Used for the larger tiers (50K – 500K) that exceed the arm64 `netconvert` threshold and benefit from QarSUMO's GPU path. All three engines (SUMO, MATSim, QarSUMO) run end-to-end on Pitzer; see `doc/SCENARIO_GENERATION.md` §9 for the operational guide.
 
-| Component       | Specification                                   |
-| --------------- | ----------------------------------------------- |
-| Cluster         | Ohio Supercomputer Center — Pitzer              |
-| CPU per node    | Intel Xeon (40 – 48 cores)                      |
-| RAM per node    | 178 GB – 744 GB                                 |
-| GPU per node    | NVIDIA V100 (2 – 4 per GPU node)                |
-| Storage         | Home: 500 GB, Project (PMIU0110): 500 GB        |
-| Max wall time   | 7 days                                          |
-| Interconnect    | InfiniBand HDR                                  |
-| Internet access | Available on compute nodes (critical for OSM)   |
+| Component       | Specification                                                    |
+| --------------- | ---------------------------------------------------------------- |
+| Cluster         | Ohio Supercomputer Center — Pitzer (RHEL 9, SLURM)               |
+| CPU per node    | Intel Xeon Skylake (40 cores) or Cascade Lake (48 cores), 192 GB |
+| Large-mem nodes | Up to 3 TB RAM (`hugemem` partition)                             |
+| GPU             | NVIDIA V100 (16 GB or 32 GB), 2 or 4 per GPU node                |
+| Partitions used | `cpu` (gen + SUMO + MATSim), `gpu` / `gpu-quad` (QarSUMO)        |
+| Max wall time   | 7 days (`cpu`, `gpu`); 14 days (`longcpu`, restricted)            |
+| Storage         | Home 500 GB, Project (`PMIU0110`) 500 GB, scratch per-job        |
+| Project account | `--account=PMIU0110`                                              |
+| Internet access | Outbound via NAT on login + compute nodes (Overpass, PyPI, GitHub) |
 
 ### 4.3.3 Software Versions
 
@@ -307,7 +308,7 @@ python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress
 | Random seed affecting results | 3 runs per condition with different seeds; report mean ± std    |
 | JVM warm-up affecting MATSim  | All runs include the same JVM start cost; comparison is fair-relative |
 | OS scheduling noise           | Use `perf_counter()`; HPC runs on dedicated nodes               |
-| Adapter conversion errors     | 284 unit tests including byte-identical determinism tests       |
+| Adapter conversion errors     | 293 unit tests including byte-identical determinism tests       |
 | Scenario validation failures  | Pre-flight validation check before every run                    |
 | Trip-count asymmetry across engines | SCC filter at generator + adapter; `feasibility_report.json` audit trail |
 
@@ -343,4 +344,4 @@ For any researcher to reproduce these experiments:
 - [ ] Run the canonical benchmark: `python -m execution.run_benchmark runspecs/stress_test.yaml`.
 - [ ] Analyse: `python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown`.
 - [ ] Render figures: `python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json`.
-- [ ] Verify: 284/284 tests pass (`python -m pytest tests/ -q`).
+- [ ] Verify: 293/293 tests pass (`python -m pytest tests/ -q`).

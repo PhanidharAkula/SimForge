@@ -77,7 +77,7 @@ rm matsim-15.0.zip
 ### Verify Installation
 
 ```bash
-python -m pytest tests/ -q                              # 284 tests should pass
+python -m pytest tests/ -q                              # 293 tests should pass
 python -c "from adapters.sumo.sumo_adapter import SUMOAdapter; print('SUMO: OK')"
 python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MATSim:', find_matsim_jar())"
 ```
@@ -239,7 +239,7 @@ Falls back to CPU SUMO automatically when no GPU is available.
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
 | `scripts/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the 284-test suite                     |
+| `python -m pytest tests/ -v`                           | Run the 293-test suite                     |
 
 ---
 
@@ -267,7 +267,7 @@ SimForge/
 ├── scripts/                # Per-tier generation scripts + clean.sh
 ├── runspecs/               # Benchmark YAML configurations
 ├── scenarios/              # Bundled canonical scenarios
-├── tests/                  # 284 unit & integration tests
+├── tests/                  # 293 unit & integration tests
 ├── run.py                  # Convenience CLI
 ├── generate.py             # Scenario generator entry point
 ├── setup_simforge.py       # One-command bootstrap

@@ -13,7 +13,7 @@ git clone <repo-url>
 cd SimForge
 python setup_simforge.py        # creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
-python -m pytest tests/ -q      # 284 tests should pass
+python -m pytest tests/ -q      # 293 tests should pass
 ```
 
 If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install path.
@@ -34,7 +34,7 @@ git checkout -b your-feature-branch
 
 ### 2. Write the test first
 
-The 284-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The 293-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |
@@ -51,7 +51,7 @@ The 284-test suite is the only thing standing between a "small fix" and a silent
 | `test_pipeline_e2e.py`                 | 20    | OSM fetch → bundle → adapter → metrics                       |
 | `test_scc.py`                          | 16    | Iterative Kosaraju + bundled-network coverage                |
 | `test_feasibility.py`                  | 16    | Shared SCC-based cross-engine trip filter                    |
-| `test_analyze_benchmark.py`            | 25    | Mode-aware grouping + table/LaTeX/Markdown renderers         |
+| `test_analyze_benchmark.py`            | 34    | Mode-aware grouping, renderers (incl. Adj TT), intersection helpers |
 | `test_osm_fetch.py`                    | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pinning  |
 | `test_demand_generators.py`            | 21    | Uniform / gravity / peak-hour generators, SCC-restricted OD |
 | `test_engine_smoke.py`                 | 4     | Real-binary SUMO/MATSim/QarSUMO smoke (skip if missing)      |

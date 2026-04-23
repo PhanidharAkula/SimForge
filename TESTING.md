@@ -1,6 +1,6 @@
 # SimForge Test Suite
 
-**284 tests** across **17 test files** covering adapters, metrics, validation,
+**293 tests** across **17 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, OSM network fetching
 (mocked), demand generators, and real-binary engine smoke tests.
@@ -256,7 +256,7 @@ scenarios are well below the threshold and never skip.
 | **OSM fetch**          | **20**  | Mocked Overpass, bbox validation, cache pin (NEW)           |
 | **Demand generators**  | **21**  | Synthetic generators + SCC restriction + seed (NEW)         |
 | **Engine smoke**       | **4**   | Real-binary SUMO/MATSim smoke, skip-gracefully (NEW)        |
-| **Total**              | **284** | **22 s** full suite on M-series; **12 s** with `-m "not slow"` |
+| **Total**              | **293** | **22 s** full suite on M-series; **12 s** with `-m "not slow"` |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
 **76.3 %** (pytest-cov + `branch = true`).  The CI threshold is **70 %**

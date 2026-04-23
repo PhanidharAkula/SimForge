@@ -234,7 +234,7 @@ python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress
 # 5. Render Figures 5.1 – 5.9 (PNG + PDF) into doc/figures/
 python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json --output doc/figures
 
-# 6. Verify the framework: 284/284 tests pass
+# 6. Verify the framework: 293/293 tests pass
 python -m pytest tests/ -q
 ```
 

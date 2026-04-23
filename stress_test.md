@@ -1,17 +1,18 @@
 # SimForge Stress Test Report
 
-**Date:** 2026-04-19
+**Date:** 2026-04-19 (initial three fixes), 2026-04-20 (post-fairness-audit additions)
 **Branch:** Version_2
 **Hardware:** Apple M4 Pro MacBook Pro (arm64), macOS 25.4.0
-**Constraints:** ≤ 5,000 trips per scenario; read-only first pass, then three targeted fixes (2026-04-19).
+**Constraints:** ≤ 5,000 trips per scenario; read-only first pass, then three targeted fixes (2026-04-19), then two further fairness improvements (2026-04-20).
 **Mandate (verbatim):** *"Stress test the entire application end-to-end, in-depth, and thoroughly. Test every component, file, and setting, from top to bottom. … Limit the scenarios to 5,000 trips. Also, don't make any changes or edits to the application. Test it as it is now, like a new user, to ensure it works without errors. Log and update everything into a stress_test.md file with a scoring system from 0 to 100 for each individual thing/component and the overall score."*
-**Follow-up:** *"fix those 3 gaps, and make it score 100, dont test the whole application again, only the changed/appropriate once."*
+**Follow-up 1:** *"fix those 3 gaps, and make it score 100, dont test the whole application again, only the changed/appropriate once."*
+**Follow-up 2 (fairness audit):** *"is it now the fair and apple-to-apple comparision, or is there any imbalance, do a final check."* → fairness scored **93/100**; user requested fixes to reach thesis standard.
 
 ---
 
 ## Overall Score: **100 / 100**
 
-Initial audit scored **97/100** with three small gaps (SUMO CLI parity, `generate.py` default radius, dev-deps bootstrap). All three have been fixed in this same session; the full test suite still passes **284/284 in 21.6 s**, and the bundled `chicago_1k_car` scenario now reproduces byte-for-byte from plain `generate.py --city chicago --trips 1000`.
+Initial audit scored **97/100** with three small gaps (SUMO CLI parity, `generate.py` default radius, dev-deps bootstrap). All three were fixed (2026-04-19). A subsequent fairness audit scored **93/100** and surfaced two more improvements (intersection-corrected TT, QarSUMO CPU-fallback disclosure) — both fixed (2026-04-20). The full test suite now passes **293/293 in 22.8 s**, and the bundled `chicago_1k_car` scenario reproduces byte-for-byte from plain `generate.py --city chicago --trips 1000`.
 
 ---
 
@@ -20,19 +21,48 @@ Initial audit scored **97/100** with three small gaps (SUMO CLI parity, `generat
 | # | Component | Score | Evidence |
 | :- | :-------- | ----: | :------- |
 | 1 | Environment / toolchain | **100** | Python 3.13.2, SUMO 1.20.0, Java 17.0.13 (Temurin), MATSim 15.0 JAR all present and on PATH |
-| 2 | Help system (`help.py`) | **100** | 20 topic aliases + default + unknown-topic fallback all render cleanly; SUMO `--ignore-route-errors` now documented in `HELP_ADAPTERS` and troubleshooting item 13 |
-| 3 | Scenario generation (`generate.py`) | **100** | Defaults now reproduce bundled scenarios byte-for-byte (see §3 below) |
+| 2 | Help system (`help.py`) | **100** | 20 topic aliases + default + unknown-topic fallback all render cleanly; SUMO `--ignore-route-errors` documented in `HELP_ADAPTERS` and troubleshooting item 13; `HELP_EVALUATION` mentions Adj TT |
+| 3 | Scenario generation (`generate.py`) | **100** | Defaults reproduce bundled scenarios byte-for-byte (see §3 below) |
 | 4 | Validators (`validate_bundle`) | **100** | Passes all four scenarios; correctly rejects deliberately corrupted demand.csv |
 | 5 | SUMO adapter | **100** | `--run` + `--mesoscopic` flags added, match MATSim/QarSUMO API; `--ignore-route-errors` passed automatically (see §5) |
-| 6 | QarSUMO adapter | **100** | `--run` works; 0.97 s CPU fallback; tripinfo.xml emitted |
+| 6 | QarSUMO adapter | **100** | `--run` works; 0.97 s CPU fallback; tripinfo.xml emitted; CPU-fallback now disclosed in plots + thesis chapter |
 | 7 | MATSim adapter | **100** | `--run` works; 9.46 s; mean TT 195.6 s matches thesis exactly |
 | 8 | Single-run orchestrator (`run.py`) | **100** | `--help`, `--list`, `--validate-only`, single-repeat run all succeed |
 | 9 | Benchmark harness | **100** | 22/22 stress matrix runs in 53 s; all R ≥ 0.9964 |
-| 10 | Evaluation tools | **100** | `analyze_benchmark`, `compare_modes`, `generate_plots` reproduce thesis Tables 5.1 + 5.2 and Figures 5.1–5.9 |
-| 11 | Test suite | **100** | 284 passed in 21.56 s after fixes; fast tier unaffected; coverage 76.3 % |
+| 10 | Evaluation tools | **100** | `analyze_benchmark` reproduces Tables 5.1+5.2 with new Adj TT column; `compare_modes` and `generate_plots` reproduce thesis figures with QarSUMO CPU-fallback footnotes |
+| 11 | Test suite | **100** | 293 passed in 22.79 s after all fixes; fast tier unaffected; coverage 76.3 % |
 | 12 | CI workflow | **100** | `.github/workflows/test.yml` parses; 2 jobs (fast matrix + slow) |
-| 13 | Dev-deps bootstrap | **100** | `setup_simforge.py` now installs `requirements-dev.txt` automatically (see §13) |
-| 14 | Documentation audit | **100** | `284 tests` consistent across README / SETUP / TESTING / CONTRIBUTING / CHANGELOG / thesis chapters; SETUP.md + TESTING.md updated for auto-installed dev deps |
+| 13 | Dev-deps bootstrap | **100** | `setup_simforge.py` installs `requirements-dev.txt` automatically (see §13) |
+| 14 | Documentation audit | **100** | `293 tests` consistent across README / SETUP / TESTING / CONTRIBUTING / CHANGELOG / thesis chapters; SETUP.md + TESTING.md updated for auto-installed dev deps; results.md Table 5.2 updated with Adj TT column |
+
+---
+
+## Post-fairness-audit fixes (2026-04-20)
+
+Following an apples-to-apples fairness review that scored **93/100**, two additional improvements were applied to reach thesis standard:
+
+### Fix 4 — Intersection-corrected travel-time column (Adj TT)
+
+`evaluation/analyze_benchmark.py` gained three private helpers (`_parse_sumo_trip_durations`, `_parse_matsim_trip_durations`, `_find_run_artifacts`) and one new public function `compute_intersection_means`. When run-artifact directories exist alongside the benchmark JSON, `main()` auto-computes the per-engine mean TT over the *trip-ID intersection* across all engines for each `(scenario, mode, seed)`, eliminating the sample bias that arises because SUMO drops ~5 trips that MATSim always completes.
+
+Result: an **Adj TT (s)** column is appended to Table 5.2 in `print_reproducibility_table`. Finding: for meso engines the correction is small (MATSim chicago: 195.6 → 192.9 s, −1.4 %), confirming the raw MATSim/SUMO TT divergence reflects genuine mobsim differences, not sample composition.
+
+`doc/chapters/results.md` Table 5.2 was updated with the Adj TT column values; `doc/RESULTS_GUIDE.md` §4.1 Table 5.2 row and `help.py HELP_EVALUATION` were updated accordingly.
+
+### Fix 5 — QarSUMO CPU-fallback disclosure in plots + thesis
+
+`evaluation/generate_plots.py` Figs 5.1 and 5.9 now carry a footnote disclosing that QarSUMO falls back to SUMO on non-CUDA hosts and produces bit-identical results on the M4 Pro test machine. Matching `> **Note:**` blockquotes added to `doc/chapters/results.md` §5.1 (Fig 5.1) and §5.3 (Fig 5.9). Plots regenerated and committed to `doc/figures/`.
+
+### Test additions
+
+`tests/test_analyze_benchmark.py` grew from 25 to 34 tests with three new test classes — `TestParseSumoTripDurations` (3 tests), `TestParseMATSimTripDurations` (2 tests), `TestComputeIntersectionMeans` (2 tests) — plus two new `TestTableRenderers` cases covering the `intersection_means` parameter.
+
+### Regression check (post-fairness fixes)
+
+```
+$ python -m pytest
+============================= 293 passed in 22.79s =============================
+```
 
 ---
 
@@ -101,17 +131,21 @@ Successfully installed mutmut-2.5.1 pytest-xdist-3.8.0 ...
 
 ## Regression check
 
-After all three fixes:
+After the initial three fixes (2026-04-19), before the post-fairness additions:
 ```
 $ python -m pytest
 ============================= 284 passed in 21.56s =============================
+```
+After all five fixes (2026-04-20):
+```
+$ python -m pytest
+============================= 293 passed in 22.79s =============================
 ```
 And the targeted suite (SUMO adapter + determinism + engine smoke):
 ```
 $ python -m pytest tests/test_sumo_adapter.py tests/test_adapter_determinism.py tests/test_engine_smoke.py
 ============================= 16 passed in 18.63s =============================
 ```
-No test changes were required.
 
 ---
 
@@ -128,12 +162,12 @@ No test changes were required.
 
 ### 2. Help system — 100 / 100
 
-`python help.py <topic>` renders successfully for all 20 aliases and returns exit code 0: `overview, setup, install, bootstrap, generate, run, scripts, presets, cities, modes, adapters, metrics, evaluation, analysis, plots, schema, benchmark, tests, testing, troubleshooting`. After the fixes, the new SUMO-routing guidance is also rendered correctly.
+`python help.py <topic>` renders successfully for all 20 aliases and returns exit code 0: `overview, setup, install, bootstrap, generate, run, scripts, presets, cities, modes, adapters, metrics, evaluation, analysis, plots, schema, benchmark, tests, testing, troubleshooting`. After the fixes, the new SUMO-routing guidance and Adj TT mention render correctly.
 
 ### 3. Scenario generation — 100 / 100
 
 - `generate.py --help` and `--list` work.
-- `generate.py --city chicago --trips 1000` now reproduces the bundled `chicago_1k_car` scenario byte-for-byte (demand.csv and signals.xml SHA-256 identical).
+- `generate.py --city chicago --trips 1000` reproduces the bundled `chicago_1k_car` scenario byte-for-byte (demand.csv and signals.xml SHA-256 identical).
 - `generate.py --city nyc --trips 5000 --radius 2.5` (5K ceiling): 1,376 nodes, 2,740 links, 42.3 s. Validator: **VALID**.
 
 ### 4. Validators — 100 / 100
@@ -152,6 +186,7 @@ No test changes were required.
 
 - `--run` succeeds in 0.97 s on the toy scenario (CPU fallback, as expected on Apple Silicon without CUDA).
 - Emits `qarsumo_toy.sumocfg` + `tripinfo.xml`.
+- CPU-fallback now disclosed in Figs 5.1 and 5.9 footnotes and `doc/chapters/results.md` blockquotes.
 
 ### 7. MATSim adapter — 100 / 100
 
@@ -171,14 +206,14 @@ No test changes were required.
 
 ### 10. Evaluation tools — 100 / 100
 
-- `analyze_benchmark --latex --markdown` → Tables 5.1 and 5.2 in both formats. Values reproduce: **195.6 / 203.5 / 287.0 s** mean TT for MATSim / SUMO-meso / SUMO-micro on chicago.
+- `analyze_benchmark --latex --markdown` → Tables 5.1 and 5.2 in both formats with new **Adj TT** column when run-artifact dirs are present. Values reproduce: **195.6 / 203.5 / 287.0 s** mean TT for MATSim / SUMO-meso / SUMO-micro on chicago.
 - `compare_modes --from-benchmark` → **4.2×** and **4.5×** meso/micro speedups (matches `doc/chapters/results.md`).
-- `generate_plots` → 9 PNG + 9 PDF files in `doc/figures/` covering Figures 5.1–5.9.
+- `generate_plots` → 9 PNG + 9 PDF files in `doc/figures/` covering Figures 5.1–5.9 with QarSUMO CPU-fallback footnotes on Figs 5.1 and 5.9.
 
 ### 11. Test suite — 100 / 100
 
-- `pytest` → **284 passed in 21.56 s** (after fixes, down from 22.48 s).
-- `pytest -m "not slow"` → **277 passed, 7 deselected in 7.02 s**.
+- `pytest` → **293 passed in 22.79 s** (initial 284 after the first three gap fixes; +9 new tests for post-fairness additions).
+- `pytest -m "not slow"` → **286 passed, 7 deselected in 7.10 s**.
 - Marker discipline honored: `slow` (7), `determinism` (8), `integration` (20), plus `requires_sumo`, `requires_java`, `requires_gpu`.
 - Coverage: **76.3 %** (floor is 70 %).
 
@@ -197,8 +232,9 @@ No test changes were required.
 
 ### 14. Documentation audit — 100 / 100
 
-- `284 tests` consistent across README, SETUP, TESTING, CONTRIBUTING, CHANGELOG, `doc/chapters/methods.md`, `doc/chapters/experiments.md`, `doc/chapters/results.md`.
-- `CHANGELOG.md` correctly retains the historical `184` reference in the earlier log entry.
+- `293 tests` consistent across README, SETUP, TESTING, CONTRIBUTING, CHANGELOG, `doc/chapters/methods.md`, `doc/chapters/experiments.md`, `doc/chapters/results.md`.
+- `CHANGELOG.md` correctly retains the historical `184` reference in the earlier log entry, and the "test count drift fix → 284" historical entry.
 - Every `doc/*.md` file referenced by READMEs exists on disk.
 - `pyproject.toml` markers line up with what `TESTING.md` documents.
 - All 9 figures (`fig_5_1…fig_5_9`) are present under `doc/figures/` in both PNG and PDF.
+- `doc/chapters/results.md` Table 5.2 includes the **Adj TT (s)** column with intersection-corrected values; §5.1 and §5.3 carry QarSUMO CPU-fallback `> **Note:**` blockquotes.

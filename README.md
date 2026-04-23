@@ -26,7 +26,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | MATSim Adapter               | ✅ Complete (single-iteration meso) |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (9 thesis figures)      |
-| Test Suite                   | ✅ 284 tests passing                |
+| Test Suite                   | ✅ 293 tests passing                |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 | Bundled scenario: `nyc_1k_car`     | ✅ Generated & validated      |
 
@@ -128,7 +128,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # OSM Overpass HTTP cache (gitignored)
-├── tests/                  # pytest test suite (284 tests)
+├── tests/                  # pytest test suite (293 tests)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -170,7 +170,7 @@ SimForge/
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all 284 tests
+pytest tests/ -v          # Run all 293 tests
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 

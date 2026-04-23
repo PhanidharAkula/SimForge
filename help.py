@@ -483,7 +483,7 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships 284 tests across 17 files. The fast tier (~12 s) is
+SimForge ships 293 tests across 17 files. The fast tier (~12 s) is
 what developers run locally; the full suite (~22 s on M-series) adds
 adapter sweeps and real-binary smoke tests.
 
@@ -518,7 +518,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m "integration and not slow"
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (17 files / 284 tests):
+TEST FILES (17 files / 293 tests):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]

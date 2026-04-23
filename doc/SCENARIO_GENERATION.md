@@ -25,7 +25,7 @@
 6. [What Makes It Realistic (and What Doesn't)](#6-what-makes-it-realistic-and-what-doesnt)
 7. [Data Lineage Diagram](#7-data-lineage-diagram)
 8. [Output Files Explained](#8-output-files-explained)
-9. [Cluster Comparison — RedHawk vs Pitzer](#9-cluster-comparison--redhawk-vs-pitzer)
+9. [Running on OSC Pitzer](#9-running-on-osc-pitzer)
 10. [Workspace Alternatives on Pitzer](#10-workspace-alternatives-on-pitzer)
 11. [Glossary](#11-glossary)
 
@@ -754,58 +754,79 @@ t2,n399,n603,25200,car
 
 ---
 
-## 9. Cluster Comparison — RedHawk vs Pitzer
+## 9. Running on OSC Pitzer
 
-### Hardware & Resources
+OSC Pitzer is the supported HPC target for SimForge. Everything in the canonical pipeline — scenario generation, all three engines (SUMO, MATSim, QarSUMO), evaluation, and plotting — runs end-to-end on Pitzer.
 
-| Feature             | OSC Pitzer                         | Miami RedHawk                         |
-| ------------------- | ---------------------------------- | ------------------------------------- |
-| **Operator**        | Ohio Supercomputer Center (state)  | Miami University (campus)             |
-| **CPU**             | Intel Xeon (40-48 cores/node)      | Intel Xeon Gold 6126 (24+ cores/node) |
-| **RAM**             | 178 GB – 744 GB per node           | 93 GB – 708 GB per node               |
-| **GPU**             | NVIDIA V100 (2-4/node, GRES works) | CUDA-capable (GRES not configured)    |
-| **Max wall time**   | 7 days                             | 20 days (batch), 3 days (gpu/bigmem)  |
-| **Partitions**      | batch\*, cpu, gpu, gpu-quad, debug | batch, gpu, bigmem                    |
-| **Storage**         | Home: 500 GB, Project: 500 GB      | Home directory only                   |
-| **Project Account** | PMIU0110                           | N/A (user-level)                      |
+### 9.1 Hardware
 
-### Software & Modules
+| Feature             | Specification                                                              |
+| ------------------- | -------------------------------------------------------------------------- |
+| **Operator**        | Ohio Supercomputer Center (state-funded)                                   |
+| **Login**           | `pitzer.osc.edu` (4 login nodes)                                           |
+| **OS**              | RHEL 9                                                                     |
+| **Standard CPU**    | 564 nodes — Skylake (40 cores, 192 GB) or Cascade Lake (48 cores, 192 GB)  |
+| **Large memory**    | 12 nodes (~744 GB) + 4 huge-mem nodes (3 TB, 80 cores)                     |
+| **GPU**             | 74 dual-V100 nodes (16 GB or 32 GB) + 4 quad-V100 nodes (32 GB)            |
+| **Total**           | 658 nodes / 29,664 cores                                                   |
+| **Scheduler**       | SLURM                                                                      |
+| **Storage**         | Home 500 GB, Project (`PMIU0110`) 500 GB, scratch (`/fs/scratch`) per-job  |
+| **Project Account** | `PMIU0110` (passed to SLURM via `--account=PMIU0110`)                      |
 
-| Software    | OSC Pitzer                                            | Miami RedHawk                         |
-| ----------- | ----------------------------------------------------- | ------------------------------------- |
-| **Python**  | `python/3.10`, `python/3.12`                          | `anaconda-python3.10` (Python 3.10.9) |
-| **SUMO**    | Not a module — install via `pip install eclipse-sumo` | Not available                         |
-| **Java**    | Not available (no MATSim)                             | Not checked                           |
-| **CUDA**    | `cuda/11.8.0`, `cuda/12.4.1`, `cuda/12.6.2`           | Available                             |
-| **QarSUMO** | Not available                                         | Not available                         |
-| **GCC**     | Modern (build from source works)                      | GCC 4.8.5 (can't build pandas 2.x)    |
+### 9.2 Internet access
 
-### SimForge Capabilities
+**Outbound HTTPS works on both login and compute nodes**, routed through OSC's NAT (`192.148.249.248–251`). This means:
 
-| Capability                                       | OSC Pitzer | Miami RedHawk | Notes                                                      |
-| ------------------------------------------------ | ---------- | ------------- | ---------------------------------------------------------- |
-| **Scenario generation (small, no model file)**   | YES        | YES           | Synthetic gravity model, no internet needed                |
-| **Scenario generation (large, with model file)** | YES        | PARTIAL       | RedHawk compute nodes block internet → OSM download hangs  |
-| **Scenario generation on login node**            | YES        | YES           | Both allow light interactive work                          |
-| **OSM network download in batch jobs**           | YES        | NO            | RedHawk blocks internet on compute nodes; Pitzer allows it |
-| **SUMO simulation (meso)**                       | YES (pip)  | NO            | eclipse-sumo installable via pip on Pitzer                 |
-| **SUMO simulation (micro)**                      | YES (pip)  | NO            | Same — eclipse-sumo includes sumo binary                   |
-| **MATSim simulation**                            | NO         | NO            | No Java on either cluster                                  |
-| **QarSUMO (GPU-accelerated)**                    | NO         | NO            | Custom binary not available on either                      |
-| **Evaluation / analysis**                        | YES        | YES           | Pure Python, no external deps                              |
-| **Plot generation**                              | YES        | YES           | matplotlib in venv                                         |
-| **Transfer model files**                         | YES (scp)  | YES (scp)     | Both accept scp transfers                                  |
-| **Full benchmark pipeline**                      | YES        | NO (no SUMO)  | Pitzer can run end-to-end                                  |
+- `pip install eclipse-sumo` works in batch jobs ✓
+- OSM/Overpass downloads work on compute nodes ✓
+- `git clone`, `wget`, package fetches all succeed ✓
+- **Inbound** is blocked — you can't expose a service on a compute node
 
-### Recommendation
+No SimForge endpoint (Overpass, GitHub, PyPI, OSM tile servers) is on OSC's blocklist. If something is ever blocked, email `oschelp@osc.edu`.
 
-**Use OSC Pitzer for everything.** RedHawk is limited by:
+### 9.3 SLURM partitions
 
-1. No internet on compute nodes (can't download OSM in batch jobs)
-2. No SUMO module or pip-installable SUMO (old GCC)
-3. Old GCC prevents building many modern Python packages
+| Partition          | Max walltime | Max nodes | Use for                                          |
+| ------------------ | ------------ | --------- | ------------------------------------------------ |
+| `cpu`              | 7 days       | 20        | Standard 40-core jobs (scenario generation)      |
+| `cpu-exp`          | 7 days       | 36        | Standard 48-core Cascade Lake jobs               |
+| `gpu`              | 7 days       | 4         | Dual V100 16 GB (QarSUMO build + run)            |
+| `gpu-exp`          | 7 days       | 6         | Dual V100 32 GB (larger QarSUMO scenarios)       |
+| `gpu-quad`         | 7 days       | 1         | Quad V100 32 GB (heaviest QarSUMO runs)          |
+| `debug-cpu` / `gpudebug` | 1 hour | 2         | Quick smoke tests before queuing the real run    |
+| `hugemem`          | 1 day        | 1         | 3 TB RAM (only if a 500K bundle exceeds 192 GB)  |
+| `longcpu`          | 14 days      | 1         | Restricted access (request via OSC)              |
 
-Pitzer has internet on compute nodes, modern Python 3.12, and eclipse-sumo installs cleanly.
+Submit-queue limit: 1000 jobs per user. Plenty of headroom for SLURM array jobs across seeds and tiers.
+
+### 9.4 Software environment
+
+Confirmed via OSC's documented software list (RHEL 9 rebuild, current as of 2026-04):
+
+| Software   | Available on Pitzer                  | How to use                                       |
+| ---------- | ------------------------------------ | ------------------------------------------------ |
+| **Python** | Multiple 3.x versions as modules     | `module load python/3.12`                        |
+| **GCC**    | 11+ available                        | `module load gcc` (default is modern enough)     |
+| **CUDA**   | Multiple versions as modules         | `module load cuda` (use `module spider cuda`)    |
+| **OpenJDK**| Yes — module renamed from `java`     | `module load openjdk` → MATSim runs              |
+| **SUMO**   | Not a module                         | `pip install eclipse-sumo` inside your venv      |
+| **QarSUMO**| Not prebuilt — V100 + CUDA available | Build from source on a `gpu` partition node      |
+
+`module spider <name>` is the authoritative check on a logged-in shell. Module names and versions get rebumped after rebuilds.
+
+### 9.5 What runs end-to-end on Pitzer
+
+| SimForge component                     | Status on Pitzer | How                                                              |
+| -------------------------------------- | ---------------- | ---------------------------------------------------------------- |
+| Scenario generation (synthetic)        | Works            | Pure Python, no external network needed                          |
+| Scenario generation (with model file)  | Works            | OSM/Overpass reachable from compute nodes                        |
+| SUMO meso + micro                      | Works            | `pip install eclipse-sumo` covers both binaries                  |
+| MATSim                                 | Works            | `module load openjdk`, then `lib/matsim-15.0/matsim-15.0.jar`    |
+| QarSUMO (real GPU)                     | Works            | Build on `gpu` partition; binary at `~/qarsumo/build/qarsumo`    |
+| Evaluation + plot rendering            | Works            | Pure Python (matplotlib in venv)                                 |
+| Bundle validation + hashing            | Works            | Pure Python                                                      |
+
+The QarSUMO row is the meaningful upgrade vs. running locally on Apple Silicon: on Pitzer it executes on a real V100 instead of falling back to bit-identical SUMO meso, so the GPU speedup story can be measured rather than asserted.
 
 ---
 
@@ -817,7 +838,7 @@ You don't need to clone into the project directory (`/fs/ess/PMIU0110/`). Here a
 
 ```bash
 # Clone to your home directory — no advisor permission needed
-git clone -b modelgen https://github.com/PhanidharAkula/SimForge.git ~/SimForge
+git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git ~/SimForge
 ```
 
 - **Path**: `/users/PMIU0110/phanidharakula/SimForge/` (this is `~/SimForge`)
@@ -831,7 +852,7 @@ git clone -b modelgen https://github.com/PhanidharAkula/SimForge.git ~/SimForge
 # OSC provides fast scratch space
 # Check: echo $TMPDIR (set per-job) or use /fs/scratch/PMIU0110/
 mkdir -p /fs/scratch/PMIU0110/phanidharakula/SimForge
-git clone -b modelgen https://github.com/PhanidharAkula/SimForge.git /fs/scratch/PMIU0110/phanidharakula/SimForge
+git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git /fs/scratch/PMIU0110/phanidharakula/SimForge
 ```
 
 - **Pros**: Fast I/O, good for large generation jobs
@@ -842,7 +863,7 @@ git clone -b modelgen https://github.com/PhanidharAkula/SimForge.git /fs/scratch
 ```bash
 # If advisor approves — good for sharing results with the group
 mkdir -p /fs/ess/PMIU0110/SimForge
-git clone -b modelgen https://github.com/PhanidharAkula/SimForge.git /fs/ess/PMIU0110/SimForge
+git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git /fs/ess/PMIU0110/SimForge
 ```
 
 - **Path**: `/fs/ess/PMIU0110/SimForge/`
