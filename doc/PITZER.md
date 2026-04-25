@@ -289,58 +289,43 @@ python -m execution.run_benchmark runspecs/stress_test.yaml
 ## 7. SLURM batch jobs
 
 The generation tiers above 10K are submitted as batch jobs (they can take
-minutes to hours). A typical `sbatch` script lives under `jobs/` (gitignored
-— keep per-user scripts out of the repo).
+minutes to hours). Canonical sbatch templates are tracked under
+`cluster/jobs/`; user-specific copies you tweak (different `--account`,
+different `--mail-user`) belong in `jobs/` at the repo root, which is
+gitignored.
 
 ### Per-tier template
 
-Save as `~/jobs/gen_nyc_500k.sbatch`:
+The recorded thesis run used [`cluster/jobs/gen_nyc_500k.sbatch`](../cluster/jobs/gen_nyc_500k.sbatch).
+Submit from the repo root:
 
 ```bash
-#!/bin/bash
-#SBATCH --account=PMIU0110
-#SBATCH --partition=cpu
-#SBATCH --job-name=gen-nyc-500k
-#SBATCH --nodes=1
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=64G
-#SBATCH --time=06:00:00     # NYC-500K demand step alone takes ~3h 43m (single-threaded gravity loop); see budgets table below
-#SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.err
-
-set -euo pipefail
-
-cd $HOME/SimForge
-source .venv/bin/activate
-module load python/3.12
-
-echo "=== $(date) === job $SLURM_JOB_ID on $(hostname) ==="
-python --version
-python -c "import osmium, osmnx; print('osmium', osmium.__version__, '/ osmnx', osmnx.__version__)"
-
-# The actual work — 500K NYC trips, 6 AM – 10 AM window
-python scripts/05_stress_test.py
-
-# Validate before declaring success
-python -m pipeline.validation.validate_bundle scenarios/nyc_500k_car
+sbatch cluster/jobs/gen_nyc_500k.sbatch
+# Submitted batch job 47063986
+# Outputs land in ./logs/simforge_nyc_500k_<jobid>.{out,err}
 ```
 
-Submit and capture the job ID:
+For a different OSC project, copy and edit `--account` (and `--mail-user`)
+first — `jobs/` is gitignored so your edits stay local:
 
 ```bash
-sbatch ~/jobs/gen_nyc_500k.sbatch
-# Submitted batch job 47060176
+cp cluster/jobs/gen_nyc_500k.sbatch jobs/
+$EDITOR jobs/gen_nyc_500k.sbatch          # set --account=<your-project>
+sbatch jobs/gen_nyc_500k.sbatch
 ```
+
+The committed file ships with `--time=08:00:00` to leave headroom over the
+measured 3 h 52 m runtime (see budgets below).
 
 ### Wall-clock budgets
 
 The `stress_test` row is **measured** on JobID 47063986 (Pitzer `cpu`,
 8 cores, 64 GB, NYC @ 20 km radius, `new-york-2026-04-22.osm.pbf`,
-`scripts/05_stress_test.py`). The smaller tier rows are pre-measurement
-estimates that assume a mid-size US city (~50k SCC nodes); demand-gen scales
-as O(trips × SCC destination nodes), so any tier pointed at a larger graph
-will run proportionally longer.
+`scripts/05_stress_test.py`); the annotated stderr with per-step
+breakdowns is at [`cluster/example_runs/nyc_500k_47063986.md`](../cluster/example_runs/nyc_500k_47063986.md).
+The smaller tier rows are pre-measurement estimates that assume a mid-size
+US city (~50k SCC nodes); demand-gen scales as O(trips × SCC destination
+nodes), so any tier pointed at a larger graph will run proportionally longer.
 
 | Tier             | Trips   | PBF slice   | osmnx parse | Demand gen      | Total           | Partition   |
 | ---------------- | ------- | ----------- | ----------- | --------------- | --------------- | ----------- |
@@ -359,8 +344,9 @@ buys nothing for this step.
 The PBF + osmnx numbers above assume the California PBF (~1.2 GB) — the
 heaviest case. Smaller states finish faster. These are **generation**
 numbers; the actual simulation runs (SUMO / MATSim / QarSUMO) are separate
-jobs. Always set `--time` to ≥ 1.5× the relevant row; the example sbatch
-above uses `--time=06:00:00` for the `stress_test` tier.
+jobs. Always set `--time` to ≥ 1.5× the relevant row; the committed
+`cluster/jobs/gen_nyc_500k.sbatch` uses `--time=08:00:00` for the
+`stress_test` tier (≈ 2× the measured 3 h 52 m runtime).
 
 ### Running the benchmark matrix
 

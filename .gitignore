@@ -78,6 +78,11 @@ lib/
 # Benchmark output runs (generated data)
 runs/
 
-# Cluster job logs
+# Per-user cluster scratch at the repo root (anchored with leading slash so
+# the patterns don't shadow the tracked cluster/jobs/ and cluster/example_runs/).
+#   /jobs/  user-tweaked copies of sbatch templates (filenames stable, contents per-user)
+#   /logs/  SLURM stdout/stderr (filenames embed JobIDs that change every run)
+/jobs/
+/logs/
 cluster/logs/*.out
 cluster/logs/*.err
