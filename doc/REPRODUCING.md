@@ -35,7 +35,7 @@ Python dependencies (installed via `requirements.txt`):
 | `osmnx`     | `>=2.0,<3`         | OSM graph parsing + bbox truncation (network stage); v2.x positional `bbox=(W,S,E,N)` API |
 | `osmium`    | `>=4.0` (pyosmium) | PBF slicing (`FileProcessor` + `BackReferenceWriter`)             |
 | `networkx`  | (latest)           | Graph representation between osmnx and the canonical writer       |
-| `geopandas` | `>=0.9,<1`         | Geometry handling during network conversion                       |
+| `geopandas` | `>=1.0,<2`         | Transitive dep of osmnx 2.x (we don't import it directly)          |
 | `pandas`    | (latest)           | Demand + census data frames                                       |
 
 ---
