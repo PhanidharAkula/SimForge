@@ -78,6 +78,12 @@ lib/
 # Benchmark output runs (generated data)
 runs/
 
+# Generated scenario bundles — only the reference chicago_1k_car is tracked.
+# Other dirs (nyc_500k_car, la_*_car, custom user bundles, …) are user-generated
+# output (often >100 MB each) and shouldn't bloat the repo.
+scenarios/*/
+!scenarios/chicago_1k_car/
+
 # Per-user cluster scratch at the repo root (anchored with leading slash so
 # the patterns don't shadow the tracked cluster/jobs/ and cluster/example_runs/).
 #   /jobs/  user-tweaked copies of sbatch templates (filenames stable, contents per-user)
