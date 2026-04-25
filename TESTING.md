@@ -1,22 +1,22 @@
 # SimForge Test Suite
 
-**293 tests** across **17 test files** covering adapters, metrics, validation,
+**249 tests** across **17 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, OSM network fetching
 (mocked), demand generators, and real-binary engine smoke tests.
 
 Pytest configuration lives in `pyproject.toml` (`[tool.pytest.ini_options]`)
 with strict-marker enforcement, `testpaths = ["tests"]`, and `--tb=short`.
-Coverage thresholds are enforced by `pytest-cov` (≥70 % in CI, currently
+Coverage thresholds are enforced by `pytest-cov` (≥70 % floor, currently
 **76 %** — see `[tool.coverage]` in `pyproject.toml`).  Shared
 scenario-discovery, hashing, and arm64-skip helpers live in
 `tests/conftest.py`.
 
-CI runs on every push (`.github/workflows/test.yml`) across
-macOS + Ubuntu × Python 3.10/3.11/3.13; the slow tier (full suite +
-real-binary smoke) runs on Ubuntu only to sidestep the Apple Silicon
-`netconvert` segfault documented below.  Mutation testing against the
-two cross-engine-fairness modules is documented in
+The project ships without a hosted CI workflow — `python -m pytest` is the
+authoritative gate and is expected to pass before any merge. On Apple Silicon
+the `slow` tier is gated by the real-binary `netconvert` segfault documented
+below; skip it with `-m "not slow"` for the fast developer loop. Mutation
+testing against the two cross-engine-fairness modules is documented in
 [`doc/MUTATION_BASELINE.md`](doc/MUTATION_BASELINE.md).
 
 ---
@@ -56,7 +56,7 @@ python -m pytest -m "not requires_sumo"   # skip tests needing the SUMO binary
 # Source/omit lists and the report format are configured in pyproject.toml.
 python -m pytest --cov --cov-report=term-missing
 
-# CI-style: enforce the 70 % floor.
+# Enforce the 70 % coverage floor (same threshold pyproject.toml declares).
 python -m pytest --cov --cov-fail-under=70
 
 # Parallel execution (pytest-xdist ships in requirements-dev.txt).
@@ -214,8 +214,7 @@ Actually invokes `sumo`, `netconvert`, and the MATSim JAR on the bundled
 scenario and asserts the engine produced non-empty artefacts
 (`tripinfo.xml`, `output_trips.csv.gz`).  All three smoke tests
 `pytest.skip` gracefully when the binary is missing so `pytest -m "not
-slow"` stays green on a developer laptop without SUMO/Java installed; CI
-runs them on the Linux slow-tier job where the binaries are installed.
+slow"` stays green on a developer laptop without SUMO/Java installed.
 Catches the class of regression where the adapter writes files the engine
 refuses to parse — something no amount of XML-structure assertions can
 see.
@@ -240,7 +239,8 @@ scenarios are well below the threshold and never skip.
 
 | Area                   | Tests   | Notes                                                       |
 | ---------------------- | ------- | ----------------------------------------------------------- |
-| SUMO Adapter           | 12      | File generation, determinism, geo projection, sweep         |
+| SUMO Adapter           | 4       | File generation, determinism, geo projection, sweep         |
+| SUMO / MATSim / QarSUMO determinism | 8 | Byte-identical tripinfo across re-runs             |
 | MATSim Adapter         | 24      | Helpers, builders, prepare path, sweep                      |
 | QarSUMO Adapter        | 10      | Config, GPU detection, extend, sweep                        |
 | Fidelity Metrics       | 21      | RMSE, GEH, KS, combined                                     |
@@ -248,19 +248,19 @@ scenarios are well below the threshold and never skip.
 | Reproducibility        | 15      | R-score core, multi-KPI, thresholds                         |
 | Scalability            | 8       | Monotonic timer, throughput, comparison                     |
 | Validator              | 2       | Real-bundle pass + corruption fail                          |
-| Data Integrity         | 70      | 7 classes × every bundled scenario                          |
+| Data Integrity         | 35      | 7 classes × the bundled `chicago_1k_car` scenario           |
 | E2E Pipeline           | 20      | 13 corruption modes, 3 robustness, 4 routing                |
-| SCC algorithm          | 16      | Iterative Kosaraju + bundled-network coverage               |
+| SCC algorithm          | 14      | Iterative Kosaraju + bundled-network coverage               |
 | Feasibility filter     | 16      | Shared cross-engine trip filter                             |
 | Benchmark analyser     | 25      | Mode-aware grouping + identity fallback + renderers         |
-| **OSM fetch**          | **20**  | Mocked Overpass, bbox validation, cache pin (NEW)           |
-| **Demand generators**  | **21**  | Synthetic generators + SCC restriction + seed (NEW)         |
-| **Engine smoke**       | **4**   | Real-binary SUMO/MATSim smoke, skip-gracefully (NEW)        |
-| **Total**              | **293** | **22 s** full suite on M-series; **12 s** with `-m "not slow"` |
+| OSM fetch              | 20      | Mocked Overpass, bbox validation, cache pin                 |
+| Demand generators      | 21      | Synthetic generators + SCC restriction + seed               |
+| Engine smoke           | 4       | Real-binary SUMO/MATSim smoke, skip-gracefully              |
+| **Total**              | **249** | **22 s** full suite on M-series; **7 s** with `-m "not slow"` |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
-**76.3 %** (pytest-cov + `branch = true`).  The CI threshold is **70 %**
+**76.3 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**
 to leave headroom for ongoing refactoring; the uncovered lines are
 concentrated in the subprocess-invoking `run_matsim` / `run_qarsumo`
 paths and the PUMS/modelgen parsers (tested instead by the slow-tier
-integration sweep and the engine-smoke job).
+integration sweep and the engine-smoke tests).

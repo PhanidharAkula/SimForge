@@ -161,7 +161,8 @@ PROJECT STRUCTURE:
   generate.py           Unified scenario generator (start here)
   run.py                Simulation runner CLI
   help.py               This help system
-  scripts/              5 ready-to-use generation scripts
+  scripts/              5 ready-to-use generation scripts (01–05)
+  tools/                Operator utilities (clean.sh, download_osm.py)
   scenarios/            Generated canonical data bundles
   adapters/             Simulator-specific converters
   pipeline/             Data generation pipeline modules
@@ -193,9 +194,9 @@ DEMAND FLAGS:
   --end-time <seconds>     End time, seconds from midnight   (default: 28800 = 08:00 AM)
 
   The default 07:00–08:00 AM rush-hour window matches the bundled
-  chicago_1k_car / nyc_1k_car scenarios. Together with --radius 2.0 (default
-  for chicago and nyc) and --seed 42, `generate.py --city chicago --trips 1000`
-  reproduces the bundled scenario exactly.
+  chicago_1k_car scenario. Together with --radius 2.0 (default for chicago)
+  and --seed 42, `generate.py --city chicago --trips 1000` reproduces the
+  bundled scenario exactly.
 
 NETWORK FLAGS:
   --radius, -r <km>        Network extraction radius (default: city-specific)
@@ -255,7 +256,7 @@ EXAMPLES:
   python run.py --validate-only
 
 BENCHMARK HARNESS:
-  python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical 22-run matrix
+  python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical 11-run matrix
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
   python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
 """
@@ -455,10 +456,10 @@ COMMANDS:
   python -m execution.run_benchmark <runspec.yaml> --dry-run
 
 BUILT-IN RUNSPECS:
-  stress_test.yaml       Canonical 22-run matrix: {chicago,nyc}_1k_car x
+  stress_test.yaml       Canonical 11-run matrix: chicago_1k_car x
                          {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso},
                          3 repeats per stochastic cell (2 for MATSim).
-                         ~55 s on Apple M4 Pro. All thesis Chapter 5 numbers
+                         ~27 s on Apple M4 Pro. All thesis Chapter 5 numbers
                          come from this runspec.
   benchmark_small.yaml   1K-50K trips, 600 s per-run timeout (laptop tier).
   benchmark_large.yaml   200K-500K trips, 3600 s per-run timeout (HPC tier).
@@ -483,7 +484,7 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships 293 tests across 17 files. The fast tier (~12 s) is
+SimForge ships 249 tests across 17 files. The fast tier (~7 s) is
 what developers run locally; the full suite (~22 s on M-series) adds
 adapter sweeps and real-binary smoke tests.
 
@@ -500,7 +501,7 @@ RUN COMMANDS:
   python -m pytest tests/test_feasibility.py -v # One file, verbose
   python -m pytest tests/test_scc.py -k "kosaraju"      # Substring filter
   python -m pytest --cov --cov-report=term-missing      # With coverage
-  python -m pytest --cov --cov-fail-under=70            # CI-style threshold
+  python -m pytest --cov --cov-fail-under=70            # Enforce 70 % floor
   python -m pytest -n auto                      # Parallel (needs pytest-xdist)
   python -m pytest --collect-only               # List tests without running
 
@@ -518,7 +519,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m "integration and not slow"
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (17 files / 293 tests):
+TEST FILES (17 files / 249 tests):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
@@ -529,9 +530,9 @@ TEST FILES (17 files / 293 tests):
   test_reproducibility_metrics.py (15)  R-score core + edge cases
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
   test_validator.py               (2)   Bundle pass + corruption fail
-  test_scenario_data_integrity.py (70)  7 classes x every bundled scenario
+  test_scenario_data_integrity.py (35)  7 classes x the bundled scenario
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
-  test_scc.py                     (16)  Iterative Kosaraju + parser
+  test_scc.py                     (14)  Iterative Kosaraju + parser
   test_feasibility.py             (16)  Shared cross-engine trip filter
   test_analyze_benchmark.py       (25)  Mode-aware grouping + all renderers
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
@@ -566,7 +567,7 @@ WHAT THE OUTPUT LOOKS LIKE:
 COVERAGE:
   python -m pytest --cov                        # Terminal summary
   python -m pytest --cov --cov-report=html      # HTML report in htmlcov/
-  python -m pytest --cov --cov-fail-under=70    # CI-style threshold
+  python -m pytest --cov --cov-fail-under=70    # Enforce 70 % floor
 
   Current line coverage: ~76 % (branch coverage enabled). Source set and
   omit list configured in pyproject.toml [tool.coverage]. Dev tools install
@@ -587,12 +588,6 @@ SHARED FIXTURES (tests/conftest.py):
   is_arm64_netconvert_crash               Platform skip detector
   warn_skipped                            Emits a single UserWarning summary
 
-CONTINUOUS INTEGRATION:
-  .github/workflows/test.yml runs on every push:
-    fast     macOS + Ubuntu x Python 3.10, 3.11, 3.13  —  pytest -m "not slow"
-    coverage Ubuntu + Python 3.11                      —  --cov-fail-under=70
-    slow     Ubuntu only (SUMO via apt + Java 17 + MATSim JAR download)
-
 COMMON TEST FLAGS:
   -v, --verbose            Show individual test names
   -vv                      Verbose + full assertion diffs
@@ -605,7 +600,7 @@ COMMON TEST FLAGS:
   --collect-only           List tests without running them
 
 SEE ALSO:
-  TESTING.md                Full per-file reference + markers + CI matrix
+  TESTING.md                Full per-file reference + markers + coverage
   CONTRIBUTING.md           Test-writing conventions + determinism rules
   doc/MUTATION_BASELINE.md  Mutation testing scope and baseline
 """
@@ -620,7 +615,7 @@ HELP_TROUBLESHOOTING = """
       (On Windows: .venv\\Scripts\\activate)
 
 2. "ModuleNotFoundError: No module named 'pipeline'"
-   -> Run from project root: cd SimForge (not from scripts/ or tests/).
+   -> Run from project root: cd SimForge (not from scripts/, tools/, or tests/).
 
 3. "No residential buildings mapped to network nodes"
    -> Increase --radius to capture more buildings.
@@ -644,13 +639,18 @@ HELP_TROUBLESHOOTING = """
 8. "netconvert segfaults on arm64 with networks > ~3000 nodes"
    -> SUMO platform bug, not SimForge. Adapter sweeps auto-skip
       affected scenarios on arm64 with a summary UserWarning.
-      The bundled 1K scenarios are safely below the threshold.
-      Full-suite CI runs on Ubuntu only for this reason.
+      The bundled 1K scenario is safely below the threshold.
+      Run the larger tiers on Linux / HPC to sidestep the crash.
 
 9. "OSM download timeout / ConnectionError to Overpass"
    -> Wait and retry. Large radii may timeout. Pre-warm the cache:
         python -m pipeline.network.warmup
       Fresh fetches are logged with "first-time fetch" WARNING.
+
+9b. "FileNotFoundError: OSM PBF required for city '<name>'"
+   -> generate.py needs a hash-pinned state PBF in osm_data/. Fetch it:
+        python tools/download_osm.py
+      The committed scenarios/chicago_1k_car/ bundle runs without this step.
 
 10. "Pytest passes nothing visible — I see only dots"
    -> Add -v for one line per test:
@@ -730,7 +730,7 @@ VERIFY THE INSTALL (full sanity check):
   python -m pytest -m "not slow"                # Fast tier, ~12 s
   python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
-  python -m execution.run_benchmark runspecs/stress_test.yaml      # ~55 s
+  python -m execution.run_benchmark runspecs/stress_test.yaml      # ~27 s
 
 MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
   python3.10+ -m venv .venv
@@ -743,6 +743,19 @@ MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
   mkdir -p lib/matsim-15.0
   # Download matsim-15.0.jar from the official MATSim GitHub release
   # and place it in lib/matsim-15.0/
+
+OSM PBF SNAPSHOTS (required only if you regenerate scenarios):
+  python tools/download_osm.py                     # fetch all manifest entries
+  python tools/download_osm.py illinois            # fetch one state (IL/NY/CA)
+  python tools/download_osm.py --force             # re-download + hash-verify
+
+  Skipped if files are already present and hashes match. The committed
+  scenarios/chicago_1k_car/ bundle works without running this.
+
+OPERATOR UTILITIES (tools/):
+  tools/download_osm.py      Hash-pinned Geofabrik PBF fetcher
+  tools/clean.sh             Wipe __pycache__ / *.pyc / .pytest_cache
+  tools/clean.sh --all       Also drops cache/ (Overpass HTTP cache)
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle

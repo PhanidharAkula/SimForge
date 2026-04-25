@@ -4,13 +4,15 @@
 
 1. [Prerequisites](#prerequisites)
 2. [Installation](#installation)
-3. [Scenario Data](#scenario-data)
-4. [Running Simulations](#running-simulations)
-5. [Understanding the Output](#understanding-the-output)
-6. [GPU Acceleration](#gpu-acceleration)
-7. [Command Reference](#command-reference)
-8. [Project Structure](#project-structure)
-9. [Troubleshooting](#troubleshooting)
+3. [OSM Data](#osm-data)
+4. [Scenario Data](#scenario-data)
+5. [Running Simulations](#running-simulations)
+6. [Understanding the Output](#understanding-the-output)
+7. [GPU Acceleration](#gpu-acceleration)
+8. [HPC / Supercomputer](#hpc--supercomputer)
+9. [Command Reference](#command-reference)
+10. [Project Structure](#project-structure)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -77,10 +79,56 @@ rm matsim-15.0-release.zip
 ### Verify Installation
 
 ```bash
-python -m pytest tests/ -q                              # 293 tests should pass
+python -m pytest tests/ -q                              # 249 tests should pass
 python -c "from adapters.sumo.sumo_adapter import SUMOAdapter; print('SUMO: OK')"
 python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MATSim:', find_matsim_jar())"
+python -c "import osmium, osmnx; print('osmium', osmium.__version__, '/ osmnx', osmnx.__version__)"
 ```
+
+---
+
+## OSM Data
+
+SimForge generates road networks from **hash-pinned OSM PBF snapshots** rather than live Overpass API queries. The PBFs live under `osm_data/`, each tracked by an entry in [`osm_data/manifest.json`](osm_data/manifest.json) that pins a SHA-256 hash for reproducibility.
+
+### Why local PBFs
+
+| Path           | Reproducibility                  | Speed (city-scale bbox) | Reliability                                  |
+| -------------- | -------------------------------- | ----------------------- | -------------------------------------------- |
+| Local PBF      | ✅ SHA-256 pinned, byte-identical | 30 – 90 s               | ✅ Deterministic — no rate limits             |
+| Overpass (API) | ⚠️ Upstream OSM is a moving target | 5 – 30+ min             | ⚠️ Rate-limited; stalls on NYC-sized bboxes   |
+
+The Overpass path still exists as a fallback in `pipeline/network/build_network_from_osm.py` for cities without a committed PBF, but every bundled city (`chicago`, `nyc`, `la`) ships with a matching state-level PBF entry in the manifest.
+
+### Download the PBFs
+
+The PBFs themselves are **gitignored** (348 MB – 1.3 GB each, too large for git). Fetch them on first install:
+
+```bash
+python tools/download_osm.py
+```
+
+That script reads `osm_data/manifest.json`, downloads any missing file from Geofabrik, and refuses to proceed on a SHA-256 mismatch. Re-running is cheap — it just verifies existing files' hashes.
+
+| File                                 | Size    | Covers                        | Used by   |
+| ------------------------------------ | ------- | ----------------------------- | --------- |
+| `osm_data/illinois-2026-04-22.osm.pbf`  | 348 MB  | State of Illinois             | `chicago` |
+| `osm_data/new-york-2026-04-22.osm.pbf`  | 489 MB  | State of New York             | `nyc`     |
+| `osm_data/california-2026-04-22.osm.pbf` | 1.3 GB | State of California           | `la`      |
+
+Total: ~2.1 GB. Re-download only needed if the manifest is updated (rare — `downloaded_on` is pinned).
+
+### How the PBF is consumed
+
+`generate.py` passes the city's `pbf_file` into `pipeline/network/build_network_from_osm.py::build_network_from_osm`, which delegates to `pipeline/network/load_network_from_pbf.py`:
+
+1. **pyosmium** scans the state PBF and writes a bbox-clipped `.osm` XML file with every `highway=*` way plus every node those ways reference (via `BackReferenceWriter` — the equivalent of `osmium extract -b ...` via the Python API).
+2. **osmnx** (`graph_from_xml`) parses the XML into a `MultiDiGraph` with the same attributes the Overpass path produced.
+3. **osmnx** (`truncate.truncate_graph_bbox`) clips edges that bleed past the requested bbox.
+
+The result is schema-identical to what the Overpass path returned — downstream canonical extraction is unchanged.
+
+> **osmnx version note:** `load_network_from_pbf.py` branches on `ox.__version__` because osmnx 1.9.x takes `north=/south=/east=/west=` kwargs and 2.x takes a positional `bbox=(W,S,E,N)` tuple. Both versions are supported; the test suite passes on each.
 
 ---
 
@@ -88,12 +136,11 @@ python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MA
 
 ### Bundled Scenarios
 
-Two small scenarios are committed to the repo so the test suite and the default `run.py` invocation work out of the box:
+One small scenario is committed to the repo so the test suite and the default `run.py` invocation work out of the box:
 
 | Scenario          | City    | Trips | Modes | Bundle size |
 | ----------------- | ------- | ----- | ----- | ----------- |
 | `chicago_1k_car`  | Chicago | 1,000 | car   | ~1 MB       |
-| `nyc_1k_car`      | NYC     | 1,000 | car   | ~1 MB       |
 
 Larger scenarios are not committed — generate them locally with the helper scripts below.
 
@@ -149,9 +196,11 @@ python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 ### Cleaning Caches
 
 ```bash
-scripts/clean.sh           # Wipe Python bytecode (__pycache__, *.pyc, .pytest_cache)
-scripts/clean.sh --all     # Also wipe cache/ (OSM Overpass HTTP cache)
+tools/clean.sh           # Wipe Python bytecode (__pycache__, *.pyc, .pytest_cache)
+tools/clean.sh --all     # Also wipe cache/ (only populated if the Overpass fallback ran)
 ```
+
+`tools/clean.sh` never touches `osm_data/` — those PBFs are the provenance anchor and should only be removed by editing the manifest.
 
 ---
 
@@ -168,7 +217,7 @@ python run.py                                 # All bundled scenarios × all ins
 ### Run Benchmark from RunSpec
 
 ```bash
-# Canonical 8-cell stress test (matches the thesis figures)
+# Canonical 4-cell stress test (matches the thesis figures)
 python -m execution.run_benchmark runspecs/stress_test.yaml
 
 # Dry run (validate without executing)
@@ -225,6 +274,31 @@ Falls back to CPU SUMO automatically when no GPU is available.
 
 ---
 
+## HPC / Supercomputer
+
+For running on the Ohio Supercomputer Center's Pitzer cluster (the target HPC for the 50K – 500K scenarios), see the dedicated guide:
+
+- **[doc/PITZER.md](doc/PITZER.md)** — SSH setup, module loads, PBF transfer via rsync, SLURM job templates per tier, job monitoring, and troubleshooting.
+
+Short version:
+
+```bash
+ssh pitzer
+cd ~ && git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git
+cd SimForge
+module load python/3.12 openjdk
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install eclipse-sumo
+
+# Ship PBFs + ModelGen from your local machine (from local, not Pitzer):
+rsync -avh osm_data/ pitzer:SimForge/osm_data/
+rsync -avh modelgen/ pitzer:SimForge/modelgen/
+
+sbatch jobs/gen_nyc_500k.sbatch
+```
+
+---
+
 ## Command Reference
 
 | Command                                                | Description                                |
@@ -238,8 +312,8 @@ Falls back to CPU SUMO automatically when no GPU is available.
 | `python generate.py --preset <name>`                   | Generate a scenario from a preset         |
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
-| `scripts/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the 293-test suite                     |
+| `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
+| `python -m pytest tests/ -v`                           | Run the 249-test suite                     |
 
 ---
 
@@ -259,19 +333,22 @@ SimForge/
 │   ├── run_benchmark.py    #   Orchestrates full benchmark runs
 │   └── runspec.py          #   RunSpec / RunConfig schema
 ├── lib/                    # External JARs (MATSim) — gitignored
+├── osm_data/               # Hash-pinned OSM PBF snapshots (gitignored binaries)
+│   └── manifest.json       #   SHA-256 + URL + coverage per state PBF
 ├── pipeline/               # Data generation pipeline
-│   ├── network/            #   OSM → canonical network
+│   ├── network/            #   OSM (PBF or Overpass) → canonical network
 │   ├── demand/             #   Synthetic + census demand generation
 │   ├── signals/            #   Traffic signal inference
 │   └── validation/         #   Bundle validators
-├── scripts/                # Per-tier generation scripts + clean.sh
+├── scripts/                # Per-tier scenario generation (01_quick_test.py … 05_stress_test.py)
+├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark YAML configurations
 ├── scenarios/              # Bundled canonical scenarios
-├── tests/                  # 293 unit & integration tests
+├── tests/                  # 249 unit & integration tests
 ├── run.py                  # Convenience CLI
 ├── generate.py             # Scenario generator entry point
 ├── setup_simforge.py       # One-command bootstrap
-├── requirements.txt        # Python dependencies
+├── requirements.txt        # Python dependencies (osmium, osmnx, lxml, …)
 └── SETUP.md                # This file
 ```
 
@@ -281,9 +358,11 @@ SimForge/
 
 | Problem                | Solution                                                          |
 | ---------------------- | ----------------------------------------------------------------- |
-| `MATSim JAR not found` | Re-run `python setup_simforge.py`, or run the manual `curl` above |
-| `SUMO not found`       | `brew install sumo`                                               |
-| `Java not found`       | `brew install openjdk@17`                                         |
-| OSM download timeout   | Check internet connection, retry; cache is in `cache/`            |
-| `No scenarios found`   | Run a script in `scripts/` first, or check `python run.py --list` |
-| Large `cache/` folder  | `scripts/clean.sh --all` to wipe the OSM Overpass cache           |
+| `MATSim JAR not found`                          | Re-run `python setup_simforge.py`, or run the manual `curl` above                                     |
+| `SUMO not found`                                | `brew install sumo`                                                                                    |
+| `Java not found`                                | `brew install openjdk@17`                                                                              |
+| `FileNotFoundError: osm_data/<state>.osm.pbf`   | Run `python tools/download_osm.py` — fetches + SHA-256-verifies every PBF in the manifest            |
+| `ImportError: osmium`                           | `pip install 'osmium>=4.0'` (not `pyrosm`; that package no longer builds on Python 3.13+)              |
+| Overpass fallback hangs                         | Prefer the PBF path — add the city's `pbf_file` to `generate.py::CITIES` and update the manifest       |
+| `No scenarios found`                            | Run a script in `scripts/` first, or check `python run.py --list`                                      |
+| Large `cache/` folder                           | `tools/clean.sh --all` to wipe the Overpass HTTP cache (no effect on the pinned PBFs in `osm_data/`) |

@@ -7,9 +7,9 @@ Otherwise it fetches missing / corrupt files from Geofabrik and refuses to
 proceed on hash mismatch (never leaves a broken PBF behind).
 
 Usage:
-    python scripts/download_osm.py            # all files in manifest
-    python scripts/download_osm.py illinois   # one file
-    python scripts/download_osm.py --force    # re-download even if present
+    python tools/download_osm.py            # all files in manifest
+    python tools/download_osm.py illinois   # one file
+    python tools/download_osm.py --force    # re-download even if present
 """
 
 from __future__ import annotations

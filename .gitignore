@@ -69,7 +69,7 @@ ModelGen/*.txt
 cache/
 
 # OSM PBF snapshots — large binary data, tracked via osm_data/manifest.json
-# (download with: python scripts/download_osm.py)
+# (download with: python tools/download_osm.py)
 osm_data/*.osm.pbf
 
 # External libraries / downloaded JARs (see SETUP.md for install)

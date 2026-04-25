@@ -49,6 +49,9 @@ The dimension of evaluation that compares simulator outputs against each other o
 ### GEH (Geoffrey E. Havers statistic)
 A traffic-engineering goodness-of-fit metric, $\text{GEH} = \sqrt{\frac{2(M - C)^2}{M + C}}$, where $M$ is the modelled volume and $C$ is the observed count. Acceptance criterion: ≥ 85 % of links with $\text{GEH} < 5.0$. Implementation: `evaluation/metrics/fidelity.py:compute_geh`.
 
+### Geofabrik
+A long-running provider of *OSM* data extracts at continent, country, and state/region granularity (<https://download.geofabrik.de/>). SimForge pins specific Geofabrik state-level `.osm.pbf` snapshots in `osm_data/manifest.json` and verifies them by SHA-256 + MD5 on download. Anyone fetching the published URL and matching the manifest hash is working with bit-identical network input.
+
 ---
 
 ## J
@@ -110,10 +113,10 @@ National Electrical Manufacturers Association. NEMA TS 1/2 defines the standard 
 ## O
 
 ### OSM (OpenStreetMap)
-The crowdsourced geographic data source SimForge uses for road network topology. Fetched via the *Overpass* API and cached in `cache/`.
+The crowdsourced geographic data source SimForge uses for road network topology. The primary ingest path reads hash-pinned *PBF* snapshots from *Geofabrik* stored under `osm_data/`; the legacy live *Overpass* path is retained as a fallback for cities without a committed PBF.
 
 ### Overpass
-The OSM query API (`https://overpass-api.de`). Network fetches are HTTP-cached so re-runs do not re-hit the upstream server. Pre-warm with `python -m pipeline.network.warmup`.
+The OSM query API (`https://overpass-api.de`). SimForge uses it **only as a fallback** when no local *PBF* covers the target bbox. Responses are HTTP-cached under `cache/` so re-runs do not re-hit the upstream server. Pre-warm with `python -m pipeline.network.warmup`.
 
 ---
 
@@ -122,8 +125,14 @@ The OSM query API (`https://overpass-api.de`). Network fetches are HTTP-cached s
 ### P95 travel time
 The 95th percentile of trip durations within a single run. Used as a tail-latency indicator in Fig 5.8 and complements the mean travel time reported in Table 5.2.
 
+### PBF (Protocolbuffer Binary Format)
+The OSM project's binary serialization of map data (file extension `.osm.pbf`). Roughly an order of magnitude smaller than the equivalent XML and much faster to parse. SimForge stores *Geofabrik* state-level PBFs in `osm_data/` and slices them to a scenario bounding box with *pyosmium* before handing the slice to osmnx.
+
 ### PUMS (Public Use Microdata Sample)
 The US Census Bureau dataset of de-identified individual-level census records. SimForge uses PUMS columns *JWMNP* and *JWTRNS* to calibrate demand. Default since the census-calibrated demand became the framework default; pass `--synthetic` to fall back to the gravity model.
+
+### pyosmium
+Python bindings for `libosmium` (PyPI package `osmium`, `>=4.0` in `requirements.txt`). SimForge uses `pyosmium.FileProcessor().with_locations()` + `BackReferenceWriter` in `pipeline/network/load_network_from_pbf.py` to extract a bbox-clipped `.osm.xml` slice from a state-level *PBF* without materialising the whole file in memory.
 
 ---
 

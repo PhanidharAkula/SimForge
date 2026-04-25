@@ -8,8 +8,7 @@ engine produced a non-empty results artefact.
 
 The tests skip gracefully when the binary is missing so `pytest -m "not
 slow"` stays green on developer machines without SUMO / Java / the MATSim
-JAR installed.  On CI we schedule them to run where the binaries are
-actually available (see `.github/workflows/test.yml`).
+JAR installed.
 
 These catch the class of regression where the adapter writes files the
 engine refuses to parse (e.g. an attribute added/removed in a breaking

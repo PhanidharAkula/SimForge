@@ -26,11 +26,10 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | MATSim Adapter               | ✅ Complete (single-iteration meso) |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (9 thesis figures)      |
-| Test Suite                   | ✅ 293 tests passing                |
+| Test Suite                   | ✅ 249 tests passing                |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
-| Bundled scenario: `nyc_1k_car`     | ✅ Generated & validated      |
 
-Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the two small bundles above are committed to the repo.
+Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
 
 ---
 
@@ -52,9 +51,13 @@ python3 -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
+
+# Download the hash-pinned OSM PBFs (~2.1 GB across IL/NY/CA — the state-level
+# extracts used for chicago, nyc, and la scenarios). Skipped if already present.
+python tools/download_osm.py
 ```
 
-For MATSim JAR installation and HPC setup, see [SETUP.md](SETUP.md).
+For MATSim JAR installation, manifest details, and the supercomputer workflow, see [SETUP.md](SETUP.md) and [doc/PITZER.md](doc/PITZER.md).
 
 ### Validate a Bundled Scenario
 
@@ -81,7 +84,7 @@ python run.py --list
 python -m execution.run_benchmark runspecs/stress_test.yaml
 ```
 
-`stress_test.yaml` declares the canonical 8-cell matrix (2 scenarios × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}) used to produce the thesis figures. After it finishes:
+`stress_test.yaml` declares the canonical 4-cell matrix (`chicago_1k_car` × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}) used to produce the thesis figures. After it finishes:
 
 ```bash
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
@@ -111,24 +114,26 @@ SimForge/
 │   ├── qarsumo/            # GPU-accelerated SUMO (CPU fallback)
 │   └── matsim/             # Activity-based simulator
 ├── canonical/schema/       # Schema documentation (v0)
-├── doc/                    # Architecture, reproduction, thesis chapters
+├── doc/                    # Architecture, reproduction, Pitzer, thesis chapters
 ├── evaluation/             # Metrics, analysis, plot generation
 │   └── metrics/            # Fidelity, scalability, reproducibility
 ├── execution/              # Benchmark harness & runners
+├── osm_data/               # Hash-pinned OSM PBF snapshots + manifest.json
+│                           # (PBF binaries gitignored; download via tools/download_osm.py)
 ├── pipeline/               # Data generation pipeline
-│   ├── network/            # OSM → canonical network
-│   ├── demand/             # Synthetic trip generation
+│   ├── network/            # OSM (PBF or Overpass) → canonical network
+│   ├── demand/             # Synthetic + census-calibrated trip generation
 │   ├── signals/            # Traffic signal inference
 │   └── validation/         # Bundle validator
-├── scripts/                # Per-tier scenario generation + clean.sh
+├── scripts/                # Per-tier scenario generation (01_quick_test.py … 05_stress_test.py)
+├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark configurations (YAML)
 ├── scenarios/              # Bundled canonical scenarios
-│   ├── chicago_1k_car/
-│   └── nyc_1k_car/
+│   └── chicago_1k_car/     # (larger tiers are generated on demand via scripts/)
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
-├── cache/                  # OSM Overpass HTTP cache (gitignored)
-├── tests/                  # pytest test suite (293 tests)
+├── cache/                  # Overpass HTTP cache — only populated if the fallback path runs (gitignored)
+├── tests/                  # pytest test suite (249 tests)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -170,7 +175,7 @@ SimForge/
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all 293 tests
+pytest tests/ -v          # Run all 249 tests
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 
@@ -209,7 +214,8 @@ For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECT
 
 | Document                                                   | Description                                   |
 | ---------------------------------------------------------- | --------------------------------------------- |
-| [SETUP.md](SETUP.md)                                       | Installation guide (local + HPC)              |
+| [SETUP.md](SETUP.md)                                       | Installation guide (local + OSM data)         |
+| [doc/PITZER.md](doc/PITZER.md)                             | Supercomputer (OSC Pitzer) setup and SLURM    |
 | [TESTING.md](TESTING.md)                                   | Test suite layout and how to run subsets      |
 | [CHANGELOG.md](CHANGELOG.md)                               | Notable changes per release                   |
 | [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md)                 | End-to-end system architecture                |

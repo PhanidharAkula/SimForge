@@ -24,7 +24,7 @@ markers = [
 # Coverage — see requirements-dev.txt for the pytest-cov pin.
 # Run locally with:
 #   python -m pytest --cov=adapters --cov=evaluation --cov=pipeline
-# CI enforces --cov-fail-under=80 on one matrix cell (see .github/workflows/test.yml).
+# Coverage floor is 70 % (enforced via --cov-fail-under=70 when running with coverage).
 # ---------------------------------------------------------------------------
 [tool.coverage.run]
 branch = true

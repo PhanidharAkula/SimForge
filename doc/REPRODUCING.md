@@ -20,12 +20,23 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 ### Software Requirements
 
-| Software | Version | Required For            |
-| -------- | ------- | ----------------------- |
-| Python   | 3.10+   | Framework               |
-| SUMO     | 1.20+   | SUMO/QarSUMO simulation |
-| Java     | 17+     | MATSim simulation       |
-| Git      | 2.0+    | Repository cloning      |
+| Software   | Version       | Required For                                            |
+| ---------- | ------------- | ------------------------------------------------------- |
+| Python     | 3.10+         | Framework                                               |
+| SUMO       | 1.20+         | SUMO/QarSUMO simulation                                 |
+| Java       | 17+           | MATSim simulation                                       |
+| Git        | 2.0+          | Repository cloning                                      |
+| osmium-tool| 1.14+ (opt)   | Optional CLI sanity checks on PBFs; not required        |
+
+Python dependencies (installed via `requirements.txt`):
+
+| Package     | Version pin        | Used For                                                          |
+| ----------- | ------------------ | ----------------------------------------------------------------- |
+| `osmnx`     | `>=1.1,<3`         | OSM graph parsing + bbox truncation (network stage); 1.9.x and 2.x are both supported via an internal version branch |
+| `osmium`    | `>=4.0` (pyosmium) | PBF slicing (`FileProcessor` + `BackReferenceWriter`)             |
+| `networkx`  | (latest)           | Graph representation between osmnx and the canonical writer       |
+| `geopandas` | `>=0.9,<1`         | Geometry handling during network conversion                       |
+| `pandas`    | (latest)           | Demand + census data frames                                       |
 
 ---
 
@@ -38,22 +49,34 @@ cd SimForge
 python3 setup_simforge.py     # checks prereqs, creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
 
-# Confirm the bundled scenarios validate cleanly
+# Fetch the hash-pinned OSM PBFs (~2.1 GB across IL / NY / CA state extracts).
+# Required before regenerating any scenario; skipped if files are already present.
+python tools/download_osm.py
+
+# Confirm the bundled scenario validates cleanly
 python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
-python -m pipeline.validation.validate_bundle scenarios/nyc_1k_car
-# Expected: ✓ VALID for each
+# Expected: ✓ VALID
 ```
 
-(For a manual install path, see [SETUP.md](../SETUP.md).)
+(For a manual install path, see [SETUP.md](../SETUP.md). For the OSM data source, coverage, and hash-pinning, see [doc/SCENARIO_GENERATION.md §4](SCENARIO_GENERATION.md).)
 
-### Optional: pre-warm the OSM cache
+### Running vs. regenerating — PBF requirement
 
-If the network XMLs are present but `cache/` is empty, the first benchmark run still triggers an Overpass fetch. Pre-warm it:
+The pre-built `scenarios/*_1k_car/` bundles already contain `network.xml`; reproducing the published simulation results does **not** require any OSM data. You only need the PBFs when:
+
+- Regenerating any scenario (e.g. `scripts/02_small_commute.py` onwards), **or**
+- Running `python -m pipeline.network.warmup` against a scenario whose network was removed.
+
+### Optional: pre-warm a scenario that was regenerated
+
+The network stage is fully deterministic, so pre-warming is only necessary when a bundle has been (re)generated from scratch on a machine without a warm disk cache:
 
 ```bash
 python -m pipeline.network.warmup            # warm every scenarios/* bundle
 python -m pipeline.network.warmup --dry-run  # report only
 ```
+
+If `osm_data/<state>-<date>.osm.pbf` is missing for a target city, the pipeline falls back to the Overpass API (slower, not hash-pinned). The fallback is intentionally preserved for cities we have not yet committed a PBF for.
 
 ---
 
@@ -90,7 +113,7 @@ QarSUMO requires NVIDIA GPU with CUDA. Without it, the QarSUMO adapter falls bac
 
 ## Running the Canonical Stress Test
 
-The thesis figures are produced by `runspecs/stress_test.yaml` — an 8-cell matrix of `{chicago_1k_car, nyc_1k_car} × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}` with 3 repeats each (MATSim runs 2 repeats since it is deterministic).
+The thesis figures are produced by `runspecs/stress_test.yaml` — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}` with 3 repeats each (MATSim runs 2 repeats since it is deterministic).
 
 ```bash
 # 1. Sanity check (one run, ~30 s)
@@ -110,7 +133,7 @@ python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_te
 
 ## Generating the Larger Tiers (Optional)
 
-The repo only commits the two 1K scenarios. To recreate the 10K/50K/200K/500K tiers used for scalability discussion:
+The repo only commits the `chicago_1k_car` bundle. To recreate the 10K/50K/200K/500K tiers used for scalability discussion:
 
 ```bash
 python scripts/02_small_commute.py     # 10K NYC car, 7–9 AM
@@ -123,6 +146,21 @@ Each writes a fresh bundle into `scenarios/<id>/` and is then runnable through `
 
 > **Apple Silicon caveat:** SUMO 1.20's `netconvert` crashes on networks above ~3,000 nodes on arm64 (a SUMO bug, not SimForge's). The 1K bundles run cleanly; the 200K and 500K tiers must be run on Linux/HPC.
 
+### Regenerating on a Supercomputer (OSC Pitzer)
+
+The 200K and 500K tiers were produced on the Ohio Supercomputer Center's Pitzer cluster. The full workflow — module setup, PBF / ModelGen rsync, per-tier SLURM templates, monitoring, and troubleshooting — is documented in [doc/PITZER.md](PITZER.md). Short version:
+
+```bash
+# From your laptop
+rsync -avh osm_data/   pitzer:SimForge/osm_data/
+rsync -avh modelgen/   pitzer:SimForge/modelgen/
+
+# On Pitzer (login node)
+module load python/3.12 openjdk
+cd ~/SimForge && source .venv/bin/activate
+sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
+```
+
 ---
 
 ## Collecting Results
@@ -132,19 +170,17 @@ Each writes a fresh bundle into `scenarios/<id>/` and is then runnable through `
 ```
 runs/stress_test/
 ├── benchmark_results_stress_test.json
-├── chicago_1k_car/
-│   ├── sumo/
-│   │   ├── seed_42/
-│   │   │   ├── feasibility_report.json
-│   │   │   ├── tripinfo.xml
-│   │   │   ├── statistics.xml
-│   │   │   └── (SUMO native files)
-│   │   ├── seed_43/
-│   │   └── seed_44/
-│   ├── qarsumo/
-│   ├── matsim/
-│   └── ...
-└── nyc_1k_car/
+└── chicago_1k_car/
+    ├── sumo/
+    │   ├── seed_42/
+    │   │   ├── feasibility_report.json
+    │   │   ├── tripinfo.xml
+    │   │   ├── statistics.xml
+    │   │   └── (SUMO native files)
+    │   ├── seed_43/
+    │   └── seed_44/
+    ├── qarsumo/
+    └── matsim/
 ```
 
 `feasibility_report.json` is the audit trail proving every engine was fed the same trip set (see [CHANGELOG.md](../CHANGELOG.md), Addenda 1–2).
@@ -176,16 +212,14 @@ Renders Fig 5.1 – Fig 5.9 (PNG + PDF) into `runs/stress_test/plots/`. See [doc
 
 These are the numbers from the most recent canonical stress test (see CHANGELOG.md → Addendum 3):
 
-| Scenario       | Engine  | Mode  | Trips simulated | Avg TT (s)  | Runtime (s)  | R-Score |
-| -------------- | ------- | ----- | --------------- | ----------- | ------------ | ------- |
+| Scenario       | Engine  | Mode  | Trips simulated  | Avg TT (s)  | Runtime (s)  | R-Score |
+| -------------- | ------- | ----- | ---------------- | ----------- | ------------ | ------- |
 | chicago_1k_car | matsim  | meso  | **1000 (100 %)** | 195.7 ± 0.0 | 10.19 ± 0.16 | 1.0000  |
-| chicago_1k_car | qarsumo | meso  | 995 (99.5 %)    | 204.1 ± 0.4 |  0.28 ± 0.01 | 0.9981  |
-| chicago_1k_car | sumo    | meso  | 995 (99.5 %)    | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
-| chicago_1k_car | sumo    | micro | 940 (94.0 %)    | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
-| nyc_1k_car     | matsim  | meso  | **1000 (100 %)** | 249.3 ± 0.0 |  9.99 ± 0.06 | 1.0000  |
-| nyc_1k_car     | sumo    | meso  | 995 (99.5 %)    | 253.4 ± 0.3 |  0.26 ± 0.06 | 0.9988  |
+| chicago_1k_car | qarsumo | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.28 ± 0.01 | 0.9981  |
+| chicago_1k_car | sumo    | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
+| chicago_1k_car | sumo    | micro | 940 (94.0 %)     | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
 
-Total wall-clock for the 16-run matrix: ~52 s.
+Total wall-clock for the 11-run matrix: ~27 s.
 
 The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses). It is the simulation outcome we want to *measure*, not an input asymmetry — every `feasibility_report.json` records `feasible_trips == total_trips == 1000`.
 
@@ -200,8 +234,11 @@ The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO re
 | `SUMO command not found`         | `brew install sumo` (macOS) or `apt-get install sumo` (Linux).                                           |
 | `Java version too old`           | `brew install openjdk@17` (macOS) or `apt-get install openjdk-17-jdk` (Linux).                            |
 | Slow MATSim runs                 | MATSim has ~5 – 7 s JVM startup overhead per run; this dominates wall-clock for the 1K tier.              |
-| Overpass fetch hangs the first run | Run `python -m pipeline.network.warmup` once.                                                             |
-| `cache/` grows large             | `scripts/clean.sh --all` to wipe both Python bytecode and the OSM HTTP cache.                            |
+| `FileNotFoundError: osm_data/illinois-*.osm.pbf` during generation | Run `python tools/download_osm.py` to fetch the hash-pinned PBFs.                      |
+| `SHA-256 mismatch` on a PBF      | A partial download — delete the offending file in `osm_data/` and re-run `tools/download_osm.py`.       |
+| `osmnx.truncate` TypeError on `bbox` kwargs | `requirements.txt` pins `osmnx>=1.1,<3`; `build_network_from_osm.py` branches on `ox.__version__` to handle the 1.9.x → 2.x kwargs rename (`north/south/east/west` → positional `bbox=(W,S,E,N)`). If you pinned a newer major yourself, revert to the documented range. |
+| Overpass fallback hangs          | Only reachable for cities without a committed PBF. Pre-fetch with `pipeline.network.warmup`, or add the PBF to `osm_data/manifest.json`. |
+| `cache/` grows large             | `tools/clean.sh --all` to wipe both Python bytecode and the OSM HTTP cache. (PBFs in `osm_data/` are kept.) |
 
 ---
 
@@ -235,11 +272,14 @@ This thesis was produced with:
 
 | Component | Version |
 | --------- | ------- |
-| SimForge  | Version_2 (commit `537ae75` or later) |
+| SimForge  | Version_2 (commit `d66747d` or later) |
 | Python    | 3.13.2  |
 | SUMO      | 1.20.0  |
 | MATSim    | 15.0    |
 | Java      | 17.0.13 |
+| osmnx     | 1.9.x or 2.x *(`requirements.txt` allows `>=1.1,<3`; `build_network_from_osm.py` branches on `ox.__version__` to keep both APIs working)* |
+| osmium (pyosmium) | 4.x |
+| OSM PBF snapshots | Geofabrik extracts — exact SHA-256 hashes in `osm_data/manifest.json` |
 
 To reproduce exactly, use these versions.
 

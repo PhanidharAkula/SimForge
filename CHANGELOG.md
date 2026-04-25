@@ -10,6 +10,10 @@ Commit hashes refer to the `Version_2` branch.
 
 ### Added
 
+- **Hash-pinned local OSM ingest (`osm_data/`)** — SimForge no longer depends on the live Overpass API for the cities it ships. State-level Geofabrik PBF snapshots (Illinois 348 MB, New York 489 MB, California 1.3 GB) are pinned by SHA-256 + MD5 in `osm_data/manifest.json`.
+- **`tools/download_osm.py`** — idempotent fetcher that downloads each manifest entry, verifies both hashes, and skips already-present files. Replaces the old per-scenario Overpass warm-up for the committed cities.
+- **`pipeline/network/load_network_from_pbf.py`** — pyosmium `FileProcessor().with_locations()` + `BackReferenceWriter` pipeline that bbox-slices a state-level PBF into an `.osm.xml` fragment without materialising the whole file, then hands it to `osmnx.graph_from_xml`.
+- **`doc/PITZER.md`** — new end-to-end guide for the OSC Pitzer supercomputer workflow: account setup, module loads, filesystem layout, PBF / ModelGen rsync, `srun` vs. `sbatch` templates per generation tier, job monitoring (`squeue` / `sacct`), QarSUMO GPU build, and troubleshooting.
 - **`pyproject.toml`** with `[tool.pytest.ini_options]`: `testpaths`, `--strict-markers`, `--strict-config`, `--tb=short`, and a registered marker set (`slow`, `integration`, `determinism`, `requires_sumo`, `requires_java`, `requires_gpu`). Now also carries `[tool.coverage.run]` / `[tool.coverage.report]` / `[tool.coverage.xml]` (branch coverage, `source = [adapters, evaluation, pipeline]`, renderers + data-dependent modules in `omit`) and `[tool.mutmut]` (mutation-testing scope pinned to the two cross-engine-fairness modules).
 - **`tests/conftest.py`** with shared fixtures (`bundled_scenario`, `all_bundled_scenarios`, `small_bundled_scenarios`, `repo_root`) and helpers (`file_sha256`, `directory_sha256`, `is_arm64_netconvert_crash`, `is_large_scenario`, `warn_skipped`). Eliminates the `_CANDIDATES` scenario-discovery duplication that was sitting in five test files.
 - **`tests/test_scc.py`** (16 tests) — covers `pipeline/network/scc.py` (iterative Kosaraju + parsing) including a 5 000-node deep-chain test that would blow the recursive form's stack.
@@ -18,19 +22,23 @@ Commit hashes refer to the `Version_2` branch.
 - **`tests/test_osm_fetch.py`** (20 tests) — fully mocked Overpass/osmnx pipeline: `BoundingBox` validation (inverted lat/lon, `from_string` arity, `from_center` geometry), cache folder pinning to `<repo>/cache`, error translation (`ConnectionError → RuntimeError` with a "possible causes" block), empty-result guard (`ValueError`), missing-osmnx guard (`ImportError`), the `PREDEFINED_CITIES` catalogue, and full `build_network_from_osm` end-to-end against a duck-typed stub graph.
 - **`tests/test_demand_generators.py`** (21 tests) — `UniformRandomGenerator`, `GravityModelGenerator`, `PeakHourGenerator`, `load_network_for_demand`, and the `generate_synthetic_demand` dispatch. Proves SCC restriction on synthetic grids (dead-end nodes excluded from OD sampling), deterministic seeding (byte-identical `demand.csv` across runs), canonical CSV header, and the peak-hour temporal profile.
 - **`tests/test_engine_smoke.py`** (4 tests) — real-binary smoke for `sumo`, `netconvert`, and the MATSim JAR on the bundled scenario; asserts the engine produced non-empty artefacts (`tripinfo.xml`, `output_trips.csv.gz`). Skip-gracefully via `shutil.which()` + `check_java_available()` + `find_matsim_jar()` so `pytest -m "not slow"` stays green on a dev laptop without SUMO/Java installed.
-- **`.github/workflows/test.yml`** — CI matrix: fast tier on macOS + Ubuntu × Python 3.10/3.11/3.13 runs `pytest -m "not slow"`; coverage gate (`--cov-fail-under=70`) runs on the Ubuntu + Python 3.11 cell and uploads `coverage.xml` as an artifact; slow tier on Ubuntu only installs SUMO via apt, Java 17 via `setup-java@v4`, downloads MATSim 15.0 JAR from GitHub releases, and runs the full suite (sidesteps the Apple Silicon `netconvert` segfault).
 - **`requirements-dev.txt`** — pins `pytest>=7.0`, `pytest-cov>=4.1`, `pytest-xdist>=3.5`, `mutmut>=2.5,<3` on top of the runtime requirements.
 - **`doc/MUTATION_BASELINE.md`** — documents the `mutmut` scope (only `adapters/common/feasibility.py` + `pipeline/network/scc.py`, since those are the two modules that make cross-engine comparison *fair*), the narrow runner, the baseline table (populated on first run), and the surviving-mutant review checklist.
 
 ### Changed
 
+- **Network generation default flipped to PBF.** `pipeline/network/build_network_from_osm.py` now looks up `osm_data/manifest.json` first and dispatches to `load_network_from_pbf.py` when a covering PBF is present; the live Overpass path is reached only when no local file covers the bbox. `generate.py` hard-fails with a pointer to `tools/download_osm.py` if a committed city is requested but its PBF is absent.
+- **osmnx 1.9.x / 2.x compatibility.** `build_network_from_osm.py` now branches on `int(ox.__version__.split(".", 1)[0]) >= 2`: 1.9.x receives `north=/south=/east=/west=` kwargs for `truncate_graph_bbox`, 2.x receives the positional `bbox=(W, S, E, N)` tuple. `requirements.txt` allows `osmnx>=1.1,<3` so either major works; the recorded thesis results were produced on 1.9.x.
+- **`requirements.txt`** now declares `osmium>=4.0` (pyosmium) explicitly and documents Overpass as fallback-only in an inline comment.
 - **All test files refactored** to use shared `bundled_scenario` / `small_bundled_scenarios` fixtures instead of duplicating the scenario-discovery preamble. Suite-wide adapter sweeps now carry `@pytest.mark.slow` / `@pytest.mark.requires_sumo` so contributors can run the fast tier with `pytest -m "not slow"`.
-- **`tests/test_scalability_metrics.py`** — `test_timer_measures_time` no longer relies on a hard-coded 0.05–0.30 s window; it now compares against a `time.monotonic()` reference, removing CI-load flakiness.
-- **`TESTING.md`** rewritten to document the 17-file / 284-test layout, the CI matrix, the coverage summary (76.3 % line coverage; 70 % CI floor), and the run-command catalogue (full / fast / slow / by-marker / coverage / parallel / mutmut).
+- **`tests/test_scalability_metrics.py`** — `test_timer_measures_time` no longer relies on a hard-coded 0.05–0.30 s window; it now compares against a `time.monotonic()` reference, removing host-load flakiness.
+- **`TESTING.md`** rewritten to document the 17-file / 293-test layout, the coverage summary (76.3 % line coverage; 70 % floor), and the run-command catalogue (full / fast / slow / by-marker / coverage / parallel / mutmut).
 
 ### Fixed
 
-- **Test count drift**: docs across `README.md`, `SETUP.md`, `CONTRIBUTING.md`, `doc/chapters/methods.md`, `doc/chapters/experiments.md`, and `doc/chapters/results.md` now consistently report **284 tests** (was 184).
+- **NYC 500 K generation unblocked** — the previous Overpass path timed out on the full NYC bbox and the alternative (splitting the bbox across multiple Overpass queries) produced non-deterministic topology between runs. The PBF slice is both faster and byte-reproducible.
+- **MATSim 15.0 download URL** corrected in `setup_simforge.py`; the old release asset URL had been superseded on GitHub and caused a silent 404 → zero-byte JAR on fresh clones.
+- **Test count reconciled to 249.** Removing the redundant `nyc_1k_car`, `la_1k_car`, and three synthetic bundles shrank the parametrised suite in `tests/test_scenario_data_integrity.py` (70 → 35) and `tests/test_scc.py` (16 → 14). Docs across `README.md`, `SETUP.md`, `TESTING.md`, `CONTRIBUTING.md`, `help.py`, and the thesis chapters now consistently report **249 tests** (previously 293).
 
 ---
 
@@ -41,7 +49,7 @@ Plot polish, coverage diagnostics, and cache hygiene. Commit `537ae75`.
 ### Added
 
 - **Coverage diagnostic** in `evaluation/analyze_benchmark.py` (`print_coverage_report`) — flags low-sample cells (`n < 3`), asymmetric coverage across scenarios, and silently-failed cells.
-- **`scripts/clean.sh`** — wipes Python bytecode (`__pycache__`, `*.pyc`, `.pytest_cache`); `--all` also drops `cache/` (OSM Overpass HTTP cache).
+- **`tools/clean.sh`** — wipes Python bytecode (`__pycache__`, `*.pyc`, `.pytest_cache`); `--all` also drops `cache/` (OSM Overpass HTTP cache).
 - **Per-bar error bars** confirmed on Figs 5.1 and 5.3 (`yerr=errs, capsize=3`) for cross-engine variance disclosure.
 
 ### Changed

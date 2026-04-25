@@ -393,7 +393,7 @@ def generate_scenario(
     if pbf_path is None or not pbf_path.exists():
         raise FileNotFoundError(
             f"OSM PBF required for city '{city}' but not found: {pbf_path}\n"
-            f"  Download it with:  python scripts/download_osm.py\n"
+            f"  Download it with:  python tools/download_osm.py\n"
             f"  Provenance lives in osm_data/manifest.json (URL + SHA256)."
         )
 
@@ -622,9 +622,9 @@ def main() -> None:
         city = args.city
         trips = args.trips if args.trips is not None else 5_000
         modes = args.modes.split(",") if args.modes else ["car"]
-        # Default to the 7–8 AM rush-hour window used by the bundled scenarios
-        # so `generate.py --city <X> --trips 1000` reproduces chicago_1k_car /
-        # nyc_1k_car exactly (seed 42, radius 2 km, 25200–28800 s).
+        # Default to the 7–8 AM rush-hour window used by the bundled scenario
+        # so `generate.py --city chicago --trips 1000` reproduces chicago_1k_car
+        # exactly (seed 42, radius 2 km, 25200–28800 s).
         start_time = args.start_time if args.start_time is not None else 25200
         end_time = args.end_time if args.end_time is not None else 28800
         radius_km = (args.radius if args.radius is not None

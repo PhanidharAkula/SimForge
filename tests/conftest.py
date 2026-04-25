@@ -24,10 +24,10 @@ SCENARIOS_DIR = REPO_ROOT / "scenarios"
 # actually exists on disk becomes the default for single-scenario tests.
 _BUNDLED_PREFERENCE = (
     "chicago_1k_car",
-    "nyc_1k_car",
-    "la_1k_car",
     "nyc_10k_car",
     "la_50k_bike_car_transit",
+    "chicago_200k_car_transit",
+    "nyc_500k_car",
 )
 
 # Substring filename patterns identifying scenarios that are too large for the

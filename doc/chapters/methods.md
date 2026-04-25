@@ -51,7 +51,8 @@ SimForge solves these challenges through five interacting subsystems:
 | ------------------ | ---------------------------- | ------- | --------------------------------------- |
 | Core framework     | Python                       | 3.10+   | All pipeline, adapter, and harness code |
 | XML processing     | lxml / xml.etree.ElementTree | —       | Canonical and simulator XML I/O         |
-| Network extraction | osmnx + networkx             | 1.9+    | OpenStreetMap download and graph ops    |
+| OSM slicing        | pyosmium (libosmium bindings) | 4.0+   | Bbox-slice hash-pinned Geofabrik PBFs   |
+| Network extraction | osmnx + networkx             | 1.9.x   | Parse sliced OSM XML → `MultiDiGraph`   |
 | Data processing    | pandas                       | 2.0+    | Demand CSV handling                     |
 | Validation         | pydantic                     | 2.0+    | Schema enforcement                      |
 | SUMO simulator     | SUMO (eclipse-sumo)          | 1.20.0  | Microscopic + mesoscopic simulation     |
@@ -59,7 +60,7 @@ SimForge solves these challenges through five interacting subsystems:
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | QarSUMO            | QarSUMO (LLNL)               | —       | GPU-accelerated SUMO variant            |
 | GPU compute        | CUDA                         | 11.8+   | QarSUMO acceleration                    |
-| Testing            | pytest                       | 8.0+    | 293 tests across all subsystems         |
+| Testing            | pytest                       | 8.0+    | 249 tests across all subsystems         |
 
 ---
 
@@ -367,10 +368,11 @@ python generate.py --city chicago --trips 5000 --synthetic --seed 42
    $$\text{east} = \text{lon} + \frac{r_\text{km}}{111 \cdot \cos(\text{lat})}$$
    $$\text{west} = \text{lon} - \frac{r_\text{km}}{111 \cdot \cos(\text{lat})}$$
 
-2. **OSM download** via osmnx (which uses the Overpass API):
-   - Filters to `highway=*` tags for driveable roads
-   - Returns a NetworkX directed multigraph
-   - Road types included: motorway, trunk, primary, secondary, tertiary, residential, unclassified
+2. **OSM ingest.** SimForge prefers a hash-pinned, state-level Geofabrik PBF when `osm_data/manifest.json` covers the target bounding box; it falls back to the live Overpass API otherwise.
+   - **PBF path (primary).** `pyosmium.FileProcessor(pbf).with_locations()` streams the state PBF and a `BackReferenceWriter` writes a bbox-clipped `.osm.xml` slice without materialising the whole file; `osmnx.graph_from_xml` then parses that slice into a NetworkX directed multigraph and `osmnx.truncate.truncate_graph_bbox` trims boundary-clipped edges. The PBF's SHA-256 + MD5 are validated against `manifest.json` before parsing.
+   - **Overpass path (fallback).** `osmnx.graph_from_bbox(...)` with response caching under `cache/`. Used only for cities without a committed PBF.
+   - Filters to `highway=*` tags for driveable roads; returns a NetworkX directed multigraph identical in schema regardless of ingest path.
+   - Road types included: motorway, trunk, primary, secondary, tertiary, residential, unclassified.
 
 3. **Graph simplification** (performed by osmnx):
    - Merges degree-2 nodes (straight-through segments) into single edges
@@ -957,7 +959,7 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **293 tests** across all subsystems:
+The framework includes **249 tests** across all subsystems:
 
 | Test Module                       | Tests | What It Validates                                       |
 | --------------------------------- | ----- | ------------------------------------------------------- |
@@ -970,19 +972,19 @@ The framework includes **293 tests** across all subsystems:
 | `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation         |
 | `test_scalability_metrics.py`     | 8     | Timer, throughput, hardware detection                   |
 | `test_validator.py`               | 2     | Bundle validation: valid and invalid bundles            |
-| `test_scenario_data_integrity.py` | 70    | Per-scenario × 35 integrity checks                      |
+| `test_scenario_data_integrity.py` | 35    | 7 classes x the bundled scenario                        |
 | `test_pipeline_e2e.py`            | 20    | Bad data detection, routing, adapter robustness         |
-| `test_scc.py`                     | 16    | Iterative Kosaraju + parsing                            |
+| `test_scc.py`                     | 14    | Iterative Kosaraju + parsing                            |
 | `test_feasibility.py`             | 16    | Shared cross-engine trip filter                         |
 | `test_analyze_benchmark.py`       | 25    | Mode-aware grouping + identity fallback + renderers     |
 | `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
 | `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/QarSUMO                |
 
-**All 293 tests passing** as of current version. Marker registry in
+**All 249 tests passing** as of current version. Marker registry in
 `pyproject.toml`; shared fixtures in `tests/conftest.py`.  Line coverage
 sits at **76 %** across the adapter, pipeline, and evaluation packages;
-CI enforces ≥70 % on every PR via `pytest --cov --cov-fail-under=70`.
+the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.
 
 ### 3.7.2 Determinism Guarantees
 

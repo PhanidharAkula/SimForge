@@ -114,7 +114,7 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
     if not pbf_path.exists():
         raise FileNotFoundError(
             f"OSM PBF not found at {pbf_path}.\n"
-            f"  Download with: python scripts/download_osm.py"
+            f"  Download with: python tools/download_osm.py"
         )
 
     size_mb = pbf_path.stat().st_size / 1e6

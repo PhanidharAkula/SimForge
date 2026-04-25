@@ -26,8 +26,7 @@
 7. [Data Lineage Diagram](#7-data-lineage-diagram)
 8. [Output Files Explained](#8-output-files-explained)
 9. [Running on OSC Pitzer](#9-running-on-osc-pitzer)
-10. [Workspace Alternatives on Pitzer](#10-workspace-alternatives-on-pitzer)
-11. [Glossary](#11-glossary)
+10. [Glossary](#10-glossary)
 
 ---
 
@@ -35,18 +34,18 @@
 
 SimForge generates **simulator-agnostic scenario bundles** — a set of XML and CSV files that describe a complete traffic simulation scenario. Any scenario bundle contains:
 
-| File           | What It Describes                          | Source                         |
-| -------------- | ------------------------------------------ | ------------------------------ |
-| `network.xml`  | Road network (nodes, links, lanes, speeds) | OpenStreetMap (real)           |
-| `demand.csv`   | Trip table (who, from, to, when, how)      | Census + ModelGen              |
-| `signals.xml`  | Traffic signal controllers and phases      | Inferred from network topology |
-| `config.xml`   | Simulation parameters (time, seed, units)  | Generated                      |
-| `manifest.xml` | Bundle inventory listing all files         | Generated                      |
+| File           | What It Describes                          | Source                              |
+| -------------- | ------------------------------------------ | ----------------------------------- |
+| `network.xml`  | Road network (nodes, links, lanes, speeds) | OpenStreetMap (hash-pinned PBF)     |
+| `demand.csv`   | Trip table (who, from, to, when, how)      | Census + ModelGen                   |
+| `signals.xml`  | Traffic signal controllers and phases      | Inferred from network topology      |
+| `config.xml`   | Simulation parameters (time, seed, units)  | Generated                           |
+| `manifest.xml` | Bundle inventory listing all files         | Generated                           |
 
 The generation pipeline has **4 steps**, executed by `generate.py`:
 
 ```
-Step 1: Download road network from OpenStreetMap (real roads)
+Step 1: Slice road network from a hash-pinned Geofabrik OSM PBF
 Step 2: Infer traffic signals at busy intersections
 Step 3: Write config.xml + manifest.xml
 Step 4: Generate trip demand (census-calibrated or synthetic)
@@ -242,10 +241,11 @@ When you run `python generate.py --city chicago --trips 1000`, here's exactly wh
 
 ### Step 1: Network from OpenStreetMap
 
-**File**: `pipeline/network/build_network_from_osm.py`
+**Files**: `pipeline/network/build_network_from_osm.py` + `pipeline/network/load_network_from_pbf.py`
 
 ```
-Input:  City center coordinates (41.8781, -87.6298) + radius (4 km)
+Input:  osm_data/<state>-<date>.osm.pbf   (hash-pinned in osm_data/manifest.json)
+        + city center coordinates (41.8781, -87.6298) + radius (2 km)
 Output: scenarios/chicago_1k_car/network.xml
 ```
 
@@ -256,27 +256,37 @@ Output: scenarios/chicago_1k_car/network.xml
    - south = lat - radius/111 km
    - east = lon + radius/(111·cos(lat)) km
    - west = lon - radius/(111·cos(lat)) km
-   - For Chicago 4km: roughly 41.842°–41.914° N, -87.678°–-87.582° W
+   - For Chicago 2km: roughly 41.860°–41.896° N, -87.654°–-87.606° W
 
-2. **Download from OSM** via the Overpass API (through `osmnx` library):
-   - Requests all `highway=*` ways within the bounding box
-   - Filters to driveable roads (motorway, trunk, primary, secondary, tertiary, residential, service, etc.)
-   - Returns a NetworkX directed multigraph
+2. **Slice the state PBF** via pyosmium (`load_network_from_pbf.py::_slice_pbf_to_xml`):
+   - `osmium.FileProcessor(state.osm.pbf).with_locations()` streams the PBF (never holds the whole state in memory).
+   - For each way with a `highway=*` tag, check if any node lies inside the bbox — if so, write the way via `osmium.BackReferenceWriter`. The back-reference writer automatically includes every node the way refers to, even those outside the bbox (required so long arterials that pass through the corner keep their geometry).
+   - Result: a reference-complete `.osm` XML staged under `$TMPDIR` — this is what `osmium extract -b N,S,E,W state.pbf` would produce via the CLI, expressed through the Python API so only `pip install osmium` is needed.
 
-3. **Simplify the graph** (osmnx does this):
-   - Merges degree-2 nodes (straight-through road segments) into single edges
-   - Keeps only intersections and dead-ends as nodes
-   - Preserves the total road length
+3. **Parse with osmnx**: `ox.graph_from_xml(simplify=True, retain_all=False)` turns the sliced XML into a `networkx.MultiDiGraph` with per-node `x`/`y` and per-edge `highway`/`length`/`maxspeed`/`lanes`/`name`/`osmid` attributes. Graph simplification merges degree-2 nodes (straight-through segments) and keeps only intersections and dead-ends.
 
-4. **Convert to canonical format**:
+4. **Clip the bleed with `truncate_graph_bbox`**: `BackReferenceWriter` keeps every node any matched way references — including nodes far outside the bbox when long ways pass through the corner. osmnx's `truncate.truncate_graph_bbox(truncate_by_edge=True)` removes those stub extensions so the simulated footprint matches what a direct bbox query would have returned. The module branches on `int(ox.__version__.split(".", 1)[0])` because osmnx 1.9.x takes `north=/south=/east=/west=` kwargs while 2.x takes a positional `bbox=(W,S,E,N)` tuple — both are supported in the test matrix.
+
+5. **Convert to canonical format**:
    - Each OSM node → `<node id="n0" x="-87.657" y="41.895" type="intersection" osm_id="25779173" />`
    - Each OSM way segment → `<link id="l0" from="n1" to="n2" length="134.5" lanes="2" speed_limit="13.9" road_type="primary" />`
-   - Speed limits: from OSM `maxspeed` tag if present, otherwise defaults by road type (motorway=120km/h, residential=40km/h, etc.)
+   - Speed limits: from OSM `maxspeed` tag if present, otherwise defaults by road type (motorway=120 km/h, residential=40 km/h, etc.)
    - Lane counts: from OSM `lanes` tag if present, otherwise defaults (motorway=3, residential=1)
+
+**Why local PBF instead of live Overpass:**
+
+| Path           | Reproducibility                       | Speed (city-scale bbox) | Reliability                                  |
+| -------------- | ------------------------------------- | ----------------------- | -------------------------------------------- |
+| Local PBF      | ✅ SHA-256 pinned, byte-identical      | 30 – 90 s               | ✅ Deterministic — no rate limits             |
+| Overpass (API) | ⚠️ OSM is a moving target (daily churn) | 5 – 30+ min             | ⚠️ Rate-limited; stalls silently on NYC-sized bboxes |
+
+The Overpass path (`download_osm_network`) is retained as a fallback for cities without a committed PBF, but every city in `generate.py::CITIES` has a matching `pbf_file` entry, and the thesis pipeline exclusively uses the PBF path. The move was motivated by a concrete failure: a NYC 500K scenario stalled an 8-hour Pitzer SLURM job with the Overpass path; the same bbox now finishes the slice in ~4 minutes against `new-york-2026-04-22.osm.pbf`.
+
+**PBF provenance:** every PBF in `osm_data/` is pinned by SHA-256 + MD5 in `osm_data/manifest.json` with its source URL (Geofabrik) and coverage area. Anyone downloading from the published URL and getting the same hash is working with bit-identical data.
 
 **Realistic?** YES — these are actual roads from OpenStreetMap with real geometries, real names, and mostly real speed limits. The network structure is as real as OSM data quality allows.
 
-**Typical output**: 1,200-1,500 nodes, 2,500-3,500 links for a 4km radius in a dense urban area.
+**Typical output**: 1,200-1,500 nodes, 2,500-3,500 links for a 2 km radius in a dense urban area.
 
 ---
 
@@ -623,27 +633,26 @@ The thesis goal is **not** to replicate real traffic perfectly, but to **compare
   SIMFORGE PIPELINE                     │
   ═════════════════                     │
                                         │
-  ┌────────────────────────┐            │
-  │  OpenStreetMap          │            │
-  │  (live Overpass API)    │            │
-  │                         │            │
-  │  Fresh network download │            │
-  │  for the exact bbox     │            │
-  └───────────┬─────────────┘            │
-              │                          │
-              ▼                          ▼
-  ┌───────────────────┐     ┌──────────────────────────┐
-  │ build_network_    │     │   parse_model_file.py     │
-  │  from_osm.py      │     │                          │
-  │                   │     │  Parse bld/hld/per records│
-  │  • Download OSM   │     │  Filter to bounding box  │
-  │  • Simplify graph │     │  Filter by mode/car_only │
-  │  • Extract nodes  │     │  Build: buildings,        │
-  │  • Extract links  │     │    households, persons    │
-  │  • Write XML      │     └──────────┬───────────────┘
-  └────────┬──────────┘                │
-           │                           │
-           ▼                           ▼
+  ┌────────────────────────────────────┐   │
+  │  osm_data/<state>-<date>.osm.pbf    │   │
+  │  (Geofabrik snapshot, SHA-256       │   │
+  │   pinned in osm_data/manifest.json) │   │
+  └────────────────┬───────────────────┘   │
+                   │                        │
+                   ▼                        ▼
+  ┌──────────────────────────────────┐   ┌──────────────────────────┐
+  │ load_network_from_pbf.py          │   │   parse_model_file.py     │
+  │                                   │   │                          │
+  │  • pyosmium bbox slice            │   │  Parse bld/hld/per records│
+  │    (BackReferenceWriter)          │   │  Filter to bounding box  │
+  │  • osmnx graph_from_xml           │   │  Filter by mode/car_only │
+  │  • truncate_graph_bbox            │   │  Build: buildings,        │
+  │    (1.9.x / 2.x version branch)   │   │    households, persons    │
+  │  • extract_canonical_network      │   └──────────┬───────────────┘
+  │  • Write XML                      │              │
+  └────────────────┬──────────────────┘              │
+                   │                                  │
+                   ▼                                  ▼
   ┌──────────────────────────────────────────────────┐
   │           generate_census_demand.py               │
   │                                                    │
@@ -756,128 +765,37 @@ t2,n399,n603,25200,car
 
 ## 9. Running on OSC Pitzer
 
-OSC Pitzer is the supported HPC target for SimForge. Everything in the canonical pipeline — scenario generation, all three engines (SUMO, MATSim, QarSUMO), evaluation, and plotting — runs end-to-end on Pitzer.
+All 50K – 500K scenarios in the thesis were generated on the Ohio Supercomputer Center's Pitzer cluster. The full HPC workflow — account setup, module loads, rsyncing PBFs and ModelGen files, per-tier SLURM `sbatch` templates, job monitoring, and troubleshooting — lives in a dedicated guide:
 
-### 9.1 Hardware
+- **[doc/PITZER.md](PITZER.md)** — OSC Pitzer setup and batch-job reference.
 
-| Feature             | Specification                                                              |
-| ------------------- | -------------------------------------------------------------------------- |
-| **Operator**        | Ohio Supercomputer Center (state-funded)                                   |
-| **Login**           | `pitzer.osc.edu` (4 login nodes)                                           |
-| **OS**              | RHEL 9                                                                     |
-| **Standard CPU**    | 564 nodes — Skylake (40 cores, 192 GB) or Cascade Lake (48 cores, 192 GB)  |
-| **Large memory**    | 12 nodes (~744 GB) + 4 huge-mem nodes (3 TB, 80 cores)                     |
-| **GPU**             | 74 dual-V100 nodes (16 GB or 32 GB) + 4 quad-V100 nodes (32 GB)            |
-| **Total**           | 658 nodes / 29,664 cores                                                   |
-| **Scheduler**       | SLURM                                                                      |
-| **Storage**         | Home 500 GB, Project (`PMIU0110`) 500 GB, scratch (`/fs/scratch`) per-job  |
-| **Project Account** | `PMIU0110` (passed to SLURM via `--account=PMIU0110`)                      |
+Short version:
 
-### 9.2 Internet access
+```bash
+ssh pitzer
+cd ~ && git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git
+cd SimForge
+module load python/3.12 openjdk
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt && pip install eclipse-sumo
 
-**Outbound HTTPS works on both login and compute nodes**, routed through OSC's NAT (`192.148.249.248–251`). This means:
+# From your local machine, ship the gitignored binaries over:
+rsync -avh osm_data/ pitzer:SimForge/osm_data/
+rsync -avh modelgen/ pitzer:SimForge/modelgen/
 
-- `pip install eclipse-sumo` works in batch jobs ✓
-- OSM/Overpass downloads work on compute nodes ✓
-- `git clone`, `wget`, package fetches all succeed ✓
-- **Inbound** is blocked — you can't expose a service on a compute node
+# Back on Pitzer:
+sbatch jobs/gen_nyc_500k.sbatch
+```
 
-No SimForge endpoint (Overpass, GitHub, PyPI, OSM tile servers) is on OSC's blocklist. If something is ever blocked, email `oschelp@osc.edu`.
+Three things are worth stressing here (full detail in [PITZER.md](PITZER.md)):
 
-### 9.3 SLURM partitions
-
-| Partition          | Max walltime | Max nodes | Use for                                          |
-| ------------------ | ------------ | --------- | ------------------------------------------------ |
-| `cpu`              | 7 days       | 20        | Standard 40-core jobs (scenario generation)      |
-| `cpu-exp`          | 7 days       | 36        | Standard 48-core Cascade Lake jobs               |
-| `gpu`              | 7 days       | 4         | Dual V100 16 GB (QarSUMO build + run)            |
-| `gpu-exp`          | 7 days       | 6         | Dual V100 32 GB (larger QarSUMO scenarios)       |
-| `gpu-quad`         | 7 days       | 1         | Quad V100 32 GB (heaviest QarSUMO runs)          |
-| `debug-cpu` / `gpudebug` | 1 hour | 2         | Quick smoke tests before queuing the real run    |
-| `hugemem`          | 1 day        | 1         | 3 TB RAM (only if a 500K bundle exceeds 192 GB)  |
-| `longcpu`          | 14 days      | 1         | Restricted access (request via OSC)              |
-
-Submit-queue limit: 1000 jobs per user. Plenty of headroom for SLURM array jobs across seeds and tiers.
-
-### 9.4 Software environment
-
-Confirmed via OSC's documented software list (RHEL 9 rebuild, current as of 2026-04):
-
-| Software   | Available on Pitzer                  | How to use                                       |
-| ---------- | ------------------------------------ | ------------------------------------------------ |
-| **Python** | Multiple 3.x versions as modules     | `module load python/3.12`                        |
-| **GCC**    | 11+ available                        | `module load gcc` (default is modern enough)     |
-| **CUDA**   | Multiple versions as modules         | `module load cuda` (use `module spider cuda`)    |
-| **OpenJDK**| Yes — module renamed from `java`     | `module load openjdk` → MATSim runs              |
-| **SUMO**   | Not a module                         | `pip install eclipse-sumo` inside your venv      |
-| **QarSUMO**| Not prebuilt — V100 + CUDA available | Build from source on a `gpu` partition node      |
-
-`module spider <name>` is the authoritative check on a logged-in shell. Module names and versions get rebumped after rebuilds.
-
-### 9.5 What runs end-to-end on Pitzer
-
-| SimForge component                     | Status on Pitzer | How                                                              |
-| -------------------------------------- | ---------------- | ---------------------------------------------------------------- |
-| Scenario generation (synthetic)        | Works            | Pure Python, no external network needed                          |
-| Scenario generation (with model file)  | Works            | OSM/Overpass reachable from compute nodes                        |
-| SUMO meso + micro                      | Works            | `pip install eclipse-sumo` covers both binaries                  |
-| MATSim                                 | Works            | `module load openjdk`, then `lib/matsim-15.0/matsim-15.0.jar`    |
-| QarSUMO (real GPU)                     | Works            | Build on `gpu` partition; binary at `~/qarsumo/build/qarsumo`    |
-| Evaluation + plot rendering            | Works            | Pure Python (matplotlib in venv)                                 |
-| Bundle validation + hashing            | Works            | Pure Python                                                      |
-
-The QarSUMO row is the meaningful upgrade vs. running locally on Apple Silicon: on Pitzer it executes on a real V100 instead of falling back to bit-identical SUMO meso, so the GPU speedup story can be measured rather than asserted.
+1. **Clone into `$HOME`, not the project share** — you own 500 GB of quota and the workflow doesn't need advisor approvals.
+2. **OSM PBFs and ModelGen files are gitignored** — rsync them in from your dev box, or run `python tools/download_osm.py` on Pitzer (NAT allows outbound HTTPS).
+3. **Pitzer Python is 3.12** (Mac dev box may be 3.13/3.14). Both versions work; osmium 4.x wheels are available for both. If `pip install -r requirements.txt` skips osmium, re-run it — older Pitzer checkouts may not have had `osmium>=4.0` in requirements.
 
 ---
 
-## 10. Workspace Alternatives on Pitzer
-
-You don't need to clone into the project directory (`/fs/ess/PMIU0110/`). Here are your options:
-
-### Option A: Home Directory (Recommended for SimForge)
-
-```bash
-# Clone to your home directory — no advisor permission needed
-git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git ~/SimForge
-```
-
-- **Path**: `/users/PMIU0110/phanidharakula/SimForge/` (this is `~/SimForge`)
-- **Quota**: 500 GB (currently using 1.14 GB)
-- **Pros**: You own it, no permission issues, plenty of space
-- **Cons**: Not shared with other group members
-
-### Option B: Scratch Storage (For Large Temporary Data)
-
-```bash
-# OSC provides fast scratch space
-# Check: echo $TMPDIR (set per-job) or use /fs/scratch/PMIU0110/
-mkdir -p /fs/scratch/PMIU0110/phanidharakula/SimForge
-git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git /fs/scratch/PMIU0110/phanidharakula/SimForge
-```
-
-- **Pros**: Fast I/O, good for large generation jobs
-- **Cons**: Scratch is purged periodically (files older than ~90 days may be deleted)
-
-### Option C: Project Storage (Shared, Ask Advisor)
-
-```bash
-# If advisor approves — good for sharing results with the group
-mkdir -p /fs/ess/PMIU0110/SimForge
-git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git /fs/ess/PMIU0110/SimForge
-```
-
-- **Path**: `/fs/ess/PMIU0110/SimForge/`
-- **Quota**: 500 GB shared (currently 16 GB used)
-- **Pros**: Shared with group, persistent
-- **Cons**: Need advisor permission, shared quota
-
-### Recommendation
-
-**Use Option A (home directory)** — it's yours, has 500 GB of space, and requires no special permissions. The model files (~1.2 GB total) and generated scenarios (~1-5 GB) fit easily.
-
----
-
-## 11. Glossary
+## 10. Glossary
 
 | Term                         | Definition                                                                                                                   |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
@@ -885,6 +803,7 @@ git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git /fs/ess/PM
 | **Bounding box (bbox)**      | Geographic rectangle defined by (north, south, east, west) coordinates                                                       |
 | **Canonical format**         | SimForge's simulator-agnostic scenario schema (network.xml, demand.csv, etc.)                                                |
 | **Census-calibrated demand** | Trip generation using real census demographic data (vs purely random)                                                        |
+| **Geofabrik**                | A long-running provider of OSM extracts at country / state / region granularity. Source of the PBFs in `osm_data/`.          |
 | **Gravity model**            | Trip distribution model where flow between zones is proportional to "mass" (activity) and inversely proportional to distance |
 | **JWMNP**                    | ACS/PUMS field: Journey to Work — travel time in Minutes to Place of work                                                    |
 | **JWTRNS**                   | ACS/PUMS field: Journey to Work — TRaNSportation mode                                                                        |
@@ -892,9 +811,11 @@ git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git /fs/ess/PM
 | **ModelGen**                 | C++ population synthesizer that combines OSM, LandScan, and PUMS into building/household/person models                       |
 | **OD pair**                  | Origin-Destination pair — a single trip from point A to point B                                                              |
 | **OSM**                      | OpenStreetMap — crowd-sourced geographic database                                                                            |
-| **Overpass API**             | HTTP API for querying OpenStreetMap data                                                                                     |
+| **Overpass API**             | HTTP API for querying OpenStreetMap data. Used as a *fallback* in SimForge for cities without a committed PBF.               |
+| **PBF**                      | Protocolbuffer Binary Format — compact binary serialization of OSM data (`.osm.pbf`), ~1/10 the size of equivalent XML       |
 | **PUMA**                     | Public Use Microdata Area — geographic unit (~100K-200K people) used in census microdata                                     |
 | **PUMS**                     | Public Use Microdata Sample — individual-level census records (anonymized)                                                   |
+| **pyosmium**                 | Python bindings for libosmium; used by `pipeline/network/load_network_from_pbf.py` to bbox-slice state-level PBFs            |
 | **SCC**                      | Strongly Connected Component — the largest subgraph where every node can reach every other node                              |
 | **Snap point**               | The point on the closest road to a building; stored as `way_lat`/`way_lon` in model files                                    |
 | **WGTP**                     | Household weight from PUMS — how many real households one survey record represents                                           |

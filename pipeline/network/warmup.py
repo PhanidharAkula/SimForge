@@ -17,7 +17,7 @@ benchmark runs hit the cache and start instantly.
 Usage
 -----
     python -m pipeline.network.warmup                  # all scenarios
-    python -m pipeline.network.warmup --scenarios chicago_1k_car,nyc_1k_car
+    python -m pipeline.network.warmup --scenarios chicago_1k_car,nyc_10k_car
     python -m pipeline.network.warmup --dry-run        # report only, no fetch
 """
 

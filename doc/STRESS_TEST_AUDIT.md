@@ -8,6 +8,8 @@
 **Follow-up 1:** *"fix those 3 gaps, and make it score 100, dont test the whole application again, only the changed/appropriate once."*
 **Follow-up 2 (fairness audit):** *"is it now the fair and apple-to-apple comparision, or is there any imbalance, do a final check."* → fairness scored **93/100**; user requested fixes to reach thesis standard.
 
+> **Note (2026-04-23):** After this audit the canonical stress-test matrix was reduced from 8 cells (chicago + nyc) to 4 cells (chicago only) and the separate CI workflow was dropped in favour of a local `pytest` gate. References to `nyc_1k_car` and `.github/workflows/` below reflect the repository state as audited on 2026-04-20.
+
 ---
 
 ## Overall Score: **100 / 100**
@@ -31,9 +33,8 @@ Initial audit scored **97/100** with three small gaps (SUMO CLI parity, `generat
 | 9 | Benchmark harness | **100** | 22/22 stress matrix runs in 53 s; all R ≥ 0.9964 |
 | 10 | Evaluation tools | **100** | `analyze_benchmark` reproduces Tables 5.1+5.2 with new Adj TT column; `compare_modes` and `generate_plots` reproduce thesis figures with QarSUMO CPU-fallback footnotes |
 | 11 | Test suite | **100** | 293 passed in 22.79 s after all fixes; fast tier unaffected; coverage 76.3 % |
-| 12 | CI workflow | **100** | `.github/workflows/test.yml` parses; 2 jobs (fast matrix + slow) |
-| 13 | Dev-deps bootstrap | **100** | `setup_simforge.py` installs `requirements-dev.txt` automatically (see §13) |
-| 14 | Documentation audit | **100** | `293 tests` consistent across README / SETUP / TESTING / CONTRIBUTING / CHANGELOG / thesis chapters; SETUP.md + TESTING.md updated for auto-installed dev deps; results.md Table 5.2 updated with Adj TT column |
+| 12 | Dev-deps bootstrap | **100** | `setup_simforge.py` installs `requirements-dev.txt` automatically (see §13) |
+| 13 | Documentation audit | **100** | `293 tests` consistent across README / SETUP / TESTING / CONTRIBUTING / CHANGELOG / thesis chapters; SETUP.md + TESTING.md updated for auto-installed dev deps; results.md Table 5.2 updated with Adj TT column |
 
 ---
 
@@ -92,7 +93,7 @@ Mean TT **203.6 s** matches thesis Table 5.1's **203.5 s** for SUMO-meso on chic
 - Default `--start-time`: 0 → **25200** (07:00 AM)
 - Default `--end-time`: 3600 → **28800** (08:00 AM)
 
-These defaults match the bundled `chicago_1k_car` / `nyc_1k_car` scenarios (which came from `scripts/01_quick_test.py` / the `quick_test` preset).
+These defaults match the bundled `chicago_1k_car` scenario (which came from `scripts/01_quick_test.py` / the `quick_test` preset). At the time of the audit an `nyc_1k_car` bundle also shipped in the repo; it was later removed in favour of generating the NYC tiers on demand via `scripts/02_…05_`.
 
 Byte-for-byte reproduction verified:
 ```
@@ -217,20 +218,13 @@ $ python -m pytest tests/test_sumo_adapter.py tests/test_adapter_determinism.py 
 - Marker discipline honored: `slow` (7), `determinism` (8), `integration` (20), plus `requires_sumo`, `requires_java`, `requires_gpu`.
 - Coverage: **76.3 %** (floor is 70 %).
 
-### 12. CI workflow — 100 / 100
-
-- `.github/workflows/test.yml` parses cleanly.
-- Two jobs:
-  - `fast`: matrix on macOS + Ubuntu × Python 3.10 / 3.11 / 3.13, runs `-m "not slow"`.
-  - `slow`: Ubuntu with SUMO + Java, runs the full suite.
-
-### 13. Dev-deps bootstrap — 100 / 100
+### 12. Dev-deps bootstrap — 100 / 100
 
 - `setup_simforge.py install_dependencies()` now runs `pip install -r requirements-dev.txt` after the runtime install.
 - Failure is non-fatal and surfaces a clear warning.
 - `SETUP.md` manual-install path and `TESTING.md` coverage section updated accordingly.
 
-### 14. Documentation audit — 100 / 100
+### 13. Documentation audit — 100 / 100
 
 - `293 tests` consistent across README, SETUP, TESTING, CONTRIBUTING, CHANGELOG, `doc/chapters/methods.md`, `doc/chapters/experiments.md`, `doc/chapters/results.md`.
 - `CHANGELOG.md` correctly retains the historical `184` reference in the earlier log entry, and the "test count drift fix → 284" historical entry.

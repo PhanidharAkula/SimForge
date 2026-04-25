@@ -63,7 +63,10 @@ Five-stage pipeline from raw data to validated bundle:
 
 ```
 Stage 1: Network        pipeline/network/build_network_from_osm.py
-         OSM → Overpass API → graph → canonical network.xml
+                        pipeline/network/load_network_from_pbf.py
+         OSM PBF (hash-pinned) → pyosmium bbox slice → osmnx parse
+         → canonical network.xml
+         (Overpass API retained as fallback for cities without a committed PBF)
 
 Stage 2: Signals        pipeline/signals/build_signals_default.py
          Network nodes → signal detection → 2-phase timing → signals.xml
@@ -184,7 +187,7 @@ runs:
     repeats: 3
     seed: 42
     timeout_s: 300
-  # ... eight cells total: 2 scenarios × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}
+  # ... four cells total: chicago_1k_car × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}
 ```
 
 The harness expands each `runs[]` entry into `repeats` individual runs, monotonically incrementing seeds when `seed_increment` is enabled. After execution, `analyze_benchmark.py` and `generate_plots.py` consume the resulting `runs/<name>/benchmark_results_<name>.json`.
@@ -246,7 +249,9 @@ evaluation/metrics/travel_time.py   (xml.etree — SUMO tripinfo parser)
 
 **External dependencies** (from `requirements.txt`):
 
-- `osmnx` — OpenStreetMap network extraction
+- `osmium` (pyosmium) — bbox-slicing of local PBF snapshots
+- `osmnx` — parses the sliced XML into a `MultiDiGraph`; also drives the Overpass fallback
+- `networkx` — graph operations (pulled in by osmnx)
 - `lxml` — XML processing
 - `pandas` — demand CSV handling
 - `numpy` — numerical computations (metrics)
@@ -264,11 +269,13 @@ evaluation/metrics/travel_time.py   (xml.etree — SUMO tripinfo parser)
 User: python generate.py --city chicago --trips 1000 --seed 42
         │
         ▼
-[1] Download OSM network (Overpass API, bbox from city center + radius;
-    cache pinned to <repo>/cache via _configure_osmnx_cache)
-        │ → raw OSM XML
+[1] Load OSM network (hash-pinned PBF from osm_data/<state>-<date>.osm.pbf;
+    bbox computed from city center + radius; pyosmium slices the PBF to a
+    reference-complete temp .osm XML via BackReferenceWriter)
+        │ → bbox-clipped OSM XML (temp file, not persisted)
         ▼
-[2] Clean + convert (osmnx → simplified directed graph)
+[2] Parse + simplify (osmnx.graph_from_xml → simplified directed graph,
+    then truncate_graph_bbox to clip stub extensions)
         │ → network.xml (1,245 nodes, 2,862 links for chicago_1k_car)
         ▼
 [3] Compute largest SCC (pipeline/network/scc.py — iterative Kosaraju)
@@ -419,8 +426,11 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 ┌─────────────────────────────────────────────────┐
 │  HPC (OSC Pitzer Cluster)                         │
 │  48-core Intel Xeon / 192 GB / V100 GPU           │
-│  → 50K – 500K scenarios                           │
+│  → OSM PBFs + ModelGen files rsynced from dev box │
+│  → 50K – 500K scenarios (SLURM batch)             │
 │  → Full benchmark matrix                          │
-│  → QarSUMO GPU experiments                        │
+│  → QarSUMO GPU experiments (real V100 kernels)    │
 └──────────────────────────────────────────────────┘
 ```
+
+The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development — only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring).

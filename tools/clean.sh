@@ -14,7 +14,7 @@ for arg in "$@"; do
   case "$arg" in
     --all) WIPE_OSM=1 ;;
     -h|--help)
-      echo "Usage: scripts/clean.sh [--all]"
+      echo "Usage: tools/clean.sh [--all]"
       echo "  (no args)  wipe Python bytecode (__pycache__, *.pyc, .pytest_cache)"
       echo "  --all      additionally wipe cache/ (OSM Overpass HTTP cache)"
       exit 0

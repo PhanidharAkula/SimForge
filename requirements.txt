@@ -10,7 +10,7 @@ pyyaml
 # pyosmium (package name: "osmium") slices hash-pinned Geofabrik PBFs in
 # osm_data/ by bbox; osmnx parses the slice into a MultiDiGraph. The live
 # Overpass path via osmnx is retained only for bboxes with no local PBF.
-osmnx>=1.1,<2
+osmnx>=1.1,<3
 osmium>=4.0
 networkx
 geopandas>=0.9,<1
