@@ -53,7 +53,15 @@ from pipeline.demand.parse_model_file import parse_model_file
 from pipeline.signals.build_signals_default import build_signals_default
 from pipeline.modelgen_scanner import scan_modelgen_dir
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
+# force=True + explicit stream because library modules under pipeline/ call
+# basicConfig at import time; without force this entry-point config would be a
+# no-op and logs would land on stderr (SLURM .err) instead of stdout (.out).
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s  %(message)s",
+    stream=sys.stdout,
+    force=True,
+)
 logger = logging.getLogger(__name__)
 
 

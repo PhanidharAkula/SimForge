@@ -36,7 +36,12 @@ from xml.etree import ElementTree as ET
 if TYPE_CHECKING:
     from pipeline.network.build_network_from_osm import BoundingBox
 
-logging.basicConfig(level=logging.INFO, format="%(levelname)s  %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s  %(message)s",
+    stream=sys.stdout,
+    force=True,
+)
 logger = logging.getLogger(__name__)
 
 

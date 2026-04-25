@@ -429,19 +429,29 @@ sacct --user=$USER --starttime=now-24hours -o JobID,JobName,State,ExitCode,Elaps
 # One specific job
 sacct -j 47060176 -o JobID,JobName,State,ExitCode,Elapsed,MaxRSS,NodeList
 
-# Failure autopsy (exit code + wall-clock — correlate with the .err file)
+# Failure autopsy (exit code + wall-clock — correlate with the .out file for
+# progress, .err for tracebacks)
 sacct -j 47060176 --format=JobID,State,ExitCode,Elapsed,DerivedExitCode
 ```
 
 ### Watch logs
 
-```bash
-# Live stream — Ctrl-C to detach
-tail -f ~/SimForge/gen-nyc-500k-47060176.out
-tail -f ~/SimForge/gen-nyc-500k-47060176.err
+The four entry-point modules (`generate.py`, `execution/run_benchmark.py`,
+`pipeline/network/warmup.py`, `evaluation/compare_modes.py`) configure the
+root logger with `stream=sys.stdout, force=True`, so all
+`INFO`/`WARNING`/`ERROR` lines land in the SLURM **`.out`** file. The `.err`
+file only catches uncaught Python tracebacks and external-tool stderr (SUMO,
+MATSim, etc.).
 
-# Grep for errors across all recent logs
-grep -E "(Error|Traceback|FAILED)" ~/SimForge/*.err
+```bash
+# Primary live stream — generation progress, per-step timings
+tail -f ~/SimForge/logs/simforge_nyc_500k_47063986.out
+
+# Real errors only — usually empty on a healthy run
+tail -f ~/SimForge/logs/simforge_nyc_500k_47063986.err
+
+# Grep across all recent logs (check both — uncaught tracebacks still land in .err)
+grep -E "(Error|Traceback|FAILED)" ~/SimForge/logs/*.{out,err}
 ```
 
 ### Cancel
@@ -516,7 +526,7 @@ module load python/3.12 openjdk
 # Submit / watch
 sbatch ~/jobs/gen_nyc_500k.sbatch
 squeue --user=$USER
-tail -f ~/SimForge/gen-nyc-500k-*.out
+tail -f ~/SimForge/logs/simforge_nyc_500k_*.out
 
 # Postmortem
 sacct --user=$USER --starttime=now-1day -o JobID,JobName,State,Elapsed,MaxRSS

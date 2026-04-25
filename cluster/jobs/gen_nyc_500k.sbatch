@@ -22,8 +22,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
 #SBATCH --time=08:00:00
-#SBATCH --output=logs/%x_%j.out
-#SBATCH --error=logs/%x_%j.err
+#SBATCH --output=logs/%x_%j.out      # progress + INFO/WARNING/ERROR (Python logging routes to stdout)
+#SBATCH --error=logs/%x_%j.err       # uncaught Python tracebacks + external-tool stderr (SUMO, MATSim, …)
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=akulaphanidhar30@gmail.com
 
