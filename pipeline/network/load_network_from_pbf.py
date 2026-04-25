@@ -168,24 +168,10 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
     # when long ways (interstates, arterials) pass through the corner.
     # truncate_graph_bbox removes those stub extensions so the simulated
     # footprint matches what Overpass's graph_from_bbox would have returned.
-    #
-    # osmnx 2.x takes bbox=(W,S,E,N); 1.x takes north/south/east/west kwargs
-    # (passing a 2.x-style tuple to 1.x would be silently accepted as
-    # (N,S,E,W), build an inverted polygon, and clip the graph to zero
-    # nodes). Branch on the major version — Pitzer runs 1.9.x, the dev
-    # box runs 2.x, and either is a valid pipeline for the thesis.
-    osmnx_major = int(ox.__version__.split(".", 1)[0])
-    if osmnx_major >= 2:
-        G = ox.truncate.truncate_graph_bbox(
-            G, bbox=(bbox.west, bbox.south, bbox.east, bbox.north),
-            truncate_by_edge=True,
-        )
-    else:
-        G = ox.truncate.truncate_graph_bbox(
-            G, north=bbox.north, south=bbox.south,
-            east=bbox.east, west=bbox.west,
-            truncate_by_edge=True,
-        )
+    G = ox.truncate.truncate_graph_bbox(
+        G, bbox=(bbox.west, bbox.south, bbox.east, bbox.north),
+        truncate_by_edge=True,
+    )
 
     if G.number_of_nodes() == 0:
         raise ValueError(

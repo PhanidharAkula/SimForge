@@ -128,8 +128,6 @@ Total: ~2.1 GB. Re-download only needed if the manifest is updated (rare — `do
 
 The result is schema-identical to what the Overpass path returned — downstream canonical extraction is unchanged.
 
-> **osmnx version note:** `load_network_from_pbf.py` branches on `ox.__version__` because osmnx 1.9.x takes `north=/south=/east=/west=` kwargs and 2.x takes a positional `bbox=(W,S,E,N)` tuple. Both versions are supported; the test suite passes on each.
-
 ---
 
 ## Scenario Data

@@ -265,7 +265,7 @@ Output: scenarios/chicago_1k_car/network.xml
 
 3. **Parse with osmnx**: `ox.graph_from_xml(simplify=True, retain_all=False)` turns the sliced XML into a `networkx.MultiDiGraph` with per-node `x`/`y` and per-edge `highway`/`length`/`maxspeed`/`lanes`/`name`/`osmid` attributes. Graph simplification merges degree-2 nodes (straight-through segments) and keeps only intersections and dead-ends.
 
-4. **Clip the bleed with `truncate_graph_bbox`**: `BackReferenceWriter` keeps every node any matched way references — including nodes far outside the bbox when long ways pass through the corner. osmnx's `truncate.truncate_graph_bbox(truncate_by_edge=True)` removes those stub extensions so the simulated footprint matches what a direct bbox query would have returned. The module branches on `int(ox.__version__.split(".", 1)[0])` because osmnx 1.9.x takes `north=/south=/east=/west=` kwargs while 2.x takes a positional `bbox=(W,S,E,N)` tuple — both are supported in the test matrix.
+4. **Clip the bleed with `truncate_graph_bbox`**: `BackReferenceWriter` keeps every node any matched way references — including nodes far outside the bbox when long ways pass through the corner. osmnx's `truncate.truncate_graph_bbox(truncate_by_edge=True)` removes those stub extensions so the simulated footprint matches what a direct bbox query would have returned. The call uses osmnx 2.x's positional `bbox=(W, S, E, N)` tuple; `requirements.txt` pins `osmnx>=2.0,<3`.
 
 5. **Convert to canonical format**:
    - Each OSM node → `<node id="n0" x="-87.657" y="41.895" type="intersection" osm_id="25779173" />`
@@ -647,7 +647,7 @@ The thesis goal is **not** to replicate real traffic perfectly, but to **compare
   │    (BackReferenceWriter)          │   │  Filter to bounding box  │
   │  • osmnx graph_from_xml           │   │  Filter by mode/car_only │
   │  • truncate_graph_bbox            │   │  Build: buildings,        │
-  │    (1.9.x / 2.x version branch)   │   │    households, persons    │
+  │    (osmnx 2.x bbox tuple)         │   │    households, persons    │
   │  • extract_canonical_network      │   └──────────┬───────────────┘
   │  • Write XML                      │              │
   └────────────────┬──────────────────┘              │

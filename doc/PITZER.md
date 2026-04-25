@@ -305,7 +305,7 @@ Save as `~/jobs/gen_nyc_500k.sbatch`:
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=64G
-#SBATCH --time=02:00:00
+#SBATCH --time=06:00:00     # NYC-500K demand step alone takes ~3h 43m (single-threaded gravity loop); see budgets table below
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 
@@ -333,19 +333,34 @@ sbatch ~/jobs/gen_nyc_500k.sbatch
 # Submitted batch job 47060176
 ```
 
-### Wall-clock budgets (measured)
+### Wall-clock budgets
 
-| Tier             | Trips   | PBF stage   | osmnx parse | Demand gen  | Total est.  | Partition   |
-| ---------------- | ------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| `quick_test`     | 1K      | 5 – 15 s    | < 5 s       | 1 – 2 s     | < 1 min     | `debug-cpu` |
-| `small_commute`  | 10K     | 15 – 45 s   | 10 – 20 s   | 5 – 10 s    | 1 – 2 min   | `cpu`       |
-| `medium_multi`   | 50K     | 45 – 90 s   | 30 – 60 s   | 30 – 60 s   | 3 – 5 min   | `cpu`       |
-| `large_full_day` | 200K    | 60 – 120 s  | 60 – 120 s  | 2 – 4 min   | 5 – 10 min  | `cpu`       |
-| `stress_test`    | 500K    | 120 – 240 s | 120 – 240 s | 4 – 8 min   | 8 – 15 min  | `cpu`       |
+The `stress_test` row is **measured** on JobID 47063986 (Pitzer `cpu`,
+8 cores, 64 GB, NYC @ 20 km radius, `new-york-2026-04-22.osm.pbf`,
+`scripts/05_stress_test.py`). The smaller tier rows are pre-measurement
+estimates that assume a mid-size US city (~50k SCC nodes); demand-gen scales
+as O(trips × SCC destination nodes), so any tier pointed at a larger graph
+will run proportionally longer.
 
-The PBF + osmnx numbers assume the California PBF (~1.2 GB) — the heaviest
-case. Smaller states finish faster. These are **generation** numbers; the
-actual simulation runs (SUMO / MATSim / QarSUMO) are separate jobs.
+| Tier             | Trips   | PBF slice   | osmnx parse | Demand gen      | Total           | Partition   |
+| ---------------- | ------- | ----------- | ----------- | --------------- | --------------- | ----------- |
+| `quick_test`     | 1K      | 5 – 15 s    | < 5 s       | 1 – 2 s         | < 1 min         | `debug-cpu` |
+| `small_commute`  | 10K     | 15 – 45 s   | 10 – 20 s   | 5 – 10 s        | 1 – 2 min       | `cpu`       |
+| `medium_multi`   | 50K     | 45 – 90 s   | 30 – 60 s   | 30 – 60 s       | 3 – 5 min       | `cpu`       |
+| `large_full_day` | 200K    | 60 – 120 s  | 60 – 120 s  | 2 – 4 min*      | 5 – 10 min*     | `cpu`       |
+| `stress_test`    | 500K    | **211 s**   | **217 s**   | **3 h 43 min**  | **3 h 52 min**  | `cpu`       |
+
+\* `large_full_day` demand is estimated for a mid-size city; a 200K NYC-class
+run would land much closer to the `stress_test` row. The gravity sampler is a
+single-threaded NumPy loop over all SCC destination nodes, so wall-time scales
+near-linearly with both trip count and graph size — `--cpus-per-task` past 1
+buys nothing for this step.
+
+The PBF + osmnx numbers above assume the California PBF (~1.2 GB) — the
+heaviest case. Smaller states finish faster. These are **generation**
+numbers; the actual simulation runs (SUMO / MATSim / QarSUMO) are separate
+jobs. Always set `--time` to ≥ 1.5× the relevant row; the example sbatch
+above uses `--time=06:00:00` for the `stress_test` tier.
 
 ### Running the benchmark matrix
 
@@ -485,10 +500,10 @@ rsync -avh pitzer:SimForge/runs/stress_test/ ./runs/stress_test_pitzer/
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | `module: command not found`                            | Log out and back in — `module` is loaded by Pitzer's login shell. If still missing, `source /etc/profile.d/lmod.sh`.             |
 | `ImportError: osmium` after a fresh pull               | Pitzer was on an older commit before `git pull`. Re-run `pip install -r requirements.txt` so `osmium>=4.0` is installed.         |
-| osmnx version differs from local (1.9.x vs 2.x)        | Supported — `pipeline/network/load_network_from_pbf.py` branches on `ox.__version__`. Both pass the test suite.                  |
+| `TypeError` from `truncate_graph_bbox` on `bbox` kwarg | osmnx 1.x is installed. `requirements.txt` now requires `>=2.0,<3` — run `pip install -U "osmnx>=2.0,<3"`.                       |
 | `FileNotFoundError: osm_data/<state>.osm.pbf`          | PBF not transferred. See §5. Re-run `python tools/download_osm.py` to fetch + SHA-256-verify against the manifest.              |
 | Job sits in `PD` for hours                             | `squeue --start -j <id>` shows estimated start. `cpu` partition is oversubscribed during semester peaks — try `debug-cpu` (≤1 h) or reduce `--time`.  |
-| `ValueError: Found no graph nodes within the requested polygon` | Historical bug fixed in commit `6b605be` — osmnx 1.9.x's `truncate_graph_bbox` takes `north=/south=/east=/west=` keyword args. If you see this on a newer commit, file an issue. |
+| `ValueError: Found no graph nodes within the requested polygon` | Likely an osmnx version mismatch. `requirements.txt` requires `>=2.0,<3` — confirm with `python -c "import osmnx; print(osmnx.__version__)"` and `pip install -U "osmnx>=2.0,<3"` if older. |
 | `MATSim ClassNotFoundException`                        | `module load openjdk` (must be in the sbatch, not just your login shell) and verify `lib/matsim-15.0/matsim-15.0.jar` exists.     |
 | Job killed with `OUT_OF_MEMORY`                        | Increase `--mem` in the sbatch. 200K tier needs ≥ 48 GB; 500K needs ≥ 64 GB; multi-engine benchmark needs ≥ 96 GB.                |
 | `Disk quota exceeded` on `$HOME`                       | `myquota` to confirm. Move `runs/` to `/fs/scratch/PMIU0110/$USER/runs/` and symlink: `ln -s /fs/scratch/.../runs $HOME/SimForge/runs`. |

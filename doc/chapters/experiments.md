@@ -170,7 +170,7 @@ Used for the larger tiers (50K – 500K) that exceed the arm64 `netconvert` thre
 | MATSim   | 15.0         | JAR                        | `lib/matsim-15.0/`  |
 | Java     | 17           | Homebrew                   | MATSim runtime      |
 | QarSUMO  | git checkout | LLNL/QarSUMO               | Optional (GPU only) |
-| osmnx    | 1.9.x or 2.x (`>=1.1,<3`) | pip               | Parse PBF slice → graph, bbox truncate (internal version branch) |
+| osmnx    | 2.x (`>=2.0,<3`) | pip               | Parse PBF slice → graph, bbox truncate (`bbox=(W,S,E,N)` tuple)  |
 | pyosmium | 4.x          | pip (`osmium`)             | Bbox-slice Geofabrik PBFs in `osm_data/` |
 | lxml     | 5.x          | pip                        | XML processing      |
 | pandas   | 2.x          | pip                        | Demand CSV handling |

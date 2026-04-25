@@ -52,7 +52,7 @@ SimForge solves these challenges through five interacting subsystems:
 | Core framework     | Python                       | 3.10+   | All pipeline, adapter, and harness code |
 | XML processing     | lxml / xml.etree.ElementTree | —       | Canonical and simulator XML I/O         |
 | OSM slicing        | pyosmium (libosmium bindings) | 4.0+   | Bbox-slice hash-pinned Geofabrik PBFs   |
-| Network extraction | osmnx + networkx             | 1.9.x   | Parse sliced OSM XML → `MultiDiGraph`   |
+| Network extraction | osmnx + networkx             | 2.x     | Parse sliced OSM XML → `MultiDiGraph`   |
 | Data processing    | pandas                       | 2.0+    | Demand CSV handling                     |
 | Validation         | pydantic                     | 2.0+    | Schema enforcement                      |
 | SUMO simulator     | SUMO (eclipse-sumo)          | 1.20.0  | Microscopic + mesoscopic simulation     |

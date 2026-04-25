@@ -32,7 +32,7 @@ Python dependencies (installed via `requirements.txt`):
 
 | Package     | Version pin        | Used For                                                          |
 | ----------- | ------------------ | ----------------------------------------------------------------- |
-| `osmnx`     | `>=1.1,<3`         | OSM graph parsing + bbox truncation (network stage); 1.9.x and 2.x are both supported via an internal version branch |
+| `osmnx`     | `>=2.0,<3`         | OSM graph parsing + bbox truncation (network stage); v2.x positional `bbox=(W,S,E,N)` API |
 | `osmium`    | `>=4.0` (pyosmium) | PBF slicing (`FileProcessor` + `BackReferenceWriter`)             |
 | `networkx`  | (latest)           | Graph representation between osmnx and the canonical writer       |
 | `geopandas` | `>=0.9,<1`         | Geometry handling during network conversion                       |
@@ -236,7 +236,7 @@ The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO re
 | Slow MATSim runs                 | MATSim has ~5 – 7 s JVM startup overhead per run; this dominates wall-clock for the 1K tier.              |
 | `FileNotFoundError: osm_data/illinois-*.osm.pbf` during generation | Run `python tools/download_osm.py` to fetch the hash-pinned PBFs.                      |
 | `SHA-256 mismatch` on a PBF      | A partial download — delete the offending file in `osm_data/` and re-run `tools/download_osm.py`.       |
-| `osmnx.truncate` TypeError on `bbox` kwargs | `requirements.txt` pins `osmnx>=1.1,<3`; `build_network_from_osm.py` branches on `ox.__version__` to handle the 1.9.x → 2.x kwargs rename (`north/south/east/west` → positional `bbox=(W,S,E,N)`). If you pinned a newer major yourself, revert to the documented range. |
+| `osmnx.truncate` TypeError on `bbox` kwargs | osmnx 1.x is installed. `requirements.txt` now requires `osmnx>=2.0,<3` (positional `bbox=(W,S,E,N)`). Run `pip install -U "osmnx>=2.0,<3"`. |
 | Overpass fallback hangs          | Only reachable for cities without a committed PBF. Pre-fetch with `pipeline.network.warmup`, or add the PBF to `osm_data/manifest.json`. |
 | `cache/` grows large             | `tools/clean.sh --all` to wipe both Python bytecode and the OSM HTTP cache. (PBFs in `osm_data/` are kept.) |
 
@@ -277,7 +277,7 @@ This thesis was produced with:
 | SUMO      | 1.20.0  |
 | MATSim    | 15.0    |
 | Java      | 17.0.13 |
-| osmnx     | 1.9.x or 2.x *(`requirements.txt` allows `>=1.1,<3`; `build_network_from_osm.py` branches on `ox.__version__` to keep both APIs working)* |
+| osmnx     | 2.x (`requirements.txt` pins `>=2.0,<3`) |
 | osmium (pyosmium) | 4.x |
 | OSM PBF snapshots | Geofabrik extracts — exact SHA-256 hashes in `osm_data/manifest.json` |
 
