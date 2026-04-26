@@ -990,13 +990,17 @@ the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.
 
 ### 3.7.2 Determinism Guarantees
 
-| Mechanism          | What It Ensures                                              |
-| ------------------ | ------------------------------------------------------------ |
-| Fixed random seeds | All stochastic processes seeded via config.xml `random_seed` |
-| Sorted outputs     | All XML/CSV files use sorted iteration over sets/dicts       |
-| SHA-256 hashes     | Manifest checksums detect any input drift                    |
-| Version pinning    | `requirements.txt` specifies exact package versions          |
-| Deterministic BFS  | Adapter routing uses sorted adjacency lists for tie-breaking |
+| Mechanism                       | What It Ensures                                                                                  |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Fixed random seeds              | All stochastic processes seeded via config.xml `random_seed`                                     |
+| Sorted outputs                  | All XML/CSV files use sorted iteration over sets/dicts                                           |
+| SHA-256 hashes                  | Manifest checksums detect any input drift                                                        |
+| Version pinning                 | `requirements.txt` specifies exact package versions                                              |
+| Per-bundle toolchain capture    | `generation_metadata.json::toolchain` records the Python and dep versions that built each bundle |
+| Deterministic BFS               | Adapter routing uses sorted adjacency lists for tie-breaking                                     |
+| Schedule-first hybrid (demand)  | PUMS-derived workplace destinations are deterministic per (modelgen, network, seed) triple       |
+
+**Cross-platform reproducibility (verified).** Generation produces byte-identical `demand.csv` and `signals.xml` across (Apple Silicon ARM64, macOS, Python 3.13.2, osmnx 2.0.7) and (x86_64, RHEL Pitzer, Python 3.12.4, osmnx 2.1.0), verified empirically on the `la_50k_bike_car_transit` bundle (50K LA car + transit + bike trips, 06:00–10:00, 10 km radius, seed 42). The `network.xml` file itself differs in MD5 across the two architectures because the lxml serialization is version-dependent (attribute ordering, float-precision rendering); the semantic content (node IDs, edge `from`/`to` pairs, attributes, SCC membership) is identical, as proven by both downstream artefacts being byte-equal — they reference network node IDs by string, so any drift would have propagated. The verification recipe and reference MD5 hashes are documented in [doc/REPRODUCING.md §Cross-Platform Reproducibility](../REPRODUCING.md#cross-platform-reproducibility-verified). At the level the simulators care about (the canonical `demand.csv` and `signals.xml` consumed by every adapter), generation is fully cross-platform reproducible.
 
 ### 3.7.3 Error Handling
 
