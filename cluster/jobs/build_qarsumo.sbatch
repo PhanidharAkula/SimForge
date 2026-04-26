@@ -34,7 +34,9 @@
 set -euo pipefail
 
 mkdir -p logs
-module load cuda gcc
+# Pitzer's lmod requires explicit versions. As of 2026-04 the latest pair is
+# gcc/13.2.0 + cuda/12.6.2 (check current options with `module avail gcc cuda`).
+module load gcc/13.2.0 cuda/12.6.2
 
 echo "=== Job starting on $(hostname) at $(date) ==="
 echo "CUDA:   $(nvcc --version 2>&1 | tail -1)"
