@@ -756,6 +756,7 @@ OPERATOR UTILITIES (tools/):
   tools/download_osm.py      Hash-pinned Geofabrik PBF fetcher
   tools/clean.sh             Wipe __pycache__ / *.pyc / .pytest_cache
   tools/clean.sh --all       Also drops cache/ (Overpass HTTP cache)
+  tools/inspect_network.py <scenario_dir>    Length distribution + degenerate-edge report
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle
