@@ -4,74 +4,45 @@
 #
 # Scenarios:  chicago_200k_car_transit, nyc_500k_car
 # Engines:    SUMO, QarSUMO, MATSim
-# Mode:       mesoscopic
-# Repeats:    3
-# Total runs: 2 scenarios × 3 engines × 3 repeats = 18
+# Modes:      mesoscopic only — microscopic at 200K+ trips would not finish
+#             in any reasonable wall.
+# Repeats:    3 for SUMO/QarSUMO, 2 for MATSim (matches stress_test.yaml).
+# Total:      6 entries → ~16 simulator invocations.
 #
-# NOTE: These scenarios must be generated first:
-#   python scripts/04_large_full_day.py
-#   python scripts/05_stress_test.py
+# Submit with cluster/jobs/benchmark_large.sbatch (parallel by scenario,
+# 2 backgrounded workers, --output-isolated). Bundles must be present:
+# both 200K and 500K are gitignored, rsync from your dev box first.
+#
+# ⚠️ KNOWN PERFORMANCE WALL: the SUMO adapter pre-routes every trip via
+# BFS on the canonical graph BEFORE handing off to the simulator. For
+# chicago_200k that BFS pre-step alone has been measured at ~17 h per
+# (engine, seed) — multiplied by 8 (sumo×3 + qarsumo×3 + matsim×2)
+# that's ~140 h, well past Pitzer's gpu-partition wall (96 h) and
+# comparable to the cpu-partition wall (168 h). nyc_500k is worse.
+# Until the route precomputation gets cached/parallelised, this runspec
+# will exceed wall time. Use benchmark_small.yaml for jobs that finish.
 # =============================================================================
 
 name: benchmark_large
 description: >
   SimForge large-tier benchmark — 200K and 500K trip scenarios for
-  supercomputer execution. GPU acceleration recommended for QarSUMO.
+  supercomputer execution. Currently bottlenecked by per-trip BFS routing
+  in the SUMO adapter — see header note.
 output_dir: runs/benchmark_large
 
 runs:
-  # ----- Chicago 200K car+transit (full day) -----
-  - scenario_id: chicago_200k_car_transit
-    scenario_path: scenarios/chicago_200k_car_transit
-    engine: sumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 3600
+  # ---------------------------------------------------- chicago_200k_car_transit
+  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
+     engine: sumo,    mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 3600}
+  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
+     engine: qarsumo, mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 3600}
+  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
+     engine: matsim,  mode: mesoscopic, repeats: 2, seed: 42, seed_increment: true, timeout_s: 3600}
 
-  - scenario_id: chicago_200k_car_transit
-    scenario_path: scenarios/chicago_200k_car_transit
-    engine: qarsumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 3600
-
-  - scenario_id: chicago_200k_car_transit
-    scenario_path: scenarios/chicago_200k_car_transit
-    engine: matsim
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 3600
-
-  # ----- NYC 500K car (stress test) -----
-  - scenario_id: nyc_500k_car
-    scenario_path: scenarios/nyc_500k_car
-    engine: sumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 7200
-
-  - scenario_id: nyc_500k_car
-    scenario_path: scenarios/nyc_500k_car
-    engine: qarsumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 7200
-
-  - scenario_id: nyc_500k_car
-    scenario_path: scenarios/nyc_500k_car
-    engine: matsim
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 7200
+  # ----------------------------------------------------------------- nyc_500k
+  - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
+     engine: sumo,    mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 7200}
+  - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
+     engine: qarsumo, mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 7200}
+  - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
+     engine: matsim,  mode: mesoscopic, repeats: 2, seed: 42, seed_increment: true, timeout_s: 7200}

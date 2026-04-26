@@ -1,101 +1,66 @@
 # =============================================================================
-# SimForge Benchmark — Small Tier
+# SimForge Benchmark — Small Tier (canonical "is everything green?" matrix)
 # =============================================================================
 #
 # Scenarios:  chicago_1k_car, nyc_10k_car, la_50k_bike_car_transit
 # Engines:    SUMO, QarSUMO, MATSim
-# Mode:       mesoscopic
-# Repeats:    3
-# Total runs: 3 scenarios × 3 engines × 3 repeats = 27
+# Modes:      mesoscopic for all engines, plus microscopic for the
+#             SUMO-family engines (sumo + qarsumo) on every scenario.
+#             MATSim is mesoscopic-only by design.
+# Repeats:    3 for SUMO/QarSUMO, 2 for MATSim (matches stress_test.yaml).
+# Total:      15 entries → ~42 simulator invocations.
+#
+# This is the matrix you can actually finish in a single SLURM wall.
+# Designed for parallel-by-scenario launch via cluster/jobs/benchmark_small.sbatch
+# (3 backgrounded `python -m execution.run_benchmark` processes, one per
+# scenario, each with its own --output dir).
+#
+# Prerequisites:
+#   - All 3 bundles are tracked in git — `git pull` brings them down.
+#   - For QarSUMO: build per cluster/build_qarsumo.sh once on a GPU node.
+#     Without it, the qarsumo adapter falls back to standard SUMO.
 # =============================================================================
 
 name: benchmark_small
 description: >
-  SimForge small-tier benchmark — three generated scenarios evaluated
-  across SUMO (mesoscopic), QarSUMO (mesoscopic, GPU-fallback), and MATSim.
+  SimForge small-tier benchmark across the three reference scenarios
+  (chicago_1k_car, nyc_10k_car, la_50k_bike_car_transit) with all engines
+  in mesoscopic, plus microscopic for the SUMO-family.
 output_dir: runs/benchmark_small
 
 runs:
-  # ----- Chicago 1K car -----
-  - scenario_id: chicago_1k_car
-    scenario_path: scenarios/chicago_1k_car
-    engine: sumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 300
+  # ---------------------------------------------------------------- chicago_1k
+  - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
+     engine: sumo,    mode: mesoscopic,  repeats: 3, seed: 42, seed_increment: true, timeout_s: 60}
+  - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
+     engine: sumo,    mode: microscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 600}
+  - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
+     engine: qarsumo, mode: mesoscopic,  repeats: 3, seed: 42, seed_increment: true, timeout_s: 60}
+  - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
+     engine: qarsumo, mode: microscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 600}
+  - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
+     engine: matsim,  mode: mesoscopic,  repeats: 2, seed: 42, seed_increment: true, timeout_s: 300}
 
-  - scenario_id: chicago_1k_car
-    scenario_path: scenarios/chicago_1k_car
-    engine: qarsumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 300
+  # ----------------------------------------------------------------- nyc_10k
+  - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
+     engine: sumo,    mode: mesoscopic,  repeats: 3, seed: 42, seed_increment: true, timeout_s: 600}
+  - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
+     engine: sumo,    mode: microscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 3600}
+  - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
+     engine: qarsumo, mode: mesoscopic,  repeats: 3, seed: 42, seed_increment: true, timeout_s: 600}
+  - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
+     engine: qarsumo, mode: microscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 3600}
+  - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
+     engine: matsim,  mode: mesoscopic,  repeats: 2, seed: 42, seed_increment: true, timeout_s: 600}
 
-  - scenario_id: chicago_1k_car
-    scenario_path: scenarios/chicago_1k_car
-    engine: matsim
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 300
-
-  # ----- NYC 10K car -----
-  - scenario_id: nyc_10k_car
-    scenario_path: scenarios/nyc_10k_car
-    engine: sumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 600
-
-  - scenario_id: nyc_10k_car
-    scenario_path: scenarios/nyc_10k_car
-    engine: qarsumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 600
-
-  - scenario_id: nyc_10k_car
-    scenario_path: scenarios/nyc_10k_car
-    engine: matsim
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 600
-
-  # ----- LA 50K multimodal -----
-  - scenario_id: la_50k_bike_car_transit
-    scenario_path: scenarios/la_50k_bike_car_transit
-    engine: sumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 1800
-
-  - scenario_id: la_50k_bike_car_transit
-    scenario_path: scenarios/la_50k_bike_car_transit
-    engine: qarsumo
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 1800
-
-  - scenario_id: la_50k_bike_car_transit
-    scenario_path: scenarios/la_50k_bike_car_transit
-    engine: matsim
-    mode: mesoscopic
-    repeats: 3
-    seed: 42
-    seed_increment: true
-    timeout_s: 1800
+  # ---------------------------------------------------- la_50k_bike_car_transit
+  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+     engine: sumo,    mode: mesoscopic,  repeats: 3, seed: 42, seed_increment: true, timeout_s: 1800}
+  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+     engine: sumo,    mode: microscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 14400}
+  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+     engine: qarsumo, mode: mesoscopic,  repeats: 3, seed: 42, seed_increment: true, timeout_s: 1800}
+  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+     engine: qarsumo, mode: microscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 14400}
+  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+     engine: matsim,  mode: mesoscopic,  repeats: 2, seed: 42, seed_increment: true, timeout_s: 1800}
