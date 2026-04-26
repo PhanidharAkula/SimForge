@@ -11,9 +11,37 @@
   "end_time_s": 28800,
   "radius_km": 2.0,
   "seed": 42,
-  "demand_strategy": "census",
-  "node_count": 1245,
-  "link_count": 2862,
-  "signal_count": 922,
-  "generation_time_s": 27.7
+  "demand_strategy": "census_schedule_first",
+  "node_count": 20058,
+  "link_count": 58918,
+  "signal_count": 17013,
+  "generation_time_s": 88.4,
+  "osm_source": {
+    "type": "pbf",
+    "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/illinois-2026-04-22.osm.pbf",
+    "name": "illinois-2026-04-22.osm.pbf"
+  },
+  "toolchain": {
+    "python": "3.13.2",
+    "platform": "Darwin arm64",
+    "osmnx": "2.0.7",
+    "numpy": "2.3.5",
+    "networkx": "3.6.1",
+    "lxml": "6.0.2",
+    "shapely": "2.1.2",
+    "osmium": "4.3.1",
+    "geopandas": "1.1.2",
+    "pandas": "2.3.3"
+  },
+  "demand_provenance": {
+    "schedule_driven_count": 200,
+    "gravity_fallback_count": 800,
+    "schedule_driven_pct": 20.0,
+    "scheduled_pool_size": 200,
+    "fallback_reasons": {
+      "schedule_dest_orphan_or_outside_bbox": 13095,
+      "home_outside_scc": 397,
+      "schedule_dest_outside_scc": 2
+    }
+  }
 }

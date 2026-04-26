@@ -17,11 +17,23 @@
   "node_count": 159042,
   "link_count": 468105,
   "signal_count": 135351,
-  "generation_time_s": 391.2,
+  "generation_time_s": 391.0,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/california-2026-04-22.osm.pbf",
     "name": "california-2026-04-22.osm.pbf"
+  },
+  "toolchain": {
+    "python": "3.13.2",
+    "platform": "Darwin arm64",
+    "osmnx": "2.0.7",
+    "numpy": "2.3.5",
+    "networkx": "3.6.1",
+    "lxml": "6.0.2",
+    "shapely": "2.1.2",
+    "osmium": "4.3.1",
+    "geopandas": "1.1.2",
+    "pandas": "2.3.3"
   },
   "demand_provenance": {
     "schedule_driven_count": 50000,
