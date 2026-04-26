@@ -41,4 +41,12 @@ echo
 python -u scripts/05_stress_test.py
 
 echo
+echo "=== Validating bundle (schema + node-ID cross-refs) ==="
+python -m pipeline.validation.validate_bundle scenarios/nyc_500k_car
+
+echo
+echo "=== Running integrity test suite (35 tests for nyc_500k_car) ==="
+python -m pytest tests/test_scenario_data_integrity.py -v -k nyc_500k_car
+
+echo
 echo "=== Job complete at $(date) ==="
