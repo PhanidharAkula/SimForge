@@ -479,23 +479,24 @@ ModelGen file → parse_model_file.py → generate_census_demand.py → demand.c
 | `hld`  | bld_ID, PUMS serial, bedrooms, WGTP, HINCP, person_ids               | ~500K+          |
 | `per`  | ID, AGEP, WAGP, JWMNP, JWTRNS, schedule                              | ~1M+            |
 
-**Census demand generation algorithm** (7 steps):
+**Census demand generation algorithm** — schedule-first hybrid:
 
-1. **Parse model file** with geographic filtering to bounding box
-2. **Map buildings to network nodes** using haversine nearest-neighbor with spatial grid index (O(B log N) complexity via grid bucketing vs O(BN) brute force)
-3. **Build population-weighted origin pool**: `weight(node) = Σ building.population` for all residential buildings at that node
-4. **For each trip** (repeated `num_trips` times):
-   - **Sample origin**: `random.choices(nodes, weights=population)` — more people → more trips
-   - **Sample census person**: Pick a PUMS person record from a building at the origin (for commute profile)
-   - **Sample destination**: Gravity model with distance decay calibrated by person's commute time:
-     $$P(\text{dest} = j) \propto \text{degree}(j) \cdot \exp\left(-\frac{1}{2}\left(\frac{d_{ij} - d_\text{target}}{\sigma}\right)^2\right)$$
-     where $d_\text{target} = \text{JWMNP} \times 0.5$ km (assuming 30 km/h average) and $\sigma = d_\text{target} \times 0.7 + 0.5$
-   - **Generate departure time**: Gaussian centered in time window, offset by commute duration:
-     $$t_\text{depart} \sim \mathcal{N}(\mu + \delta, \sigma)$$
-     where $\mu = (t_\text{start} + t_\text{end})/2$, $\sigma = (t_\text{end} - t_\text{start})/6$, and $\delta = -\min(\text{JWMNP}, 60) \cdot \sigma / 120$
-   - **Assign mode**: From PUMS JWTRNS if multi-mode, or fixed if single-mode
-5. **Sort by departure time** and renumber trip IDs sequentially
-6. **Write demand.csv**
+1. **Parse model file** with geographic filtering to bounding box; extract building, household, and person records along with the per-person activity schedule field added by the cityscape ScheduleGenerator (Rao, [github.com/raodj/cityscape](https://github.com/raodj/cityscape), Schedule-generator branch).
+2. **Map buildings to network nodes** using haversine nearest-neighbor with a spatial grid index (O(B log N) via grid bucketing vs O(BN) brute force).
+3. **Build population-weighted origin pool**: `weight(node) = Σ building.population` for residential buildings at that node, restricted to the largest strongly-connected component (SCC) of the network.
+4. **Validate the schedule-driven pool.** For each person whose cityscape schedule is non-empty, resolve their home building (`ModelData.home_bld_by_per_id[per_id]`) and their workplace building (`schedule[0].bld_id`). Drop the person if any of these fail: home unmapped to a node, home outside SCC, workplace unmapped (orphan or outside bbox), workplace outside SCC, workplace == home. Surviving entries form `valid_scheduled = list[(person, home_node, dest_node)]`.
+5. **Phase 1 — schedule-driven trips.** Deterministically shuffle `valid_scheduled` and take the first `min(num_trips, len(valid_scheduled))` entries. For each, emit a trip with `origin = home_node`, `destination = dest_node`, `dest_source = "schedule"`. Departure time uses the temporal profile in step 7 below — the cityscape schedule's hardcoded 8 AM is *not* used (it would create a 100 %-at-08:00 thundering herd).
+6. **Phase 2 — gravity fallback for the remainder.** When the scheduled pool is exhausted (`num_trips > len(valid_scheduled)`), the remaining trips fall back to the original origin-first gravity sampler. Sample an origin node by population weight, sample a census person from a building at that origin, then sample a destination over all SCC destination nodes:
+   $$P(\text{dest} = j) \propto \text{degree}(j) \cdot \exp\left(-\frac{1}{2}\left(\frac{d_{ij} - d_\text{target}}{\sigma}\right)^2\right)$$
+   where $d_\text{target} = \text{JWMNP} \times 0.5$ km and $\sigma = d_\text{target} \times 0.7 + 0.5$. Each fallback trip carries `dest_source = "gravity"`.
+7. **Generate departure time** for both phases with a JWMNP-calibrated Gaussian peak: $t_\text{depart} \sim \mathcal{N}(\mu + \delta, \sigma)$, where $\mu = (t_\text{start} + t_\text{end})/2$, $\sigma = (t_\text{end} - t_\text{start})/6$, and $\delta = -\min(\text{JWMNP}, 60) \cdot \sigma / 120$.
+8. **Assign mode**: from PUMS JWTRNS if multi-mode, or fixed if single-mode.
+9. **Sort by departure time** (with origin/destination secondary keys for stable ordering) and renumber trip IDs sequentially.
+10. **Write demand.csv** with columns `trip_id, origin_node_id, destination_node_id, departure_time_s, mode, dest_source`. Adapters consume the canonical 5-column subset by name; the `dest_source` column is provenance metadata only.
+
+**Bundle-level provenance.** `generation_metadata.json` carries a `demand_provenance` block listing `schedule_driven_count`, `gravity_fallback_count`, `schedule_driven_pct`, `scheduled_pool_size`, and `fallback_reasons` (a counter over the validation rejections in step 4). For NYC-500K with the 20 km radius bbox, the scheduled pool covers all 500K trips (100 % schedule-driven). For the small 2 km Chicago bbox most workplaces fall outside the bbox and the scheduled fraction drops accordingly — this is captured per-bundle so the methods chapter never has to hand-wave the realism mix.
+
+**Why the cityscape schedules are more realistic than gravity alone.** Cityscape's `RadiusFilterWorkBuildingAssigner` selects each person's workplace from real non-residential OSM buildings whose predicted travel time matches the person's PUMS-reported commute time (JWMNP) within ±1 minute, subject to per-building office-capacity bounds (`offSqFtPer`). Gravity uses commute time only as a soft weight on a topology-only network node and has no capacity constraint, so it can over-concentrate trips at the gravity peak and routinely puts workplaces in residential cul-de-sacs. The schedule path's destinations are PUMS-derived OD pairs anchored to physical buildings; gravity's destinations are samples from a fitted distribution. Both methods produce demand calibrated to the same JWMNP commute-time distribution; the schedule path additionally preserves *individual* OD identity, not just the aggregate distribution.
 
 **JWTRNS → canonical mode mapping:**
 
@@ -531,14 +532,15 @@ Used when no ModelGen file is available. Generates demand from network topology 
 
 **Comparison with census mode:**
 
-| Feature              | Census Mode                | Synthetic Mode        |
-| -------------------- | -------------------------- | --------------------- |
-| Origin weighting     | Real population            | Node degree           |
-| Destination model    | Commute-calibrated gravity | Topology-only gravity |
-| Departure times      | Gaussian peak (JWMNP)      | Uniform random        |
-| Mode assignment      | Census JWTRNS              | Fixed (car only)      |
-| External data needed | ModelGen file (~300MB)     | None                  |
-| Realism              | ~60-65%                    | ~15-20%               |
+| Feature              | Census Mode (schedule-first hybrid)                                | Synthetic Mode        |
+| -------------------- | ------------------------------------------------------------------ | --------------------- |
+| Origin               | Person's actual PUMS home building → nearest network node          | Node degree           |
+| Destination (primary)| Cityscape PUMS-derived workplace `bld_id` (real non-home building) | Topology-only gravity |
+| Destination (fallback)| Commute-calibrated gravity (when person has no usable schedule)   | (n/a)                 |
+| Departure times      | Gaussian peak calibrated by PUMS JWMNP                             | Uniform random        |
+| Mode assignment      | PUMS JWTRNS                                                         | Fixed (car only)      |
+| External data needed | ModelGen + cityscape ScheduleGenerator output (~300 MB per city)   | None                  |
+| Per-trip provenance  | `dest_source` column + `demand_provenance` metadata block          | None                  |
 
 ---
 

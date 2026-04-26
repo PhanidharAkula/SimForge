@@ -77,9 +77,9 @@ This is the critical question. Here's the honest breakdown:
 
 | Component                     | Method                                                         | How Synthetic Is It?                                                                       |
 | ----------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| **Trip origins (which node)** | Population-weighted random sampling                            | Semi-real: more people → more trips, but exact origins are random within the building pool |
-| **Trip destinations**         | Gravity model (degree-weighted, distance-decayed)              | Synthetic: no real OD survey data; destinations are probabilistic                          |
-| **Departure times**           | Gaussian peak centered in time window, shifted by commute time | Semi-real: commute duration is from census, but the distribution shape is a model          |
+| **Trip origins (which node)** | Population-weighted random sampling (gravity path) **or** the person's actual PUMS home building (schedule path) | Schedule path: real (per-person home). Gravity path: semi-real (population-weighted within the building pool). Per-trip provenance recorded in `dest_source` column. |
+| **Trip destinations**         | Hybrid: cityscape PUMS-derived workplace `bld_id` (schedule path, when available) **or** commute-calibrated gravity model (fallback) | Schedule path: real (cityscape `RadiusFilterWorkBuildingAssigner` picks a non-home building matching the person's PUMS commute time within ±1 min, subject to office-capacity bounds). Gravity path: semi-real (commute time is from census, destination is gravity-fitted). Mix per bundle is logged in `generation_metadata.json::demand_provenance`. |
+| **Departure times**           | Gaussian peak centered in time window, shifted by commute time | Semi-real: commute duration is from census, but the distribution shape is a model. Cityscape's hardcoded 8 AM is *not* used (would create a thundering herd). |
 | **Traffic signal timing**     | Generic 2-phase signals at high-degree nodes                   | Synthetic: real cities have complex, optimized timing; we use simple approximations        |
 | **Signal placement**          | Nodes with degree ≥ 4                                          | Rough heuristic — real signal placement depends on traffic studies, not just connectivity  |
 | **OD pair routability**       | Not pre-checked in census mode                                 | Some OD pairs may not be routable depending on network connectivity                        |
@@ -499,9 +499,9 @@ SimForge scenarios are **more realistic than typical synthetic benchmarks** beca
 
 ### The Honest Limitations
 
-1. **No real OD data**: The biggest limitation. Destinations are gravity-modeled, not from actual surveys. Real OD data (like LODES/LEHD or NHTS) would be a major improvement.
+1. **OD provenance is mixed.** Trips with `dest_source = "schedule"` carry a real PUMS-derived workplace assigned by the cityscape ScheduleGenerator (non-home building matching JWMNP within ±1 min, capacity-bounded). Trips with `dest_source = "gravity"` use a fitted distribution. The mix per bundle depends on (a) how many of the city's PUMS records have schedules in cityscape's covered transport modes — drove-alone, carpool, ferry, bike — and (b) how many of those schedules' workplaces fall within the bbox + SCC. The `demand_provenance` block in `generation_metadata.json` reports the exact split per bundle (`schedule_driven_count`, `gravity_fallback_count`, `fallback_reasons`). Real LODES/LEHD or NHTS OD data could close the remaining gravity gap.
 
-2. **No activity chains**: Each trip is independent. Real people make sequences of trips (home → work → lunch → work → home). Activity-based models (like POLARIS) capture these chains.
+2. **No activity chains**: Each trip is independent. Real people make sequences of trips (home → work → lunch → work → home). Activity-based models (like POLARIS) capture these chains. Cityscape emits two-activity schedules (8 AM workplace, 5 PM home return); SimForge currently uses only the morning origin → workplace edge of that pair.
 
 3. **Simplified signals**: Traffic signals are generic 2-phase controllers, not the city's actual signal plans.
 

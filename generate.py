@@ -472,6 +472,7 @@ def generate_scenario(
 
     elapsed = round(time.time() - t0, 1)
     strategy = dem.get("strategy", "synthetic")
+    provenance = dem.get("provenance")  # only present for census_schedule_first
 
     logger.info("")
     logger.info("=" * 65)
@@ -481,6 +482,13 @@ def generate_scenario(
     logger.info("  Network:      %d nodes, %d links", net["node_count"], net["link_count"])
     logger.info("  Signals:      %d controllers", sig["signal_count"])
     logger.info("  Demand (%s): %d trips", strategy, dem["trip_count"])
+    if provenance:
+        logger.info(
+            "    schedule-driven: %d (%.1f%%)   gravity-fallback: %d",
+            provenance["schedule_driven_count"],
+            provenance["schedule_driven_pct"],
+            provenance["gravity_fallback_count"],
+        )
     logger.info("=" * 65)
 
     # Save generation metadata (includes OSM provenance so any scenario can be
@@ -503,6 +511,12 @@ def generate_scenario(
         "generation_time_s": elapsed,
         "osm_source": net.get("osm_source"),
     }
+    if provenance:
+        # demand_provenance documents how each trip's destination was selected:
+        # schedule (real PUMS workplace via cityscape ScheduleGenerator) vs
+        # gravity (degree-weighted fallback). fallback_reasons records why
+        # any scheduled persons were rejected at validation time.
+        metadata["demand_provenance"] = provenance
     with open(out / "generation_metadata.json", "w", encoding="utf-8") as f:
         json.dump(metadata, f, indent=2)
 

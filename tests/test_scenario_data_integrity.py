@@ -295,6 +295,21 @@ class TestDemandIntegrity:
                 bad_modes.add(mode)
         assert not bad_modes, f"Invalid mode(s) in demand: {bad_modes}"
 
+    def test_dest_source_values_when_column_present(self, scenario):
+        """If the optional `dest_source` provenance column exists, every row
+        must carry a value in {schedule, gravity}. The column is added by
+        census_schedule_first generation; older bundles may omit it."""
+        _, rows, fieldnames = self._load_demand_and_nodes(scenario)
+        if "dest_source" not in fieldnames:
+            pytest.skip("dest_source column not present (legacy bundle)")
+        valid = {"schedule", "gravity"}
+        bad = {(i + 2, r.get("dest_source", "")) for i, r in enumerate(rows)
+               if r.get("dest_source", "").strip() not in valid}
+        assert not bad, (
+            f"{len(bad)} row(s) have dest_source outside {valid}: "
+            f"{list(bad)[:5]}"
+        )
+
 
 # ===== Config integrity =====
 

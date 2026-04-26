@@ -5,6 +5,10 @@ These files are produced by an activity-based population synthesizer that
 integrates OpenStreetMap road networks, LandScan population grids, and
 U.S. Census PUMS microdata into a single flat-text model.
 
+Files post-processed by the cityscape ScheduleGenerator
+(github.com/raodj/cityscape, Schedule-generator branch) additionally carry
+per-person activity schedules in the trailing field of `per` records.
+
 This module extracts building, household, and person records, optionally
 filtering to a geographic bounding box, and returns structured data
 suitable for census-calibrated demand generation.
@@ -15,6 +19,15 @@ Record format (fields are space-separated):
   hld  bldID "SMARTPHONE,SERIALNO" bedRooms BLDtype pumaID WGTP HINCP
        #people peopleIDs...
   per  perID HldID #info AGEP WAGP JWMNP JWTRNS schedule
+
+The trailing `schedule` is an empty string `""` for persons without a
+schedule (non-workers, transit/walk/WFH/taxi/other commuters), or a
+sequence of `(activity_type subtype time_s bld_id)` tuples for persons
+the schedule generator covered. In the current cityscape output every
+populated schedule is exactly two tuples — `(1 5 28800 <work_bld_id>)`
+followed by `(1 5 61200 <home_bld_id>)` — i.e. workplace at 8 AM,
+return home at 5 PM. The 8 AM / 5 PM times are constants set by
+cityscape; only the destination bld_id varies per person.
 
 JWTRNS codes (ACS/PUMS):
   1  = Car, truck, or van — drove alone
@@ -33,6 +46,7 @@ JWTRNS codes (ACS/PUMS):
 """
 
 import logging
+import re
 import shlex
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -88,6 +102,21 @@ class Household:
 
 
 @dataclass
+class ScheduleActivity:
+    """A single activity in a person's daily schedule.
+
+    In current cityscape output: a populated schedule is always two
+    activities — workplace arrival at 8 AM and home return at 5 PM.
+    Only ``bld_id`` varies per person; the other fields are constants
+    (`activity_type=1`, `subtype=5`, `time_s` ∈ {28800, 61200}).
+    """
+    activity_type: int
+    subtype: int
+    time_s: int     # seconds from midnight
+    bld_id: int     # destination building
+
+
+@dataclass
 class Person:
     """A person from the model file."""
     per_id: int
@@ -97,6 +126,9 @@ class Person:
     wages: int          # WAGP (-1 = N/A)
     commute_min: int    # JWMNP — commute time in minutes (-1 = N/A)
     transport_mode: int # JWTRNS code (-1 = N/A)
+    # Activity schedule from cityscape ScheduleGenerator (empty list for
+    # persons whose mode the generator does not cover — see module docstring).
+    schedule: list[ScheduleActivity] = field(default_factory=list)
 
 
 @dataclass
@@ -108,6 +140,7 @@ class ModelData:
     # Indexes for fast lookup
     bld_by_id: dict[int, Building] = field(default_factory=dict)
     hld_by_bld: dict[int, list[Household]] = field(default_factory=dict)
+    home_bld_by_per_id: dict[int, int] = field(default_factory=dict)
     per_by_id: dict[int, Person] = field(default_factory=dict)
 
     def __post_init__(self):
@@ -115,6 +148,14 @@ class ModelData:
         self.hld_by_bld = {}
         for h in self.households:
             self.hld_by_bld.setdefault(h.bld_id, []).append(h)
+        # Per-person home resolution: PUMS replicates SERIALNO across many
+        # synthesised households (each with its own bld_id), so a SERIALNO
+        # lookup is ambiguous. Each `hld` record's person_ids list, however,
+        # uniquely names which synthesised home holds each person — use that.
+        self.home_bld_by_per_id = {}
+        for h in self.households:
+            for pid in h.person_ids:
+                self.home_bld_by_per_id[pid] = h.bld_id
         self.per_by_id = {p.per_id: p for p in self.persons}
 
 
@@ -205,8 +246,41 @@ def _parse_household_line(parts: list[str]) -> Optional[Household]:
         return None
 
 
-def _parse_person_line(parts: list[str]) -> Optional[Person]:
-    """Parse a single 'per' line into a Person object."""
+# Schedule activity tuple inside the trailing quoted field.
+# Captures four whitespace-separated integers between matching parentheses.
+# Defensive: tolerates extra whitespace; ignores anything that is not a 4-int tuple.
+_SCHEDULE_TUPLE_RE = re.compile(r"\((-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\)")
+
+
+def _parse_schedule(raw: str) -> list[ScheduleActivity]:
+    """Extract a list of ScheduleActivity from the trailing quoted schedule field.
+
+    Empty string ``""`` (the common case for non-workers and uncovered modes)
+    returns an empty list. Malformed content is silently dropped — the
+    upstream cityscape generator is the source of truth for schema, and a
+    bad tuple should not crash the whole parse.
+    """
+    inner = raw.strip().strip('"')
+    if not inner:
+        return []
+    return [
+        ScheduleActivity(
+            activity_type=int(m.group(1)),
+            subtype=int(m.group(2)),
+            time_s=int(m.group(3)),
+            bld_id=int(m.group(4)),
+        )
+        for m in _SCHEDULE_TUPLE_RE.finditer(inner)
+    ]
+
+
+def _parse_person_line(line: str, parts: list[str]) -> Optional[Person]:
+    """Parse a single 'per' line into a Person object.
+
+    ``parts`` is the whitespace-split prefix (used for the seven scalar fields);
+    ``line`` is the raw line from which we recover the trailing quoted schedule
+    field — split() would shred the parentheses inside the quotes.
+    """
     try:
         per_id = int(parts[1])
         hld_serial = parts[2]
@@ -215,10 +289,18 @@ def _parse_person_line(parts: list[str]) -> Optional[Person]:
         wages = int(parts[5])
         commute_min = int(parts[6])
         transport_mode = int(parts[7])
+        # Schedule is everything inside the first pair of double-quotes after
+        # the seven scalar fields. Empty string → no schedule (most persons).
+        schedule: list[ScheduleActivity] = []
+        first_q = line.find('"')
+        if first_q != -1:
+            last_q = line.rfind('"')
+            if last_q > first_q:
+                schedule = _parse_schedule(line[first_q : last_q + 1])
         return Person(
             per_id=per_id, hld_serial=hld_serial, num_info=num_info,
             age=age, wages=wages, commute_min=commute_min,
-            transport_mode=transport_mode,
+            transport_mode=transport_mode, schedule=schedule,
         )
     except (IndexError, ValueError) as e:
         logger.debug("Skipping malformed per line: %s", e)
@@ -298,8 +380,10 @@ def parse_model_file(
 
             elif line.startswith("per "):
                 per_count += 1
-                parts = line.split()
-                per = _parse_person_line(parts)
+                # Split for scalar fields, but keep the raw line so the
+                # parenthesised schedule field survives the split() shredding.
+                parts = line.split(maxsplit=8)
+                per = _parse_person_line(line, parts)
                 if per is not None:
                     all_persons.append(per)
 
@@ -384,6 +468,7 @@ def main():
     total_pop = sum(b.population for b in data.buildings)
     commuters = [p for p in data.persons if p.commute_min > 0]
     commute_times = [p.commute_min for p in commuters]
+    scheduled = [p for p in data.persons if p.schedule]
 
     print(f"\n{'='*50}")
     print(f"  Model file: {args.model_path}")
@@ -394,6 +479,8 @@ def main():
     if commute_times:
         avg = sum(commute_times) / len(commute_times)
         print(f"  Commute:    avg {avg:.0f} min, range {min(commute_times)}-{max(commute_times)} min")
+    pct = (len(scheduled) / len(data.persons) * 100) if data.persons else 0.0
+    print(f"  Schedules:  {len(scheduled)} ({pct:.1f}% of persons have a workplace destination)")
     print(f"{'='*50}\n")
 
 

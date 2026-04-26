@@ -1,15 +1,29 @@
 """
 Generate census-calibrated demand from modelgen data + canonical network.
 
-This module replaces the synthetic gravity model with demand grounded in
-U.S. Census PUMS microdata.  It reads a parsed ModelData object (buildings,
-households, persons) and the canonical network.xml to produce demand.csv
-with:
-  - Origins  weighted by residential building population
-  - Destinations  selected via gravity model over the canonical network
-  - Departure times  drawn from a realistic morning-peak profile
-                     calibrated by PUMS JWMNP (commute-time) data
-  - Mode  set from PUMS JWTRNS (only car trips for v0)
+This module produces demand grounded in U.S. Census PUMS microdata. It reads
+a parsed ModelData object (buildings, households, persons, optional activity
+schedules) plus the canonical network.xml, and emits demand.csv with:
+
+  - Origins        weighted by residential building population
+  - Destinations   schedule-first hybrid:
+                     1. If the picked person has a cityscape activity
+                        schedule, use the workplace bld_id from that
+                        schedule (real PUMS-derived OD pair).
+                     2. Otherwise fall back to the gravity sampler
+                        (degree-weighted, distance-decayed around the
+                        person's PUMS commute time).
+  - Departure times morning-peak profile, calibrated by PUMS JWMNP
+                     commute time. Cityscape's schedule field has hard-
+                     coded 8 AM / 5 PM times that we deliberately do not
+                     use — they would create a thundering herd at 08:00.
+  - Mode           set from PUMS JWTRNS (only car trips for v0)
+
+The output CSV carries an extra `dest_source` column ({"schedule", "gravity"})
+so per-trip provenance is preserved. Adapters consume the canonical 5-column
+subset by name and ignore the extra column. The summary dict returned by
+``generate_census_demand`` includes a ``provenance`` block (counts +
+fallback reasons) which ``generate.py`` writes into generation_metadata.json.
 
 Usage (library):
     from pipeline.demand.parse_model_file import parse_model_file
@@ -28,7 +42,7 @@ Usage (library):
 import csv
 import math
 import random
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
@@ -354,7 +368,7 @@ def generate_census_demand(
     _R_KM = 6371.0
 
     # 5. Build a person pool — census persons for commute-time sampling
-    #    Grouped by building for origin-correlated sampling
+    #    Grouped by building for origin-correlated sampling (gravity path)
     bld_persons: dict[int, list] = defaultdict(list)
     for hld in model_data.households:
         for pid in hld.person_ids:
@@ -368,10 +382,59 @@ def generate_census_demand(
         logger.warning("No commuters found in model data — using flat 30-min default")
         class _FakePerson:
             commute_min = 30
+            transport_mode = 1
+            schedule: list = []  # type: ignore[var-annotated]
         all_commuters = [_FakePerson()]  # type: ignore
 
     avg_commute = sum(p.commute_min for p in all_commuters) / len(all_commuters)
     logger.info("Census commuters: %d (avg %.0f min)", len(all_commuters), avg_commute)
+
+    # 5b. Schedule-driven pool: persons whose cityscape schedule resolves to a
+    # valid (home_node, dest_node) pair inside the bbox + SCC. Persons whose
+    # schedule references a building we don't have (orphan), maps to a node
+    # outside the SCC, or collapses to a self-trip are dropped here and will
+    # be served by the gravity fallback in Phase 2 below.
+    valid_scheduled: list[tuple[object, str, str]] = []
+    fallback_reasons: Counter[str] = Counter()
+    for per in model_data.persons:
+        if per.commute_min <= 0 or not per.schedule:
+            continue
+        home_bld_id = model_data.home_bld_by_per_id.get(per.per_id)
+        if home_bld_id is None:
+            fallback_reasons["no_home_household"] += 1
+            continue
+        home_node = bld_to_node.get(home_bld_id)
+        if home_node is None:
+            fallback_reasons["home_unmapped_to_node"] += 1
+            continue
+        if home_node not in network.scc_nodes:
+            fallback_reasons["home_outside_scc"] += 1
+            continue
+        # First activity in cityscape's output is the workplace (8 AM); the
+        # second is the return-home (5 PM). We use the workplace destination
+        # for the morning trip; departure time uses our temporal profile,
+        # NOT cityscape's hardcoded 28800.
+        dest_bld_id = per.schedule[0].bld_id
+        dest_node = bld_to_node.get(dest_bld_id)
+        if dest_node is None:
+            fallback_reasons["schedule_dest_orphan_or_outside_bbox"] += 1
+            continue
+        if dest_node not in network.scc_nodes:
+            fallback_reasons["schedule_dest_outside_scc"] += 1
+            continue
+        if home_node == dest_node:
+            fallback_reasons["schedule_dest_equals_home"] += 1
+            continue
+        valid_scheduled.append((per, home_node, dest_node))
+
+    logger.info(
+        "Schedule-driven pool: %d persons with usable workplace destinations "
+        "(of %d with any schedule)",
+        len(valid_scheduled),
+        sum(1 for p in model_data.persons if p.schedule),
+    )
+    if fallback_reasons:
+        logger.info("  Schedule rejections by reason: %s", dict(fallback_reasons))
 
     # Guard: refuse to oversample unless explicitly allowed
     if num_trips > len(all_commuters) and not allow_oversample:
@@ -394,13 +457,46 @@ def generate_census_demand(
             num_trips, len(all_commuters), ratio,
         )
 
-    # 6. Generate trips
-    trips: list[dict] = []
-    attempts = 0
-    max_attempts = num_trips * 20
+    def _trip_mode_for(person) -> str:
+        """Resolve a trip's mode column from the requested mode set + person."""
+        if modes is not None:
+            return JWTRNS_TO_MODE.get(person.transport_mode, "car")
+        return mode
 
-    while len(trips) < num_trips and attempts < max_attempts:
-        attempts += 1
+    # 6. Generate trips — Phase 1 (schedule-driven) then Phase 2 (gravity).
+    # Per-trip rows omit `trip_id` here; ids are assigned after the final sort
+    # by departure_time so they remain stable and dense (t0..tN-1).
+    trips: list[dict] = []
+
+    # Phase 1: Schedule-driven trips
+    n_schedule = min(num_trips, len(valid_scheduled))
+    if n_schedule > 0:
+        # Deterministic shuffle of the scheduled pool, then take the first
+        # n_schedule entries. Sampling-without-replacement at this stage means
+        # each scheduled person produces at most one trip — no duplication.
+        sched_indices = list(range(len(valid_scheduled)))
+        rng.shuffle(sched_indices)
+        for i in sched_indices[:n_schedule]:
+            person, home_node, dest_node = valid_scheduled[i]
+            trips.append({
+                "origin_node_id": home_node,
+                "destination_node_id": dest_node,
+                "departure_time_s": _generate_departure_time(
+                    rng, person.commute_min, horizon_start, horizon_end
+                ),
+                "mode": _trip_mode_for(person),
+                "dest_source": "schedule",
+            })
+
+    # Phase 2: Gravity fallback for the remaining trips. This is the original
+    # loop, kept verbatim (origin-first sampling, vectorised gravity scoring),
+    # only entered when the scheduled pool is exhausted.
+    n_gravity_needed = num_trips - len(trips)
+    gravity_attempts = 0
+    gravity_max_attempts = n_gravity_needed * 20 if n_gravity_needed > 0 else 0
+
+    while len(trips) < num_trips and gravity_attempts < gravity_max_attempts:
+        gravity_attempts += 1
 
         # a. Sample origin (population-weighted)
         origin = rng.choices(origin_nodes, weights=origin_weights, k=1)[0]
@@ -418,13 +514,9 @@ def generate_census_demand(
             person = rng.choice(all_commuters)
 
         # c. Sample destination (gravity: degree-weighted, distance-decayed)
-        #    Use commute_min to set a target distance range
         target_km = person.commute_min * 0.5  # rough: 30 km/h avg → 0.5 km/min
         target_km = max(0.5, min(target_km, 15.0))
 
-        # Vectorised haversine + Gaussian over all candidate destinations.
-        # Replaces a per-trip Python loop that scaled as O(trips × dest_nodes)
-        # and was the dominant cost at the 100K+ node tier.
         origin_lon, origin_lat = origin_coord
         origin_lat_rad = math.radians(origin_lat)
         cos_orig = math.cos(origin_lat_rad)
@@ -438,15 +530,11 @@ def generate_census_demand(
         scores = _dest_weights_arr * np.exp(
             -0.5 * ((distances - target_km) / sigma) ** 2
         )
-        # Drop too-close candidates and the origin itself (matches old loop).
         scores = np.where(distances < 0.1, 0.0, scores)
         origin_idx = _node_idx.get(origin)
         if origin_idx is not None:
             scores[origin_idx] = 0.0
 
-        # Cumulative-sum + binary-search sampling — preserves determinism via
-        # the existing `rng` (single rng.random() call per trip, same as the
-        # old rng.choices(k=1) accounting).
         csum = np.cumsum(scores)
         total = csum[-1]
         if total <= 0.0:
@@ -460,40 +548,41 @@ def generate_census_demand(
         if destination == origin:
             continue
 
-        # d. Generate departure time
-        departure = _generate_departure_time(
-            rng, person.commute_min, horizon_start, horizon_end
-        )
-
-        # Determine mode: use census person's actual mode if multi-mode
-        if modes is not None:
-            trip_mode = JWTRNS_TO_MODE.get(person.transport_mode, "car")
-        else:
-            trip_mode = mode
-
         trips.append({
-            "trip_id": f"t{len(trips)}",
             "origin_node_id": origin,
             "destination_node_id": destination,
-            "departure_time_s": departure,
-            "mode": trip_mode,
+            "departure_time_s": _generate_departure_time(
+                rng, person.commute_min, horizon_start, horizon_end
+            ),
+            "mode": _trip_mode_for(person),
+            "dest_source": "gravity",
         })
 
-    # Sort by departure time and renumber
-    trips.sort(key=lambda t: t["departure_time_s"])
+    # Final ordering + dense trip ids. Sort key includes a secondary tiebreak
+    # so ties on departure_time_s are deterministic across runs.
+    trips.sort(key=lambda t: (t["departure_time_s"], t["origin_node_id"],
+                              t["destination_node_id"]))
     for i, trip in enumerate(trips):
         trip["trip_id"] = f"t{i}"
 
-    # 7. Write demand.csv
+    # 7. Write demand.csv with the dest_source provenance column. Adapters
+    # consume the canonical 5-column subset by name and ignore the extra.
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["trip_id", "origin_node_id", "destination_node_id",
-                  "departure_time_s", "mode"]
+                  "departure_time_s", "mode", "dest_source"]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(trips)
 
-    logger.info("Wrote %d census-calibrated trips to %s", len(trips), output_path)
+    schedule_driven = sum(1 for t in trips if t["dest_source"] == "schedule")
+    gravity_fallback = len(trips) - schedule_driven
+    pct_sched = (schedule_driven / len(trips) * 100) if trips else 0.0
+    logger.info(
+        "Wrote %d census-calibrated trips to %s "
+        "(schedule-driven=%d / %.1f%%, gravity-fallback=%d)",
+        len(trips), output_path, schedule_driven, pct_sched, gravity_fallback,
+    )
 
     # Compute statistics
     unique_origins = len(set(t["origin_node_id"] for t in trips))
@@ -503,13 +592,20 @@ def generate_census_demand(
         "trip_count": len(trips),
         "unique_origins": unique_origins,
         "unique_destinations": unique_dests,
-        "strategy": "census",
+        "strategy": "census_schedule_first",
         "seed": seed,
         "output_path": str(output_path),
         "census_commuters": len(all_commuters),
         "avg_commute_min": round(avg_commute, 1),
         "mapped_buildings": len(bld_to_node),
         "origin_nodes": len(origin_nodes),
+        "provenance": {
+            "schedule_driven_count": schedule_driven,
+            "gravity_fallback_count": gravity_fallback,
+            "schedule_driven_pct": round(pct_sched, 2),
+            "scheduled_pool_size": len(valid_scheduled),
+            "fallback_reasons": dict(fallback_reasons),
+        },
     }
 
 
