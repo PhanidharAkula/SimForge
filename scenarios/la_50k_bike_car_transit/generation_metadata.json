@@ -1,0 +1,38 @@
+{
+  "scenario_id": "la_50k_bike_car_transit",
+  "city": "la",
+  "city_name": "Los Angeles, CA",
+  "trips_requested": 50000,
+  "trips_generated": 50000,
+  "modes": [
+    "car",
+    "transit",
+    "bike"
+  ],
+  "start_time_s": 21600,
+  "end_time_s": 36000,
+  "radius_km": 10.0,
+  "seed": 42,
+  "demand_strategy": "census_schedule_first",
+  "node_count": 159042,
+  "link_count": 468105,
+  "signal_count": 135351,
+  "generation_time_s": 391.2,
+  "osm_source": {
+    "type": "pbf",
+    "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/california-2026-04-22.osm.pbf",
+    "name": "california-2026-04-22.osm.pbf"
+  },
+  "demand_provenance": {
+    "schedule_driven_count": 50000,
+    "gravity_fallback_count": 0,
+    "schedule_driven_pct": 100.0,
+    "scheduled_pool_size": 88902,
+    "fallback_reasons": {
+      "schedule_dest_orphan_or_outside_bbox": 285251,
+      "home_outside_scc": 101,
+      "schedule_dest_outside_scc": 659,
+      "schedule_dest_equals_home": 5
+    }
+  }
+}

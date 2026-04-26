@@ -1,0 +1,34 @@
+{
+  "scenario_id": "nyc_10k_car",
+  "city": "nyc",
+  "city_name": "New York City, NY",
+  "trips_requested": 10000,
+  "trips_generated": 10000,
+  "modes": [
+    "car"
+  ],
+  "start_time_s": 25200,
+  "end_time_s": 32400,
+  "radius_km": 4.0,
+  "seed": 42,
+  "demand_strategy": "census_schedule_first",
+  "node_count": 34121,
+  "link_count": 105302,
+  "signal_count": 30647,
+  "generation_time_s": 393.2,
+  "osm_source": {
+    "type": "pbf",
+    "path": "/users/PMIU0110/phanidharakula/SimForge/osm_data/new-york-2026-04-22.osm.pbf",
+    "name": "new-york-2026-04-22.osm.pbf"
+  },
+  "demand_provenance": {
+    "schedule_driven_count": 801,
+    "gravity_fallback_count": 9199,
+    "schedule_driven_pct": 8.01,
+    "scheduled_pool_size": 801,
+    "fallback_reasons": {
+      "schedule_dest_orphan_or_outside_bbox": 28234,
+      "home_outside_scc": 45
+    }
+  }
+}

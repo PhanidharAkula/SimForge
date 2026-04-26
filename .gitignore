@@ -77,10 +77,19 @@ lib/
 # Benchmark output runs (generated data)
 runs/
 
-# Generated scenario bundles — only the reference chicago_1k_car is tracked.
-# Other dirs (nyc_500k_car, la_*_car, custom user bundles, …) are user-generated
-# output (often >100 MB each) and shouldn't bloat the repo.
+# Generated scenario bundles. Three reference bundles are tracked so a fresh
+# clone can run tests and the bundled adapters without first generating data:
+#   - chicago_1k_car          (~1 MB)        — smallest, used as the test fixture
+#   - nyc_10k_car             (~36 MB)       — small commute tier
+#   - la_50k_bike_car_transit (~164 MB)      — multi-modal medium tier; cross-
+#                                              platform reproducibility reference
+# The 200K and 500K tiers are NOT tracked — their network.xml / signals.xml
+# files individually exceed GitHub's 100 MB hard limit and would bloat clones.
+# Regenerate them with scripts/04_large_full_day.py and scripts/05_stress_test.py.
 scenarios/*/
+!scenarios/chicago_1k_car/
+!scenarios/nyc_10k_car/
+!scenarios/la_50k_bike_car_transit/
 
 # Per-user cluster scratch at the repo root (anchored with leading slash so
 # the patterns don't shadow the tracked cluster/jobs/ and cluster/example_runs/).
