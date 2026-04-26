@@ -42,12 +42,22 @@ Python dependencies (installed via `requirements.txt`):
 
 ## Quick Setup (5 minutes)
 
+The canonical install path uses **`uv` + [`requirements.lock`](../requirements.lock)** so every machine ends up on byte-identical dep versions (Python 3.13.13 + 42 packages, including `eclipse-sumo==1.26.0`).
+
 ```bash
+# Install uv (manages Python + venv; user-space, no admin)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
+
 git clone <repo-url>
 cd SimForge
 
-python3 setup_simforge.py     # checks prereqs, creates .venv, installs deps, downloads MATSim JAR
+uv python install 3.13                          # downloads Python 3.13.13
+uv venv --python 3.13 .venv
 source .venv/bin/activate
+
+uv pip install --upgrade pip
+uv pip install -r requirements.lock             # 42 packages including SUMO
 
 # Fetch the hash-pinned OSM PBFs (~2.1 GB across IL / NY / CA state extracts).
 # Required before regenerating any scenario; skipped if files are already present.
@@ -56,9 +66,14 @@ python tools/download_osm.py
 # Confirm the bundled scenario validates cleanly
 python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 # Expected: ✓ VALID
+
+# Print the toolchain report (used to verify cross-machine parity — see §Cross-Platform Reproducibility below)
+python tools/env_report.py
 ```
 
-(For a manual install path, see [SETUP.md](../SETUP.md). For the OSM data source, coverage, and hash-pinning, see [doc/SCENARIO_GENERATION.md §4](SCENARIO_GENERATION.md).)
+> **Why `uv` and the lockfile?** `requirements.txt` declares loose dep ranges for development; `requirements.lock` records the exact versions used to produce the thesis bundles. `uv` additionally installs the exact Python interpreter (3.13.13), so `python --version` matches across machines without depending on whatever the system Python happens to be.
+
+(For a deeper install walkthrough, see [SETUP.md](../SETUP.md). For the OSM data source, coverage, and hash-pinning, see [doc/SCENARIO_GENERATION.md §4](SCENARIO_GENERATION.md).)
 
 ### Running vs. regenerating — PBF requirement
 
@@ -82,32 +97,38 @@ If `osm_data/<state>-<date>.osm.pbf` is missing for a target city, the pipeline 
 
 ## Installing Simulators
 
-### SUMO (macOS)
+### SUMO
+
+**Already done.** `eclipse-sumo==1.26.0` is in [`requirements.lock`](../requirements.lock); the `uv pip install -r requirements.lock` step above installs the SUMO binary into `.venv/bin/sumo` and `.venv/bin/netconvert` automatically. No `brew install sumo` or `apt install sumo` needed. Same wheel works on macOS arm64 and Linux x86_64.
+
+Verify:
 
 ```bash
-brew install sumo
-sumo --version    # Expect 1.20.0+
-```
-
-### SUMO (Ubuntu/Debian)
-
-```bash
-sudo add-apt-repository ppa:sumo/stable
-sudo apt-get update
-sudo apt-get install sumo sumo-tools
+sumo --version       # Eclipse SUMO sumo 1.26.0
+netconvert --version # Eclipse SUMO netconvert 1.26.0
 ```
 
 ### MATSim
 
-`setup_simforge.py` downloads the MATSim 15.0 release JAR into `lib/matsim-15.0/`. Verify Java is on PATH:
+The MATSim 15.0 release JAR lives under `lib/matsim-15.0/` (gitignored). Download once:
 
 ```bash
-java -version    # Expect openjdk 17.x or higher
+mkdir -p lib
+curl -L -o matsim-15.0-release.zip https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip
+unzip matsim-15.0-release.zip -d lib/
+rm matsim-15.0-release.zip
+```
+
+Verify Java + the JAR:
+
+```bash
+java -version                                 # openjdk 17.x or newer
+ls lib/matsim-15.0/matsim-15.0.jar            # should exist
 ```
 
 ### QarSUMO (optional — GPU only)
 
-QarSUMO requires NVIDIA GPU with CUDA. Without it, the QarSUMO adapter falls back to standard SUMO and emits identical output. Source: <https://github.com/LLNL/QarSUMO>.
+QarSUMO requires an NVIDIA GPU with CUDA. Without it, the QarSUMO adapter falls back to standard SUMO and emits identical output. Source: <https://github.com/LLNL/QarSUMO>.
 
 ---
 

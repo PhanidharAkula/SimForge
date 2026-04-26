@@ -133,31 +133,39 @@ If a public endpoint is ever blocked, email `oschelp@osc.edu`.
 
 ## 4. First-time bootstrap
 
-After SSH'ing into Pitzer, run this sequence once. Expect ~15 minutes
-including the pip install and MATSim JAR download.
+After SSH'ing into Pitzer, run this sequence once. Expect ~10 minutes
+including the `uv` install, dep install, and MATSim JAR download.
+
+The canonical install uses [`requirements.lock`](../requirements.lock) so Pitzer
+ends up on **byte-identical Python + dep versions** as a developer's Mac. SUMO
+is included in the lockfile — no `module load sumo` (Pitzer doesn't have one)
+and no separate `pip install eclipse-sumo` step.
 
 ```bash
 # 4.1 — clone into $HOME (500 GB quota, no advisor permission needed)
 cd $HOME
-git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git
+git clone -b Version_3 https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
 
-# 4.2 — load modules (persistent: add to ~/.bashrc if you want)
-module load python/3.12
-module load openjdk     # needed only for MATSim
+# 4.2 — install uv (manages Python + venv; user-space, no admin)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
+echo 'source $HOME/.local/bin/env' >> ~/.bashrc      # persist across logins
 
-# 4.3 — create venv and install Python deps
-python -m venv .venv
+# 4.3 — install Python 3.13 via uv (Pitzer modules only offer 3.10 / 3.12)
+uv python install 3.13                               # downloads 3.13.13
+
+# 4.4 — load OpenJDK module (needed only for MATSim runs)
+module load openjdk
+echo 'module load openjdk' >> ~/.bashrc              # persist across logins
+
+# 4.5 — create venv and install everything from the lockfile
+uv venv --python 3.13 .venv
 source .venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install -r requirements-dev.txt   # pytest-cov, pytest-xdist, mutmut
+uv pip install --upgrade pip
+uv pip install -r requirements.lock                  # 42 packages including SUMO
 
-# 4.4 — install SUMO (not a module on Pitzer; pip wheel works)
-pip install eclipse-sumo
-sumo --version        # expect 1.20+
-
-# 4.5 — download MATSim 15.0 JAR (~65 MB)
+# 4.6 — download MATSim 15.0 JAR (~65 MB; gitignored)
 mkdir -p lib
 curl -L -o matsim-15.0-release.zip \
     https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip
@@ -165,7 +173,8 @@ unzip matsim-15.0-release.zip -d lib/
 rm matsim-15.0-release.zip
 ls lib/matsim-15.0/matsim-15.0.jar       # should exist
 
-# 4.6 — verify the unit suite before doing anything expensive
+# 4.7 — verify the env matches your dev machine + run the fast test suite
+python tools/env_report.py                # diff against your laptop's output
 python -m pytest tests/ -m "not slow" -q
 ```
 
@@ -174,20 +183,18 @@ python -m pytest tests/ -m "not slow" -q
 Authoritative list: `module spider <name>` on a logged-in shell (module
 versions rebump after cluster upgrades). As of 2026-04:
 
-| Software   | Module command               | Purpose                         |
-| ---------- | ---------------------------- | ------------------------------- |
-| Python     | `module load python/3.12`    | Standard runtime                |
-| GCC        | `module load gcc`            | Usually unneeded (modern default) |
-| OpenJDK    | `module load openjdk`        | MATSim runtime                  |
-| CUDA       | `module load cuda`           | QarSUMO build / run             |
-| Git        | pre-installed                | —                               |
-| SUMO       | **not** a module             | use `pip install eclipse-sumo`  |
+| Software   | Module command            | Purpose                                                             |
+| ---------- | ------------------------- | ------------------------------------------------------------------- |
+| Python     | **not used**              | Use `uv` (installs Python 3.13.13 to match the locked dev env)      |
+| GCC        | `module load gcc`         | Usually unneeded (modern default)                                   |
+| OpenJDK    | `module load openjdk`     | MATSim runtime                                                      |
+| CUDA       | `module load cuda`        | QarSUMO build / run                                                 |
+| Git        | pre-installed             | —                                                                   |
+| SUMO       | **not** a module          | Bundled in `requirements.lock` (`eclipse-sumo` wheel)               |
 
-Add the modules to `~/.bashrc` if you hate typing them every session:
-
-```bash
-echo 'module load python/3.12 openjdk' >> ~/.bashrc
-```
+Pitzer's `module load python/3.12` provides Python 3.12.x, but the locked dev
+environment is on **Python 3.13** — using `uv` to manage Python aligns Pitzer
+to the canonical version regardless of what the cluster modules offer.
 
 ---
 

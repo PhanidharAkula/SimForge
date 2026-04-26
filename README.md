@@ -37,9 +37,10 @@ Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via th
 
 ### Prerequisites
 
-- Python 3.10+
-- SUMO 1.20+ (optional, for SUMO/QarSUMO runs)
-- Java 17+ (optional, for MATSim runs)
+- **uv** (manages Python + the venv) — `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **Java 17+** (only for MATSim runs) — `brew install openjdk@17` on macOS
+
+Everything else (Python 3.13, all Python packages, **SUMO including the binary**) is locked in [`requirements.lock`](requirements.lock) and installed in one step below.
 
 ### Installation
 
@@ -47,17 +48,23 @@ Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via th
 git clone <repo-url>
 cd SimForge
 
-python3 -m venv .venv
+# uv installs Python 3.13.13 and creates the venv
+uv python install 3.13
+uv venv --python 3.13 .venv
 source .venv/bin/activate
 
-pip install -r requirements.txt
+# One command pulls every Python dep + SUMO at the locked versions
+uv pip install -r requirements.lock
 
 # Download the hash-pinned OSM PBFs (~2.1 GB across IL/NY/CA — the state-level
 # extracts used for chicago, nyc, and la scenarios). Skipped if already present.
 python tools/download_osm.py
+
+# Verify the toolchain (cross-machine parity reference)
+python tools/env_report.py
 ```
 
-For MATSim JAR installation, manifest details, and the supercomputer workflow, see [SETUP.md](SETUP.md) and [doc/PITZER.md](doc/PITZER.md).
+For the MATSim JAR install, supercomputer workflow, and full reproducibility recipe see [SETUP.md](SETUP.md), [doc/PITZER.md](doc/PITZER.md), and [doc/REPRODUCING.md](doc/REPRODUCING.md).
 
 ### Validate a Bundled Scenario
 

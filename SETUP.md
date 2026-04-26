@@ -20,54 +20,42 @@
 
 ### Required Software
 
-| Software   | Version | Installation                                                              |
-| ---------- | ------- | ------------------------------------------------------------------------- |
-| **Python** | 3.10+   | `brew install python@3.13` or system package manager                      |
-| **Java**   | 17+     | `brew install openjdk@17` (required for MATSim)                           |
-| **SUMO**   | 1.20+   | `brew install sumo` or [download](https://sumo.dlr.de/docs/Downloads.php) |
-| **Git**    | 2.30+   | Usually pre-installed                                                     |
+| Software   | Version          | Installation                                              |
+| ---------- | ---------------- | --------------------------------------------------------- |
+| **uv**     | 0.4+             | `curl -LsSf https://astral.sh/uv/install.sh \| sh`        |
+| **Java**   | 17+              | `brew install openjdk@17` (required only for MATSim)      |
+| **Git**    | 2.30+            | Usually pre-installed                                     |
+
+`uv` manages Python and the venv; **Python itself does not need to be pre-installed**. SUMO (the simulator binary) is installed automatically via [`requirements.lock`](requirements.lock) — no separate `brew install sumo` step.
 
 ### Verify Prerequisites
 
 ```bash
-python3 --version   # Should be 3.10+
-java -version       # Should be 17+
-sumo --version      # Should be 1.20+
+uv --version        # 0.4+
+java -version       # openjdk 17.x or newer
 ```
 
 ---
 
 ## Installation
 
-### Option A — One-Command Bootstrap (recommended)
-
-```bash
-git clone <repo-url>
-cd SimForge
-python3 setup_simforge.py
-```
-
-`setup_simforge.py` checks Python/Java/SUMO, creates `.venv/`, installs `requirements.txt`, downloads the MATSim 15.0 JAR into `lib/matsim-15.0/`, and runs a sanity import. After it finishes:
-
-```bash
-source .venv/bin/activate
-```
-
-### Option B — Manual
+The canonical install path uses `uv` and the **fully-pinned `requirements.lock`** so every machine ends up on byte-identical dep versions (Python 3.13.13 + 42 packages, including `eclipse-sumo==1.26.0`).
 
 ```bash
 git clone <repo-url>
 cd SimForge
 
-python3 -m venv .venv
+# uv installs Python 3.13.13 (in user space, no admin) and creates the venv
+uv python install 3.13
+uv venv --python 3.13 .venv
 source .venv/bin/activate
 
-pip install --upgrade pip
-pip install -r requirements.txt
-pip install -r requirements-dev.txt   # pytest-cov, pytest-xdist, mutmut
+# One command resolves every Python dep + SUMO at the locked versions
+uv pip install --upgrade pip
+uv pip install -r requirements.lock
 ```
 
-Then download the MATSim JAR (gitignored under `lib/`):
+Then download the MATSim 15.0 JAR (gitignored under `lib/`):
 
 ```bash
 mkdir -p lib
@@ -76,14 +64,19 @@ unzip matsim-15.0-release.zip -d lib/       # extracts to lib/matsim-15.0/
 rm matsim-15.0-release.zip
 ```
 
+> **Why `requirements.lock` not `requirements.txt`?** `requirements.txt` lists loose pin ranges suitable for development; `requirements.lock` records exact transitive versions captured from the canonical thesis-build environment. Installing from the lockfile guarantees you get the same stack used to produce the recorded thesis bundles. See [doc/REPRODUCING.md §Cross-Platform Reproducibility](doc/REPRODUCING.md#cross-platform-reproducibility-verified) for the verification recipe.
+
 ### Verify Installation
 
 ```bash
-python -m pytest tests/ -q                              # 249 tests should pass
-python -c "from adapters.sumo.sumo_adapter import SUMOAdapter; print('SUMO: OK')"
-python -c "from adapters.matsim.matsim_adapter import find_matsim_jar; print('MATSim:', find_matsim_jar())"
-python -c "import osmium, osmnx; print('osmium', osmium.__version__, '/ osmnx', osmnx.__version__)"
+# Toolchain + dep + binary report — same output expected on any locked machine
+python tools/env_report.py
+
+# Fast unit suite
+python -m pytest tests/ -m "not slow" -q
 ```
+
+`env_report.py` prints Python version, all 12 watched dep versions, SUMO/Java/MATSim binary status, and counts of OSM PBFs / ModelGen files / scenarios. It's the canonical cross-platform parity check (run it on any second machine and `diff` the outputs to verify they match).
 
 ---
 
