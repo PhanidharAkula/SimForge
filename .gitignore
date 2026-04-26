@@ -83,9 +83,11 @@ runs/
 #   - nyc_10k_car             (~36 MB)       — small commute tier
 #   - la_50k_bike_car_transit (~164 MB)      — multi-modal medium tier; cross-
 #                                              platform reproducibility reference
-# The 200K and 500K tiers are NOT tracked — their network.xml / signals.xml
+# These two larger tiers are NOT tracked — their network.xml / signals.xml
 # files individually exceed GitHub's 100 MB hard limit and would bloat clones.
-# Regenerate them with scripts/04_large_full_day.py and scripts/05_stress_test.py.
+# Regenerate them with the corresponding scripts/ entry point:
+#   - chicago_200k_car_transit  → scripts/04_large_full_day.py
+#   - nyc_500k_car              → scripts/05_stress_test.py
 scenarios/*/
 !scenarios/chicago_1k_car/
 !scenarios/nyc_10k_car/
