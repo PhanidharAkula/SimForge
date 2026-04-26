@@ -6,7 +6,7 @@ Usage:
     python run.py                                    # Run all scenarios, all engines, all modes
     python run.py --scenario chicago_1k_car           # Run specific scenario
     python run.py --scenario chicago_1k_car,nyc_10k_car  # Run multiple scenarios
-    python run.py --engine sumo,matsim              # Run with specific engines
+    python run.py --engine sumo,matsim               # Run with specific engines
     python run.py --mode micro                      # Run with specific mode
     python run.py --repeats 5                       # Run with 5 repeats
     python run.py --list                            # List available options
@@ -69,13 +69,11 @@ def check_engine_installed(engine: str) -> bool:
         matsim_jar = Path("lib/matsim-15.0/matsim-15.0.jar")
         java_ok = shutil.which("java") is not None
         return matsim_jar.exists() and java_ok
-    elif engine == "qarsumo":
-        return shutil.which("sumo") is not None  # Falls back to SUMO
     return False
 
 
 # Available engines and modes
-ALL_ENGINES = ["sumo", "matsim", "qarsumo"]
+ALL_ENGINES = ["sumo", "matsim"]
 ALL_MODES = ["micro", "meso"]
 
 
@@ -274,9 +272,6 @@ def run_simulation(scenario: str, engine: str, mode: str, seed: int,
             result = run_sumo(scenario_path, mode, seed, output_dir, timeout)
         elif engine == "matsim":
             result = run_matsim(scenario_path, mode, seed, output_dir, timeout)
-        elif engine == "qarsumo":
-            # QarSUMO falls back to SUMO
-            result = run_sumo(scenario_path, mode, seed, output_dir, timeout)
         else:
             result = {"status": "failed", "error": f"Unknown engine: {engine}"}
         

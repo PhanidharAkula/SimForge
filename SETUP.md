@@ -253,15 +253,15 @@ For a tour of every figure produced by `generate_plots.py`, see [doc/RESULTS_GUI
 
 ## GPU Acceleration
 
-### QarSUMO
+The plan commits to a 3rd primary engine (LPSim, GPU-accelerated, MIT
+licensed) which will land in Version_4 Phase B — see [todo.md](todo.md). Until
+then the active engines (SUMO + MATSim) are CPU-only.
 
-| Mode          | Hardware    | Speedup  | Use Case                   |
-| ------------- | ----------- | -------- | -------------------------- |
-| CPU (SUMO)    | Any CPU     | Baseline | Small scenarios, debugging |
-| GPU (QarSUMO) | NVIDIA CUDA | 10–50×   | Large-scale (500K+ trips)  |
-
-QarSUMO requires NVIDIA GPU with CUDA 11.0+ and ≥8 GB VRAM.
-Falls back to CPU SUMO automatically when no GPU is available.
+| Mode             | Hardware    | Use Case                          |
+| ---------------- | ----------- | --------------------------------- |
+| CPU (SUMO)       | Any CPU     | Small/medium scenarios, debugging |
+| CPU (MATSim)     | Any CPU     | Activity-based, multi-modal       |
+| GPU (LPSim)      | NVIDIA CUDA | Planned (Version_4 Phase B)       |
 
 ---
 
@@ -310,7 +310,7 @@ sbatch cluster/jobs/05_stress_test.sbatch       # or any of cluster/jobs/01..05
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
 | `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the 406-test suite                     |
+| `python -m pytest tests/ -v`                           | Run the test suite (~395 tests)            |
 
 ---
 
@@ -320,8 +320,7 @@ sbatch cluster/jobs/05_stress_test.sbatch       # or any of cluster/jobs/01..05
 SimForge/
 ├── adapters/               # Simulator-specific converters
 │   ├── sumo/               #   SUMO adapter (micro + meso)
-│   ├── matsim/             #   MATSim adapter
-│   └── qarsumo/            #   QarSUMO (GPU) adapter
+│   └── matsim/             #   MATSim adapter
 ├── canonical/              # Schema documentation (v0)
 ├── doc/                    # Architecture, reproduction, thesis chapters
 ├── evaluation/             # Metrics, analysis, plots

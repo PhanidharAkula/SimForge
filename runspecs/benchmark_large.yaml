@@ -3,11 +3,15 @@
 # =============================================================================
 #
 # Scenarios:  chicago_200k_car_transit, nyc_500k_car
-# Engines:    SUMO, QarSUMO, MATSim
+# Engines:    SUMO, MATSim
 # Modes:      mesoscopic only — microscopic at 200K+ trips would not finish
 #             in any reasonable wall.
-# Repeats:    3 for SUMO/QarSUMO, 2 for MATSim (matches stress_test.yaml).
-# Total:      6 entries → ~16 simulator invocations.
+# Repeats:    3 for SUMO, 2 for MATSim (matches stress_test.yaml).
+# Total:      4 entries → ~10 simulator invocations.
+#
+# Note: the plan commits to a 3rd primary engine (LPSim, GPU). Once the
+# LPSim adapter lands (todo.md Phase B), it'll appear here as a third row per
+# scenario and the sbatch will switch back to a GPU partition.
 #
 # Submit with cluster/jobs/benchmark_large.sbatch (parallel by scenario,
 # 2 backgrounded workers, --output-isolated). Bundles must be present:
@@ -16,11 +20,11 @@
 # ⚠️ KNOWN PERFORMANCE WALL: the SUMO adapter pre-routes every trip via
 # BFS on the canonical graph BEFORE handing off to the simulator. For
 # chicago_200k that BFS pre-step alone has been measured at ~17 h per
-# (engine, seed) — multiplied by 8 (sumo×3 + qarsumo×3 + matsim×2)
-# that's ~140 h, well past Pitzer's gpu-partition wall (96 h) and
-# comparable to the cpu-partition wall (168 h). nyc_500k is worse.
-# Until the route precomputation gets cached/parallelised, this runspec
-# will exceed wall time. Use benchmark_small.yaml for jobs that finish.
+# (engine, seed) — multiplied by 5 (sumo×3 + matsim×2) that's ~85 h, still
+# inside Pitzer's cpu wall (168 h) but tight. nyc_500k is worse and likely
+# exceeds the wall. Until the route precomputation gets cached/parallelised,
+# this runspec may exceed wall time. Use benchmark_small.yaml for jobs that
+# finish reliably.
 # =============================================================================
 
 name: benchmark_large
@@ -35,14 +39,10 @@ runs:
   - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
      engine: sumo,    mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 3600}
   - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
-     engine: qarsumo, mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 3600}
-  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
      engine: matsim,  mode: mesoscopic, repeats: 2, seed: 42, seed_increment: true, timeout_s: 3600}
 
   # ----------------------------------------------------------------- nyc_500k
   - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
      engine: sumo,    mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 7200}
-  - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
-     engine: qarsumo, mode: mesoscopic, repeats: 3, seed: 42, seed_increment: true, timeout_s: 7200}
   - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
      engine: matsim,  mode: mesoscopic, repeats: 2, seed: 42, seed_increment: true, timeout_s: 7200}

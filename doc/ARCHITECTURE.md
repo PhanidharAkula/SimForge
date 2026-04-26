@@ -16,13 +16,13 @@ SimForge is a cross-simulator benchmarking framework for urban traffic simulatio
 │  │   ModelGen)   │   │               │   │                  │   │
 │  └──────────────┘   └───────────────┘   └───────┬──────────┘   │
 │                                                  │              │
-│                           ┌──────────────────────┼──────┐       │
-│                           ▼                      ▼      ▼       │
-│                    ┌───────────┐  ┌─────────┐  ┌────────────┐   │
-│                    │SUMO       │  │QarSUMO  │  │MATSim      │   │
-│                    │Adapter    │  │Adapter  │  │Adapter     │   │
-│                    └─────┬─────┘  └────┬────┘  └─────┬──────┘   │
-│                          ▼             ▼             ▼          │
+│                           ┌──────────────────────┐              │
+│                           ▼                      ▼               │
+│                    ┌───────────┐         ┌────────────┐          │
+│                    │SUMO       │         │MATSim      │          │
+│                    │Adapter    │         │Adapter     │          │
+│                    └─────┬─────┘         └─────┬──────┘          │
+│                          ▼                     ▼                 │
 │                    ┌───────────────────────────────────────┐    │
 │                    │         Execution Harness             │    │
 │                    │  (RunSpec → benchmark → results.json) │    │
@@ -116,20 +116,23 @@ Each adapter translates the canonical bundle into simulator-specific input forma
 ```
                   canonical bundle
                         │
-            ┌───────────┼───────────┐
-            ▼           ▼           ▼
-     ┌──────────┐  ┌─────────┐  ┌──────────┐
-     │ SUMO     │  │ QarSUMO │  │ MATSim   │
-     │ Adapter  │  │ Adapter │  │ Adapter  │
-     └────┬─────┘  └────┬────┘  └────┬─────┘
-          ▼              ▼           ▼
-     .nod.xml       .nod.xml    network.xml
-     .edg.xml       .edg.xml    plans.xml
-     .rou.xml       .rou.xml    config.xml
-     .tll.xml       .tll.xml
-     .sumocfg       .sumocfg
-     .net.xml       .net.xml
-     (netconvert)   gpu_config.yaml
+            ┌───────────┴───────────┐
+            ▼                       ▼
+     ┌──────────┐            ┌──────────┐
+     │ SUMO     │            │ MATSim   │
+     │ Adapter  │            │ Adapter  │
+     └────┬─────┘            └────┬─────┘
+          ▼                       ▼
+     .nod.xml               network.xml
+     .edg.xml               plans.xml
+     .rou.xml               config.xml
+     .tll.xml
+     .sumocfg
+     .net.xml
+     (netconvert)
+
+     (LPSim adapter — 3rd primary engine — is planned for Version_4 Phase B;
+     see todo.md.)
 ```
 
 **SUMO adapter internals** (most complex):
@@ -142,8 +145,6 @@ Each adapter translates the canonical bundle into simulator-specific input forma
 6. Write `.sumocfg` referencing all files
 
 **MATSim adapter** translates demand trips into activity-based plans (home → work) with `lastIteration=0` to ensure single-pass execution (fair comparison with SUMO's single-pass simulation).
-
-**QarSUMO adapter** delegates to SUMO adapter, adds GPU configuration layer. Falls back to SUMO if no CUDA GPU detected.
 
 ### 2.4 Execution Harness
 
@@ -187,7 +188,7 @@ runs:
     repeats: 3
     seed: 42
     timeout_s: 300
-  # ... four cells total: chicago_1k_car × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}
+  # ... three cells total: chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso}
 ```
 
 The harness expands each `runs[]` entry into `repeats` individual runs, monotonically incrementing seeds when `seed_increment` is enabled. After execution, `analyze_benchmark.py` and `generate_plots.py` consume the resulting `runs/<name>/benchmark_results_<name>.json`.
@@ -232,9 +233,6 @@ adapters/sumo/sumo_adapter.py
     │
 adapters/matsim/matsim_adapter.py
     │ uses: xml.etree, csv
-    │
-adapters/qarsumo/qarsumo_adapter.py
-    │ uses: sumo_adapter (delegation), yaml
     │
     ▼
 execution/runspec.py               (YAML/JSON loading, dataclasses)
@@ -333,10 +331,10 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
 
 | Approach        | Adapters Needed | Maintenance |
 | --------------- | --------------- | ----------- |
-| Direct N↔N      | N(N-1) = 6      | Quadratic   |
-| Canonical (hub) | N = 3           | Linear      |
+| Direct N↔N      | N(N-1) = 2      | Quadratic   |
+| Canonical (hub) | N = 2           | Linear      |
 
-(SimForge currently ships 3 adapters — SUMO, QarSUMO, MATSim. The pattern continues to scale linearly as adapters are added.)
+(SimForge currently ships 2 adapters — SUMO, MATSim. LPSim is planned as the 3rd primary engine in Version_4 Phase B; the canonical-hub pattern keeps that addition linear in cost.)
 
 ### 5.2 Why BFS at Conversion Time?
 
@@ -384,7 +382,6 @@ Census-calibrated balances realism with reproducibility at zero cost.
 | `test_adapter_determinism.py`     | 8       | Byte-identical output across runs |
 | `test_sumo_adapter.py`            | 4       | SUMO conversion pipeline          |
 | `test_matsim_adapter.py`          | 24      | MATSim adapter unit + integration |
-| `test_qarsumo_adapter.py`         | 10      | QarSUMO config + GPU detection    |
 | `test_fidelity_metrics.py`        | 21      | RMSE, GEH, KS computation         |
 | `test_metrics_travel_time.py`     | 2       | SUMO tripinfo parsing             |
 | `test_reproducibility_metrics.py` | 15      | R-index, multi-KPI analysis       |
@@ -392,7 +389,7 @@ Census-calibrated balances realism with reproducibility at zero cost.
 | `test_validator.py`               | 2       | Bundle validation checks          |
 | `test_scenario_data_integrity.py` | 70      | All scenarios × 35 checks each    |
 | `test_pipeline_e2e.py`            | 20      | Bad data, routing, robustness     |
-| **Total**                         | **184** | **All passing**                   |
+| **Total**                         | **174** | **All passing**                   |
 
 ### 6.2 Determinism Guarantees
 
@@ -412,14 +409,14 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 │  Development (Local)                              │
 │  macOS / Apple Silicon / 16 GB                    │
 │  → 1K scenarios (< 60 s generation)               │
-│  → Full unit suite (184/184)                      │
-│  → SUMO meso + micro, MATSim, QarSUMO (CPU)       │
+│  → Full unit suite                                │
+│  → SUMO meso + micro, MATSim                      │
 └───────────────────┬──────────────────────────────┘
                     │ git push
                     ▼
 ┌─────────────────────────────────────────────────┐
 │  GitHub                                           │
-│  Branch: Version_3 (active), main                 │
+│  Branch: Version_4 (active), main                 │
 └───────────────────┬──────────────────────────────┘
                     │ git clone
                     ▼
@@ -429,7 +426,7 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 │  → OSM PBFs + ModelGen files rsynced from dev box │
 │  → 50K – 500K scenarios (SLURM batch)             │
 │  → Full benchmark matrix                          │
-│  → QarSUMO GPU experiments (real V100 kernels)    │
+│  → LPSim GPU runs (planned, Version_4 Phase B)    │
 └──────────────────────────────────────────────────┘
 ```
 

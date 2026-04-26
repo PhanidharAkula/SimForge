@@ -22,11 +22,11 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | Canonical Schema (v0)        | ✅ Stable                           |
 | Scenario Validator           | ✅ Complete                         |
 | SUMO Adapter                 | ✅ Complete (microscopic + meso)    |
-| QarSUMO Adapter              | ✅ Complete (CPU fallback to SUMO)  |
 | MATSim Adapter               | ✅ Complete (single-iteration meso) |
+| LPSim Adapter (3rd primary)  | 🚧 Planned (Version_4 Phase B)      |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (9 thesis figures)      |
-| Test Suite                   | ✅ 406 tests passing                |
+| Test Suite                   | ✅ ~395 tests passing               |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 
 Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
@@ -91,7 +91,7 @@ python run.py --list
 python -m execution.run_benchmark runspecs/stress_test.yaml
 ```
 
-`stress_test.yaml` declares the canonical 4-cell matrix (`chicago_1k_car` × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}) used to produce the thesis figures. After it finishes:
+`stress_test.yaml` declares the canonical 3-cell matrix (`chicago_1k_car` × {SUMO meso, SUMO micro, MATSim meso}) used to produce the thesis figures. After it finishes:
 
 ```bash
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
@@ -118,7 +118,6 @@ See [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) for what each tier 
 SimForge/
 ├── adapters/               # Simulator-specific converters
 │   ├── sumo/               # SUMO adapter (micro + meso)
-│   ├── qarsumo/            # GPU-accelerated SUMO (CPU fallback)
 │   └── matsim/             # Activity-based simulator
 ├── canonical/schema/       # Schema documentation (v0)
 ├── doc/                    # Architecture, reproduction, Pitzer, thesis chapters
@@ -140,7 +139,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache — only populated if the fallback path runs (gitignored)
-├── tests/                  # pytest test suite (406 tests)
+├── tests/                  # pytest test suite (~395 tests)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -166,8 +165,10 @@ SimForge/
 | Adapter | Engine    | Traffic Model                      | Output                 |
 | ------- | --------- | ---------------------------------- | ---------------------- |
 | SUMO    | eclipse-sumo 1.26+| Microscopic / Mesoscopic           | net.xml, rou.xml       |
-| QarSUMO | QarSUMO   | GPU-accelerated meso (CPU fallback)| SUMO + GPU config      |
 | MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml |
+| LPSim   | LPSim (CUDA) | GPU-accelerated meso (planned)  | LPSim CSV + JSON cfg   |
+
+LPSim is the planned 3rd primary engine, scheduled for Version_4 Phase B. POLARIS and QarSUMO are documented backups (deferred / unavailable). See [todo.md](todo.md).
 
 ---
 
@@ -182,7 +183,7 @@ SimForge/
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all 406 tests
+pytest tests/ -v          # Run all ~395 tests
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 
@@ -202,7 +203,7 @@ Data Sources → Generation Pipeline → Canonical Bundle → Adapter Layer → 
 | ------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
 | Generation Pipeline | `pipeline/network/`, `pipeline/demand/`, `pipeline/signals/` | OSM + Census → validated canonical bundles                                      |
 | Canonical Schema    | `canonical/schema/`                                          | 5-file intermediate representation (network, demand, signals, config, manifest) |
-| Adapter Layer       | `adapters/sumo/`, `adapters/matsim/`, `adapters/qarsumo/`    | Canonical → simulator-specific format                                           |
+| Adapter Layer       | `adapters/sumo/`, `adapters/matsim/`                         | Canonical → simulator-specific format (LPSim adapter planned for Version_4)     |
 | Execution Harness   | `execution/`                                                 | RunSpec-driven benchmark orchestration                                          |
 | Evaluation Metrics  | `evaluation/metrics/`                                        | Fidelity (RMSE, GEH, KS), Scalability, Reproducibility                          |
 

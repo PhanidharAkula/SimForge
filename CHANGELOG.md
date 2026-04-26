@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 Commit hashes refer to the `Version_2` branch.
 
+## [Unreleased] — Version_4
+
+### Removed
+
+- **QarSUMO engine completely dropped** (Version_4 Phase A) — the plan listed QarSUMO as a 5th engine, but as of the 2026-04-26 audit no usable public source exists: LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper cited in the plan hasn't materialised into runnable code. The CPU-fallback path that shipped through Version_3 was bit-identical to standard SUMO meso, contributing no new comparison signal. Removed: `adapters/qarsumo/` package, `tests/test_qarsumo_adapter.py` (10 tests), `cluster/jobs/build_qarsumo.sbatch`, all `qarsumo` runspec entries (`stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml`), engine registry membership in `execution/runspec.py` and `run.py`, dispatcher branches in `execution/run_benchmark.py`, plot/analyze engine tuples, and all doc references. The 3rd primary engine slot is now reserved for **LPSim** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU-accelerated, Docker shipped) — see `todo.md` Phase B.
+
+### Changed
+
+- **`cluster/jobs/benchmark_small.sbatch` and `benchmark_large.sbatch` switched off the GPU partition** — without QarSUMO, no current engine needs CUDA. Both jobs now request `--partition=cpu`. Once LPSim lands in Version_4 Phase B, both will switch back to `--partition=gpu --gres=gpu:v100:1`.
+- **`runspecs/stress_test.yaml`** is now a **3-cell matrix** (was 4): `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso}`.
+- **`runspecs/benchmark_small.yaml`** is now **9 entries / ~24 invocations** (was 15 / ~42): SUMO meso+micro + MATSim meso per scenario, no QarSUMO.
+- **`runspecs/benchmark_large.yaml`** is now **4 entries / ~10 invocations** (was 6 / ~16): SUMO meso + MATSim meso per scenario, no QarSUMO.
+
+### Added
+
+- **`todo.md`** — Version_4 roadmap with plan-vs-reality gap audit (engines, cities, loads, hardware, repeats, reproducibility, calibration, metrics, deliverables), advisor-approved scope adjustments, phased roadmap (A: foundation → B: LPSim → C: containers → D: optional → E: integration), and open questions for the next advisor meeting. Cross-references `a personal PDF` (December 2025) as the canonical source of truth.
+- **`evaluation/metrics/confidence.py`** — 95 % confidence intervals on the mean via Student's t-distribution. Hard-coded t-critical table (df 1–30) with normal-distribution Z=1.960 fallback for df > 30 — no scipy dependency, math is auditable in the thesis appendix. Closes plan §3.5 commitment to "95 % CIs on every KPI". Tested in `tests/test_confidence.py` (11 tests covering edge cases and hand-computable references). Wired into:
+  - `evaluation/analyze_benchmark.py` — `ScenarioStats` gains `ci95_runtime` / `ci95_travel_time` fields; Tables 5.1 / 5.2 add a `95% CI` column alongside the existing `Std`; LaTeX and Markdown table generators render `mean ± half-width` instead of bare means.
+  - `evaluation/generate_plots.py` — `ScenarioMetrics` gains the same fields; error bars in Figs 5.1 (runtime), 5.3 (travel time), and 5.6 (micro vs meso) now show 95 % CIs instead of ±1σ. Figure titles updated to flag the change.
+
+## [Pre-Version_4 history below]
+
 ## [Unreleased]
 
 ### Added

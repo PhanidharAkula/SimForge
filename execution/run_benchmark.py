@@ -170,7 +170,7 @@ def print_banner(runspec_name: str, total_runs: int, scenarios: int, configs: in
 class RunResult:
     """Result of a single simulation run."""
     scenario: str                       # Base scenario name (e.g. "chicago_1k_car")
-    engine: str                         # "sumo", "matsim", "qarsumo"
+    engine: str                         # "sumo", "matsim"
     mode: str                           # "micro" or "meso"
     seed: int
     repeat_index: int                   # 0-based
@@ -391,7 +391,7 @@ class BenchmarkHarness:
         logger.info("Starting run: %s / %s / seed=%d%s", scenario_id, engine, seed, mode_str)
 
         # Handle different engines
-        supported_engines = ["sumo", "qarsumo", "matsim"]
+        supported_engines = ["sumo", "matsim"]
         if engine not in supported_engines:
             return RunResult(
                 scenario=scenario_id,
@@ -407,16 +407,7 @@ class BenchmarkHarness:
         
         # Prepare inputs based on engine
         try:
-            if engine == "qarsumo":
-                # QarSUMO uses same input format as SUMO
-                from adapters.qarsumo import prepare_qarsumo_inputs, QarSUMOConfig
-                gpu_opts = engine_options.get("gpu", {}) if engine_options else {}
-                qarsumo_config = QarSUMOConfig(
-                    gpu_device=gpu_opts.get("device", 0),
-                    batch_size=gpu_opts.get("batch_size", 10000),
-                )
-                prepare_qarsumo_inputs(scenario_path, run_dir, qarsumo_config)
-            elif engine == "matsim":
+            if engine == "matsim":
                 # MATSim activity-based simulator
                 from adapters.matsim import prepare_matsim_inputs, MATSimConfig
                 matsim_opts = engine_options or {}
@@ -479,7 +470,7 @@ class BenchmarkHarness:
                         "trip_count": stats.get("trip_count", 0)
                     }
         else:
-            # SUMO/QarSUMO use .sumocfg
+            # SUMO uses .sumocfg
             config_files = list(run_dir.glob("*.sumocfg"))
             if not config_files:
                 return RunResult(
@@ -493,24 +484,10 @@ class BenchmarkHarness:
                     output_dir=run_dir,
                     error_message="No .sumocfg file generated"
                 )
-            
+
             config_path = config_files[0]
-            
-            # Run simulation based on engine
-            if engine == "qarsumo":
-                from adapters.qarsumo import run_qarsumo
-                gpu_opts = engine_options.get("gpu", {}) if engine_options else {}
-                success, runtime, error = run_qarsumo(
-                    config_path, 
-                    timeout_s=timeout_s, 
-                    seed=seed,
-                    gpu_device=gpu_opts.get("device", 0),
-                    mesoscopic=mesoscopic
-                )
-            else:
-                # SUMO
-                success, runtime, error = self.run_sumo(config_path, timeout_s, seed, mesoscopic=mesoscopic)
-            
+            success, runtime, error = self.run_sumo(config_path, timeout_s, seed, mesoscopic=mesoscopic)
+
             # Compute metrics if successful
             metrics = {}
             tripinfo_path = None

@@ -9,6 +9,8 @@
 **Follow-up 2 (fairness audit):** *"is it now the fair and apple-to-apple comparision, or is there any imbalance, do a final check."* → fairness scored **93/100**; user requested fixes to reach thesis standard.
 
 > **Note (2026-04-23):** After this audit the canonical stress-test matrix was reduced from 8 cells (chicago + nyc) to 4 cells (chicago only) and the separate CI workflow was dropped in favour of a local `pytest` gate. References to `nyc_1k_car` and `.github/workflows/` below reflect the repository state as audited on 2026-04-20.
+>
+> **Superseded by Version_4 (2026-04-26):** QarSUMO has been **dropped entirely** as of the Version_4 branch — see `todo.md` and `CHANGELOG.md`. The canonical stress matrix is now 3 cells (`SUMO meso, SUMO micro, MATSim meso`); the QarSUMO scoring lines, bit-identical-fallback claims, and `adapters/qarsumo/` references in this audit are kept for historical record only.
 
 ---
 

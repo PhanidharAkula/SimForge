@@ -12,6 +12,8 @@ from pathlib import Path
 from dataclasses import dataclass
 import statistics
 
+from evaluation.metrics.confidence import confidence_interval_95
+
 
 @dataclass
 class ScenarioStats:
@@ -29,6 +31,10 @@ class ScenarioStats:
     avg_travel_time: float
     std_travel_time: float
     reproducibility_score: float
+    # 95 % confidence-interval half-widths on the mean — plan §3.5
+    # commits to reporting these on every KPI.
+    ci95_runtime: float = 0.0
+    ci95_travel_time: float = 0.0
 
 
 def load_results(results_path: Path) -> dict:
@@ -78,7 +84,7 @@ def _resolve_identity(run: dict) -> tuple[str, str, str]:
         parsed_engine = "unknown"
         parsed_scenario = scenario_id or "unknown"
         parsed_mode = "unknown"
-        for eng in ("sumo", "qarsumo", "matsim"):
+        for eng in ("sumo", "matsim"):
             if scenario_id.endswith(f"_{eng}") or f"_{eng}_" in scenario_id:
                 parsed_engine = eng
                 if f"_{eng}_meso" in scenario_id:
@@ -143,6 +149,15 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
         # Filter out zero travel times (might indicate metric computation failure)
         valid_travel_times = [tt for tt in travel_times if tt > 0]
 
+        # 95 % CI half-widths from the same per-cell sample. These shrink as
+        # √N grows and as σ shrinks, so they're directly comparable across
+        # cells in a way std isn't. With N=1 the CI degenerates to ± 0.0.
+        ci_runtime = confidence_interval_95(runtimes).half_width if runtimes else 0.0
+        ci_tt = (
+            confidence_interval_95(valid_travel_times).half_width
+            if valid_travel_times else 0.0
+        )
+
         stats = ScenarioStats(
             scenario=scenario,
             engine=engine,
@@ -156,7 +171,9 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
             avg_trips=statistics.mean(trip_counts) if trip_counts else 0,
             avg_travel_time=statistics.mean(valid_travel_times) if valid_travel_times else 0,
             std_travel_time=statistics.stdev(valid_travel_times) if len(valid_travel_times) > 1 else 0,
-            reproducibility_score=compute_reproducibility(valid_travel_times)
+            reproducibility_score=compute_reproducibility(valid_travel_times),
+            ci95_runtime=ci_runtime,
+            ci95_travel_time=ci_tt,
         )
         stats_list.append(stats)
     
@@ -166,32 +183,39 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
 def print_runtime_table(stats_list: list[ScenarioStats]) -> str:
     """Generate runtime comparison table (Table 5.1 in thesis)."""
     lines = []
-    lines.append("\n" + "=" * 90)
-    lines.append("TABLE 5.1: Runtime Performance Comparison (seconds)")
-    lines.append("=" * 90)
-    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mode':<7} {'Mean':<10} {'Std':<10} {'Min':<10} {'Max':<10}")
-    lines.append("-" * 90)
+    lines.append("\n" + "=" * 102)
+    lines.append("TABLE 5.1: Runtime Performance Comparison (seconds; ± is the 95 % CI half-width on the mean)")
+    lines.append("=" * 102)
+    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mode':<7} {'Mean':<10} {'95% CI':<10} {'Std':<10} {'Min':<10} {'Max':<10}")
+    lines.append("-" * 102)
 
     sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
 
     for s in sorted_stats:
         if s.successes > 0:
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {s.avg_runtime:>8.2f}s {s.std_runtime:>8.3f}s {s.min_runtime:>8.2f}s {s.max_runtime:>8.2f}s")
+            lines.append(
+                f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} "
+                f"{s.avg_runtime:>8.2f}s {s.ci95_runtime:>8.3f}s "
+                f"{s.std_runtime:>8.3f}s {s.min_runtime:>8.2f}s {s.max_runtime:>8.2f}s"
+            )
         else:
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {'FAILED':<10} {'-':<10} {'-':<10} {'-':<10}")
+            lines.append(
+                f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} "
+                f"{'FAILED':<10} {'-':<10} {'-':<10} {'-':<10} {'-':<10}"
+            )
 
-    lines.append("=" * 90)
+    lines.append("=" * 102)
     return "\n".join(lines)
 
 
 def print_reproducibility_table(stats_list: list[ScenarioStats]) -> str:
     """Generate reproducibility table (Table 5.2 in thesis)."""
     lines = []
-    lines.append("\n" + "=" * 95)
-    lines.append("TABLE 5.2: Reproducibility Analysis (Travel Time)")
-    lines.append("=" * 95)
-    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mode':<7} {'Avg TT (s)':<12} {'Std TT (s)':<12} {'R-Score':<10} {'Rating':<15}")
-    lines.append("-" * 95)
+    lines.append("\n" + "=" * 107)
+    lines.append("TABLE 5.2: Reproducibility Analysis (Travel Time; ± is the 95 % CI half-width on the mean)")
+    lines.append("=" * 107)
+    lines.append(f"{'Scenario':<25} {'Engine':<10} {'Mode':<7} {'Avg TT (s)':<12} {'95% CI':<10} {'Std TT (s)':<12} {'R-Score':<10} {'Rating':<15}")
+    lines.append("-" * 107)
 
     sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
 
@@ -206,11 +230,18 @@ def print_reproducibility_table(stats_list: list[ScenarioStats]) -> str:
             else:
                 rating = "Poor"
 
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {s.avg_travel_time:>10.1f} {s.std_travel_time:>10.1f} {s.reproducibility_score:>8.4f} {rating:<15}")
+            lines.append(
+                f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} "
+                f"{s.avg_travel_time:>10.1f} {s.ci95_travel_time:>8.2f} "
+                f"{s.std_travel_time:>10.1f} {s.reproducibility_score:>8.4f} {rating:<15}"
+            )
         else:
-            lines.append(f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} {'FAILED':<12} {'-':<12} {'-':<10} {'-':<15}")
+            lines.append(
+                f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} "
+                f"{'FAILED':<12} {'-':<10} {'-':<12} {'-':<10} {'-':<15}"
+            )
 
-    lines.append("=" * 95)
+    lines.append("=" * 107)
     return "\n".join(lines)
 
 
@@ -310,18 +341,18 @@ def print_summary_table(stats_list: list[ScenarioStats]) -> str:
 
 
 def generate_latex_table(stats_list: list[ScenarioStats]) -> str:
-    """Generate LaTeX table for thesis."""
+    """Generate LaTeX table for thesis. Runtime and travel time include 95 % CIs."""
     lines = []
     lines.append("\n% LaTeX table for thesis Chapter 5")
     lines.append("\\begin{table}[htbp]")
     lines.append("\\centering")
-    lines.append("\\caption{Mesoscopic Simulation Runtime Comparison}")
+    lines.append("\\caption{Simulation Runtime Comparison (mean $\\pm$ 95\\,\\% CI half-width)}")
     lines.append("\\label{tab:runtime-comparison}")
     lines.append("\\begin{tabular}{llrrr}")
     lines.append("\\toprule")
     lines.append("Scenario & Engine & Runtime (s) & Trips & R-Score \\\\")
     lines.append("\\midrule")
-    
+
     sorted_stats = sorted(stats_list, key=lambda x: (x.scenario, x.engine, x.mode))
     current_scenario = None
 
@@ -333,19 +364,24 @@ def generate_latex_table(stats_list: list[ScenarioStats]) -> str:
                     lines.append("\\midrule")
                 current_scenario = s.scenario
 
-            lines.append(f"{scenario_name} & {s.engine}/{s.mode} & {s.avg_runtime:.2f} & {int(s.avg_trips)} & {s.reproducibility_score:.4f} \\\\")
-    
+            lines.append(
+                f"{scenario_name} & {s.engine}/{s.mode} & "
+                f"{s.avg_runtime:.2f} $\\pm$ {s.ci95_runtime:.3f} & "
+                f"{int(s.avg_trips)} & {s.reproducibility_score:.4f} \\\\"
+            )
+
     lines.append("\\bottomrule")
     lines.append("\\end{tabular}")
     lines.append("\\end{table}")
-    
+
     return "\n".join(lines)
 
 
 def generate_markdown_table(stats_list: list[ScenarioStats]) -> str:
-    """Generate Markdown table for documentation."""
+    """Generate Markdown table for documentation. ± is the 95 % CI half-width."""
     lines = []
     lines.append("\n## Benchmark Results\n")
+    lines.append("> ± values are 95 % confidence-interval half-widths on the mean (Student's t).\n")
     lines.append("| Scenario | Engine | Mode | Runtime (s) | Trips | Avg TT (s) | R-Score |")
     lines.append("|----------|--------|------|-------------|-------|------------|---------|")
 
@@ -353,10 +389,14 @@ def generate_markdown_table(stats_list: list[ScenarioStats]) -> str:
 
     for s in sorted_stats:
         if s.successes > 0:
-            lines.append(f"| {s.scenario} | {s.engine} | {s.mode} | {s.avg_runtime:.2f} | {int(s.avg_trips)} | {s.avg_travel_time:.1f} | {s.reproducibility_score:.4f} |")
+            lines.append(
+                f"| {s.scenario} | {s.engine} | {s.mode} | "
+                f"{s.avg_runtime:.2f} ± {s.ci95_runtime:.3f} | {int(s.avg_trips)} | "
+                f"{s.avg_travel_time:.1f} ± {s.ci95_travel_time:.2f} | {s.reproducibility_score:.4f} |"
+            )
         else:
             lines.append(f"| {s.scenario} | {s.engine} | {s.mode} | FAILED | - | - | - |")
-    
+
     return "\n".join(lines)
 
 

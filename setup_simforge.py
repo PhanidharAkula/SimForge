@@ -90,7 +90,7 @@ def check_sumo() -> bool:
     """Check for SUMO traffic simulator."""
     sumo = shutil.which("sumo")
     if not sumo:
-        _warn("SUMO not found — SUMO/QarSUMO engines will not work")
+        _warn("SUMO not found — SUMO engine will not work")
         _warn("Install with: uv pip install -r requirements.lock  (canonical, bundles eclipse-sumo)")
         _warn("       or:    pip install eclipse-sumo             (ad-hoc, same wheel)")
         return False

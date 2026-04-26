@@ -34,14 +34,13 @@ git checkout -b your-feature-branch
 
 ### 2. Write the test first
 
-The 406-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The ~395-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |
 | `test_adapter_determinism.py`          | 8     | Byte-identical re-runs across all adapters                   |
 | `test_sumo_adapter.py`                 | 4     | SUMO adapter input/output shape                              |
 | `test_matsim_adapter.py`               | 24    | MATSim adapter, JAR discovery, classpath, config generation |
-| `test_qarsumo_adapter.py`              | 10    | QarSUMO adapter + CPU fallback                               |
 | `test_fidelity_metrics.py`             | 21    | RMSE, GEH, KS                                                |
 | `test_metrics_travel_time.py`          | 2     | tripinfo.xml parser                                          |
 | `test_reproducibility_metrics.py`      | 15    | R-score, edge cases (μ → 0)                                  |
@@ -51,10 +50,10 @@ The 406-test suite is the only thing standing between a "small fix" and a silent
 | `test_pipeline_e2e.py`                 | 20    | OSM fetch → bundle → adapter → metrics                       |
 | `test_scc.py`                          | 14    | Iterative Kosaraju + bundled-network coverage                |
 | `test_feasibility.py`                  | 16    | Shared SCC-based cross-engine trip filter                    |
-| `test_analyze_benchmark.py`            | 25    | Mode-aware grouping, renderers (incl. Adj TT), intersection helpers |
+| `test_analyze_benchmark.py`            | 24    | Mode-aware grouping, renderers (incl. Adj TT), intersection helpers |
 | `test_osm_fetch.py`                    | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pinning  |
 | `test_demand_generators.py`            | 21    | Uniform / gravity / peak-hour generators, SCC-restricted OD |
-| `test_engine_smoke.py`                 | 4     | Real-binary SUMO/MATSim/QarSUMO smoke (skip if missing)      |
+| `test_engine_smoke.py`                 | 3     | Real-binary SUMO/MATSim smoke (skip if missing)              |
 
 If you change adapter behaviour, run the determinism tests *and* the relevant adapter tests — the determinism tests catch silent file-format regressions that the adapter unit tests miss.
 

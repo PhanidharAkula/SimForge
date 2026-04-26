@@ -38,12 +38,12 @@ compare_modes.py  ──►  micro vs meso  ──►  speedup + fidelity
 python -m execution.run_benchmark runspecs/stress_test.yaml
 ```
 
-Writes to `runs/stress_test/benchmark_results_stress_test.json` (8 cells × ~3 repeats = ~22 runs).
+Writes to `runs/stress_test/benchmark_results_stress_test.json` (3 cells × ~3 repeats = ~8 runs).
 
 ### Ad-hoc one-off via `run.py`
 
 ```bash
-python run.py --scenario chicago_1k_car --engine sumo,qarsumo --mode meso --repeats 3
+python run.py --scenario chicago_1k_car --engine sumo,matsim --mode meso --repeats 3
 ```
 
 Writes to `runs/<timestamp>/benchmark_results_<timestamp>.json`.
@@ -65,7 +65,7 @@ Each run produces a JSON object:
   "timestamp": "20260418_223000",
   "matrix": {
     "scenarios": ["chicago_1k_car"],
-    "engines": ["sumo", "qarsumo"],
+    "engines": ["sumo", "matsim"],
     "modes": ["meso"],
     "repeats": 3
   },
@@ -205,8 +205,8 @@ Located in `evaluation/metrics/`:
 ### What to report in Chapter 5
 
 1. **Runtime comparison** (Table 5.1, Fig 5.1, Fig 5.5)
-   - SUMO/QarSUMO meso vs MATSim wall-clock, **per mode**
-   - Note: QarSUMO without NVIDIA GPU falls back to SUMO and produces bit-identical output
+   - SUMO meso vs MATSim wall-clock, **per mode**
+   - Note: LPSim (3rd primary engine) is planned for Version_4 Phase B and will appear here once the adapter lands.
 
 2. **Reproducibility** (Table 5.2, Fig 5.2)
    - R-scores ≥ 0.997 across all engines confirm deterministic behaviour
@@ -230,17 +230,17 @@ Located in `evaluation/metrics/`:
 | Canonical schema enables fair comparison       | Same scenario runs on all engines with identical demand (Fig 5.9) |
 | Mesoscopic mode is much faster than micro      | Fig 5.6 (within-engine), `compare_modes.py` speedup ratio         |
 | Results are reproducible                       | R-scores ≥ 0.997 across seeds (Table 5.2, Fig 5.2)                |
-| QarSUMO GPU acceleration provides speedup      | QarSUMO vs SUMO runtime when CUDA is present                      |
 | Framework scales to large scenarios            | Scalability metrics from HPC runs (200K, 500K tiers)              |
+| LPSim adds GPU-accelerated meso engine to the matrix | Planned — see todo.md Phase B                              |
 
 ---
 
 ## 7. Known Limitations
 
 - **Apple Silicon arm64**: `netconvert` on macOS arm64 has historically segfaulted on large networks (>~3,000 nodes) under SUMO 1.20.x. Behaviour under the locked SUMO 1.26.0 wheel has not been re-verified at scale; the bundled 1K and 10K scenarios run cleanly, but for the 50K+ tiers we recommend Linux/HPC where the same `eclipse-sumo` wheel installs without the macOS-specific issue.
-- **QarSUMO**: Falls back to SUMO without an NVIDIA GPU (Apple Silicon Macs have no NVIDIA support).
 - **MATSim**: Requires Java 17+ and the JAR in `lib/matsim-15.0/` (downloaded once per [SETUP.md](../SETUP.md)).
 - **Microscopic mode**: Order-of-magnitude slower than meso for the same trip count.
+- **3rd engine (LPSim)**: Not yet integrated; planned for Version_4 Phase B (see todo.md).
 
 ---
 

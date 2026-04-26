@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge benchmark — small tier (3 scenarios × all engines × meso+micro).
+# SimForge benchmark — small tier (3 scenarios × SUMO + MATSim × meso+micro).
 #
 # Runs runspecs/benchmark_small.yaml with three parallel python workers,
 # one per scenario, each writing to its own --output dir to avoid the
@@ -8,30 +8,26 @@
 # the runspec, not the scenario).
 #
 # Wall-clock budget:
-#   Sequential worst case ~24 h dominated by la_50k microscopic (sumo+qarsumo
-#   × 3 repeats × up to 4 h timeout each = 24 h). Parallelising per-scenario
-#   doesn't help la_50k itself, but chicago_1k and nyc_10k workers finish in
-#   ~30 min and ~2 h respectively, leaving la_50k as the wall-time floor.
-#   Budget set to 24 h as a safety ceiling.
+#   Sequential worst case ~16 h dominated by la_50k microscopic (sumo
+#   × 3 repeats × 4 h timeout each = 12 h). Parallelising per-scenario
+#   doesn't help la_50k itself, but chicago_1k and nyc_10k workers finish
+#   in ~30 min and ~2 h respectively, leaving la_50k as the wall-time floor.
+#   Budget set to 18 h for headroom.
 #
 # Resources:
-#   --partition=gpu        : QarSUMO needs CUDA. Without GPU it falls back
-#                            to standard SUMO and effectively duplicates the
-#                            SUMO runs.
-#   --gres=gpu:v100:1      : One V100 — concurrent QarSUMO runs from the
-#                            three parallel scenarios share the GPU via
-#                            CUDA's scheduler.
+#   --partition=hugemem-cascade or cpu : SUMO + MATSim are CPU-only with
+#                            QarSUMO dropped. Use the standard cpu partition.
 #   --cpus-per-task=16     : 3 parallel scenarios × ~2 cores each + python
 #                            overhead + post-step analyzer fits comfortably.
 #   --mem=64G              : Peak per-scenario memory ~5 GB; 3 in parallel
-#                            ≤ 20 GB; 64 GB has headroom.
-#   --time=24:00:00        : See wall-clock budget above.
+#                            ≤ 20 GB; 64 GB has headroom (la_50k microscopic
+#                            can spike).
+#   --time=18:00:00        : See wall-clock budget above.
 #
-# QarSUMO: build once on a GPU node before submitting:
-#   sbatch cluster/jobs/build_qarsumo.sbatch
-#       (or interactively per doc/PITZER.md §7)
-# Once built at $HOME/qarsumo/build/qarsumo the adapter auto-finds it.
-# Without it, qarsumo runs fall back to standard SUMO (logged as a warning).
+# Note: the GPU partition is no longer required. Once LPSim lands as the
+# 3rd primary engine (todo.md Phase B), switch back to:
+#   --partition=gpu --gres=gpu:v100:1
+# since LPSim needs CUDA.
 #
 # Edit before submitting on a different OSC project:
 #   --account=...     your project allocation (replaces PMIU0110)
@@ -42,13 +38,12 @@
 
 #SBATCH --account=PMIU0110
 #SBATCH --job-name=simforge_benchmark_small
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:v100:1
+#SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --time=18:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 ##SBATCH --mail-type=END,FAIL
@@ -66,13 +61,6 @@ echo "Python:    $(which python)"
 echo "SUMO:      $(sumo --version 2>&1 | head -1)"
 echo "Java:      $(java -version 2>&1 | head -1)"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>&1 | head -3 || echo "nvidia-smi unavailable"
-if [ -x "$HOME/qarsumo/build/qarsumo" ]; then
-    echo "QarSUMO:   $HOME/qarsumo/build/qarsumo (GPU-accelerated)"
-else
-    echo "QarSUMO:   NOT BUILT — qarsumo runs will fall back to standard SUMO."
-    echo "           Build once via: sbatch cluster/jobs/build_qarsumo.sbatch"
-fi
 echo
 
 # ---------------------------------------------------------------------------

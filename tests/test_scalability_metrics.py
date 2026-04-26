@@ -143,12 +143,12 @@ class TestScalabilityComparison:
             wall_clock_seconds=10.0,  # 2x faster
             simulated_time_seconds=3600.0,
             vehicles_completed=100,
-            engine="qarsumo",
+            engine="matsim",
         )
-        
+
         comparison = compare_scalability(baseline, faster)
-        
+
         assert comparison["runtime_speedup"] == 2.0  # 20/10
         assert comparison["throughput_ratio"] == 2.0  # faster has 2x throughput
         assert comparison["baseline_engine"] == "sumo"
-        assert comparison["comparison_engine"] == "qarsumo"
+        assert comparison["comparison_engine"] == "matsim"

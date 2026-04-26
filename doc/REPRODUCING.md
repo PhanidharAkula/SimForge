@@ -16,14 +16,14 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 - 16+ GB RAM
 - 50+ GB disk space
-- NVIDIA GPU with CUDA 11+ (only needed if you want true GPU-accelerated QarSUMO; the framework falls back to SUMO otherwise)
+- NVIDIA GPU with CUDA 11+ (only needed once the planned LPSim adapter lands in Version_4 Phase B; SUMO + MATSim are CPU-only)
 
 ### Software Requirements
 
 | Software   | Version       | Required For                                            |
 | ---------- | ------------- | ------------------------------------------------------- |
 | Python     | 3.10+         | Framework                                               |
-| SUMO       | 1.26+ (via `eclipse-sumo` in `requirements.lock`) | SUMO/QarSUMO simulation                                 |
+| SUMO       | 1.26+ (via `eclipse-sumo` in `requirements.lock`) | SUMO simulation                                         |
 | Java       | 17+           | MATSim simulation                                       |
 | Git        | 2.0+          | Repository cloning                                      |
 | osmium-tool| 1.14+ (opt)   | Optional CLI sanity checks on PBFs; not required        |
@@ -126,15 +126,15 @@ java -version                                 # openjdk 17.x or newer
 ls lib/matsim-15.0/matsim-15.0.jar            # should exist
 ```
 
-### QarSUMO (optional — GPU only)
+### LPSim (planned — Version_4 Phase B)
 
-QarSUMO requires an NVIDIA GPU with CUDA. Without it, the QarSUMO adapter falls back to standard SUMO and emits identical output. Source: <https://github.com/LLNL/QarSUMO>.
+The plan lists LPSim as the 3rd primary engine (GPU-accelerated, MIT licensed, Docker image `yibo123/lpsim:cuda12.4`). The adapter is scheduled for Version_4 Phase B. Once it lands, this section will document the build/run flow and the canonical matrix below will gain a 4th cell. Source: <https://github.com/Xuan-1998/LPSim>.
 
 ---
 
 ## Running the Canonical Stress Test
 
-The thesis figures are produced by `runspecs/stress_test.yaml` — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso}` with 3 repeats each (MATSim runs 2 repeats since it is deterministic).
+The thesis figures are produced by `runspecs/stress_test.yaml` — a 3-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso}` with 3 repeats each (MATSim runs 2 repeats since it is deterministic).
 
 ```bash
 # 1. Sanity check (one run, ~30 s)
@@ -182,7 +182,7 @@ cd ~/SimForge && source .venv/bin/activate
 sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 ```
 
-> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix and QarSUMO GPU runs** — see [doc/PITZER.md §1](PITZER.md). The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
+> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix and (once Phase B lands) LPSim GPU runs** — see [doc/PITZER.md §1](PITZER.md). The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
 
 ### Cross-Platform Reproducibility (Verified)
 
@@ -196,7 +196,7 @@ The schedule-first census demand generator is **byte-reproducible across archite
 
 The `network.xml` MD5 differs only because of **lxml-version-dependent XML serialization** (attribute ordering, float-precision rendering). The semantic content — node IDs, edge `from`/`to` pairs, lengths, lane counts, SCC membership — is identical, as evidenced by the two downstream artefacts being byte-equal: `signals.xml` and `demand.csv` reference network node IDs by string, so any drift in the underlying node set would have propagated and broken those matches.
 
-What this means in practice: feeding either the Mac-generated or the Pitzer-generated `demand.csv` into a SUMO/MATSim/QarSUMO simulation will produce the same engine inputs and (under the same engine version + seed) the same simulation outputs. The generation step is fully reproducible at the level the simulators care about.
+What this means in practice: feeding either the Mac-generated or the Pitzer-generated `demand.csv` into a SUMO/MATSim simulation will produce the same engine inputs and (under the same engine version + seed) the same simulation outputs. The generation step is fully reproducible at the level the simulators care about.
 
 **Reproduce locally** to verify your install matches the reference:
 
@@ -276,7 +276,6 @@ runs/stress_test/
     │   │   └── (SUMO native files)
     │   ├── seed_43/
     │   └── seed_44/
-    ├── qarsumo/
     └── matsim/
 ```
 
@@ -312,11 +311,10 @@ These are the numbers from the most recent canonical stress test (see CHANGELOG.
 | Scenario       | Engine  | Mode  | Trips simulated  | Avg TT (s)  | Runtime (s)  | R-Score |
 | -------------- | ------- | ----- | ---------------- | ----------- | ------------ | ------- |
 | chicago_1k_car | matsim  | meso  | **1000 (100 %)** | 195.7 ± 0.0 | 10.19 ± 0.16 | 1.0000  |
-| chicago_1k_car | qarsumo | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.28 ± 0.01 | 0.9981  |
 | chicago_1k_car | sumo    | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
 | chicago_1k_car | sumo    | micro | 940 (94.0 %)     | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
 
-Total wall-clock for the 11-run matrix: ~27 s.
+Total wall-clock for the 8-run matrix: ~22 s.
 
 The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses). It is the simulation outcome we want to *measure*, not an input asymmetry — every `feasibility_report.json` records `feasible_trips == total_trips == 1000`.
 
@@ -327,7 +325,6 @@ The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO re
 | Problem                          | Solution                                                                                                |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `MATSim ClassNotFoundException`  | The classpath includes everything in `libs/` automatically. Re-run `setup_simforge.py` to repair the JAR. |
-| `QarSUMO not found`              | Expected without an NVIDIA GPU — the adapter falls back to SUMO and emits a log line saying so.          |
 | `SUMO command not found`         | `brew install sumo` (macOS) or `apt-get install sumo` (Linux).                                           |
 | `Java version too old`           | `brew install openjdk@17` (macOS) or `apt-get install openjdk-17-jdk` (Linux).                            |
 | Slow MATSim runs                 | MATSim has ~5 – 7 s JVM startup overhead per run; this dominates wall-clock for the 1K tier.              |

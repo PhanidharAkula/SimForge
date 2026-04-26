@@ -52,12 +52,6 @@ class TestResolveIdentity:
         scenario, engine, mode = _resolve_identity(run)
         assert (engine, mode, scenario) == ("sumo", "micro", "nyc_1k_car")
 
-    def test_falls_back_for_qarsumo(self):
-        run = {"scenario_id": "chicago_1k_car_qarsumo_meso"}
-        _, engine, mode = _resolve_identity(run)
-        assert engine == "qarsumo"
-        assert mode == "meso"
-
     def test_falls_back_for_matsim(self):
         run = {"scenario_id": "chicago_1k_car_matsim_meso"}
         _, engine, mode = _resolve_identity(run)

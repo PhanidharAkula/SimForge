@@ -34,6 +34,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from evaluation.metrics.confidence import confidence_interval_95
+
 try:
     import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
@@ -57,11 +59,10 @@ except ImportError:
 
 ENGINE_COLORS = {
     'sumo': '#1f77b4',     # blue
-    'qarsumo': '#ff7f0e',  # orange
     'matsim': '#2ca02c',   # green
 }
 MODE_COLORS = {'meso': '#ff7f0e', 'micro': '#2ca02c'}
-KNOWN_ENGINES = ('sumo', 'qarsumo', 'matsim')
+KNOWN_ENGINES = ('sumo', 'matsim')
 
 
 def _require_matplotlib():
@@ -88,6 +89,10 @@ class ScenarioMetrics:
     std_travel_time: float
     p95_travel_time: float
     reproducibility: float
+    # 95 % confidence-interval half-widths on the mean (plan §3.5).
+    # These drive the error bars on every figure that previously used ±1σ.
+    ci95_runtime: float = 0.0
+    ci95_travel_time: float = 0.0
 
 
 def load_results(results_path: Path) -> dict:
@@ -176,6 +181,13 @@ def analyze_results(results: dict) -> list[ScenarioMetrics]:
         ]
         valid_tt = [tt for tt in travel_times if tt > 0]
 
+        ci_runtime = (
+            confidence_interval_95(runtimes).half_width if runtimes else 0.0
+        )
+        ci_tt = (
+            confidence_interval_95(valid_tt).half_width if valid_tt else 0.0
+        )
+
         out.append(ScenarioMetrics(
             scenario=f"{city}_{engine}_{mode}",
             city=city,
@@ -191,6 +203,8 @@ def analyze_results(results: dict) -> list[ScenarioMetrics]:
                              if len(valid_tt) > 1 else 0),
             p95_travel_time=statistics.mean(p95_times) if p95_times else 0,
             reproducibility=compute_reproducibility(valid_tt),
+            ci95_runtime=ci_runtime,
+            ci95_travel_time=ci_tt,
         ))
     return out
 
@@ -257,7 +271,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
                 hit = [m for m in metrics
                        if m.city == city and m.engine == engine and m.mode == mode]
                 heights.append(hit[0].avg_runtime if hit else 0)
-                errs.append(hit[0].std_runtime if hit else 0)
+                errs.append(hit[0].ci95_runtime if hit else 0)
             offset = (idx - (len(engines) - 1) / 2) * bar_width
             ax.bar([x + offset for x in x_positions], heights, bar_width,
                    yerr=errs, capsize=3,
@@ -275,7 +289,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
         ax.legend(title='Engine', loc='upper right')
 
     axes[0].set_ylabel('Runtime (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.1: Runtime Comparison by City, Engine, and Mode',
+    fig.suptitle('Figure 5.1: Runtime Comparison by City, Engine, and Mode (error bars: 95 % CI)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
     return _save("fig_5_1_runtime_comparison", output_dir)
@@ -389,7 +403,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
                 hit = [m for m in metrics
                        if m.city == city and m.engine == engine and m.mode == mode]
                 heights.append(hit[0].avg_travel_time if hit else 0)
-                errs.append(hit[0].std_travel_time if hit else 0)
+                errs.append(hit[0].ci95_travel_time if hit else 0)
             offset = (idx - (len(engines) - 1) / 2) * bar_width
             ax.bar([x + offset for x in x_positions], heights, bar_width,
                    yerr=[e if e > 0 else 0 for e in errs], capsize=3,
@@ -407,7 +421,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
         ax.legend(title='Engine', loc='upper right')
 
     axes[0].set_ylabel('Mean Travel Time (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.3: Travel Time Comparison by Engine and Mode',
+    fig.suptitle('Figure 5.3: Travel Time Comparison by Engine and Mode (error bars: 95 % CI)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
     return _save("fig_5_3_travel_time_comparison", output_dir)
@@ -589,7 +603,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
                 hit = [m for m in metrics
                        if m.engine == engine and m.city == city and m.mode == mode]
                 heights.append(hit[0].avg_runtime if hit else 0)
-                errs.append(hit[0].std_runtime if hit else 0)
+                errs.append(hit[0].ci95_runtime if hit else 0)
             if any(h > 0 for h in heights):
                 rendered = True
             offset = (idx - 0.5) * bar_width

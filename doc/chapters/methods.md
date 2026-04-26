@@ -4,7 +4,7 @@
 
 This chapter describes the design, implementation, and rationale of **SimForge** — a reproducible, cross-simulator benchmarking framework for urban traffic simulation. The framework addresses three fundamental challenges in simulator comparison that have historically hindered fair, reproducible evaluation of traffic simulation engines:
 
-1. **Input standardization**: Traffic simulators (SUMO, MATSim, QarSUMO, etc.) use incompatible input formats with different data models, coordinate systems, and semantic interpretations. Direct comparison requires a common input representation.
+1. **Input standardization**: Traffic simulators (SUMO, MATSim, LPSim, etc.) use incompatible input formats with different data models, coordinate systems, and semantic interpretations. Direct comparison requires a common input representation.
 
 2. **Execution reproducibility**: Simulation results vary due to hardware differences, software versions, random seed handling, floating-point behavior, and configuration details. A fair comparison requires deterministic, repeatable execution pipelines.
 
@@ -58,9 +58,11 @@ SimForge solves these challenges through five interacting subsystems:
 | SUMO simulator     | SUMO (eclipse-sumo)          | 1.20.0  | Microscopic + mesoscopic simulation     |
 | MATSim simulator   | MATSim                       | 15.0    | Activity-based mesoscopic simulation    |
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
-| QarSUMO            | QarSUMO (LLNL)               | —       | GPU-accelerated SUMO variant            |
-| GPU compute        | CUDA                         | 11.8+   | QarSUMO acceleration                    |
-| Testing            | pytest                       | 8.0+    | 406 tests across all subsystems         |
+| LPSim (planned)    | LPSim                        | —       | GPU-accelerated mesoscopic engine (Version_4 Phase B) |
+| GPU compute        | CUDA                         | 12.4+   | LPSim acceleration                      |
+| Testing            | pytest                       | 8.0+    | ~395 tests across all subsystems        |
+
+> **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement, Version_4 narrows scope to **three primary engines** (SUMO, MATSim, LPSim) with POLARIS and QarSUMO as documented backups. QarSUMO was dropped after a 2026-04-26 audit confirmed no usable public source (LLNL/QarSUMO 404; QarSUMO/QarSUMO is an empty placeholder; the Boulmakoul 2023 IEEE HPCS paper has not produced runnable code). LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, Docker shipped) replaces it as the GPU comparator. See `todo.md` for the gap audit and rollout plan.
 
 ---
 
@@ -668,34 +670,13 @@ config.xml   ──► config.xml (MATSim config format) + vehicles.xml
 | Typical iterations    | 1             | 1 (forced for fair comparison) |
 | Startup overhead      | ~0.1s         | ~5-7s (JVM warmup)             |
 
-### 3.4.4 QarSUMO Adapter
+### 3.4.4 LPSim Adapter (planned — Version_4 Phase B)
 
-**Simulator**: QarSUMO (LLNL) — GPU-accelerated variant of SUMO that offloads car-following computations to CUDA-enabled GPUs.
+**Simulator**: LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim)) — GPU-accelerated mesoscopic traffic simulator distributed under MIT license. Provides the GPU comparator slot in the experimental matrix that the plan originally allocated to QarSUMO.
 
-**Conversion**: Reuses the SUMO adapter's conversion pipeline entirely. Adds GPU-specific configuration:
+**Status**: Adapter not yet implemented. The integration plan is documented in `todo.md` (Phase B) and consists of: (1) translating canonical `network.xml` + `demand.csv` into LPSim's CSV/Parquet + JSON config format, (2) invoking the LPSim binary or `singularity exec docker://yibo123/lpsim:cuda12.4 …`, (3) parsing LPSim outputs into a SUMO-tripinfo-equivalent structure for the shared fidelity metrics.
 
-```xml
-<processing>
-  <qarsumo.gpu-device value="0"/>
-  <qarsumo.batch-size value="1024"/>
-</processing>
-```
-
-**Fallback behavior**: When the QarSUMO binary is unavailable (no GPU, not installed), the adapter automatically falls back to standard SUMO execution with a warning.
-
-**GPU detection:**
-
-```python
-def _detect_gpu() -> bool:
-    """Check for CUDA GPU availability."""
-    try:
-        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True)
-        return result.returncode == 0
-    except FileNotFoundError:
-        return False
-```
-
-**Performance expectation**: QarSUMO provides 2-10× speedup over SUMO for microscopic simulations with >100K vehicles, due to GPU-parallel car-following computation.
+**Performance expectation**: GPU-parallel mesoscopic queue updates target 5–20× speedup over CPU SUMO meso for the 200K and 500K trip tiers — the regime where SUMO's single-threaded queue scan is the binding constraint.
 
 ### 3.4.5 Adapter Determinism
 
@@ -743,7 +724,7 @@ runs:
 | --------------- | ------ | ------------------------------------------------------ |
 | `scenario_id`   | string | Human-readable scenario identifier                     |
 | `scenario_path` | string | Path to canonical scenario bundle                      |
-| `engine`        | string | Simulator: `sumo`, `matsim`, `qarsumo`                 |
+| `engine`        | string | Simulator: `sumo`, `matsim` (LPSim coming in Version_4 Phase B) |
 | `mode`          | enum   | `microscopic` or `mesoscopic`                          |
 | `repeats`       | int    | Number of repeated runs (for reproducibility analysis) |
 | `seed`          | int    | Base seed (incremented per repeat: 42, 43, 44)         |
@@ -968,7 +949,6 @@ The framework includes **406 tests** across all subsystems:
 | `test_adapter_determinism.py`     | 8     | Byte-identical outputs from identical inputs            |
 | `test_sumo_adapter.py`            | 4     | SUMO conversion: network, routes, config                |
 | `test_matsim_adapter.py`          | 24    | MATSim adapter: unit + integration, all scenarios       |
-| `test_qarsumo_adapter.py`         | 10    | QarSUMO config, GPU detection, all scenarios            |
 | `test_fidelity_metrics.py`        | 21    | RMSE, GEH, KS computation correctness                   |
 | `test_metrics_travel_time.py`     | 2     | SUMO tripinfo parsing                                   |
 | `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation         |
@@ -981,9 +961,9 @@ The framework includes **406 tests** across all subsystems:
 | `test_analyze_benchmark.py`       | 25    | Mode-aware grouping + identity fallback + renderers     |
 | `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
-| `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/QarSUMO                |
+| `test_engine_smoke.py`            | 3     | Real-binary smoke on SUMO/MATSim                        |
 
-**All 406 tests passing** as of current version. Marker registry in
+**All ~395 tests passing** as of Version_4. Marker registry in
 `pyproject.toml`; shared fixtures in `tests/conftest.py`.  Line coverage
 sits at **76 %** across the adapter, pipeline, and evaluation packages;
 the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.
@@ -1004,7 +984,7 @@ the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.
 
 ### 3.7.3 Error Handling
 
-- **Graceful fallback**: QarSUMO → SUMO when no GPU; MATSim adapter detects missing Java
+- **Graceful fallback**: MATSim adapter detects missing Java and reports an actionable error rather than producing empty outputs
 - **Informative errors**: Demand generation provides specific guidance when model file lacks data for the target city
 - **Timeout protection**: Each simulation run has a configurable timeout to prevent HPC job hangs
 - **Progress tracking**: Real-time progress bars with ETA prevent silent failures in long benchmark runs

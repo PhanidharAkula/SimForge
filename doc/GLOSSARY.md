@@ -90,7 +90,7 @@ A *coverage diagnostic* class flagged when an `(engine, mode)` cell has fewer th
 Multi-Agent Transport Simulation; an activity-based, event-driven, queue-mobsim simulator written in Java. SimForge bundles MATSim 15.0 and runs it in single-iteration mode (`lastIteration = 0`) for reproducibility.
 
 ### Mesoscopic (meso)
-A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso, QarSUMO meso, and MATSim are all mesoscopic.
+A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso and MATSim are mesoscopic. The planned LPSim adapter (Version_4 Phase B) will also be mesoscopic, GPU-accelerated.
 
 ### Microscopic (micro)
 A simulation paradigm that models each vehicle individually with car-following and lane-changing dynamics. Higher fidelity at the cost of order-of-magnitude longer runtime. SUMO micro is the only microscopic engine in the canonical *RunSpec*.
@@ -139,7 +139,14 @@ Python bindings for `libosmium` (PyPI package `osmium`, `>=4.0` in `requirements
 ## Q
 
 ### QarSUMO
-A GPU-accelerated SUMO fork from LLNL (<https://github.com/LLNL/QarSUMO>) requiring NVIDIA CUDA 11.0+. SimForge's QarSUMO adapter falls back to standard SUMO when CUDA is absent and emits a log line saying so — outputs are bit-identical to SUMO meso in fallback mode. The fallback path is the one exercised on the Apple M4 Pro test bench.
+A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope** — no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code). The 3rd primary engine slot is now reserved for *LPSim* (see `todo.md`).
+
+---
+
+## L
+
+### LPSim
+A GPU-accelerated mesoscopic traffic simulator (<https://github.com/Xuan-1998/LPSim>), MIT-licensed, distributed via the `yibo123/lpsim:cuda12.4` Docker image. Planned as the 3rd primary engine in Version_4 Phase B (see `todo.md`). Replaces QarSUMO in the canonical experimental matrix.
 
 ---
 

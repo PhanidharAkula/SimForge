@@ -1,5 +1,5 @@
 """
-Real-binary smoke tests for the SUMO, QarSUMO, and MATSim engines.
+Real-binary smoke tests for the SUMO and MATSim engines.
 
 Every other test file exercises *adapter* code (input preparation, XML
 structure, determinism).  This file goes one step further: it actually
@@ -30,7 +30,6 @@ from adapters.matsim.matsim_adapter import (
     prepare_matsim_inputs,
     run_matsim,
 )
-from adapters.qarsumo.qarsumo_adapter import prepare_qarsumo_inputs
 from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 
 from .conftest import is_arm64_netconvert_crash
@@ -103,42 +102,6 @@ def test_sumo_real_binary_produces_tripinfo(bundled_scenario: Path, tmp_path: Pa
     # A 1k-trip scenario should land the overwhelming majority; anything below
     # 50 % means the route file is broken in ways the adapter tests missed.
     assert len(rows) >= 50, f"only {len(rows)} trips completed — route file likely broken"
-
-
-@pytest.mark.slow
-@pytest.mark.requires_sumo
-def test_qarsumo_real_binary_falls_back_to_sumo(bundled_scenario: Path, tmp_path: Path) -> None:
-    """QarSUMO config is SUMO-compatible; the plain `sumo` binary must still run it.
-
-    This is the documented fallback: QarSUMO-specific `<qarsumo>` extensions are
-    ignored by stock SUMO so an adapter regression that breaks the `.sumocfg`
-    itself would fail here even without a CUDA GPU."""
-    if not _have_sumo():
-        pytest.skip("SUMO binaries not on PATH")
-
-    out = tmp_path / "qarsumo_run"
-    try:
-        prepare_qarsumo_inputs(bundled_scenario, out)
-    except RuntimeError as exc:
-        if is_arm64_netconvert_crash(exc):
-            pytest.skip(f"arm64 netconvert crashed preparing {bundled_scenario.name}")
-        raise
-
-    cfgs = list(out.glob("*.sumocfg"))
-    assert cfgs, "qarsumo adapter did not emit a .sumocfg"
-
-    result = subprocess.run(
-        ["sumo", "-c", str(cfgs[0]), "--ignore-route-errors"],
-        cwd=out,
-        capture_output=True,
-        text=True,
-        timeout=SUMO_TIMEOUT_S,
-        check=False,
-    )
-    assert result.returncode == 0, (
-        f"sumo rejected the QarSUMO-extended config: "
-        f"stderr={result.stderr[:500]!r}"
-    )
 
 
 # ---------------------------------------------------------------------------

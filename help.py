@@ -149,7 +149,7 @@ HELP TOPICS:
   python help.py scripts            Built-in preset scripts
   python help.py cities             Supported cities & census limits (LIVE DATA)
   python help.py modes              Travel modes reference
-  python help.py adapters           Simulator adapters (SUMO, MATSim, QarSUMO)
+  python help.py adapters           Simulator adapters (SUMO, MATSim, LPSim)
   python help.py metrics            Evaluation metrics
   python help.py evaluation         Analysis & plotting commands
   python help.py schema             Canonical schema format reference
@@ -241,7 +241,7 @@ HELP_RUN = """
 
 FLAGS:
   --scenario, -s <name>    Scenario name(s), comma-separated
-  --engine, -e <name>      Engine(s): sumo, matsim, qarsumo
+  --engine, -e <name>      Engine(s): sumo, matsim
   --mode, -m <name>        Mode(s): micro, meso
   --repeats, -r <n>        Repeats (default: 10)
   --seed <int>             Base random seed (default: 42)
@@ -313,7 +313,6 @@ CENSUS MODE MAPPING (JWTRNS codes):
 
 SIMULATOR SUPPORT:
   SUMO:    car (micro/meso), transit (with PT module)
-  QarSUMO: car only (GPU-accelerated)
   MATSim:  car, transit, bike, walk (full multi-modal)
 """
 
@@ -324,13 +323,14 @@ HELP_ADAPTERS = """
 
 SUPPORTED SIMULATORS:
   SUMO     1.26+     Microscopic/mesoscopic vehicle simulation (eclipse-sumo wheel)
-  QarSUMO  Latest    GPU-accelerated SUMO (falls back to SUMO without CUDA)
   MATSim   15.0      Activity-based mesoscopic multi-agent sim
+
+  LPSim is the planned 3rd primary engine (GPU-accelerated, MIT licensed);
+  see todo.md Phase B. POLARIS and QarSUMO are documented backups, deferred.
 
 ADAPTER CLI:
   python -m adapters.sumo.cli    <scenario_path> <output_dir>          # convert only
   python -m adapters.sumo.cli    <scenario_path> <output_dir> --run --mesoscopic
-  python -m adapters.qarsumo.cli <scenario_path> <output_dir> --run
   python -m adapters.matsim.cli  <scenario_path> <output_dir> --run
 
 SUMO NOTES:
@@ -345,7 +345,6 @@ SUMO NOTES:
 PREREQUISITES:
   SUMO:    bundled in requirements.lock (eclipse-sumo wheel) — `uv pip install -r requirements.lock` puts `sumo`, `netconvert`, `sumo-gui` directly in `.venv/bin/`. Verify: `sumo --version`.
   MATSim:  Download JAR to lib/matsim-15.0/, requires Java 17+
-  QarSUMO: Requires NVIDIA GPU with CUDA 11+
 """
 
 HELP_METRICS = """
@@ -456,11 +455,10 @@ COMMANDS:
   python -m execution.run_benchmark <runspec.yaml> --dry-run
 
 BUILT-IN RUNSPECS:
-  stress_test.yaml       Canonical 11-run matrix: chicago_1k_car x
-                         {SUMO meso, SUMO micro, QarSUMO meso, MATSim meso},
+  stress_test.yaml       Canonical 8-run matrix: chicago_1k_car x
+                         {SUMO meso, SUMO micro, MATSim meso},
                          3 repeats per stochastic cell (2 for MATSim).
-                         ~27 s on Apple M4 Pro. All thesis Chapter 5 numbers
-                         come from this runspec.
+                         All thesis Chapter 5 numbers come from this runspec.
   benchmark_small.yaml   1K-50K trips, 600 s per-run timeout (laptop tier).
   benchmark_large.yaml   200K-500K trips, 3600 s per-run timeout (HPC tier).
 
@@ -484,7 +482,7 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships 406 tests across 18 files. The fast tier (~7 s) is
+SimForge ships ~395 tests across 17 files. The fast tier (~7 s) is
 what developers run locally; the full suite (~22 s on M-series) adds
 adapter sweeps and real-binary smoke tests.
 
@@ -511,7 +509,6 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
   determinism     Verifies byte-identical adapter outputs across re-runs
   requires_sumo   Needs sumo / netconvert on PATH
   requires_java   Needs Java 17+ and the MATSim JAR
-  requires_gpu    Needs NVIDIA GPU (otherwise QarSUMO CPU fallback)
 
   Filter examples:
     python -m pytest -m slow
@@ -519,12 +516,11 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m "integration and not slow"
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (18 files / 406 tests):
+TEST FILES (17 files / ~395 tests):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
   test_matsim_adapter.py          (24)  MATSim helpers + end-to-end [slow sweep]
-  test_qarsumo_adapter.py         (10)  QarSUMO + CPU fallback [slow sweep]
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_reproducibility_metrics.py (15)  R-score core + edge cases
@@ -537,7 +533,7 @@ TEST FILES (18 files / 406 tests):
   test_analyze_benchmark.py       (25)  Mode-aware grouping + all renderers
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
   test_demand_generators.py       (21)  Uniform / gravity / peak-hour
-  test_engine_smoke.py            (4)   Real-binary SUMO/MATSim [skips if missing]
+  test_engine_smoke.py            (3)   Real-binary SUMO/MATSim [skips if missing]
 
 test_scenario_data_integrity.py classes (7, parametrized over every scenario):
   TestFileExistence       All 5 canonical files exist
@@ -718,10 +714,8 @@ EXTERNAL DEPENDENCIES:
                     binary on macOS arm64 and Linux x86_64). Installed by
                     `uv pip install -r requirements.lock`. Verify: sumo --version
   Java 17+          macOS:  brew install openjdk@17
-                    Linux:  apt-get install openjdk-17-jdk  (or `module load openjdk` on Pitzer)
+                    Linux:  apt-get install openjdk-17-jdk  (or `module load openjdk/21.0.3_9` on Pitzer)
                     Verify: java -version
-  QarSUMO           Optional — GPU path only. Falls back to SUMO without
-                    CUDA, so most developers can skip this.
 
 DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
   Installing requirements.lock via `uv pip install -r requirements.lock`

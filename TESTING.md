@@ -80,7 +80,6 @@ Registered in `pyproject.toml`. `--strict-markers` rejects unknown markers.
 | `determinism`    | Verifies byte-identical adapter outputs across re-runs        |
 | `requires_sumo`  | Needs the SUMO `netconvert` / `sumo` binaries on PATH         |
 | `requires_java`  | Needs Java + the MATSim JAR (`lib/matsim-15.0/`)              |
-| `requires_gpu`   | Needs an NVIDIA GPU (otherwise the QarSUMO CPU fallback path) |
 
 The `requires_*` markers are advisory today (no auto-skip plumbing yet) — they
 let contributors filter explicitly with `-m "not requires_java"`.
@@ -108,13 +107,7 @@ Tests the MATSim adapter's helpers (`seconds_to_time_string`, `MATSimConfig`,
 vehicles XML, network XML, plans XML, config XML) and the full
 `prepare_matsim_inputs` pipeline. No Java/JAR required.
 
-### 4. `test_qarsumo_adapter.py` — QarSUMO Adapter (10 tests; sweep `@slow`)
-
-Tests `QarSUMOConfig`, the `<qarsumo>` config-extension XML surgery, GPU
-detection (always returns a dict — falls back gracefully on CPU-only hosts),
-and the full prepare path.
-
-### 5. `test_fidelity_metrics.py` — Fidelity Metrics (21 tests)
+### 4. `test_fidelity_metrics.py` — Fidelity Metrics (21 tests)
 
 RMSE, GEH (single + batch), KS statistic, and `compute_fidelity_metrics`.
 
@@ -168,7 +161,7 @@ real bundled-network coverage (≥95 %).
 
 ### 13. `test_feasibility.py` — Cross-engine feasibility filter (16 tests, NEW)
 
-The shared SCC-based filter that makes SUMO/MATSim/QarSUMO simulate the
+The shared SCC-based filter that makes SUMO and MATSim simulate the
 **same** trip subset (CHANGELOG 1.0.0 fix). Covers feasible-trip computation,
 all four drop reasons (outside-SCC, unknown-node, missing-fields, missing-column-in-CSV),
 `FeasibilityReport` math (`feasible_fraction`, `summary_line`, `to_dict`),
@@ -208,11 +201,11 @@ demand.csv across runs), canonical CSV header, and the peak-hour temporal
 profile.  Complements the adapter-level feasibility filter — the two
 tests together prove that every emitted trip is routable in the engine.
 
-### 17. `test_engine_smoke.py` — Real-binary smoke (4 tests, NEW)
+### 16. `test_engine_smoke.py` — Real-binary smoke (3 tests, NEW)
 
 Actually invokes `sumo`, `netconvert`, and the MATSim JAR on the bundled
 scenario and asserts the engine produced non-empty artefacts
-(`tripinfo.xml`, `output_trips.csv.gz`).  All three smoke tests
+(`tripinfo.xml`, `output_trips.csv.gz`).  Both binary-driven smoke tests
 `pytest.skip` gracefully when the binary is missing so `pytest -m "not
 slow"` stays green on a developer laptop without SUMO/Java installed.
 Catches the class of regression where the adapter writes files the engine
@@ -240,9 +233,8 @@ scenarios are well below the threshold and never skip.
 | Area                   | Tests   | Notes                                                       |
 | ---------------------- | ------- | ----------------------------------------------------------- |
 | SUMO Adapter           | 4       | File generation, determinism, geo projection, sweep         |
-| SUMO / MATSim / QarSUMO determinism | 8 | Byte-identical tripinfo across re-runs             |
+| SUMO / MATSim determinism | 8    | Byte-identical tripinfo across re-runs                      |
 | MATSim Adapter         | 24      | Helpers, builders, prepare path, sweep                      |
-| QarSUMO Adapter        | 10      | Config, GPU detection, extend, sweep                        |
 | Fidelity Metrics       | 21      | RMSE, GEH, KS, combined                                     |
 | Travel Time            | 2       | Tripinfo parser                                             |
 | Reproducibility        | 15      | R-score core, multi-KPI, thresholds                         |
@@ -255,12 +247,12 @@ scenarios are well below the threshold and never skip.
 | Benchmark analyser     | 25      | Mode-aware grouping + identity fallback + renderers         |
 | OSM fetch              | 20      | Mocked Overpass, bbox validation, cache pin                 |
 | Demand generators      | 21      | Synthetic generators + SCC restriction + seed               |
-| Engine smoke           | 4       | Real-binary SUMO/MATSim smoke, skip-gracefully              |
-| **Total**              | **406** | **~25 s** full suite on M-series; **~7 s** with `-m "not slow"` (count scales with the number of committed scenarios — three reference bundles add ~108 parametrized integrity tests on top of the per-module suite) |
+| Engine smoke           | 3       | Real-binary SUMO/MATSim smoke, skip-gracefully              |
+| **Total**              | **~395** | **~22 s** full suite on M-series; **~7 s** with `-m "not slow"` (count scales with the number of committed scenarios — three reference bundles add ~108 parametrized integrity tests on top of the per-module suite) |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
-**76.3 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**
+**~76 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**
 to leave headroom for ongoing refactoring; the uncovered lines are
-concentrated in the subprocess-invoking `run_matsim` / `run_qarsumo`
-paths and the PUMS/modelgen parsers (tested instead by the slow-tier
-integration sweep and the engine-smoke tests).
+concentrated in the subprocess-invoking `run_matsim` path and the
+PUMS/modelgen parsers (tested instead by the slow-tier integration
+sweep and the engine-smoke tests).
