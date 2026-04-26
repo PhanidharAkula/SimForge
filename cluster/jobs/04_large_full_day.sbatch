@@ -1,0 +1,44 @@
+#!/bin/bash
+# ============================================================================
+# SimForge — 04_large_full_day: 200K trips (car+transit), Chicago, 24-hour
+# horizon, 15 km radius.
+#
+# Large full-day tier. Larger bbox + trip count than 03 means more memory
+# headroom and more network-extraction time; demand-step is still ~minutes
+# under the schedule-first pipeline.
+#
+# Edit before submitting on a different OSC project:
+#   --account=...     your project allocation (replaces PMIU0110)
+#   --mail-user=...   uncomment + fill if you want completion notifications
+#
+# Submit from the repo root:   sbatch cluster/jobs/04_large_full_day.sbatch
+# ============================================================================
+
+#SBATCH --account=PMIU0110
+#SBATCH --job-name=simforge_large_full_day
+#SBATCH --partition=cpu
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=48G
+#SBATCH --time=04:00:00
+#SBATCH --output=logs/%x_%j.out
+#SBATCH --error=logs/%x_%j.err
+##SBATCH --mail-type=END,FAIL
+##SBATCH --mail-user=your-email@example.com
+
+set -euo pipefail
+
+module load python/3.12
+cd ~/SimForge
+source .venv/bin/activate
+
+echo "=== Job starting on $(hostname) at $(date) ==="
+echo "Python: $(which python)"
+echo "Free memory: $(free -h | awk 'NR==2{print $4}')"
+echo
+
+python -u scripts/04_large_full_day.py
+
+echo
+echo "=== Job complete at $(date) ==="
