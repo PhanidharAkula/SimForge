@@ -23,7 +23,7 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 | Software   | Version       | Required For                                            |
 | ---------- | ------------- | ------------------------------------------------------- |
 | Python     | 3.10+         | Framework                                               |
-| SUMO       | 1.20+         | SUMO/QarSUMO simulation                                 |
+| SUMO       | 1.26+ (via `eclipse-sumo` in `requirements.lock`) | SUMO/QarSUMO simulation                                 |
 | Java       | 17+           | MATSim simulation                                       |
 | Git        | 2.0+          | Repository cloning                                      |
 | osmium-tool| 1.14+ (opt)   | Optional CLI sanity checks on PBFs; not required        |
@@ -165,7 +165,7 @@ python scripts/05_stress_test.py       # 500K NYC car, 6–10 AM
 
 Each writes a fresh bundle into `scenarios/<id>/` and is then runnable through `run.py` or by adding it to a runspec.
 
-> **Apple Silicon caveat:** SUMO 1.20's `netconvert` crashes on networks above ~3,000 nodes on arm64 (a SUMO bug, not SimForge's). The 1K bundles run cleanly; the 200K and 500K tiers must be run on Linux/HPC.
+> **Apple Silicon caveat:** `netconvert` on macOS arm64 has historically segfaulted on large networks (>~3,000 nodes) under SUMO 1.20.x; behaviour under the locked SUMO 1.26.0 wheel may differ but has not been re-verified at scale. The 1K bundles run cleanly on Mac; for the 200K and 500K tiers, run on Linux/HPC (Pitzer) where the same `eclipse-sumo` wheel installs without the macOS-specific issue.
 
 ### Regenerating on a Supercomputer (OSC Pitzer)
 
@@ -371,7 +371,7 @@ This thesis was produced with:
 | --------- | ------- |
 | SimForge  | Version_2 (commit `d66747d` or later) |
 | Python    | 3.13.2  |
-| SUMO      | 1.20.0  |
+| SUMO      | 1.26.0 (`eclipse-sumo` wheel via `requirements.lock`) |
 | MATSim    | 15.0    |
 | Java      | 17.0.13 |
 | osmnx     | 2.x (`requirements.txt` pins `>=2.0,<3`) |

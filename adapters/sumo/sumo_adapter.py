@@ -571,11 +571,10 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
     except FileNotFoundError as exc:
         raise RuntimeError(
             "netconvert not found on PATH.\n"
-            "  Install SUMO and ensure 'netconvert' is accessible:\n"
-            "    macOS:  brew install sumo\n"
-            "    Ubuntu: sudo apt-get install sumo sumo-tools\n"
-            "    Conda:  conda install -c conda-forge sumo\n"
-            "  Then verify: netconvert --version"
+            "  SUMO is bundled in requirements.lock as the eclipse-sumo wheel.\n"
+            "  Install with:  uv pip install -r requirements.lock\n"
+            "    (or:         pip install eclipse-sumo  for an ad-hoc install)\n"
+            "  Then verify:   netconvert --version"
         ) from exc
 
     # Compute the shared feasibility set — every engine must simulate exactly this subset.

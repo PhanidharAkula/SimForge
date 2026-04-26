@@ -26,7 +26,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | MATSim Adapter               | ✅ Complete (single-iteration meso) |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (9 thesis figures)      |
-| Test Suite                   | ✅ 249 tests passing                |
+| Test Suite                   | ✅ 406 tests passing                |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 
 Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
@@ -140,7 +140,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache — only populated if the fallback path runs (gitignored)
-├── tests/                  # pytest test suite (249 tests)
+├── tests/                  # pytest test suite (406 tests)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -165,7 +165,7 @@ SimForge/
 
 | Adapter | Engine    | Traffic Model                      | Output                 |
 | ------- | --------- | ---------------------------------- | ---------------------- |
-| SUMO    | SUMO 1.20+| Microscopic / Mesoscopic           | net.xml, rou.xml       |
+| SUMO    | eclipse-sumo 1.26+| Microscopic / Mesoscopic           | net.xml, rou.xml       |
 | QarSUMO | QarSUMO   | GPU-accelerated meso (CPU fallback)| SUMO + GPU config      |
 | MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml |
 
@@ -182,7 +182,7 @@ SimForge/
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all 249 tests
+pytest tests/ -v          # Run all 406 tests
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 

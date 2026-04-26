@@ -325,7 +325,7 @@ def run_qarsumo(
         elapsed = time.time() - start_time
         return False, elapsed, (
             f"Simulation binary not found: {qarsumo_bin}. "
-            f"Install SUMO: brew install sumo (macOS) or apt install sumo (Ubuntu)"
+            f"SUMO is bundled in requirements.lock — install with `uv pip install -r requirements.lock`."
         )
     except OSError as e:
         elapsed = time.time() - start_time

@@ -171,7 +171,7 @@ The framework documented by this repository — the cross-simulator benchmarking
 The ratio `simulated_time / wall_clock_time`. SRT > 1 means the simulator runs faster than real time. Reported by `evaluation/metrics/scalability.py`.
 
 ### SUMO (Simulation of Urban MObility)
-The Eclipse open-source traffic simulator. SimForge bundles SUMO 1.20+ and uses it in both *microscopic* and *mesoscopic* modes via the same `adapters/sumo/` adapter.
+The Eclipse open-source traffic simulator. SimForge bundles `eclipse-sumo==1.26.0` (installed automatically by `requirements.lock`) and uses it in both *microscopic* and *mesoscopic* modes via the same `adapters/sumo/` adapter.
 
 ---
 

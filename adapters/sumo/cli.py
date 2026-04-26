@@ -39,8 +39,9 @@ def _run_sumo(
         return (
             False,
             0.0,
-            "sumo not found on PATH. Install with: brew install sumo (macOS) "
-            "or apt-get install sumo (Linux).",
+            "sumo not found on PATH. SUMO is bundled in requirements.lock as the "
+            "eclipse-sumo wheel — install with: `uv pip install -r requirements.lock` "
+            "(or `pip install eclipse-sumo` for an ad-hoc install). Verify with: `sumo --version`.",
         )
 
     cmd = ["sumo"]

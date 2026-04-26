@@ -169,8 +169,9 @@ def run_mode(
             p95_travel_time_s=0,
             error=(
                 "SUMO binary not found on PATH.\n"
-                "  Install: brew install sumo (macOS) or apt install sumo (Ubuntu)\n"
-                "  Then ensure 'sumo' is on your PATH."
+                "  SUMO is bundled in requirements.lock as the eclipse-sumo wheel.\n"
+                "  Install:  uv pip install -r requirements.lock  (or: pip install eclipse-sumo)\n"
+                "  Then verify: sumo --version"
             )
         )
     start_time = time.time()

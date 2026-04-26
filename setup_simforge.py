@@ -91,8 +91,8 @@ def check_sumo() -> bool:
     sumo = shutil.which("sumo")
     if not sumo:
         _warn("SUMO not found — SUMO/QarSUMO engines will not work")
-        _warn("Install with: brew install sumo  (macOS)")
-        _warn("              apt install sumo sumo-tools  (Linux)")
+        _warn("Install with: uv pip install -r requirements.lock  (canonical, bundles eclipse-sumo)")
+        _warn("       or:    pip install eclipse-sumo             (ad-hoc, same wheel)")
         return False
     result = _run([sumo, "--version"])
     first_line = result.stdout.strip().split("\n")[0]
@@ -264,7 +264,7 @@ def print_next_steps(has_java: bool, has_sumo: bool):
     if not has_java:
         missing.append("  • Java 17+: brew install openjdk@17  (needed for MATSim)")
     if not has_sumo:
-        missing.append("  • SUMO:     brew install sumo  (needed for SUMO/QarSUMO)")
+        missing.append("  • SUMO:     uv pip install -r requirements.lock  (bundles eclipse-sumo)")
     if missing:
         print(f"{YELLOW}Missing external tools:{RESET}")
         for m in missing:

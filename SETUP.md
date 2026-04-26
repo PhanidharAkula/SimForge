@@ -275,17 +275,23 @@ Short version:
 
 ```bash
 ssh pitzer
-cd ~ && git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git
+cd ~ && git clone -b Version_3 https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
-module load python/3.12 openjdk
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt && pip install eclipse-sumo
+
+# Install uv (manages Python + venv; user-space, no admin)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
+uv python install 3.13                          # Pitzer modules only offer 3.10/3.12
+
+module load openjdk                              # for MATSim
+uv venv --python 3.13 .venv && source .venv/bin/activate
+uv pip install -r requirements.lock             # 42 packages including SUMO
 
 # Ship PBFs + ModelGen from your local machine (from local, not Pitzer):
 rsync -avh osm_data/ pitzer:SimForge/osm_data/
 rsync -avh modelgen/ pitzer:SimForge/modelgen/
 
-sbatch jobs/gen_nyc_500k.sbatch
+sbatch cluster/jobs/05_stress_test.sbatch       # or any of cluster/jobs/01..05
 ```
 
 ---
@@ -304,7 +310,7 @@ sbatch jobs/gen_nyc_500k.sbatch
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
 | `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the 249-test suite                     |
+| `python -m pytest tests/ -v`                           | Run the 406-test suite                     |
 
 ---
 
@@ -335,7 +341,7 @@ SimForge/
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark YAML configurations
 ├── scenarios/              # Bundled canonical scenarios
-├── tests/                  # 249 unit & integration tests
+├── tests/                  # 406 unit & integration tests
 ├── run.py                  # Convenience CLI
 ├── generate.py             # Scenario generator entry point
 ├── setup_simforge.py       # One-command bootstrap

@@ -22,7 +22,7 @@ Initial audit scored **97/100** with three small gaps (SUMO CLI parity, `generat
 
 | # | Component | Score | Evidence |
 | :- | :-------- | ----: | :------- |
-| 1 | Environment / toolchain | **100** | Python 3.13.2, SUMO 1.20.0, Java 17.0.13 (Temurin), MATSim 15.0 JAR all present and on PATH |
+| 1 | Environment / toolchain | **100** | Python 3.13.2, SUMO 1.20.0, Java 17.0.13 (Temurin), MATSim 15.0 JAR all present and on PATH (audit-time state; current canonical is Python 3.13.13 + `eclipse-sumo==1.26.0` from `requirements.lock`) |
 | 2 | Help system (`help.py`) | **100** | 20 topic aliases + default + unknown-topic fallback all render cleanly; SUMO `--ignore-route-errors` documented in `HELP_ADAPTERS` and troubleshooting item 13; `HELP_EVALUATION` mentions Adj TT |
 | 3 | Scenario generation (`generate.py`) | **100** | Defaults reproduce bundled scenarios byte-for-byte (see §3 below) |
 | 4 | Validators (`validate_bundle`) | **100** | Passes all four scenarios; correctly rejects deliberately corrupted demand.csv |
@@ -154,8 +154,8 @@ $ python -m pytest tests/test_sumo_adapter.py tests/test_adapter_determinism.py 
 
 ### 1. Environment / toolchain — 100 / 100
 
-- `python --version` → `Python 3.13.2` in `.venv`
-- `sumo --version` → `SUMO 1.20.0`; `netconvert` resolved at `/opt/homebrew/bin/netconvert`
+- `python --version` → `Python 3.13.2` in `.venv` (audit-time; current canonical is 3.13.13)
+- `sumo --version` → `SUMO 1.20.0`; `netconvert` resolved at `/opt/homebrew/bin/netconvert` (audit-time; current canonical is `eclipse-sumo==1.26.0` from `<repo>/.venv/bin/`)
 - `java -version` → `openjdk 17.0.13 2024-10-15` (Temurin), `/usr/bin/java`
 - `lib/matsim-15.0/matsim-15.0.jar` present (3.2 MB)
 - `modelgen/` catalogues chicago (1.1 M commuters), la (1.3 M), nyc (2.98 M)

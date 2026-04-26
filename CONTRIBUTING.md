@@ -13,7 +13,7 @@ git clone <repo-url>
 cd SimForge
 python setup_simforge.py        # creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
-python -m pytest tests/ -q      # 249 tests should pass
+python -m pytest tests/ -q      # 406 tests should pass
 ```
 
 If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install path.
@@ -22,19 +22,19 @@ If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install pa
 
 ## Development workflow
 
-### 1. Branch from `Version_2`
+### 1. Branch from `Version_3`
 
-`main` tracks the released thesis snapshot. `Version_2` is the active development branch — base your work on it:
+`main` tracks the released thesis snapshot. `Version_3` is the active development branch (succeeded `Version_2` in 2026-04 with the schedule-first demand pipeline + `uv` toolchain migration) — base your work on it:
 
 ```bash
-git checkout Version_2
-git pull origin Version_2
+git checkout Version_3
+git pull origin Version_3
 git checkout -b your-feature-branch
 ```
 
 ### 2. Write the test first
 
-The 249-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The 406-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |

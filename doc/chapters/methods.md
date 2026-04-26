@@ -60,7 +60,7 @@ SimForge solves these challenges through five interacting subsystems:
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | QarSUMO            | QarSUMO (LLNL)               | —       | GPU-accelerated SUMO variant            |
 | GPU compute        | CUDA                         | 11.8+   | QarSUMO acceleration                    |
-| Testing            | pytest                       | 8.0+    | 249 tests across all subsystems         |
+| Testing            | pytest                       | 8.0+    | 406 tests across all subsystems         |
 
 ---
 
@@ -961,7 +961,7 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **249 tests** across all subsystems:
+The framework includes **406 tests** across all subsystems:
 
 | Test Module                       | Tests | What It Validates                                       |
 | --------------------------------- | ----- | ------------------------------------------------------- |
@@ -983,7 +983,7 @@ The framework includes **249 tests** across all subsystems:
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
 | `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/QarSUMO                |
 
-**All 249 tests passing** as of current version. Marker registry in
+**All 406 tests passing** as of current version. Marker registry in
 `pyproject.toml`; shared fixtures in `tests/conftest.py`.  Line coverage
 sits at **76 %** across the adapter, pipeline, and evaluation packages;
 the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.

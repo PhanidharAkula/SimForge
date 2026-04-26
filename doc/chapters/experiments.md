@@ -166,7 +166,7 @@ Used for the larger tiers (50K – 500K) that exceed the arm64 `netconvert` thre
 | Software | Version      | Installation              | Notes               |
 | -------- | ------------ | -------------------------- | ------------------- |
 | Python   | 3.13.x       | `setup_simforge.py`        | Bootstrapper        |
-| SUMO     | 1.20.0       | `brew install sumo`        | Mandatory           |
+| SUMO     | 1.26.0       | bundled in `requirements.lock` (`eclipse-sumo` wheel) | Mandatory           |
 | MATSim   | 15.0         | JAR                        | `lib/matsim-15.0/`  |
 | Java     | 17           | Homebrew                   | MATSim runtime      |
 | QarSUMO  | git checkout | LLNL/QarSUMO               | Optional (GPU only) |
@@ -284,7 +284,7 @@ python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress
 | Random seed affecting results | 3 runs per condition with different seeds; report mean ± std    |
 | JVM warm-up affecting MATSim  | All runs include the same JVM start cost; comparison is fair-relative |
 | OS scheduling noise           | Use `perf_counter()`; HPC runs on dedicated nodes               |
-| Adapter conversion errors     | 249 unit tests including byte-identical determinism tests       |
+| Adapter conversion errors     | 406 unit tests including byte-identical determinism tests       |
 | Scenario validation failures  | Pre-flight validation check before every run                    |
 | Trip-count asymmetry across engines | SCC filter at generator + adapter; `feasibility_report.json` audit trail |
 
@@ -311,14 +311,14 @@ python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress
 
 For any researcher to reproduce these experiments:
 
-- [ ] Clone repository (branch `Version_2`).
-- [ ] `python setup_simforge.py` (creates `.venv`, installs deps, downloads MATSim JAR).
-- [ ] Install SUMO: `brew install sumo` (macOS) or `apt-get install sumo` (Linux).
-- [ ] Install Java 17+: `brew install openjdk@17`.
-- [ ] Fetch hash-pinned OSM PBFs: `python tools/download_osm.py` (only required if you plan to *regenerate* bundles; the committed `scenarios/*_1k_car/` networks are already built).
+- [ ] Clone repository (branch `Version_3`).
+- [ ] Install `uv`: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
+- [ ] Provision the canonical environment: `uv python install 3.13 && uv venv --python 3.13 .venv && source .venv/bin/activate && uv pip install -r requirements.lock` (installs Python 3.13.13, all 41 Python deps, AND `eclipse-sumo==1.26.0` in one step).
+- [ ] Install Java 17+ for MATSim: `brew install openjdk@17` (macOS) / `apt install openjdk-17-jdk` (Linux) / `module load openjdk` (Pitzer). Then download the MATSim JAR per [SETUP.md](../../SETUP.md).
+- [ ] Fetch hash-pinned OSM PBFs: `python tools/download_osm.py` (only required if you plan to *regenerate* bundles; the committed `scenarios/{chicago_1k_car,nyc_10k_car,la_50k_bike_car_transit}/` networks are already built).
 - [ ] (Optional, fallback-path only) Pre-warm OSM cache: `python -m pipeline.network.warmup`.
 - [ ] Validate the bundled scenarios: `python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car`.
 - [ ] Run the canonical benchmark: `python -m execution.run_benchmark runspecs/stress_test.yaml`.
 - [ ] Analyse: `python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown`.
 - [ ] Render figures: `python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json`.
-- [ ] Verify: 249/249 tests pass (`python -m pytest tests/ -q`).
+- [ ] Verify: all 406 tests pass (`python -m pytest tests/ -q`).

@@ -323,7 +323,7 @@ HELP_ADAPTERS = """
 ====================================================================
 
 SUPPORTED SIMULATORS:
-  SUMO     1.20+     Microscopic/mesoscopic vehicle simulation
+  SUMO     1.26+     Microscopic/mesoscopic vehicle simulation (eclipse-sumo wheel)
   QarSUMO  Latest    GPU-accelerated SUMO (falls back to SUMO without CUDA)
   MATSim   15.0      Activity-based mesoscopic multi-agent sim
 
@@ -343,7 +343,7 @@ SUMO NOTES:
     mesoscopic model; omit for the default microscopic simulation.
 
 PREREQUISITES:
-  SUMO:    brew install sumo  (verify: sumo --version)
+  SUMO:    bundled in requirements.lock (eclipse-sumo wheel) — `uv pip install -r requirements.lock` puts `sumo`, `netconvert`, `sumo-gui` directly in `.venv/bin/`. Verify: `sumo --version`.
   MATSim:  Download JAR to lib/matsim-15.0/, requires Java 17+
   QarSUMO: Requires NVIDIA GPU with CUDA 11+
 """
@@ -484,7 +484,7 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships 249 tests across 17 files. The fast tier (~7 s) is
+SimForge ships 406 tests across 18 files. The fast tier (~7 s) is
 what developers run locally; the full suite (~22 s on M-series) adds
 adapter sweeps and real-binary smoke tests.
 
@@ -519,7 +519,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m "integration and not slow"
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (17 files / 249 tests):
+TEST FILES (18 files / 406 tests):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
@@ -627,10 +627,12 @@ HELP_TROUBLESHOOTING = """
    -> Generate first: python generate.py --city chicago --trips 1000
 
 6. "SUMO not found" / "netconvert: command not found"
-   -> macOS: brew install sumo
-      Linux: apt-get install sumo
-      If installed but still not found:
-        export SUMO_HOME=$(brew --prefix sumo)/share/sumo
+   -> SUMO is bundled in requirements.lock as `eclipse-sumo`. Install via:
+        source .venv/bin/activate
+        uv pip install -r requirements.lock
+      That puts `sumo`, `netconvert`, `sumo-gui` in `.venv/bin/`. Confirm:
+        which sumo netconvert
+        sumo --version
 
 7. "MATSim JAR not found"
    -> Download to lib/matsim-15.0/, needs Java 17+
@@ -712,18 +714,19 @@ ACTIVATE THE VENV (REQUIRED IN EVERY NEW SHELL):
   If you see 'command not found: python', the venv is not active.
 
 EXTERNAL DEPENDENCIES:
-  SUMO 1.20+        macOS:  brew install sumo
-                    Linux:  apt-get install sumo
-                    Verify: sumo --version
+  SUMO 1.26+        Bundled in requirements.lock (eclipse-sumo wheel — same
+                    binary on macOS arm64 and Linux x86_64). Installed by
+                    `uv pip install -r requirements.lock`. Verify: sumo --version
   Java 17+          macOS:  brew install openjdk@17
-                    Linux:  apt-get install openjdk-17-jdk
+                    Linux:  apt-get install openjdk-17-jdk  (or `module load openjdk` on Pitzer)
                     Verify: java -version
   QarSUMO           Optional — GPU path only. Falls back to SUMO without
                     CUDA, so most developers can skip this.
 
 DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
-  setup_simforge.py installs these automatically. To install manually:
-    pip install -r requirements-dev.txt
+  Installing requirements.lock via `uv pip install -r requirements.lock`
+  bundles pytest, pytest-cov, and other dev tooling. The legacy
+  `pip install -r requirements-dev.txt` path still works for ad-hoc dev installs.
 
 VERIFY THE INSTALL (full sanity check):
   source .venv/bin/activate

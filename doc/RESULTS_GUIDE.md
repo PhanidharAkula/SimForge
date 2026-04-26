@@ -237,9 +237,9 @@ Located in `evaluation/metrics/`:
 
 ## 7. Known Limitations
 
-- **Apple Silicon arm64**: SUMO 1.20's `netconvert` segfaults on networks above ~3,000 nodes. The bundled 1K scenarios are unaffected; larger tiers require Linux/HPC.
+- **Apple Silicon arm64**: `netconvert` on macOS arm64 has historically segfaulted on large networks (>~3,000 nodes) under SUMO 1.20.x. Behaviour under the locked SUMO 1.26.0 wheel has not been re-verified at scale; the bundled 1K and 10K scenarios run cleanly, but for the 50K+ tiers we recommend Linux/HPC where the same `eclipse-sumo` wheel installs without the macOS-specific issue.
 - **QarSUMO**: Falls back to SUMO without an NVIDIA GPU (Apple Silicon Macs have no NVIDIA support).
-- **MATSim**: Requires Java 17+ and the JAR in `lib/matsim-15.0/` (`setup_simforge.py` handles both).
+- **MATSim**: Requires Java 17+ and the JAR in `lib/matsim-15.0/` (downloaded once per [SETUP.md](../SETUP.md)).
 - **Microscopic mode**: Order-of-magnitude slower than meso for the same trip count.
 
 ---

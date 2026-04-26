@@ -753,7 +753,7 @@ t2,n399,n603,25200,car
   "city": "chicago",
   "trips_requested": 1000,
   "trips_generated": 1000,
-  "demand_strategy": "census",
+  "demand_strategy": "census_schedule_first",
   "node_count": 1248,
   "link_count": 2871,
   "signal_count": 925,
@@ -773,18 +773,24 @@ Short version:
 
 ```bash
 ssh pitzer
-cd ~ && git clone -b Version_2 https://github.com/PhanidharAkula/SimForge.git
+cd ~ && git clone -b Version_3 https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
-module load python/3.12 openjdk
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt && pip install eclipse-sumo
+
+# Install uv (manages Python + venv; user-space, no admin)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source ~/.local/bin/env
+uv python install 3.13                       # Pitzer modules only offer 3.10/3.12
+
+module load openjdk                           # for MATSim
+uv venv --python 3.13 .venv && source .venv/bin/activate
+uv pip install -r requirements.lock          # 42 packages including SUMO
 
 # From your local machine, ship the gitignored binaries over:
 rsync -avh osm_data/ pitzer:SimForge/osm_data/
 rsync -avh modelgen/ pitzer:SimForge/modelgen/
 
 # Back on Pitzer:
-sbatch jobs/gen_nyc_500k.sbatch
+sbatch cluster/jobs/05_stress_test.sbatch    # or any of cluster/jobs/01..05
 ```
 
 Three things are worth stressing here (full detail in [PITZER.md](PITZER.md)):
