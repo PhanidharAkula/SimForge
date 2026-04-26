@@ -31,8 +31,10 @@ Usage:
 """
 
 import argparse
+import importlib
 import json
 import math
+import platform
 import shutil
 import sys
 import time
@@ -63,6 +65,54 @@ logging.basicConfig(
     force=True,
 )
 logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# Toolchain capture — recorded into generation_metadata.json so any bundle
+# carries the exact code+dep stack that produced it. Critical for cross-machine
+# reproducibility audits — minor osmnx releases have observably altered network
+# extraction in the past, so the bundle must say which version it was built on.
+# =============================================================================
+
+# (module name, distribution name) — the second is for importlib.metadata when
+# the import-time __version__ attribute isn't exposed (pyosmium is the case).
+_TOOLCHAIN_PACKAGES = (
+    ("osmnx", "osmnx"),
+    ("numpy", "numpy"),
+    ("networkx", "networkx"),
+    ("lxml", "lxml"),
+    ("shapely", "shapely"),
+    ("osmium", "osmium"),
+    ("geopandas", "geopandas"),
+    ("pandas", "pandas"),
+)
+
+
+def _toolchain_versions() -> dict[str, str]:
+    """Snapshot of dep versions for the metadata record. Tries the module's
+    ``__version__`` first, then falls back to ``importlib.metadata.version``
+    so packages that don't expose ``__version__`` (e.g. pyosmium) still
+    report their installed version."""
+    from importlib import metadata as _md
+    versions: dict[str, str] = {
+        "python": platform.python_version(),
+        "platform": f"{platform.system()} {platform.machine()}",
+    }
+    for mod_name, dist_name in _TOOLCHAIN_PACKAGES:
+        ver: str
+        try:
+            mod = importlib.import_module(mod_name)
+            ver = getattr(mod, "__version__", "")
+        except ImportError:
+            versions[mod_name] = "not installed"
+            continue
+        if not ver:
+            try:
+                ver = _md.version(dist_name)
+            except _md.PackageNotFoundError:
+                ver = "unknown"
+        versions[mod_name] = ver
+    return versions
 
 
 # =============================================================================
@@ -510,6 +560,11 @@ def generate_scenario(
         "signal_count": sig["signal_count"],
         "generation_time_s": elapsed,
         "osm_source": net.get("osm_source"),
+        # Toolchain snapshot pins the bundle to its exact build environment.
+        # Cross-machine bundles produced under different osmnx/python/numpy
+        # versions can diverge byte-wise even with the same seed; this block
+        # gives reviewers and the methods chapter the receipts.
+        "toolchain": _toolchain_versions(),
     }
     if provenance:
         # demand_provenance documents how each trip's destination was selected:
