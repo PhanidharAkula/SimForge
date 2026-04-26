@@ -757,6 +757,7 @@ OPERATOR UTILITIES (tools/):
   tools/clean.sh             Wipe __pycache__ / *.pyc / .pytest_cache
   tools/clean.sh --all       Also drops cache/ (Overpass HTTP cache)
   tools/inspect_network.py <scenario_dir>    Length distribution + degenerate-edge report
+  tools/env_report.py                        Toolchain + dep + binary versions, for cross-machine parity check
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle
