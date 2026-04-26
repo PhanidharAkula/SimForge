@@ -316,24 +316,36 @@ def extract_canonical_network(
     # Extract links (edges)
     link_counter = 0
     seen_edges = set()
-    
+    skipped_zero_length = 0
+
     for u, v, key, data in sorted(G.edges(keys=True, data=True)):
         # Create unique edge identifier
         edge_id = (u, v, key)
         if edge_id in seen_edges:
             continue
         seen_edges.add(edge_id)
-        
+
         from_node = osm_to_canonical[u]
         to_node = osm_to_canonical[v]
-        
+
         # Get highway type
         highway = data.get("highway", "residential")
         if isinstance(highway, list):
             highway = highway[0]
-        
-        # Get length
+
+        # Get length. Drop degenerate edges (length <= 0) — these arise when an
+        # OSM way connects two nodes that share identical coordinates (parking
+        # connectors, barrier-crossing artifacts, etc.). SUMO would warn and
+        # MATSim would emit teleport routes; safer to filter at extract time.
         length_m = data.get("length", 100.0)
+        if length_m <= 0:
+            logger.warning(
+                "Dropping degenerate edge u=%s v=%s key=%s length=%s "
+                "(osmid=%s, highway=%s) — endpoints share the same coordinates",
+                u, v, key, length_m, data.get("osmid"), highway,
+            )
+            skipped_zero_length += 1
+            continue
         
         # Get speed limit
         maxspeed = data.get("maxspeed")
@@ -383,7 +395,13 @@ def extract_canonical_network(
         ))
         link_counter += 1
     
-    logger.info("Extracted %d nodes, %d links", len(nodes), len(links))
+    if skipped_zero_length:
+        logger.info(
+            "Extracted %d nodes, %d links (dropped %d degenerate zero-length edges)",
+            len(nodes), len(links), skipped_zero_length,
+        )
+    else:
+        logger.info("Extracted %d nodes, %d links", len(nodes), len(links))
     return nodes, links
 
 

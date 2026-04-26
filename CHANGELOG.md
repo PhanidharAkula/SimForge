@@ -39,6 +39,7 @@ Commit hashes refer to the `Version_2` branch.
 - **NYC 500 K generation unblocked** — the previous Overpass path timed out on the full NYC bbox and the alternative (splitting the bbox across multiple Overpass queries) produced non-deterministic topology between runs. The PBF slice is both faster and byte-reproducible.
 - **MATSim 15.0 download URL** corrected in `setup_simforge.py`; the old release asset URL had been superseded on GitHub and caused a silent 404 → zero-byte JAR on fresh clones.
 - **Test count reconciled to 249.** Removing the redundant `nyc_1k_car`, `la_1k_car`, and three synthetic bundles shrank the parametrised suite in `tests/test_scenario_data_integrity.py` (70 → 35) and `tests/test_scc.py` (16 → 14). Docs across `README.md`, `SETUP.md`, `TESTING.md`, `CONTRIBUTING.md`, `help.py`, and the thesis chapters now consistently report **249 tests** (previously 293).
+- **Degenerate zero-length edges filtered at extract time.** `extract_canonical_network` in `pipeline/network/build_network_from_osm.py` now drops edges with `length <= 0` (logged via `logger.warning` with `osmid`/`highway` for traceability) and reports the skipped count in the summary line. Surfaced by `tests/test_scenario_data_integrity.py::test_link_lengths_are_positive` against the NYC-500K bundle, which contained 2 such edges out of 1.3 M from a single OSM way (`1351901326`) whose endpoint nodes shared identical coordinates. SUMO would warn and MATSim would emit teleport routes on these edges; filtering at the canonical extract is the right fix.
 
 ---
 
