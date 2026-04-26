@@ -283,7 +283,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
 uv python install 3.13                          # Pitzer modules only offer 3.10/3.12
 
-module load openjdk                              # for MATSim
+module load openjdk/21.0.3_9                     # for MATSim — Pitzer's lmod requires an explicit version
 uv venv --python 3.13 .venv && source .venv/bin/activate
 uv pip install -r requirements.lock             # 42 packages including SUMO
 

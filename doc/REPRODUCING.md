@@ -177,7 +177,7 @@ rsync -avh osm_data/   pitzer:SimForge/osm_data/
 rsync -avh modelgen/   pitzer:SimForge/modelgen/
 
 # On Pitzer (login node)
-module load python/3.12 openjdk
+module load python/3.12 openjdk/21.0.3_9
 cd ~/SimForge && source .venv/bin/activate
 sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 ```

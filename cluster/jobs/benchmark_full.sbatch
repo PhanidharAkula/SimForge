@@ -59,7 +59,7 @@
 
 set -euo pipefail
 
-module load openjdk          # MATSim runtime
+module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires an explicit version
 cd ~/SimForge
 source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
 

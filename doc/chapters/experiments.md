@@ -314,7 +314,7 @@ For any researcher to reproduce these experiments:
 - [ ] Clone repository (branch `Version_3`).
 - [ ] Install `uv`: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
 - [ ] Provision the canonical environment: `uv python install 3.13 && uv venv --python 3.13 .venv && source .venv/bin/activate && uv pip install -r requirements.lock` (installs Python 3.13.13, all 41 Python deps, AND `eclipse-sumo==1.26.0` in one step).
-- [ ] Install Java 17+ for MATSim: `brew install openjdk@17` (macOS) / `apt install openjdk-17-jdk` (Linux) / `module load openjdk` (Pitzer). Then download the MATSim JAR per [SETUP.md](../../SETUP.md).
+- [ ] Install Java 17+ for MATSim: `brew install openjdk@17` (macOS) / `apt install openjdk-17-jdk` (Linux) / `module load openjdk/21.0.3_9` (Pitzer — explicit version required by lmod). Then download the MATSim JAR per [SETUP.md](../../SETUP.md).
 - [ ] Fetch hash-pinned OSM PBFs: `python tools/download_osm.py` (only required if you plan to *regenerate* bundles; the committed `scenarios/{chicago_1k_car,nyc_10k_car,la_50k_bike_car_transit}/` networks are already built).
 - [ ] (Optional, fallback-path only) Pre-warm OSM cache: `python -m pipeline.network.warmup`.
 - [ ] Validate the bundled scenarios: `python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car`.

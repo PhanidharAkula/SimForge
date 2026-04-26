@@ -33,7 +33,7 @@ that produced the published numbers.
 | Scenario generation (synthetic)     | Works  | Pure Python, no external data required                             |
 | Scenario generation (PBF + census)  | Works  | PBFs rsynced from local (see §5); no Overpass hits on compute node |
 | SUMO meso + micro                   | Works  | `pip install eclipse-sumo` inside the venv                         |
-| MATSim 15.0                         | Works  | `module load openjdk` + `lib/matsim-15.0/matsim-15.0.jar`          |
+| MATSim 15.0                         | Works  | `module load openjdk/21.0.3_9` + `lib/matsim-15.0/matsim-15.0.jar` |
 | QarSUMO (real GPU)                  | Works  | Build from source on a `gpu` partition node                        |
 | Evaluation + plot rendering         | Works  | Pure Python (matplotlib in venv)                                   |
 | Bundle validation + SHA-256 hashing | Works  | Pure Python                                                        |
@@ -156,8 +156,8 @@ echo 'source $HOME/.local/bin/env' >> ~/.bashrc      # persist across logins
 uv python install 3.13                               # downloads 3.13.13
 
 # 4.4 — load OpenJDK module (needed only for MATSim runs)
-module load openjdk
-echo 'module load openjdk' >> ~/.bashrc              # persist across logins
+module load openjdk/21.0.3_9                         # explicit version — Pitzer's lmod requires one
+echo 'module load openjdk/21.0.3_9' >> ~/.bashrc     # persist across logins
 
 # 4.5 — create venv and install everything from the lockfile
 uv venv --python 3.13 .venv
@@ -187,7 +187,7 @@ versions rebump after cluster upgrades). As of 2026-04:
 | ---------- | ------------------------- | ------------------------------------------------------------------- |
 | Python     | **not used**              | Use `uv` (installs Python 3.13.13 to match the locked dev env)      |
 | GCC        | `module load gcc`         | Usually unneeded (modern default)                                   |
-| OpenJDK    | `module load openjdk`     | MATSim runtime                                                      |
+| OpenJDK    | `module load openjdk/21.0.3_9` | MATSim runtime — Pitzer's lmod requires an explicit version (`module spider openjdk` lists current options) |
 | CUDA       | `module load cuda`        | QarSUMO build / run                                                 |
 | Git        | pre-installed             | —                                                                   |
 | SUMO       | **not** a module          | Bundled in `requirements.lock` (`eclipse-sumo` wheel)               |
@@ -269,7 +269,7 @@ srun --account=PMIU0110 --partition=debug-cpu \
 # Once you land on cpuXXXX:
 cd $HOME/SimForge
 source .venv/bin/activate
-module load python/3.12 openjdk
+module load python/3.12 openjdk/21.0.3_9
 
 # Generate the bundled small scenario — ~30 s on Pitzer CPU
 python generate.py --city chicago --trips 1000
@@ -372,7 +372,7 @@ Once the bundles exist, run the 4-cell canonical matrix (or a subset):
 
 cd $HOME/SimForge
 source .venv/bin/activate
-module load python/3.12 openjdk
+module load python/3.12 openjdk/21.0.3_9
 
 python -m execution.run_benchmark runspecs/stress_test.yaml
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --markdown
@@ -507,7 +507,7 @@ rsync -avh pitzer:SimForge/runs/stress_test/ ./runs/stress_test_pitzer/
 | `FileNotFoundError: osm_data/<state>.osm.pbf`          | PBF not transferred. See §5. Re-run `python tools/download_osm.py` to fetch + SHA-256-verify against the manifest.              |
 | Job sits in `PD` for hours                             | `squeue --start -j <id>` shows estimated start. `cpu` partition is oversubscribed during semester peaks — try `debug-cpu` (≤1 h) or reduce `--time`.  |
 | `ValueError: Found no graph nodes within the requested polygon` | Likely an osmnx version mismatch. `requirements.txt` requires `>=2.0,<3` — confirm with `python -c "import osmnx; print(osmnx.__version__)"` and `pip install -U "osmnx>=2.0,<3"` if older. |
-| `MATSim ClassNotFoundException`                        | `module load openjdk` (must be in the sbatch, not just your login shell) and verify `lib/matsim-15.0/matsim-15.0.jar` exists.     |
+| `MATSim ClassNotFoundException`                        | `module load openjdk/21.0.3_9` (must be in the sbatch, not just your login shell — and Pitzer's lmod requires an explicit version) and verify `lib/matsim-15.0/matsim-15.0.jar` exists. |
 | Job killed with `OUT_OF_MEMORY`                        | Increase `--mem` in the sbatch. 200K tier needs ≥ 48 GB; 500K needs ≥ 64 GB; multi-engine benchmark needs ≥ 96 GB.                |
 | `Disk quota exceeded` on `$HOME`                       | `myquota` to confirm. Move `runs/` to `/fs/scratch/PMIU0110/$USER/runs/` and symlink: `ln -s /fs/scratch/.../runs $HOME/SimForge/runs`. |
 | Scratch files disappeared                              | Scratch is purged after ~90 days of inactivity. Copy anything precious back to `$HOME` or `/fs/ess/PMIU0110/`.                    |
@@ -528,7 +528,7 @@ rsync -avh pitzer:SimForge/runs/stress_test/ ./runs/stress_test_pitzer/
 # Daily workflow
 ssh pitzer
 cd $HOME/SimForge && git pull && source .venv/bin/activate
-module load python/3.12 openjdk
+module load python/3.12 openjdk/21.0.3_9
 
 # Submit / watch
 sbatch ~/jobs/gen_nyc_500k.sbatch
