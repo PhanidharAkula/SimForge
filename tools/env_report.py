@@ -71,7 +71,11 @@ def main() -> None:
         print(f"  {label:<12} {_binary_version(cmd)}")
     print()
     print("--- Project files ---")
-    matsim = sorted(glob.glob("lib/matsim-*/matsim-*.jar"))
+    # Skip -sources.jar / -javadoc.jar variants — those aren't runnable MATSim.
+    matsim = sorted(
+        p for p in glob.glob("lib/matsim-*/matsim-*.jar")
+        if not p.endswith(("-sources.jar", "-javadoc.jar"))
+    )
     print(f"  matsim jar:    {matsim[0] if matsim else 'NOT FOUND'}")
     print(f"  osm pbfs:      {len(glob.glob('osm_data/*.osm.pbf'))}")
     print(f"  modelgen txts: {len(glob.glob('modelgen/*.txt'))}")
