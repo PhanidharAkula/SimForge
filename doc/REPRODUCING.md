@@ -211,6 +211,53 @@ md5sum scenarios/la_50k_bike_car_transit/demand.csv \
 
 If those two MD5s match, your local install reproduces the reference bundle exactly. Each bundle's `generation_metadata.json::toolchain` block additionally records the exact Python and dependency versions that produced it, so any future divergence is diagnosable without guesswork.
 
+### Reference toolchain — `env_report.py` baseline
+
+Before running the simulation pipeline, verify your install matches the canonical thesis-build environment:
+
+```bash
+python tools/env_report.py
+```
+
+The full reference output is committed at [`cluster/example_runs/env_report_canonical.txt`](../cluster/example_runs/env_report_canonical.txt) — diff your local output against it. Inline reference (Mac side, captured 2026-04-26 after the `uv` migration):
+
+```text
+============================================================
+Python:     3.13.13                              # MUST match
+Platform:   Darwin arm64                         # differs by host (Linux x86_64 on Pitzer)
+Executable: <repo>/.venv/bin/python              # differs by host (full path is local)
+
+--- Python deps (importable from current venv) ---
+  osmnx        2.0.7                             # MUST match
+  numpy        2.3.5                             # MUST match
+  networkx     3.6.1                             # MUST match
+  lxml         6.0.2                             # MUST match
+  shapely      2.1.2                             # MUST match
+  geopandas    1.1.2                             # MUST match
+  pandas       2.3.3                             # MUST match
+  osmium       4.3.1                             # MUST match
+  matplotlib   3.10.8                            # MUST match
+  seaborn      0.13.2                            # MUST match
+  yaml         6.0.3                             # MUST match (PyYAML imports as `yaml`)
+  pytest       9.0.2                             # MUST match
+
+--- External tools (PATH-resolved) ---
+  sumo         Eclipse SUMO sumo 1.26.0          # MUST match (eclipse-sumo wheel via lockfile)
+  netconvert   Eclipse SUMO netconvert 1.26.0    # MUST match
+  java         openjdk 17.0.13 2024-10-15        # patch may differ; major (17) MUST match
+
+--- Project files ---
+  matsim jar:    lib/matsim-15.0/matsim-15.0.jar # MUST match (after MATSim JAR install)
+  osm pbfs:      3                               # MUST match (after `python tools/download_osm.py`)
+  modelgen txts: 3                               # MUST match (after rsync from dev machine)
+  scenarios:     5                               # depends on what's locally generated/synced
+============================================================
+```
+
+Any line marked **MUST match** that differs in your output is a real toolchain drift — your install is on a different version than the canonical environment. Re-run `uv pip install -r requirements.lock` to reconcile, or check `cluster/example_runs/env_report_canonical.txt` for the Pitzer comparison block (Linux x86_64 reference).
+
+The Mac↔Pitzer empirical verification we ran on 2026-04-26: every dep version matched exactly across both machines; the only differences were `Platform`, `Executable`, and a Java patch (17.0.13 vs 17.0.17 — both LTS).
+
 ---
 
 ## Collecting Results

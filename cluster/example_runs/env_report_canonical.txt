@@ -1,0 +1,79 @@
+# Canonical env_report output for the locked thesis-build environment.
+#
+# Source: Mac M4 Pro, captured 2026-04-26 after the uv migration. The Mac
+# reference and the Pitzer reference below were both produced from
+# requirements.lock (pinned by uv) and have byte-identical Python deps.
+#
+# Reproduce locally:
+#   python tools/env_report.py
+#
+# Compare your output against the appropriate block below. Lines that are
+# expected to differ across machines are marked. Anything else differing
+# is a real toolchain drift worth investigating.
+
+============================================================
+Python:     3.13.13                              # MUST match
+Platform:   Darwin arm64                         # differs by host (Linux x86_64 on Pitzer)
+Executable: <repo>/.venv/bin/python              # differs by host (full path is local)
+
+--- Python deps (importable from current venv) ---
+  osmnx        2.0.7                             # MUST match
+  numpy        2.3.5                             # MUST match
+  networkx     3.6.1                             # MUST match
+  lxml         6.0.2                             # MUST match
+  shapely      2.1.2                             # MUST match
+  geopandas    1.1.2                             # MUST match
+  pandas       2.3.3                             # MUST match
+  osmium       4.3.1                             # MUST match
+  matplotlib   3.10.8                            # MUST match
+  seaborn      0.13.2                            # MUST match
+  yaml         6.0.3                             # MUST match (PyYAML imports as `yaml`)
+  pytest       9.0.2                             # MUST match
+
+--- External tools (PATH-resolved) ---
+  sumo         Eclipse SUMO sumo 1.26.0          # MUST match (eclipse-sumo wheel via lockfile)
+  netconvert   Eclipse SUMO netconvert 1.26.0    # MUST match
+  java         openjdk 17.0.13 2024-10-15        # patch may differ; major (17) MUST match
+
+--- Project files ---
+  matsim jar:    lib/matsim-15.0/matsim-15.0.jar # MUST match (after MATSim JAR install per SETUP.md)
+  osm pbfs:      3                               # MUST match (after `python tools/download_osm.py`)
+  modelgen txts: 3                               # MUST match (after rsync from dev machine)
+  scenarios:     5                               # depends on what's locally generated/synced
+============================================================
+
+# ----------------------------------------------------------------------------
+# Pitzer-side reference (Linux x86_64), captured 2026-04-26 after the same
+# `uv pip install -r requirements.lock` install on Pitzer:
+# ----------------------------------------------------------------------------
+
+============================================================
+Python:     3.13.13
+Platform:   Linux x86_64
+Executable: <pitzer-home>/SimForge/.venv/bin/python
+
+--- Python deps (importable from current venv) ---
+  osmnx        2.0.7
+  numpy        2.3.5
+  networkx     3.6.1
+  lxml         6.0.2
+  shapely      2.1.2
+  geopandas    1.1.2
+  pandas       2.3.3
+  osmium       4.3.1
+  matplotlib   3.10.8
+  seaborn      0.13.2
+  yaml         6.0.3
+  pytest       9.0.2
+
+--- External tools (PATH-resolved) ---
+  sumo         Eclipse SUMO sumo 1.26.0
+  netconvert   Eclipse SUMO netconvert 1.26.0
+  java         openjdk 17.0.17 2025-10-21 LTS
+
+--- Project files ---
+  matsim jar:    lib/matsim-15.0/matsim-15.0.jar
+  osm pbfs:      3
+  modelgen txts: 3
+  scenarios:     5
+============================================================
