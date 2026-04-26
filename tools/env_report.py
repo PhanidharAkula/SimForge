@@ -23,7 +23,7 @@ from importlib import metadata
 _PY_DEPS = (
     "osmnx", "numpy", "networkx", "lxml", "shapely",
     "geopandas", "pandas", "osmium", "matplotlib", "seaborn",
-    "pyyaml", "pytest",
+    "yaml", "pytest",   # PyYAML installs as `pyyaml` distribution, imports as `yaml`
 )
 
 _EXTERNAL_BINS = (
