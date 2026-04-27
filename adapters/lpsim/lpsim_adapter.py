@@ -603,18 +603,23 @@ def run_lpsim(
                 "binary doesn't need this.)"
             )
 
-        # The LPSim binary `chdir`'s to /LivingCity at startup (or hardcodes
-        # the INI path), so --pwd alone doesn't redirect *input reading* —
-        # only *output writing*. Diagnosed on Pitzer (Apptainer 1.3.6):
-        # /LivingCity/command_line_options.ini exists in the image with the
-        # default NETWORK_PATH=berkeley_2018/new_full_network/, and the
-        # binary reads that file regardless of CWD or which other INIs we
-        # bind into /tmp/.
+        # The LPSim binary `chdir`'s to its install dir at startup (or
+        # hardcodes the INI path), so --pwd alone doesn't redirect *input
+        # reading* — only *output writing*. Diagnosed on Pitzer (Apptainer
+        # 1.3.6): /LivingCity/command_line_options.ini exists in the image
+        # with the default NETWORK_PATH=berkeley_2018/new_full_network/, and
+        # the bundled binary reads that file regardless of CWD or which
+        # other INIs we bind into /tmp/. The rebuilt source binary has the
+        # same behaviour but resolves paths relative to its own install dir
+        # (/lpsim_src/LivingCity/), where the source repo's default INI has
+        # NETWORK_PATH=berkeley_2018/regional_network/.
         #
-        # Fix: overlay our INI and our network/ directly on top of the paths
-        # /LivingCity/ inside the container. Output files (memory-consumption.csv,
-        # <NUM_PASSES>_people*.csv, timestamps.info) still land in --pwd
-        # because LPSim writes those to its process-CWD, not /LivingCity.
+        # Fix: overlay our INI and network/ at BOTH the bundled-binary path
+        # (/LivingCity/...) AND the source-binary path (/lpsim_src/LivingCity/...)
+        # so whichever path the active binary resolves to, it reads our files.
+        # Output files (memory-consumption.csv, <NUM_PASSES>_people*.csv,
+        # timestamps.info) still land in --pwd because LPSim writes those to
+        # its process-CWD.
         output_str = str(output_dir)
         host_ini = f"{output_str}/command_line_options.ini"
         host_network = f"{output_str}/network"
@@ -624,6 +629,11 @@ def run_lpsim(
             "--bind", f"{host_ini}:/LivingCity/command_line_options.ini",
             "--bind", f"{host_network}:/LivingCity/network",
         ])
+        if source_binary is not None:
+            cmd.extend([
+                "--bind", f"{host_ini}:/lpsim_src/LivingCity/command_line_options.ini",
+                "--bind", f"{host_network}:/lpsim_src/LivingCity/network",
+            ])
 
         cmd.extend([str(sif), in_container_binary])
     elif binary is not None:
