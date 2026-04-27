@@ -179,26 +179,36 @@ def _to_int_index(canonical_id: str) -> int:
 def write_lpsim_nodes_csv(graph: NetworkGraph, out_path: Path) -> int:
     """Write LPSim ``nodes.csv``. Returns row count.
 
-    Schema (from both loaders the bundled binary uses):
-      * ``roadGraphB2018Loader.cpp:116-119`` (Qt path): ``osmid, x, y, highway, index``
-      * ``traffic/sp/graph.h:53`` (csv.h SP path): ``index`` (with ignore_extra_column)
+    Schema — there are THREE loaders inside the binary; we satisfy all:
+      * ``traffic/sp/graph.cc:204`` (csv.h SP read_vertices, the strictest):
+          ``osmid, x, y, ref, highway, index``
+      * ``traffic/sp/graph.h:53`` (csv.h SP max-vertex pre-scan):
+          ``index`` (with ignore_extra_column)
+      * ``roadGraphB2018Loader.cpp:116-119`` (Qt fallback):
+          ``osmid, x, y, highway, index``
 
-    Line endings MUST be ``\\n`` (Unix) — the csv.h library used by the SP
-    loader does not strip ``\\r`` from CRLF endings, so a CRLF header makes
-    the last column name parse as ``"index\\r"`` instead of ``"index"`` and
-    the loader throws missing_column_in_header. Python's csv.writer default
-    is ``\\r\\n``; we override via lineterminator.
+    The graph.cc reader is the binding constraint — its ``ref`` column is
+    OSM-specific (the way's road-reference number, e.g. "I-90"). Canonical
+    SimForge networks don't preserve OSM `ref`, so we emit an empty string.
+    csv.h's ``ignore_extra_column`` policy means extra columns the other
+    loaders don't know about are harmless.
+
+    Line endings MUST be ``\\n`` (Unix) — csv.h does not strip ``\\r`` from
+    CRLF, so a CRLF header parses the last column name as e.g.
+    ``"index\\r"`` and the loader throws missing_column_in_header. Python's
+    csv.writer default is ``\\r\\n``; we override via lineterminator.
     """
     sorted_nodes = sorted(graph.nodes.values(), key=lambda n: _to_int_index(n.id))
     with out_path.open("w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
-        w.writerow(["osmid", "x", "y", "highway", "index"])
+        w.writerow(["osmid", "x", "y", "ref", "highway", "index"])
         for node in sorted_nodes:
             idx = _to_int_index(node.id)
-            # `highway` is the OSM tag (traffic_signals etc.). Canonical
-            # network.xml doesn't preserve it; an empty string is the
-            # documented "untagged" value LPSim's loader accepts.
-            w.writerow([idx, f"{node.x:.6f}", f"{node.y:.6f}", "", idx])
+            # `highway` is the OSM tag (traffic_signals etc.); `ref` is the
+            # OSM way's road-reference number. Canonical network.xml
+            # doesn't preserve either — empty strings are the documented
+            # "untagged" value LPSim's loaders accept.
+            w.writerow([idx, f"{node.x:.6f}", f"{node.y:.6f}", "", "", idx])
     return len(sorted_nodes)
 
 

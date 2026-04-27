@@ -128,7 +128,10 @@ class TestNodesCsv:
         rows = write_lpsim_nodes_csv(tiny_graph, out)
         assert rows == 3
         text = out.read_text(encoding="utf-8")
-        assert text.splitlines()[0] == "osmid,x,y,highway,index"
+        # graph.cc:204 is the binding constraint — strictest of the three
+        # node loaders inside the binary. `ref` is OSM-specific and we
+        # emit empty strings since canonical networks don't preserve it.
+        assert text.splitlines()[0] == "osmid,x,y,ref,highway,index"
 
     def test_uses_lf_line_endings(self, tiny_graph, tmp_path):
         # csv.h SP loader rejects CRLF — see write_lpsim_nodes_csv docstring.
@@ -146,6 +149,9 @@ class TestNodesCsv:
         assert {int(r["index"]) for r in rows} == {0, 1, 2}
         assert all(r["osmid"] == r["index"] for r in rows), \
             "osmid and index should match — canonical schema collapses them"
+        assert all(r["ref"] == "" for r in rows), \
+            "ref column must be present (graph.cc:204 requires it) but empty " \
+            "since canonical networks don't preserve OSM ref tags"
 
     def test_coordinates_round_to_six_decimals(self, tiny_graph, tmp_path):
         out = tmp_path / "nodes.csv"

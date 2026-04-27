@@ -37,17 +37,27 @@ primary engine in Version_4 — see `todo.md` for the gap audit and rationale.
 </nodes>
 ```
 
-**LPSim `network/nodes.csv`** (schema from `roadGraphB2018Loader.cpp:116-119`):
+**LPSim `network/nodes.csv`** — three loaders inside the binary, strictest is `traffic/sp/graph.cc:204`:
+
+```cpp
+in.read_header(csvio::ignore_extra_column,
+               "osmid", "x", "y", "ref", "highway", "index");
+```
 
 | canonical | LPSim column | how |
 |---|---|---|
 | `id` ("n123") | `osmid`, `index` | strip "n" prefix → integer 123 |
-| `x` | `x` | longitude, copied verbatim |
-| `y` | `y` | latitude, copied verbatim |
-| (none) | `highway` | empty string — canonical doesn't preserve OSM tag |
+| `x` | `x` | longitude, copied verbatim (6 decimals) |
+| `y` | `y` | latitude, copied verbatim (6 decimals) |
+| (none) | `ref` | empty string — OSM way's road-reference number, not preserved by canonical |
+| (none) | `highway` | empty string — OSM tag, not preserved by canonical |
 
 LPSim's loader requires both `osmid` and `index`; we set them to the same
 integer because the canonical schema collapses them into one identifier.
+Diagnosed on Pitzer (2026-04-27): the older `roadGraphB2018Loader.cpp` Qt
+loader is not the binding constraint — the SP path's `graph.cc:204` is.
+Missing `ref` was the source of the persistent `Missing column "ref" in
+header of file "network/nodes.csv"` error during initial integration.
 
 ### 2. Network edges
 
