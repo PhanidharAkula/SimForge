@@ -173,40 +173,83 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
     git --no-pager log -1 --format='Now at: %h  %s  (%ad)' --date=short
     echo
 
+    # The upstream repo commits a pre-built LivingCity binary (yes, really).
+    # Delete it so a stale binary can't masquerade as a successful build —
+    # we only want a fresh compile to count.
+    echo "--- Removing any pre-committed binary so stale builds can't pass ---"
+    rm -f "$SRC_DIR/LivingCity/LivingCity"
+    rm -rf "$SRC_DIR/LivingCity/obj"
+
+    # Patch LivingCity.pro to use the container's CUDA 12.4 instead of
+    # hard-coded 11.2 / 10.1 / 9.0 paths. Without this, qmake falls
+    # through to the 9.0 default and make then dies on
+    # `/usr/local/cuda-9.0/bin/nvcc: No such file or directory`.
+    # Diagnosed Pitzer 2026-04-27.
+    echo "--- Patching LivingCity.pro to point at CUDA 12.4 ---"
+    if [ -f "$SRC_DIR/LivingCity/LivingCity.pro" ]; then
+        # Show the original CUDA references for the audit trail, then patch.
+        echo "  (original CUDA references):"
+        grep -n 'cuda-' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
+        sed -i \
+            -e 's|/usr/local/cuda-11.2|/usr/local/cuda-12.4|g' \
+            -e 's|/usr/local/cuda-10.1|/usr/local/cuda-12.4|g' \
+            -e 's|/usr/local/cuda-9.0|/usr/local/cuda-12.4|g' \
+            -e 's|cuda-11.2|cuda-12.4|g' \
+            -e 's|cuda-10.1|cuda-12.4|g' \
+            -e 's|cuda-9.0|cuda-12.4|g' \
+            "$SRC_DIR/LivingCity/LivingCity.pro"
+        echo "  (after patch):"
+        grep -n 'cuda-' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
+    fi
+
     # Run qmake + make INSIDE the container, with the host source dir
-    # bind-mounted at /lpsim_src. The container's qmake/make/g++/nvcc
-    # build against its bundled Qt5 + CUDA 12.4, and the binary lands
-    # back on the host at $SOURCE_BIN.
+    # bind-mounted at /lpsim_src. Capture the exit status explicitly so
+    # we don't get fooled by a partial-write binary.
     echo "--- Building LivingCity inside the container ---"
     echo "    (uses container's qmake / make / g++ / nvcc against its CUDA 12.4)"
+    set +e
     singularity exec --nv \
         --bind "$SRC_DIR:/lpsim_src" \
         "$SIF_PATH" \
-        bash -lc "set -e; cd /lpsim_src/LivingCity && \
+        bash -lc "set -eo pipefail; cd /lpsim_src/LivingCity && \
                   echo '--- qmake ---' && qmake LivingCity.pro && \
-                  echo '--- make ---' && make -j$SLURM_CPUS_PER_TASK 2>&1 | tail -40"
+                  echo '--- make ---' && make -j$SLURM_CPUS_PER_TASK 2>&1 | tail -60"
+    BUILD_RC=$?
+    set -e
+    echo
+    echo "in-container build exit code: $BUILD_RC"
     echo
 
-    if [ -x "$SOURCE_BIN" ]; then
-        echo "=== In-container build OK ==="
-        echo "Binary:    $SOURCE_BIN"
-        ls -lh "$SOURCE_BIN"
+    if [ "$BUILD_RC" -ne 0 ] || [ ! -x "$SOURCE_BIN" ]; then
+        echo "=== In-container build FAILED ==="
+        echo "  Build exit code:  $BUILD_RC"
+        echo "  Binary present:   $([ -x "$SOURCE_BIN" ] && echo yes || echo no)"
+        echo "  Look at the qmake/make output above to diagnose."
         echo
-        echo "Provenance:"
-        echo "  LPSim git SHA:      $LPSIM_GIT_SHA"
-        echo "  Built against:      container's CUDA 12.4 + Qt5"
-        echo "  Pinned in manifest: lib/lpsim/manifest.json"
-        echo
-        echo "The adapter will prefer this binary over the bundled one."
-        echo "It runs as: singularity exec --nv --bind \$SRC:/lpsim_src \$SIF /lpsim_src/LivingCity/LivingCity"
-        echo
-        echo "=== Job complete at $(date) ==="
-        exit 0
-    else
-        echo "=== In-container build FAILED — binary not at $SOURCE_BIN ==="
-        echo "Look at the qmake/make output above to diagnose."
+        echo "  Common fixes:"
+        echo "    * CUDA detection broken — patch the sed substitutions in"
+        echo "      this sbatch (lines around 'Patching LivingCity.pro')."
+        echo "    * Missing source file (benchmarker.cpp etc.) — already"
+        echo "      ignored by upstream; the warnings above are benign."
+        echo "    * nvcc -arch mismatch — V100 is sm_70; the .pro may pin sm_50."
         exit 1
     fi
+
+    echo "=== In-container build OK ==="
+    echo "Binary:    $SOURCE_BIN"
+    ls -lh "$SOURCE_BIN"
+    file "$SOURCE_BIN" 2>/dev/null || true
+    echo
+    echo "Provenance:"
+    echo "  LPSim git SHA:      $LPSIM_GIT_SHA"
+    echo "  Built against:      container's CUDA 12.4 + Qt5"
+    echo "  Pinned in manifest: lib/lpsim/manifest.json"
+    echo
+    echo "The adapter will prefer this binary over the bundled one."
+    echo "It runs as: singularity exec --nv --bind \$SRC:/lpsim_src \$SIF /lpsim_src/LivingCity/LivingCity"
+    echo
+    echo "=== Job complete at $(date) ==="
+    exit 0
 fi
 
 # ---------------------------------------------------------------------------
