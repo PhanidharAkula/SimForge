@@ -108,8 +108,18 @@ if command -v singularity >/dev/null 2>&1; then
     if [ -f "$SIF_PATH" ]; then
         echo
         echo "=== Verifying Singularity image ==="
-        singularity exec --nv "$SIF_PATH" bash -c 'which LivingCity && nvcc --version | tail -1' \
-            || echo "    Verification command failed (image may still be usable; the adapter will retry at run time)"
+        # The yibo123/lpsim:cuda12.4 image places the binary at /LivingCity/LivingCity
+        # and does NOT add it to $PATH — invoke by absolute path. Adapter does
+        # the same; keep the two in sync if the image layout ever changes.
+        IN_CONTAINER_BIN="${LPSIM_CONTAINER_BINARY:-/LivingCity/LivingCity}"
+        if singularity exec --nv "$SIF_PATH" test -x "$IN_CONTAINER_BIN"; then
+            echo "    LivingCity binary present at $IN_CONTAINER_BIN inside the image."
+            singularity exec --nv "$SIF_PATH" "$IN_CONTAINER_BIN" --help 2>&1 | head -3 \
+                || echo "    (--help not supported by LPSim; binary is still executable.)"
+        else
+            echo "    WARN: $IN_CONTAINER_BIN not found inside the image."
+            echo "          Override path via env var: LPSIM_CONTAINER_BINARY=/path/to/LivingCity"
+        fi
         echo
         echo "=== TODO — record image digest in lib/lpsim/manifest.json ==="
         echo "    Run on a login node:"

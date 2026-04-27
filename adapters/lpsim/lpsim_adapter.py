@@ -450,8 +450,15 @@ def run_lpsim(
     binary = find_lpsim_binary()
 
     if sif is not None and shutil.which("singularity"):
-        cmd = ["singularity", "exec", "--nv", str(sif), "LivingCity"]
-        binary_label = f"singularity://{sif.name}"
+        # The yibo123/lpsim:cuda12.4 image ships the LivingCity binary at the
+        # absolute path /LivingCity/LivingCity and does NOT add it to $PATH.
+        # We therefore invoke it by full path; configurable via env var for
+        # future images that might land it elsewhere.
+        in_container_binary = os.environ.get(
+            "LPSIM_CONTAINER_BINARY", "/LivingCity/LivingCity"
+        )
+        cmd = ["singularity", "exec", "--nv", str(sif), in_container_binary]
+        binary_label = f"singularity://{sif.name}!{in_container_binary}"
     elif binary is not None:
         cmd = [str(binary)]
         binary_label = str(binary)
