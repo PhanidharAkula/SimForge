@@ -1,32 +1,37 @@
 #!/bin/bash
 # ============================================================================
-# One-time LPSim build / image-pull on Pitzer's GPU partition.
+# LPSim build job for Pitzer.
 #
-# After this job completes successfully, ONE of the following will exist:
-#   $HOME/lpsim/LivingCity/LivingCity   (native binary built from source)
-#   $HOME/lpsim/lpsim.sif               (Singularity image pulled from Docker)
+# Three modes, in priority order:
 #
-# The SimForge LPSim adapter (adapters/lpsim/lpsim_adapter.py) auto-finds
-# either at run time — no env var or config tweak needed.
+# 1. **Singularity image pull** (default, ~10–20 min)
+#    Pulls yibo123/lpsim:cuda12.4 to $HOME/lpsim/lpsim.sif. The image's
+#    bundled binary is at /LivingCity/LivingCity inside the container.
+#    KNOWN ISSUE (diagnosed Pitzer 2026-04-27): the bundled binary
+#    crashes with a GPUassert / SIGSEGV inside the simulation kernel on
+#    networks > a few thousand nodes. Use mode 2 if you hit this.
 #
-# Re-run this only when CUDA / GCC versions on Pitzer change, or when the
-# pin in lib/lpsim/manifest.json is bumped to track a new upstream LPSim
-# commit. Otherwise build once and use the binary across all benchmark jobs.
+# 2. **In-container source rebuild** (set LPSIM_FORCE_SOURCE=1)
+#    Reuses the pulled SIF as a BUILD environment (its Qt5/Boost/Pandana
+#    deps are intact) and runs `qmake + make` on a fresh checkout of the
+#    pinned LPSim SHA. Outputs the binary to
+#    $HOME/lpsim/source/LivingCity/LivingCity on the host filesystem,
+#    bind-mounted into the container at run time. The adapter prefers
+#    this binary over the bundled one when it's present.
+#    Submit:
+#      sbatch --export=ALL,LPSIM_FORCE_SOURCE=1 cluster/jobs/build_lpsim.sbatch
+#    Wall: ~30–45 min (clone + qmake + make inside the container).
 #
-# Wall: ~30-60 min for native build (clone + dependency install + cmake +
-# make), ~10-20 min for Singularity pull. 2 h budget covers both paths.
+# 3. **Native source build** (no SIF, no Docker, host-side toolchain)
+#    Falls through if Singularity isn't on $PATH. Requires Qt5, Boost,
+#    OpenCV, Pandana visible to the host compiler — which Pitzer does
+#    NOT provide as modules. Mostly a placeholder; use mode 2 instead.
 #
-# REPRODUCIBILITY — what gets pinned:
-#   * LPSim source: git checkout to the SHA recorded in lib/lpsim/manifest.json
-#     (currently 452067ee… from 2024-11-27).
-#   * Singularity image: pulled by tag (yibo123/lpsim:cuda12.4) on first
-#     build; the resolved digest is then sha256-locked in lib/lpsim/manifest.json
-#     (digest field) so subsequent re-pulls land on the same image. Today
-#     the digest is null because no Pitzer build has run yet — bump the
-#     manifest after the first successful build.
-#
-# Override either pin via env vars on the sbatch line, e.g.:
-#   sbatch --export=LPSIM_GIT_SHA=abc123… cluster/jobs/build_lpsim.sbatch
+# REPRODUCIBILITY:
+#   * git_sha and docker_image:tag are pinned in lib/lpsim/manifest.json.
+#   * Override per-submit:
+#       sbatch --export=ALL,LPSIM_GIT_SHA=abc123…,LPSIM_DOCKER_REF=foo:bar \
+#         cluster/jobs/build_lpsim.sbatch
 #
 # Edit before submitting on a different OSC project:
 #   --account=...     your project allocation (replaces PMIU0110)
@@ -50,24 +55,21 @@ set -euo pipefail
 
 mkdir -p logs
 
-# Pitzer's lmod requires explicit versions. As of 2026-04:
-#   * gcc/13.2.0 — for the source-build fall-through (Path B)
-#   * cuda/11.8.0 — REQUIRED at run time. The bundled LivingCity binary in
-#     yibo123/lpsim:cuda12.4 was compiled against libcudart.so.11.0; the
-#     container's own CUDA 12.4 toolkit is forward-incompatible with that
-#     ABI. cuda/11.8.0 ships libcudart.so.11.0 and the adapter bind-mounts
-#     $CUDA_HOME/lib64 into the container via --bind /apps + --env.
+# Pitzer modules. cuda/11.8.0 is for the runtime injection in
+# adapters/lpsim/lpsim_adapter.run_lpsim — even when we rebuild from
+# source against the container's CUDA 12.4, the adapter still binds in
+# CUDA 11.8 so the bundled-image fallback path keeps working too.
 module load gcc/13.2.0 cuda/11.8.0
 
 echo "=== Job starting on $(hostname) at $(date) ==="
-echo "CUDA:   $(nvcc --version 2>&1 | tail -1)"
-echo "GCC:    $(gcc --version | head -1)"
-echo "GPU:    $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>&1 | head -1)"
+echo "CUDA host:  $(nvcc --version 2>&1 | tail -1)"
+echo "GCC host:   $(gcc --version | head -1)"
+echo "GPU:        $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>&1 | head -1)"
+echo "Mode:       LPSIM_FORCE_SOURCE=${LPSIM_FORCE_SOURCE:-0}"
 echo
 
 # ---------------------------------------------------------------------------
 # Resolve pinned LPSim version from lib/lpsim/manifest.json (overridable).
-# Falls back to a hard-coded default if jq isn't available.
 # ---------------------------------------------------------------------------
 MANIFEST="$(pwd)/lib/lpsim/manifest.json"
 DEFAULT_SHA="452067ee831e6ecb4c906bae96fb77fdf71fa92e"
@@ -94,111 +96,153 @@ echo
 
 LPSIM_DIR="$HOME/lpsim"
 mkdir -p "$LPSIM_DIR"
+SIF_PATH="$LPSIM_DIR/lpsim.sif"
+SRC_DIR="$LPSIM_DIR/source"
+SOURCE_BIN="$SRC_DIR/LivingCity/LivingCity"
 
 # ---------------------------------------------------------------------------
-# Path A — Singularity image pull (preferred when available).
-# Fast, reproducible, and skips the dependency-install dance entirely.
+# Mode 1 — Singularity image pull.
+# Skipped when LPSIM_FORCE_SOURCE=1 AND a SIF already exists (we just need
+# the SIF as a runtime / build env; no need to re-pull).
 # ---------------------------------------------------------------------------
 if command -v singularity >/dev/null 2>&1; then
-    SIF_PATH="$LPSIM_DIR/lpsim.sif"
     if [ -f "$SIF_PATH" ]; then
-        echo "=== Singularity image already present at $SIF_PATH — skipping pull ==="
+        echo "=== Singularity image already at $SIF_PATH — skipping pull ==="
     else
         echo "=== Pulling LPSim Singularity image ($LPSIM_DOCKER_REF) ==="
         singularity pull --force "$SIF_PATH" "docker://$LPSIM_DOCKER_REF" \
             && echo "    Pulled to $SIF_PATH" \
-            || { echo "    Singularity pull failed — falling through to source build."; rm -f "$SIF_PATH"; }
+            || { echo "    Singularity pull failed."; rm -f "$SIF_PATH"; }
     fi
+
+    # Verify the bundled binary is intact (mode 1's product).
     if [ -f "$SIF_PATH" ]; then
-        echo
-        echo "=== Verifying Singularity image ==="
-        # The yibo123/lpsim:cuda12.4 image places the binary at /LivingCity/LivingCity
-        # and does NOT add it to $PATH — invoke by absolute path. Adapter does
-        # the same; keep the two in sync if the image layout ever changes.
+        echo "=== Verifying bundled binary inside SIF ==="
         IN_CONTAINER_BIN="${LPSIM_CONTAINER_BINARY:-/LivingCity/LivingCity}"
         if singularity exec --nv "$SIF_PATH" test -x "$IN_CONTAINER_BIN"; then
-            echo "    LivingCity binary present at $IN_CONTAINER_BIN inside the image."
-            singularity exec --nv "$SIF_PATH" "$IN_CONTAINER_BIN" --help 2>&1 | head -3 \
-                || echo "    (--help not supported by LPSim; binary is still executable.)"
+            echo "    OK: $IN_CONTAINER_BIN present in image."
         else
-            echo "    WARN: $IN_CONTAINER_BIN not found inside the image."
-            echo "          Override path via env var: LPSIM_CONTAINER_BINARY=/path/to/LivingCity"
+            echo "    WARN: $IN_CONTAINER_BIN missing inside SIF."
         fi
-        echo
-        echo "=== TODO — record image digest in lib/lpsim/manifest.json ==="
-        echo "    Run on a login node:"
-        echo "      sha256sum $SIF_PATH"
-        echo "    Then update lib/lpsim/manifest.json::lpsim.docker_digest with"
-        echo "    the returned hex string (or the registry digest from"
-        echo "    'singularity inspect $SIF_PATH'), and commit the manifest."
+    fi
+fi
+
+# If we're not forcing source rebuild, exit here. The bundled binary in
+# the SIF is the deliverable. Mode 1 ends.
+if [ "${LPSIM_FORCE_SOURCE:-0}" != "1" ]; then
+    if [ -f "$SIF_PATH" ]; then
         echo
         echo "=== Done — Singularity image ready at $SIF_PATH ==="
-        echo "    The lpsim adapter (adapters/lpsim/lpsim_adapter.py) will auto-find it."
+        echo "    Bundled binary: /LivingCity/LivingCity (inside the SIF)"
+        echo "    The adapter (adapters/lpsim/lpsim_adapter.py) will auto-find it."
+        echo
+        echo "    If LPSim crashes on your network shape, re-run this job with:"
+        echo "      sbatch --export=ALL,LPSIM_FORCE_SOURCE=1 cluster/jobs/build_lpsim.sbatch"
         exit 0
+    fi
+    # No SIF and no force-source — fall through to mode 3 (native build).
+fi
+
+# ---------------------------------------------------------------------------
+# Mode 2 — In-container source rebuild (LPSIM_FORCE_SOURCE=1).
+# Uses the SIF as a build environment so we don't have to install Qt5,
+# Boost, Pandana, etc. on the host.
+# ---------------------------------------------------------------------------
+if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
+    echo
+    echo "=== Mode 2: in-container source rebuild ==="
+    echo "    SIF (build env): $SIF_PATH"
+    echo "    Source dir:      $SRC_DIR"
+    echo "    Pinned SHA:      $LPSIM_GIT_SHA"
+    echo
+
+    # Clone or refresh the source on the host.
+    if [ -d "$SRC_DIR/.git" ]; then
+        echo "--- Refreshing existing clone ---"
+        cd "$SRC_DIR"
+        git fetch --quiet
+    else
+        echo "--- Cloning Xuan-1998/LPSim into $SRC_DIR ---"
+        rm -rf "$SRC_DIR"
+        git clone https://github.com/Xuan-1998/LPSim.git "$SRC_DIR"
+        cd "$SRC_DIR"
+    fi
+
+    echo "--- Checking out pinned SHA $LPSIM_GIT_SHA ---"
+    git checkout --detach "$LPSIM_GIT_SHA"
+    git --no-pager log -1 --format='Now at: %h  %s  (%ad)' --date=short
+    echo
+
+    # Run qmake + make INSIDE the container, with the host source dir
+    # bind-mounted at /lpsim_src. The container's qmake/make/g++/nvcc
+    # build against its bundled Qt5 + CUDA 12.4, and the binary lands
+    # back on the host at $SOURCE_BIN.
+    echo "--- Building LivingCity inside the container ---"
+    echo "    (uses container's qmake / make / g++ / nvcc against its CUDA 12.4)"
+    singularity exec --nv \
+        --bind "$SRC_DIR:/lpsim_src" \
+        "$SIF_PATH" \
+        bash -lc "set -e; cd /lpsim_src/LivingCity && \
+                  echo '--- qmake ---' && qmake LivingCity.pro && \
+                  echo '--- make ---' && make -j$SLURM_CPUS_PER_TASK 2>&1 | tail -40"
+    echo
+
+    if [ -x "$SOURCE_BIN" ]; then
+        echo "=== In-container build OK ==="
+        echo "Binary:    $SOURCE_BIN"
+        ls -lh "$SOURCE_BIN"
+        echo
+        echo "Provenance:"
+        echo "  LPSim git SHA:      $LPSIM_GIT_SHA"
+        echo "  Built against:      container's CUDA 12.4 + Qt5"
+        echo "  Pinned in manifest: lib/lpsim/manifest.json"
+        echo
+        echo "The adapter will prefer this binary over the bundled one."
+        echo "It runs as: singularity exec --nv --bind \$SRC:/lpsim_src \$SIF /lpsim_src/LivingCity/LivingCity"
+        echo
+        echo "=== Job complete at $(date) ==="
+        exit 0
+    else
+        echo "=== In-container build FAILED — binary not at $SOURCE_BIN ==="
+        echo "Look at the qmake/make output above to diagnose."
+        exit 1
     fi
 fi
 
 # ---------------------------------------------------------------------------
-# Path B — clone + build LPSim from source.
-# Use this when Singularity is unavailable or the pull failed.
+# Mode 3 — Native source build (fallback when no SIF and not forcing source).
+# Pitzer doesn't provide Qt5/Boost-1.59/OpenCV4/Pandana as modules, so this
+# almost certainly fails. Kept as a stub for future hosts that DO provide
+# the deps; current Pitzer should always use Mode 1 or Mode 2.
 # ---------------------------------------------------------------------------
-SRC_DIR="$LPSIM_DIR/source"
+echo
+echo "=== Mode 3: native source build (no SIF available) ==="
+echo "    NOTE: this path requires Qt5 + Boost 1.59 + OpenCV 4.x + Pandana"
+echo "    on the host's compiler search path — Pitzer does NOT supply these"
+echo "    as lmod modules. Use Mode 1 (default) or Mode 2 (LPSIM_FORCE_SOURCE=1)"
+echo "    instead unless you've installed those deps yourself."
+echo
+
 if [ -d "$SRC_DIR/.git" ]; then
-    echo "=== Refreshing existing LPSim clone at $SRC_DIR ==="
     cd "$SRC_DIR"
     git fetch --quiet
 else
-    echo "=== Cloning Xuan-1998/LPSim into $SRC_DIR ==="
     rm -rf "$SRC_DIR"
     git clone https://github.com/Xuan-1998/LPSim.git "$SRC_DIR"
     cd "$SRC_DIR"
 fi
-
-echo "=== Checking out pinned SHA $LPSIM_GIT_SHA ==="
 git checkout --detach "$LPSIM_GIT_SHA"
-git --no-pager log -1 --format='Now at: %h  %s  (%ad)' --date=short
-echo
 
-echo "=== Installing Python dependencies (if any) ==="
-if [ -f requirements.txt ]; then
-    pip install --user -r requirements.txt || \
-        echo "    pip install failed — proceeding anyway; build itself doesn't need them."
-fi
-echo
-
-echo "=== Building LivingCity (make -j$SLURM_CPUS_PER_TASK) ==="
 cd "$SRC_DIR/LivingCity"
+qmake LivingCity.pro
 make -j"$SLURM_CPUS_PER_TASK" 2>&1 | tail -30
-echo
 
-# ---------------------------------------------------------------------------
-# Verify the binary landed where the adapter expects it.
-# adapters/lpsim/lpsim_adapter.find_lpsim_binary checks:
-#   1. $LPSIM_BINARY
-#   2. $HOME/lpsim/LivingCity/LivingCity
-#   3. $HOME/lpsim/LivingCity
-# We expose path 2 by symlinking the built binary into place.
-# ---------------------------------------------------------------------------
-EXPECTED_DIR="$LPSIM_DIR/LivingCity"
-mkdir -p "$EXPECTED_DIR"
-if [ -x "$SRC_DIR/LivingCity/LivingCity" ]; then
-    ln -sf "$SRC_DIR/LivingCity/LivingCity" "$EXPECTED_DIR/LivingCity"
-    echo "=== Build OK ==="
-    echo "Binary: $EXPECTED_DIR/LivingCity (symlinked from source tree)"
-    ls -lh "$EXPECTED_DIR/LivingCity"
-    echo
-    echo "Provenance:"
-    echo "  LPSim git SHA: $LPSIM_GIT_SHA"
-    echo "  Pinned in:     lib/lpsim/manifest.json"
-    echo
-    echo "The SimForge LPSim adapter (adapters/lpsim/lpsim_adapter.py)"
-    echo "will auto-find this binary — no env var or config needed."
+if [ -x "$SOURCE_BIN" ]; then
+    echo "=== Native build OK ==="
+    ls -lh "$SOURCE_BIN"
 else
-    echo "=== Build FAILED — binary not found at expected path ==="
-    echo "Expected: $SRC_DIR/LivingCity/LivingCity"
-    echo "Look at the make output above to diagnose."
+    echo "=== Native build FAILED ==="
     exit 1
 fi
-
 echo
 echo "=== Job complete at $(date) ==="

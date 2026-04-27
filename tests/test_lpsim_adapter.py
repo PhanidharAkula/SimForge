@@ -24,6 +24,7 @@ from adapters.lpsim.lpsim_adapter import (
     _to_int_index,
     find_lpsim_binary,
     find_lpsim_singularity_image,
+    find_lpsim_source_binary,
     parse_lpsim_output,
     prepare_lpsim_inputs,
     write_lpsim_demand_csv,
@@ -508,4 +509,11 @@ class TestBinaryDiscovery:
 
     def test_find_singularity_image_returns_path_or_none(self):
         result = find_lpsim_singularity_image()
+        assert result is None or isinstance(result, Path)
+
+    def test_find_source_binary_returns_path_or_none(self):
+        # Source-rebuilt binary lives at $HOME/lpsim/source/LivingCity/LivingCity
+        # after `sbatch --export=ALL,LPSIM_FORCE_SOURCE=1 ...`. Adapter prefers
+        # it over the bundled one because the bundled one has a known GPU OOB.
+        result = find_lpsim_source_binary()
         assert result is None or isinstance(result, Path)

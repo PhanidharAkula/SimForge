@@ -145,6 +145,25 @@ def find_lpsim_binary() -> Optional[Path]:
     return Path(on_path) if on_path else None
 
 
+def find_lpsim_source_binary() -> Optional[Path]:
+    """Locate a source-rebuilt LPSim binary on the host.
+
+    Produced by ``sbatch --export=ALL,LPSIM_FORCE_SOURCE=1
+    cluster/jobs/build_lpsim.sbatch`` — the rebuild job clones
+    Xuan-1998/LPSim at the pinned SHA and runs `qmake + make` *inside*
+    the SIF (using its Qt5/Boost/CUDA-12.4 deps) with the source dir
+    bind-mounted from host. The resulting binary lands on the host
+    filesystem at the path returned here. ``run_lpsim`` prefers it
+    over the bundled binary because the bundled one has a
+    network-shape-dependent GPU OOB on networks > a few-K nodes
+    (diagnosed Pitzer 2026-04-27).
+
+    Returns ``None`` if no source rebuild has happened.
+    """
+    src_bin = Path.home() / "lpsim" / "source" / "LivingCity" / "LivingCity"
+    return src_bin if src_bin.is_file() and os.access(src_bin, os.X_OK) else None
+
+
 def find_lpsim_singularity_image() -> Optional[Path]:
     """Locate a Singularity ``.sif`` image of LPSim, if pulled.
 
@@ -511,16 +530,34 @@ def run_lpsim(
         find_lpsim_singularity_image() if use_singularity else None
     )
     binary = find_lpsim_binary()
+    source_binary = find_lpsim_source_binary()
 
+    # Preference order for the SINGULARITY paths (sif present + singularity
+    # on PATH). The source-rebuilt binary always wins over the bundled one
+    # because the bundled binary is known-buggy on networks > a few-K
+    # nodes (b18CUDA_trafficSimulator.cu:1682 GPU OOB, diagnosed Pitzer
+    # 2026-04-27). The rebuilt binary picks up scaling fixes from current
+    # main and is built against the container's CUDA 12.4 directly.
     if sif is not None and shutil.which("singularity"):
-        # The yibo123/lpsim:cuda12.4 image ships the LivingCity binary at the
-        # absolute path /LivingCity/LivingCity and does NOT add it to $PATH.
-        # We therefore invoke it by full path; configurable via env var for
-        # future images that might land it elsewhere.
-        in_container_binary = os.environ.get(
-            "LPSIM_CONTAINER_BINARY", "/LivingCity/LivingCity"
-        )
         cmd = ["singularity", "exec", "--nv"]
+        if source_binary is not None:
+            # Run rebuilt binary inside the SIF's runtime environment.
+            src_root = source_binary.parent.parent  # $HOME/lpsim/source
+            cmd.extend(["--bind", f"{src_root}:/lpsim_src"])
+            in_container_binary = "/lpsim_src/LivingCity/LivingCity"
+            binary_label = f"singularity://{sif.name}!{source_binary} (rebuilt)"
+            logger.info("LPSim: using rebuilt source binary at %s", source_binary)
+        else:
+            # Fall back to the bundled binary at /LivingCity/LivingCity.
+            in_container_binary = os.environ.get(
+                "LPSIM_CONTAINER_BINARY", "/LivingCity/LivingCity"
+            )
+            binary_label = f"singularity://{sif.name}!{in_container_binary} (bundled)"
+            logger.warning(
+                "LPSim: using bundled binary — known to crash on networks > a few-K nodes. "
+                "Rebuild via `sbatch --export=ALL,LPSIM_FORCE_SOURCE=1 "
+                "cluster/jobs/build_lpsim.sbatch` to use the patched source build."
+            )
 
         # CUDA 11.x runtime injection.
         # The yibo123/lpsim:cuda12.4 image is mis-tagged: its installed CUDA
@@ -533,7 +570,9 @@ def run_lpsim(
         #   * does NOT inherit the host's LD_LIBRARY_PATH — needs --env
         # We therefore bind /apps and explicitly point LD_LIBRARY_PATH at the
         # host CUDA 11 lib dir, while preserving the container's own CUDA 12.4
-        # / pandana / driver-lib paths after it.
+        # / pandana / driver-lib paths after it. The rebuilt source binary is
+        # built against CUDA 12.4 and doesn't need this — but the bind is
+        # harmless either way.
         cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
         if cuda_home and (Path(cuda_home) / "lib64" / "libcudart.so.11.0").is_file():
             cmd.extend(["--bind", "/apps"])
@@ -549,8 +588,9 @@ def run_lpsim(
             logger.warning(
                 "LPSim: CUDA 11.x runtime not detected on host. "
                 "Run `module load cuda/11.8.0` on Pitzer before launching — "
-                "the LPSim binary needs libcudart.so.11.0 which the container "
-                "(CUDA 12.4) does not provide."
+                "the bundled LPSim binary needs libcudart.so.11.0 which the "
+                "container (CUDA 12.4) does not provide. (The rebuilt source "
+                "binary doesn't need this.)"
             )
 
         # The LPSim binary `chdir`'s to /LivingCity at startup (or hardcodes
@@ -576,7 +616,6 @@ def run_lpsim(
         ])
 
         cmd.extend([str(sif), in_container_binary])
-        binary_label = f"singularity://{sif.name}!{in_container_binary}"
     elif binary is not None:
         cmd = [str(binary)]
         binary_label = str(binary)
