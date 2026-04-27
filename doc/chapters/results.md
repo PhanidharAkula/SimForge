@@ -2,7 +2,7 @@
 
 ## 5.0 Overview
 
-This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/stress_test.yaml`) — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, LPSim meso}` with **N=5 repeats per cell**, for **20 simulation runs** in total. The LPSim cell only produces numbers on a CUDA-capable host (Pitzer's gpu partition); on a dev laptop the cell records a clean failure with a build pointer instead of silent CPU fallback.
+This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/stress_test.yaml`) — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` with **N=5 repeats per cell**, for **20 simulation runs** in total. All three engines are CPU-only and run on Mac and Linux; the full stress test reproduces from a developer laptop without HPC access.
 
 All numbers in this chapter are reproduced verbatim from `runs/stress_test/benchmark_results_stress_test.json` and were measured on an Apple M4 Pro (2024) running macOS 25.4.0, Python 3.13.2, SUMO 1.20.0, MATSim 15.0, and Java 17.0.13. The tables and figures below are emitted by:
 
@@ -185,7 +185,7 @@ The diagnostic remains relevant when the matrix is expanded to additional scenar
 
 1. **No claim about absolute scaling.** The 1K tier is a developer-machine reproducibility benchmark, not a scaling study. Scaling exponents from the 10K – 500K HPC tiers are reported separately once those tiers are regenerated via `scripts/02_…05_` on an HPC-class host.
 2. **No claim about ground-truth fidelity.** SimForge measures inter-simulator agreement, not agreement with sensor data. The PUMS-calibrated demand has a documented realism ceiling of ~60 – 65 % (see §3.3).
-3. **No claim about GPU speedup yet.** The 3rd primary engine (LPSim, GPU-accelerated) is not yet integrated; the GPU comparison story arrives once Version_4 Phase B ships the LPSim adapter.
+3. **No GPU speedup claim.** The third primary engine in Version_5 is DTALite, a CPU-only mesoscopic Dynamic Traffic Assignment engine. The original GPU comparator (LPSim) was integrated in Version_4 Phase B and abandoned in Version_5 after exhaustive Pitzer debugging — see [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md). The thesis claim shifts from "GPU vs CPU speedup" to "paradigm spread across three CPU engines covering microscopic (SUMO micro), queue-based agent (SUMO meso + MATSim), and DTA equilibrium (DTALite)" — see [`doc/engines/ENGINE_COMPARISON.md`](../engines/ENGINE_COMPARISON.md).
 
 ### Threats to validity revisited
 

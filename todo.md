@@ -13,16 +13,19 @@ Every commitment from the plan, mapped to current code state.
 ### 1.1 Engines (plan §1.10 Objective 1, §3.1, §4.1 Experimental Matrix)
 
 The plan explicitly lists **five engines**: SUMO, MATSim, POLARIS, LPSim,
-QarSUMO. Per advisor agreement, we treat SUMO + MATSim + LPSim as the three
-primary engines and POLARIS + QarSUMO as documented backups.
+QarSUMO. After two integration cycles (Versions 4–5), the matrix narrows to
+**three primary engines** chosen for paradigm spread: SUMO microscopic +
+mesoscopic, MATSim queue-based agent simulation, and DTALite mesoscopic
+Dynamic Traffic Assignment.
 
 | Engine | Plan status | Code state | Plan |
 |--------|-----------------|------------|------|
 | SUMO | Primary | ✅ adapter implemented and working (`adapters/sumo/`) | Keep |
 | MATSim | Primary | ✅ adapter implemented and working (`adapters/matsim/`) | Keep |
-| **LPSim** | Primary (with QarSUMO as the GPU comparator originally) | ✅ adapter implemented (`adapters/lpsim/`, Phase B) — needs Pitzer GPU build to actually run | Keep |
-| POLARIS | Primary | ❌ no adapter | Drop to backup (per advisor scope) — document in thesis as deferred |
-| QarSUMO | Primary in plan, GPU variant | Adapter scaffold exists; **no usable public source** (LLNL/QarSUMO 404, QarSUMO/QarSUMO is empty placeholder, Boulmakoul 2023 paper cited in plan needs re-verification) | **Drop entirely** in Version_4 |
+| **DTALite** | New in Version_5 (replaces LPSim slot) | ✅ adapter implemented and working (`adapters/dtalite/`) — runs end-to-end on Mac in ~5 s on chicago_1k_car | Keep |
+| ~~LPSim~~ | Was Primary in Version_4 | ❌ Adapter, tests, and build pipeline removed in Version_5; full retrospective in [`doc/engines/LPSIM_RETROSPECTIVE.md`](doc/engines/LPSIM_RETROSPECTIVE.md) | **Dropped** in Version_5 — bundled GPU binary crashed on networks > a few-K nodes; in-container source rebuild SIGSEGV'd at first kernel launch despite sm_70 + Boost 1.59 sed-patches |
+| ~~POLARIS~~ | Was a backup | ❌ Evaluated as third-engine alternative in Version_5 and ruled out at criteria (license-gated, Argonne-only user base) | **Documented backup** — see [`doc/engines/THIRD_ENGINE_OPTIONS.md`](doc/engines/THIRD_ENGINE_OPTIONS.md) |
+| ~~QarSUMO~~ | Was Primary in plan | ❌ Dropped in Version_4 Phase A — no usable public source | **Dropped** — see [`doc/engines/QARSUMO_RETROSPECTIVE.md`](doc/engines/QARSUMO_RETROSPECTIVE.md) |
 
 ### 1.2 Cities and loads (plan §1.13, §3.3, §4.1)
 
@@ -35,7 +38,7 @@ primary engines and POLARIS + QarSUMO as documented backups.
 
 | Commitment | Reality | Status |
 |------------|---------|--------|
-| 2 hardware tiers (CPU reference + GPU/HPC) | Pitzer cpu and gpu partitions both available; LPSim needs GPU, SUMO/MATSim CPU | aligned (once LPSim lands) |
+| 2 hardware tiers (CPU reference + GPU/HPC) | Pitzer cpu partition only after LPSim removal in Version_5 (all three primary engines are CPU-only). The "GPU tier" claim from the plan is dropped — see `doc/engines/LPSIM_RETROSPECTIVE.md` | reframed: 2 tiers = laptop (Mac arm64) + cluster (Pitzer cpu) |
 
 ### 1.4 Repeats (plan §4.1: N=10)
 
@@ -50,7 +53,7 @@ primary engines and POLARIS + QarSUMO as documented backups.
 | Canonical schema (`network.xml`, `demand.csv`, `signals.xml`, `config.xml`, `manifest.xml`) | ✅ implemented | aligned |
 | SHA-256 manifest checksums | ✅ in `manifest.xml` | aligned |
 | Fixed seeds, deterministic adapters | ✅ seeds wired through, sorted iteration in adapters | aligned |
-| **OCI/Singularity containers with pinned digest** | ❌ venv only (Python deps frozen via `requirements.lock`, system libs not frozen) | **Implement** after LPSim |
+| **OCI/Singularity containers with pinned digest** | ❌ venv only (Python deps frozen via `requirements.lock`, system libs not frozen) | **Implement** in Version_5 Phase C |
 | Auto re-run on hash mismatch (plan §2.7, §4.4) | ❌ not implemented | Defer; hash mismatch currently surfaces as a test failure |
 | Per-bundle `toolchain` block in metadata | ✅ implemented (Version_3 work) | exceeds plan |
 | `dest_source` per-trip provenance | ✅ implemented (Version_3 work) | exceeds plan |
@@ -90,11 +93,11 @@ These reduce scope from the written plan; document in the thesis methods chapter
 
 | Item | Plan | Approved scope |
 |------|----------|----------------|
-| Number of engines actually run | 5 | **3 primary** (SUMO ✅, MATSim ✅, LPSim ✅ Phase B) |
-| Backup engines | — | **2 documented** (POLARIS, QarSUMO) — both deferred / unavailable; documented in methods |
+| Number of engines actually run | 5 | **3 primary** (SUMO ✅, MATSim ✅, DTALite ✅ Version_5) |
+| Engines researched and ruled out | — | **3 documented retrospectives** in [`doc/engines/`](doc/engines/): LPSim (abandoned Version_5 after GPU SIGSEGV), QarSUMO (no usable source), POLARIS + CityFlow (evaluated as third-engine alternatives in Version_5, ruled out at criteria) |
 | Max scenario load | 5M trips | **500K trips** (5M deferred to future work pending route-cache fix) |
 | Repeats N | 10 | **5 across the matrix** (Version_4, advisor-approved). Revisit N=10 once Pitzer wall is measured |
-| Hardware tiers | 2 (CPU + GPU/HPC) | 2 (Pitzer cpu + gpu partitions) — aligned |
+| Hardware tiers | 2 (CPU + GPU/HPC) | 2 (Mac laptop + Pitzer cpu) — GPU tier dropped after LPSim removal in Version_5 |
 
 ---
 
@@ -111,24 +114,29 @@ Ordered. Each item is one commit (or a small batch).
 
 > Pause here and talk to advisor about: (a) calibration scope, (b) per-watt scope, (c) target N for repeats.
 
-### Phase B — LPSim as the 3rd primary engine (✅ landed in Version_4)
+### Phase B — LPSim as the 3rd primary engine (landed in Version_4, ABANDONED in Version_5)
 
-5. ✅ **`cluster/jobs/build_lpsim.sbatch`** — Pitzer GPU job that prefers `singularity pull docker://yibo123/lpsim:cuda12.4` and falls back to `git clone Xuan-1998/LPSim && make` under `LivingCity/`. Output symlinked to `$HOME/lpsim/LivingCity/LivingCity` (or `$HOME/lpsim/lpsim.sif` for the Singularity path).
-6. ✅ **`adapters/lpsim/`** — full package: adapter, CLI, MAPPING.md, `__init__.py`
-   - `prepare_lpsim_inputs(scenario_path, output_dir, config)` writes LPSim's `nodes.csv` (osmid, x, y, highway, index), `edges.csv` (uniqueid, u, v, length, lanes, speed_mph), `od_demand.csv` (PERNO, origin, destination), and `command_line_options.ini` ([General] section with START_HR/END_HR derived from canonical config)
-   - `run_lpsim(output_dir, timeout_s, use_singularity)` invokes `LivingCity` (native or via `singularity exec --nv … LivingCity`) with CWD set to the prepared run dir
-   - `parse_lpsim_output(output_dir)` reads `<NUM_PASSES>_people*.csv` → `LPSimTripStats(trip_count, completed_count, mean_travel_time_s, p95_travel_time_s, mean_distance_m)`
-   - **No silent CPU fallback** — when no GPU binary is staged, `run_lpsim` returns a clean failure with a build pointer
-7. ✅ **`tests/test_lpsim_adapter.py`** (39 tests) — helpers, all 4 writers, determinism (byte-identical re-runs), end-to-end input prep on chicago_1k_car, output parsing on synthetic fixtures, binary discovery
-8. ✅ **Runspec entries** — `engine: lpsim` rows in `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` (12 LPSim cells across the matrix; 60 invocations at N=5)
-9. ✅ **Sbatches flipped back to GPU** — `benchmark_small.sbatch` and `benchmark_large.sbatch` now request `--partition=gpu --gres=gpu:v100:1`; SUMO + MATSim share the same node and don't touch the GPU
+5–9. ⚠️ **Phase B implemented in Version_4 then atomically removed in Version_5 commit `f6b1cdb`.** The bundled LPSim GPU binary (`yibo123/lpsim:cuda12.4`) crashed at `b18CUDA_trafficSimulator.cu:1682` on networks > a few-K nodes; an in-container source rebuild against the V100's sm_70 arch (with Boost 1.59 sed-patches for modern g++) succeeded but the rebuilt binary still SIGSEGV'd at "Starting simulation ...". After 12+ commits across two debugging sessions, the integration was abandoned and the entire Phase B output was removed: `adapters/lpsim/`, `tests/test_lpsim_adapter.py` (39 tests), `lib/lpsim/manifest.json`, `cluster/jobs/build_lpsim.sbatch` + `smoke_lpsim.sbatch` + `diag_lpsim.sbatch`, all `engine: lpsim` runspec entries, engine-registry membership, and doc references. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](doc/engines/LPSIM_RETROSPECTIVE.md).
+
+### Phase B′ — DTALite as the 3rd primary engine (✅ landed in Version_5)
+
+5b. ✅ **`adapters/dtalite/`** — full package: adapter, CLI, MAPPING.md, `__init__.py`
+   - `prepare_dtalite_inputs(scenario_path, output_dir, config)` writes GMNS `node.csv` (with demand-driven `zone_id`), `link.csv` (km + km/h units, BPR VDF columns), `demand.csv` (OD-aggregated), `settings.csv` (sections format read by the C++ binary), `settings.yml` (YAML mirror read by the path4gmns wrapper)
+   - `run_dtalite(output_dir, timeout_s, iterations, column_updating_iterations)` invokes `path4gmns.DTALiteClassic(1, ...)` (mode 1 = path-based UE) via subprocess
+   - `parse_dtalite_output(output_dir)` reads `agent.csv` → `DTALiteTripStats(trip_count, completed_count, mean_travel_time_s, p95_travel_time_s, mean_distance_m)` with volume expansion + minute→second conversion
+   - **No silent fallback** — when path4gmns is not installed, `run_dtalite` returns a clean failure with the install command
+6b. ✅ **`tests/test_dtalite_adapter.py`** (46 tests) — helpers, all 5 writers, demand-driven zoning, determinism, end-to-end input prep on chicago_1k_car, output parsing on synthetic fixtures, binary discovery, end-to-end smoke test gated on path4gmns availability
+7b. ✅ **`lib/dtalite/manifest.json`** — pinned `path4gmns==0.10.0`; re-included via `.gitignore` rule (replaces the LPSim re-include rule)
+8b. ✅ **`requirements.txt` + `requirements.lock`** — `path4gmns>=0.10.0,<1` added with macOS `brew install libomp` note
+9b. ✅ **Runspec entries** — `engine: dtalite` rows in `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` (12 DTALite cells across the matrix; 60 invocations at N=5)
+10b. ✅ **Sbatches flipped back to CPU** — `benchmark_small.sbatch` and `benchmark_large.sbatch` now request `--partition=cpu` (no engine needs CUDA after LPSim removal); `cuda/11.8.0` module load dropped; LPSim binary preflight replaced with python-side `is_dtalite_available()` check
 
 ### Phase C — Containerization (~2-3 days)
 
-10. **Write `Dockerfile`** — Python 3.13.13 + uv + `requirements.lock` + SUMO + Java 17 + MATSim JAR + LPSim binary (or use LPSim's Docker base)
-11. **Build + push to a registry** (Docker Hub or GitHub Container Registry), capture pinned digest
-12. **Update sbatches** to use `singularity exec docker://simforge@sha256:<digest> python -m execution.run_benchmark ...`
-13. **Update `doc/REPRODUCING.md`** — pinned digest becomes part of the canonical "how to reproduce" recipe
+11. **Write `Dockerfile`** — Python 3.13.13 + uv + `requirements.lock` (pulls `path4gmns` along with everything else) + SUMO + Java 17 + MATSim JAR. No GPU base image needed since the matrix is CPU-only after Version_5.
+12. **Build + push to a registry** (Docker Hub or GitHub Container Registry), capture pinned digest
+13. **Update sbatches** to use `singularity exec docker://simforge@sha256:<digest> python -m execution.run_benchmark ...`
+14. **Update `doc/REPRODUCING.md`** — pinned digest becomes part of the canonical "how to reproduce" recipe
 
 ### Phase D — Optional (decide after advisor conversation)
 
@@ -165,6 +173,7 @@ Pasteable for the next meeting.
 - `doc/chapters/methods.md` — current methods chapter draft
 - `doc/REPRODUCING.md` — current reproducibility recipe (will need a "containerization" section after Phase C)
 - `requirements.lock` — pinned Python deps (current foundation; gets superseded by container digest in Phase C)
-- LPSim: [Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim) (MIT, Docker shipped at `yibo123/lpsim:cuda12.4`)
+- DTALite: bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS) (Apache 2.0). DTALite C++ upstream: [`asu-trans-ai-lab/DTALite`](https://github.com/asu-trans-ai-lab/DTALite). Pin in `lib/dtalite/manifest.json`.
+- ~~LPSim~~: abandoned Version_5 — see `doc/engines/LPSIM_RETROSPECTIVE.md`
 - POLARIS: [anl-tracc/polaris](https://github.com/anl-tracc/polaris) (open source, Argonne)
 - QarSUMO: no usable public source as of this audit

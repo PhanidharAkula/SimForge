@@ -205,8 +205,8 @@ Located in `evaluation/metrics/`:
 ### What to report in Chapter 5
 
 1. **Runtime comparison** (Table 5.1, Fig 5.1, Fig 5.5)
-   - SUMO meso vs MATSim vs LPSim wall-clock, **per mode**
-   - LPSim's GPU runtime is the headline scalability story for the 200K and 500K tiers.
+   - SUMO meso vs MATSim vs DTALite wall-clock, **per mode**
+   - DTALite's UE assignment gives a third-paradigm reference point; comparable to MATSim at scenario sizes the bundled stress test exercises.
 
 2. **Reproducibility** (Table 5.2, Fig 5.2)
    - R-scores ≥ 0.997 across all engines confirm deterministic behaviour
@@ -231,7 +231,7 @@ Located in `evaluation/metrics/`:
 | Mesoscopic mode is much faster than micro      | Fig 5.6 (within-engine), `compare_modes.py` speedup ratio         |
 | Results are reproducible                       | R-scores ≥ 0.997 across seeds (Table 5.2, Fig 5.2)                |
 | Framework scales to large scenarios            | Scalability metrics from HPC runs (200K, 500K tiers)              |
-| GPU acceleration provides speedup at scale     | LPSim vs SUMO meso runtime on chicago_200k and nyc_500k tiers     |
+| Three-paradigm cross-engine validation         | DTALite (DTA equilibrium) vs MATSim (queue-based agent) vs SUMO (microscopic / meso queue) on chicago_200k and nyc_500k tiers |
 
 ---
 
@@ -240,8 +240,9 @@ Located in `evaluation/metrics/`:
 - **Apple Silicon arm64**: `netconvert` on macOS arm64 has historically segfaulted on large networks (>~3,000 nodes) under SUMO 1.20.x. Behaviour under the locked SUMO 1.26.0 wheel has not been re-verified at scale; the bundled 1K and 10K scenarios run cleanly, but for the 50K+ tiers we recommend Linux/HPC where the same `eclipse-sumo` wheel installs without the macOS-specific issue.
 - **MATSim**: Requires Java 17+ and the JAR in `lib/matsim-15.0/` (downloaded once per [SETUP.md](../SETUP.md)).
 - **Microscopic mode**: Order-of-magnitude slower than meso for the same trip count.
-- **LPSim**: Requires NVIDIA CUDA. The adapter does not silently fall back to CPU — when no GPU binary is staged, every `lpsim` cell records a clean failure with a build pointer. Build via `sbatch cluster/jobs/build_lpsim.sbatch` on a Pitzer GPU node.
-- **LPSim determinism**: GPU atomic reductions are not bit-deterministic across runs even with the same seed — expect lower R-scores than SUMO meso (which is fully deterministic) or MATSim (R = 1.0 with `lastIteration=0`). N=5 repeats give us statistical room; reported as `mean ± 95 % CI`.
+- **DTALite**: Requires `path4gmns` from `requirements.lock`. On macOS the bundled binary needs `brew install libomp` for the OpenMP runtime. The adapter does not silently fall back — when path4gmns is not installed, every `dtalite` cell records a clean failure with the install command.
+- **DTALite determinism**: Fully deterministic — UE algorithm with fixed iteration order, no atomic reductions, no GPU non-determinism. R = 1.0 expected, matching SUMO meso and MATSim with `lastIteration=0`.
+- **LPSim** (historical): Was the third primary engine in Versions 1–4, abandoned in Version_5 after the bundled GPU binary crashed on networks > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
 
 ---
 

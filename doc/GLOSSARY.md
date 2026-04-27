@@ -90,7 +90,7 @@ A *coverage diagnostic* class flagged when an `(engine, mode)` cell has fewer th
 Multi-Agent Transport Simulation; an activity-based, event-driven, queue-mobsim simulator written in Java. SimForge bundles MATSim 15.0 and runs it in single-iteration mode (`lastIteration = 0`) for reproducibility.
 
 ### Mesoscopic (meso)
-A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso, MATSim, and LPSim are all mesoscopic. LPSim runs the queue update on the GPU.
+A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso, MATSim, and DTALite are all mesoscopic. DTALite uses an iterative Dynamic Traffic Assignment formulation rather than a one-shot queue simulation.
 
 ### Microscopic (micro)
 A simulation paradigm that models each vehicle individually with car-following and lane-changing dynamics. Higher fidelity at the cost of order-of-magnitude longer runtime. SUMO micro is the only microscopic engine in the canonical *RunSpec*.
@@ -139,14 +139,21 @@ Python bindings for `libosmium` (PyPI package `osmium`, `>=4.0` in `requirements
 ## Q
 
 ### QarSUMO
-A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope** — no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code). The 3rd primary engine slot is now reserved for *LPSim* (see `todo.md`).
+A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope** — no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code). Full retrospective: [`doc/engines/QARSUMO_RETROSPECTIVE.md`](engines/QARSUMO_RETROSPECTIVE.md).
+
+---
+
+## D
+
+### DTALite
+A C++ open-source mesoscopic Dynamic Traffic Assignment (DTA) engine bundled inside the [`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package (Apache 2.0). Implemented as the 3rd primary engine in **Version_5** after LPSim was abandoned (see *LPSim* below). The adapter at `adapters/dtalite/` translates the canonical bundle into the GMNS open standard (`node.csv` / `link.csv` / `demand.csv` + `settings.{csv,yml}`). Runs on Mac (arm64/x86_64), Linux x86_64, and Windows; on Mac the bundled binary needs `brew install libomp`. Selected for its (1) bounded integration cost (pre-built binary, working CMake), (2) paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and (3) GMNS open-standard input format reinforcing SimForge's reproducibility framing. Pin: `lib/dtalite/manifest.json`. Selection rationale: [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
 
 ---
 
 ## L
 
 ### LPSim
-A GPU-accelerated mesoscopic traffic simulator (<https://github.com/Xuan-1998/LPSim>), MIT-licensed, distributed via the `yibo123/lpsim:cuda12.4` Docker image. Implemented as the 3rd primary engine in Version_4 Phase B. The adapter at `adapters/lpsim/` translates the canonical bundle into LPSim's CSV-based input layout and `command_line_options.ini`. Native binary at `$HOME/lpsim/LivingCity/LivingCity` or Singularity image at `$HOME/lpsim/lpsim.sif` — built via `sbatch cluster/jobs/build_lpsim.sbatch`.
+A GPU-accelerated mesoscopic traffic simulator ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT). Implemented as the 3rd primary engine in Version_4 Phase B but **abandoned in Version_5** after exhaustive Pitzer debugging. The bundled `LivingCity` binary had a GPU kernel OOB on networks > a few-K nodes; an in-container source rebuild (sm_70, Boost 1.59 sed-patches) succeeded but the rebuilt binary still SIGSEGV'd at first kernel launch. Replaced by *DTALite* (see above). Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
 
 ---
 

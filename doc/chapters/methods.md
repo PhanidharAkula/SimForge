@@ -4,7 +4,7 @@
 
 This chapter describes the design, implementation, and rationale of **SimForge** — a reproducible, cross-simulator benchmarking framework for urban traffic simulation. The framework addresses three fundamental challenges in simulator comparison that have historically hindered fair, reproducible evaluation of traffic simulation engines:
 
-1. **Input standardization**: Traffic simulators (SUMO, MATSim, LPSim, etc.) use incompatible input formats with different data models, coordinate systems, and semantic interpretations. Direct comparison requires a common input representation.
+1. **Input standardization**: Traffic simulators (SUMO, MATSim, DTALite, etc.) use incompatible input formats with different data models, coordinate systems, and semantic interpretations. Direct comparison requires a common input representation.
 
 2. **Execution reproducibility**: Simulation results vary due to hardware differences, software versions, random seed handling, floating-point behavior, and configuration details. A fair comparison requires deterministic, repeatable execution pipelines.
 
@@ -58,11 +58,11 @@ SimForge solves these challenges through five interacting subsystems:
 | SUMO simulator     | SUMO (eclipse-sumo)          | 1.20.0  | Microscopic + mesoscopic simulation     |
 | MATSim simulator   | MATSim                       | 15.0    | Activity-based mesoscopic simulation    |
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
-| LPSim simulator    | LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim)) | — | GPU-accelerated mesoscopic engine |
-| GPU compute        | CUDA                         | 12.4+   | LPSim acceleration                      |
+| DTALite simulator  | DTALite (bundled in [`path4gmns`](https://github.com/jdlph/Path4GMNS)) | 0.10.0+ | CPU mesoscopic Dynamic Traffic Assignment |
+| OpenMP runtime (Mac) | libomp (brew install libomp) | — | DTALite OpenMP runtime on macOS |
 | Testing            | pytest                       | 8.0+    | ~434 tests across all subsystems        |
 
-> **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement, Version_4 narrows scope to **three primary engines** (SUMO, MATSim, LPSim) with POLARIS and QarSUMO as documented backups. QarSUMO was dropped after a 2026-04-26 audit confirmed no usable public source (LLNL/QarSUMO 404; QarSUMO/QarSUMO is an empty placeholder; the Boulmakoul 2023 IEEE HPCS paper has not produced runnable code). LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, Docker shipped) is implemented as the GPU comparator in Phase B. See `todo.md` for the gap audit and rollout history.
+> **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement and after exhaustive integration work in Versions 4–5, the matrix narrows to **three primary engines** (SUMO microscopic + mesoscopic, MATSim queue-based agent, DTALite mesoscopic Dynamic Traffic Assignment) chosen for paradigm spread. Three of the originally-proposed engines were systematically evaluated and ruled out: **QarSUMO** dropped in Version_4 Phase A (no usable public source — LLNL/QarSUMO 404, QarSUMO/QarSUMO empty placeholder, Boulmakoul 2023 IEEE HPCS paper produced no runnable code; full retrospective in [`doc/engines/QARSUMO_RETROSPECTIVE.md`](../engines/QARSUMO_RETROSPECTIVE.md)); **LPSim** integrated in Version_4 Phase B but abandoned in Version_5 after the bundled GPU binary crashed at network sizes > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch (full retrospective in [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md)); **POLARIS** and **CityFlow** evaluated as alternatives during the third-engine selection but ruled out at criteria (POLARIS license-gated, CityFlow scaling-broken — see [`doc/engines/THIRD_ENGINE_OPTIONS.md`](../engines/THIRD_ENGINE_OPTIONS.md)). DTALite (bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS), Apache 2.0) was selected on three grounds: bounded integration cost (pre-built binary, working CMake), paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and CPU-only execution (the full matrix runs on Mac as well as Linux). See [`doc/engines/ENGINE_COMPARISON.md`](../engines/ENGINE_COMPARISON.md) for the full cross-engine comparison and `todo.md` for the rollout history.
 
 ---
 
@@ -670,26 +670,30 @@ config.xml   ──► config.xml (MATSim config format) + vehicles.xml
 | Typical iterations    | 1             | 1 (forced for fair comparison) |
 | Startup overhead      | ~0.1s         | ~5-7s (JVM warmup)             |
 
-### 3.4.4 LPSim Adapter
+### 3.4.4 DTALite Adapter
 
-**Simulator**: LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim)) — GPU-accelerated mesoscopic traffic simulator distributed under MIT license. Fills the GPU comparator slot in the experimental matrix that the plan originally allocated to QarSUMO.
+**Simulator**: DTALite — CPU-only mesoscopic Dynamic Traffic Assignment engine distributed under Apache 2.0 license, bundled inside the [`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package. Replaces LPSim in the third-engine slot in **Version_5** after the LPSim integration was abandoned (see [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md)). The selection rationale and the two ruled-out alternatives (CityFlow, POLARIS) are documented in [`doc/engines/THIRD_ENGINE_OPTIONS.md`](../engines/THIRD_ENGINE_OPTIONS.md).
 
-**Conversion** (Canonical → LPSim B18 schema):
+**Conversion** (Canonical → GMNS schema):
 
-| File | Canonical | LPSim |
+| File | Canonical | DTALite (GMNS) |
 |---|---|---|
-| Nodes | `network.xml` `<node id="n123" x="…" y="…"/>` | `nodes.csv` columns `osmid, x, y, highway, index` |
-| Edges | `network.xml` `<link id="l456" from="n10" to="n11" length="120.5" speed_limit="13.9" lanes="2"/>` | `edges.csv` columns `uniqueid, u, v, length, lanes, speed_mph` (m/s × 2.236936 → mph) |
-| Demand | `demand.csv` `trip_id, origin_node_id, destination_node_id, departure_time_s, mode` | OD CSV columns `PERNO, origin, destination` (departure time dropped — see fidelity note below) |
-| Config | `config.xml` `<time start_time_s="25200" end_time_s="28800"/>` | `command_line_options.ini` `[General]` with `START_HR=7`, `END_HR=8`, `OD_DEMAND_FILENAME=…`, etc. |
+| Nodes | `network.xml` `<node id="n123" x="…" y="…"/>` | `node.csv` columns `node_id, zone_id, x_coord, y_coord, production, attraction` |
+| Edges | `network.xml` `<link id="l456" from="n10" to="n11" length="120.5" speed_limit="13.9" lanes="2"/>` | `link.csv` columns `link_id, from_node_id, to_node_id, length (km), lanes, free_speed (km/h), capacity, link_type, VDF_fftt1, VDF_alpha1, VDF_beta1` (m → km, m/s × 3.6 → km/h) |
+| Demand | `demand.csv` `trip_id, origin_node_id, destination_node_id, departure_time_s, mode` | `demand.csv` columns `o_zone_id, d_zone_id, volume` (trips aggregated by OD pair) |
+| Config | `config.xml` `<time start_time_s="25200" end_time_s="28800"/>` | `settings.csv` (`[demand_period]` AM 0700_0800) + `settings.yml` mirror for the path4gmns Python wrapper |
 
-**Fidelity trade-off — departure timing**: LPSim's B18 demand format does not include a per-trip departure column; the loader (`roadGraphB2018Loader.cpp:319-321`) reads only `PERNO, origin, destination`. Departures are distributed inside the `[START_HR, END_HR]` window per LPSim's internal heuristic. The canonical `departure_time_s` precision available to SUMO and MATSim is therefore not exposed to LPSim. This is the single cleanest difference between the three engines from a demand-modeling perspective and is documented in `adapters/lpsim/MAPPING.md` for full audit trail.
+**Demand-driven zoning**: DTALite's UE assignment iterates over zones, running label-correcting shortest-path from each zone in every outer iteration. Treating every node as a zone (the naive approach) produced 20,058-zone runs that took minutes per outer iteration on chicago_1k_car. The adapter therefore promotes only nodes that appear as origin or destination in the demand to GMNS zones (~1,800 zones for chicago_1k_car); transit-only intersections retain network connectivity but are skipped in the UE loop. Runtime drops from "minutes" to ~5 seconds at the bundled scenario size.
 
-**Determinism**: LPSim's GPU code path uses `atomicAdd` and other reduction operations that are not bit-deterministic across runs even with the same seed (documented LPSim behaviour, not a SimForge bug). Reproducibility (R-score) is therefore expected to be lower for LPSim than for SUMO meso (fully deterministic) or MATSim (R = 1.0 with `lastIteration=0`). The N=5 repeats give the framework statistical room to characterise the spread; the headline number is `mean ± 95 % CI` from `evaluation/metrics/confidence.py`.
+**Fidelity trade-off — departure timing**: DTALite's GMNS demand format does not include a per-trip departure column; trips are aggregated by (origin, destination) into a count `volume`. Departures are distributed uniformly inside the `[demand_period]` window (default 0700-0800 — controlled by `DTALiteConfig`). The canonical `departure_time_s` precision available to SUMO and MATSim is therefore not exposed to DTALite. This is the single cleanest difference between the three engines from a demand-modeling perspective and is documented in `adapters/dtalite/MAPPING.md` for full audit trail.
 
-**Binary discovery**: `find_lpsim_binary()` checks (1) `$LPSIM_BINARY`, (2) `$HOME/lpsim/LivingCity/LivingCity` (the path produced by `cluster/jobs/build_lpsim.sbatch`), (3) `$HOME/lpsim/LivingCity`, (4) `LivingCity` on `$PATH`. `find_lpsim_singularity_image()` checks `$HOME/lpsim/lpsim.sif`. With no GPU binary or image staged, `run_lpsim()` returns a clean `RunResult` failure with an actionable build pointer — no silent CPU fallback (the failure mode that motivated dropping QarSUMO).
+**Determinism**: DTALite is fully deterministic. The UE algorithm (Method of Successive Averages / Frank-Wolfe) iterates in fixed order with no atomic reductions and no GPU non-determinism. R-score is expected to be 1.0 across N=5 repeats with the same inputs, matching SUMO mesoscopic and MATSim with `lastIteration=0`. (This determinism is one of the technical reasons DTALite was preferred over LPSim, whose `atomicAdd` GPU reductions would have forced an explanatory footnote on every reproducibility number — see `LPSIM_RETROSPECTIVE.md` §5.)
 
-**Performance expectation**: GPU-parallel mesoscopic queue updates target 5–20× speedup over CPU SUMO meso for the 200K and 500K trip tiers — the regime where SUMO's single-threaded queue scan is the binding constraint.
+**Binary discovery**: `is_dtalite_available()` checks both that `path4gmns` is importable AND that the platform-specific bundled binary (`DTALiteMM_arm.dylib` / `DTALiteMM_x86.dylib` / `DTALiteMM.so` / `DTALiteMM.dll`) exists in the package's `bin/` directory. With path4gmns not installed, `run_dtalite()` returns a clean `RunResult` failure with the install command (`uv pip install path4gmns`) — no silent fallback (the failure mode that motivated dropping QarSUMO).
+
+**Implementation note** — DTALiteClassic vs DTALiteMultimodal: path4gmns 0.10.0 ships two DTALite binaries. The adapter calls `DTALiteClassic` (mode 1 = path-based UE), not the newer `DTALiteMultimodal` wrapper. The multimodal binary has a regression demanding a `mode_type.csv` schema upstream has not published — even path4gmns's own bundled samples fail with `[ERROR] File mode_type does not have information` when invoked fresh. Full implementation note in `adapters/dtalite/MAPPING.md`.
+
+**Performance expectation**: at SimForge scenario sizes (1k–500k trips, ≤500k nodes) DTALite is comparable to MATSim in wallclock — slower than SUMO meso, faster than SUMO micro at scale. The thesis claim is paradigm spread (microscopic + queue-based agent + DTA equilibrium), not raw speedup; see `doc/engines/ENGINE_COMPARISON.md` §3 for the per-tier wallclock estimates.
 
 ### 3.4.5 Adapter Determinism
 
@@ -737,7 +741,7 @@ runs:
 | --------------- | ------ | ------------------------------------------------------ |
 | `scenario_id`   | string | Human-readable scenario identifier                     |
 | `scenario_path` | string | Path to canonical scenario bundle                      |
-| `engine`        | string | Simulator: `sumo`, `matsim`, `lpsim`                   |
+| `engine`        | string | Simulator: `sumo`, `matsim`, `dtalite`                 |
 | `mode`          | enum   | `microscopic` or `mesoscopic`                          |
 | `repeats`       | int    | Number of repeated runs (for reproducibility analysis) |
 | `seed`          | int    | Base seed (incremented per repeat: 42, 43, 44)         |
@@ -974,7 +978,7 @@ The framework includes **406 tests** across all subsystems:
 | `test_analyze_benchmark.py`       | 25    | Mode-aware grouping + identity fallback + renderers     |
 | `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
-| `test_lpsim_adapter.py`           | 39    | LPSim adapter: writers, INI, determinism, output parsing |
+| `test_dtalite_adapter.py`         | 46    | DTALite adapter: writers, settings, demand-driven zoning, determinism, output parsing, end-to-end smoke |
 | `test_engine_smoke.py`            | 3     | Real-binary smoke on SUMO/MATSim                        |
 
 **All ~434 tests passing** as of Version_4 Phase B. Marker registry in

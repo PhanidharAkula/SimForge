@@ -34,14 +34,16 @@ that produced the published numbers.
 | Scenario generation (PBF + census)  | Works  | PBFs rsynced from local (see §5); no Overpass hits on compute node |
 | SUMO meso + micro                   | Works  | `pip install eclipse-sumo` inside the venv                         |
 | MATSim 15.0                         | Works  | `module load openjdk/21.0.3_9` + `lib/matsim-15.0/matsim-15.0.jar` |
-| LPSim (GPU)                         | Works  | Build once via `sbatch cluster/jobs/build_lpsim.sbatch` (gpu partition) |
+| DTALite (CPU)                       | Works  | `uv pip install path4gmns` (bundled in `requirements.lock`)         |
 | Evaluation + plot rendering         | Works  | Pure Python (matplotlib in venv)                                   |
 | Bundle validation + SHA-256 hashing | Works  | Pure Python                                                        |
 
-The meaningful upgrade versus running locally is LPSim: on a V100 node the
-adapter exercises real CUDA kernels instead of the clean-failure pathway dev
-laptops hit. SUMO and MATSim run unchanged on the same GPU node — they don't
-touch the device, the GPU is purely for LPSim.
+After the LPSim removal in Version_5, **the entire SimForge matrix is CPU-only**
+and reproduces from a developer Mac. Pitzer is now reserved purely for the
+larger trip tiers (50k–500k) where SUMO microscopic + MATSim wall time
+exceeds laptop patience — none of the three engines requires GPU or
+specialised hardware. See [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md)
+for the GPU-engine abandonment narrative.
 
 ---
 
@@ -189,7 +191,6 @@ versions rebump after cluster upgrades). As of 2026-04:
 | Python     | **not used**              | Use `uv` (installs Python 3.13.13 to match the locked dev env)      |
 | GCC        | `module load gcc`         | Usually unneeded (modern default)                                   |
 | OpenJDK    | `module load openjdk/21.0.3_9` | MATSim runtime — Pitzer's lmod requires an explicit version (`module spider openjdk` lists current options) |
-| CUDA       | `module load cuda/12.6.2` | LPSim build / run                                                    |
 | Git        | pre-installed             | —                                                                   |
 | SUMO       | **not** a module          | Bundled in `requirements.lock` (`eclipse-sumo` wheel)               |
 
@@ -380,61 +381,28 @@ python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress
 python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
 ```
 
-### LPSim on GPU
+### DTALite on Pitzer (CPU)
 
-LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT) is the GPU
-mesoscopic comparator. **Pinned** at SHA `452067ee…` (2024-11-27) and Docker
-image `yibo123/lpsim:cuda12.4` in [`lib/lpsim/manifest.json`](../lib/lpsim/manifest.json).
-The manifest is the source-of-truth for reproducibility — bump it to track
-upstream changes and re-run the build.
+DTALite (the third primary engine in Version_5) is bundled inside the
+[`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package and
+ships in `requirements.lock`. After `uv pip install -r requirements.lock`
+in the Pitzer venv, DTALite is ready — no separate build step. The
+bundled binary on Linux x86_64 (`DTALiteMM.so` inside path4gmns/bin/)
+links against standard `libgomp` only and works against Pitzer's
+`module load openjdk/21.0.3_9` toolchain (no CUDA, no Apptainer needed).
 
-> ⚠️ **CUDA-version pitfall (Pitzer 2026-04, Apptainer 1.3.6).** The
-> `yibo123/lpsim:cuda12.4` image ships CUDA 12.4 dev tools **but** its
-> bundled `LivingCity` binary was compiled against `libcudart.so.11.0` —
-> confirmed via `ldd /LivingCity/LivingCity` inside the SIF. Two
-> consequences any benchmark sbatch must handle:
->
-> 1. `module load cuda/11.8.0` is **required** before launching LPSim. CUDA
->    11.8 ships `libcudart.so.11.0` (CUDA 11.x is binary-stable across
->    11.0–11.8). The committed `benchmark_small.sbatch` and
->    `benchmark_large.sbatch` already do this.
-> 2. Apptainer 1.3.6 does **not** auto-mount `/apps` and does **not**
->    inherit the host's `LD_LIBRARY_PATH`. The adapter therefore launches
->    LPSim with `singularity exec --nv --bind /apps --env
->    LD_LIBRARY_PATH=$CUDA_HOME/lib64:…` so the host CUDA 11 lib dir is
->    visible inside the container and on the linker's search path.
->
-> If you ever bump the LPSim image to a build linked against the matching
-> CUDA 12.x runtime, drop the `module load cuda/11.8.0` and the bind-mount
-> can go too. Both are configured in one place
-> ([`adapters/lpsim/lpsim_adapter.run_lpsim`](../adapters/lpsim/lpsim_adapter.py)).
-
-One-time build:
-
-```bash
-sbatch cluster/jobs/build_lpsim.sbatch
-```
-
-That job reads the pin from the manifest, tries Singularity first (pulls
-`yibo123/lpsim:cuda12.4` as a SIF to `$HOME/lpsim/lpsim.sif`) and falls
-back to a source build (clones the repo under `$HOME/lpsim/source/`,
-checks out the pinned SHA, then `make` under `LivingCity/`, with the
-binary symlinked to `$HOME/lpsim/LivingCity/LivingCity`). Either path is
-auto-discovered by the adapter at run time — no env var or config tweak
-needed.
-
-To override the pin for a one-off build:
-
-```bash
-sbatch --export=LPSIM_GIT_SHA=abc123…,LPSIM_DOCKER_REF=user/lpsim:tag \
-    cluster/jobs/build_lpsim.sbatch
-```
-
-Re-run the build only when CUDA / GCC versions on Pitzer change, or when
-the pin in the manifest is bumped. The benchmark sbatches
-(`benchmark_small.sbatch` / `benchmark_large.sbatch`) run on the gpu
-partition specifically so LPSim has a V100 available; SUMO and MATSim
-share the same node and don't touch the GPU.
+> **Historical note.** Versions 1–4 reserved this slot for LPSim
+> (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was
+> abandoned in Version_5 — the bundled `LivingCity` binary crashed on
+> networks larger than a few-K nodes, and an in-container source rebuild
+> against the V100's sm_70 arch SIGSEGV'd at first kernel launch. The
+> full integration narrative (12+ commits across two debugging sessions,
+> with Boost 1.59 sed-patches, CUDA toolchain reconciliation, and CUDA
+> arch overrides) is in [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
+> The `cluster/jobs/build_lpsim.sbatch`, `smoke_lpsim.sbatch`, and
+> `diag_lpsim.sbatch` jobs were removed in Version_5; the GPU partition
+> (`--partition=gpu --gres=gpu:v100:1`) is no longer required for any
+> SimForge engine and the benchmark sbatches now request `--partition=cpu`.
 
 ---
 
@@ -517,7 +485,7 @@ runs/stress_test/
 ├── chicago_1k_car/
 │   ├── sumo/     {seed_42,seed_43,seed_44,seed_45,seed_46}/tripinfo.xml
 │   ├── matsim/   {seed_42..seed_46}/output_trips.csv.gz
-│   └── lpsim/    {seed_42..seed_46}/1_people*.csv  (real V100 kernels)
+│   └── dtalite/  {seed_42..seed_46}/agent.csv + link_performance.csv  (UE assignment)
 └── plots/
     └── fig_5_{1..9}.{png,pdf}
 ```

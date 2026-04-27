@@ -18,9 +18,9 @@ SimForge is a cross-simulator benchmarking framework for urban traffic simulatio
 │                                                  │              │
 │                           ┌──────────────────────┼─────────┐    │
 │                           ▼                      ▼         ▼    │
-│                    ┌───────────┐         ┌────────────┐ ┌─────┐ │
-│                    │SUMO       │         │MATSim      │ │LPSim│ │
-│                    │Adapter    │         │Adapter     │ │Adpt.│ │
+│                    ┌───────────┐         ┌────────────┐ ┌──────┐ │
+│                    │SUMO       │         │MATSim      │ │DTAlite│ │
+│                    │Adapter    │         │Adapter     │ │Adpt.  │ │
 │                    └─────┬─────┘         └─────┬──────┘ └──┬──┘ │
 │                          ▼                     ▼           ▼    │
 │                    ┌───────────────────────────────────────┐    │
@@ -119,14 +119,14 @@ Each adapter translates the canonical bundle into simulator-specific input forma
             ┌───────────┼───────────┐
             ▼           ▼           ▼
      ┌──────────┐ ┌──────────┐ ┌──────────┐
-     │ SUMO     │ │ MATSim   │ │ LPSim    │
+     │ SUMO     │ │ MATSim   │ │ DTALite  │
      │ Adapter  │ │ Adapter  │ │ Adapter  │
      └────┬─────┘ └────┬─────┘ └────┬─────┘
           ▼            ▼            ▼
-     .nod.xml     network.xml  network/nodes.csv
-     .edg.xml     plans.xml    network/edges.csv
-     .rou.xml     config.xml   network/od_demand.csv
-     .tll.xml                  command_line_options.ini
+     .nod.xml     network.xml  node.csv
+     .edg.xml     plans.xml    link.csv
+     .rou.xml     config.xml   demand.csv
+     .tll.xml                  settings.csv + settings.yml
      .sumocfg
      .net.xml
      (netconvert)
@@ -143,7 +143,7 @@ Each adapter translates the canonical bundle into simulator-specific input forma
 
 **MATSim adapter** translates demand trips into activity-based plans (home → work) with `lastIteration=0` to ensure single-pass execution (fair comparison with SUMO's single-pass simulation).
 
-**LPSim adapter** translates the canonical bundle into LPSim's CSV-based input layout (`nodes.csv`, `edges.csv`, `od_demand.csv`) plus a `command_line_options.ini` matching the LivingCity binary's expected `[General]` section. LPSim runs natively or via Singularity (`singularity exec --nv lpsim.sif LivingCity`) on a CUDA GPU. The adapter does **not** fall back to a CPU path silently — when no GPU binary is staged it raises a clean failure with a build pointer (`sbatch cluster/jobs/build_lpsim.sbatch`).
+**DTALite adapter** translates the canonical bundle into the GMNS open standard (`node.csv`, `link.csv`, `demand.csv`) plus `settings.csv` (sections format read by the C++ binary) and `settings.yml` (YAML mirror read by the path4gmns Python wrapper). DTALite runs via the `path4gmns.DTALiteClassic` Python entry point, which dlopens the bundled platform-specific binary (`DTALiteMM_arm.dylib` / `_x86.dylib` / `.so` / `.dll`) and invokes mode 1 (path-based UE). When path4gmns is not installed the adapter raises a clean failure with the install command (`uv pip install path4gmns`). See [`doc/engines/`](engines/) for the full retrospective on LPSim (the GPU comparator that previously occupied this slot, abandoned in Version_5).
 
 ### 2.4 Execution Harness
 
@@ -187,7 +187,7 @@ runs:
     repeats: 3
     seed: 42
     timeout_s: 300
-  # ... four cells total: chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, LPSim meso}, N=5 each
+  # ... four cells total: chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}, N=5 each
 ```
 
 The harness expands each `runs[]` entry into `repeats` individual runs, monotonically incrementing seeds when `seed_increment` is enabled. After execution, `analyze_benchmark.py` and `generate_plots.py` consume the resulting `runs/<name>/benchmark_results_<name>.json`.
@@ -233,8 +233,8 @@ adapters/sumo/sumo_adapter.py
 adapters/matsim/matsim_adapter.py
     │ uses: xml.etree, csv
     │
-adapters/lpsim/lpsim_adapter.py
-    │ uses: csv, subprocess (LivingCity / singularity), re, statistics
+adapters/dtalite/dtalite_adapter.py
+    │ uses: csv, subprocess (path4gmns DTALiteClassic), re, statistics, yaml
     │
     ▼
 execution/runspec.py               (YAML/JSON loading, dataclasses)
@@ -336,7 +336,7 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
 | Direct N↔N      | N(N-1) = 6      | Quadratic   |
 | Canonical (hub) | N = 3           | Linear      |
 
-(SimForge ships 3 adapters in Version_4: SUMO, MATSim, LPSim.)
+(SimForge ships 3 adapters in Version_5: SUMO, MATSim, DTALite.)
 
 ### 5.2 Why BFS at Conversion Time?
 
@@ -412,24 +412,24 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 │  macOS / Apple Silicon / 16 GB                    │
 │  → 1K scenarios (< 60 s generation)               │
 │  → Full unit suite                                │
-│  → SUMO meso + micro, MATSim                      │
-│  → (LPSim cell records "no GPU" and skips)        │
+│  → SUMO meso + micro, MATSim, DTALite             │
+│  → Full 4-cell benchmark matrix runs locally      │
 └───────────────────┬──────────────────────────────┘
                     │ git push
                     ▼
 ┌─────────────────────────────────────────────────┐
 │  GitHub                                           │
-│  Branch: Version_4 (active), main                 │
+│  Branch: Version_5_dtalite (active), main         │
 └───────────────────┬──────────────────────────────┘
                     │ git clone
                     ▼
 ┌─────────────────────────────────────────────────┐
-│  HPC (OSC Pitzer Cluster)                         │
-│  48-core Intel Xeon / 192 GB / V100 GPU           │
+│  HPC (OSC Pitzer Cluster) — optional              │
+│  48-core Intel Xeon / 192 GB                      │
 │  → OSM PBFs + ModelGen files rsynced from dev box │
 │  → 50K – 500K scenarios (SLURM batch)             │
-│  → Full benchmark matrix                          │
-│  → LPSim GPU runs (real V100 kernels)             │
+│  → Full benchmark matrix at scale                 │
+│  → All three engines (SUMO, MATSim, DTALite) on cpu partition │
 └──────────────────────────────────────────────────┘
 ```
 

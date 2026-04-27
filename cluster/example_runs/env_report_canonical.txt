@@ -40,11 +40,11 @@ Executable: <repo>/.venv/bin/python              # differs by host (full path is
   osm pbfs:      3                               # MUST match (after `python tools/download_osm.py`)
   modelgen txts: 3                               # MUST match (after rsync from dev machine)
   scenarios:     5                               # depends on what's locally generated/synced
-  lpsim binary:  NOT BUILT (run `sbatch cluster/jobs/build_lpsim.sbatch` on Pitzer)
-                                                 # Mac: ALWAYS "NOT BUILT" — LPSim needs CUDA, Macs don't have it.
-                                                 # Pitzer: shows the path once build_lpsim.sbatch has run.
-  lpsim pin:     git@452067ee831e | yibo123/lpsim:cuda12.4
-                                                 # MUST match (sourced from lib/lpsim/manifest.json)
+  dtalite:       <venv>/site-packages/path4gmns/bin/DTALiteMM_arm.dylib
+                                                 # Mac arm64 path — Linux is /.../DTALiteMM.so, Windows is DTALiteMM.dll
+                                                 # NOT INSTALLED if path4gmns missing (run `uv pip install path4gmns`)
+  dtalite pin:   path4gmns==0.10.0 | upstream=https://github.com/jdlph/Path4GMNS
+                                                 # MUST match (sourced from lib/dtalite/manifest.json)
 ============================================================
 
 # ----------------------------------------------------------------------------
@@ -81,7 +81,6 @@ Executable: <pitzer-home>/SimForge/.venv/bin/python
   osm pbfs:      3
   modelgen txts: 3
   scenarios:     5
-  lpsim binary:  /users/PMIU0110/<u>/lpsim/LivingCity/LivingCity   # native build — OR
-  lpsim image:   /users/PMIU0110/<u>/lpsim/lpsim.sif (Singularity) # Singularity pull
-  lpsim pin:     git@452067ee831e | yibo123/lpsim:cuda12.4
+  dtalite:       <venv>/site-packages/path4gmns/bin/DTALiteMM.so   # Linux x86_64 binary
+  dtalite pin:   path4gmns==0.10.0 | upstream=https://github.com/jdlph/Path4GMNS
 ============================================================

@@ -251,66 +251,67 @@ For a tour of every figure produced by `generate_plots.py`, see [doc/RESULTS_GUI
 
 ---
 
-## GPU Acceleration — LPSim
+## Third Engine — DTALite (CPU mesoscopic DTA)
 
-LPSim is the 3rd primary engine ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU mesoscopic).
+DTALite is the third primary engine, replacing the GPU-based LPSim that
+was attempted-and-abandoned in Version_4 (see
+[`doc/engines/LPSIM_RETROSPECTIVE.md`](doc/engines/LPSIM_RETROSPECTIVE.md)
+and [`doc/engines/THIRD_ENGINE_OPTIONS.md`](doc/engines/THIRD_ENGINE_OPTIONS.md)
+for the full selection rationale).
 
-| Engine    | Hardware    | Use Case                          |
-| --------- | ----------- | --------------------------------- |
-| SUMO      | Any CPU     | Small/medium scenarios, debugging |
-| MATSim    | Any CPU     | Activity-based, multi-modal       |
-| LPSim     | NVIDIA CUDA | Large-scale mesoscopic on GPU     |
+| Engine    | Hardware    | Use Case                                |
+| --------- | ----------- | --------------------------------------- |
+| SUMO      | Any CPU     | Small/medium scenarios, debugging        |
+| MATSim    | Any CPU + Java | Activity-based, multi-modal           |
+| DTALite   | Any CPU     | Mesoscopic Dynamic Traffic Assignment (UE) |
 
-### Will LPSim run on my Mac?
+### Will DTALite run on my Mac?
 
-**No.** LPSim needs an NVIDIA GPU with CUDA, which Apple Silicon and modern Intel Macs don't have. What does work on a Mac:
+**Yes.** DTALite ships native arm64 and x86_64 binaries inside the
+[`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package. The
+full SimForge cross-engine matrix runs on Mac without Pitzer.
 
-- ✅ The LPSim adapter (`adapters/lpsim/`) and its 39 unit tests run fine — they exercise the input-preparation code, which is pure Python.
-- ✅ `prepare_lpsim_inputs()` writes the LPSim input bundle (`nodes.csv` / `edges.csv` / `od_demand.csv` / `command_line_options.ini`) on any platform.
-- ❌ `run_lpsim()` returns a clean failure with a build pointer — there is **no silent CPU fallback** (that was the QarSUMO trap we want to avoid).
+### Installing DTALite
 
-So on a dev Mac, `lpsim` cells in your runspecs record `failed: LPSim binary not found...` and the rest of the matrix (SUMO + MATSim) keeps running normally. The actual LPSim numbers come from Pitzer.
-
-### Installing LPSim (Pitzer)
-
-LPSim is **not** in `requirements.lock` because it's a C++ binary, not a Python package. It has its own pinned-version manifest at [`lib/lpsim/manifest.json`](lib/lpsim/manifest.json) (the same provenance pattern `osm_data/manifest.json` uses for state PBFs).
-
-One-time build on a Pitzer GPU node:
-
-```bash
-sbatch cluster/jobs/build_lpsim.sbatch
-```
-
-The sbatch tries Singularity first (pulls `yibo123/lpsim:cuda12.4` to `$HOME/lpsim/lpsim.sif`) and falls back to a source build (`git clone Xuan-1998/LPSim` at the SHA pinned in `lib/lpsim/manifest.json`, then `make` under `LivingCity/`). Either path is auto-discovered by the adapter at run time — no env var or config tweak needed.
-
-To check whether LPSim is staged on the current host:
+DTALite is bundled inside `path4gmns`, which is in `requirements.lock`.
+A one-line install gets it:
 
 ```bash
-python tools/env_report.py | grep -i lpsim
-# lpsim binary:  /Users/.../lpsim/LivingCity/LivingCity   (built)
-# lpsim pin:     git@452067ee831e | yibo123/lpsim:cuda12.4
+uv pip install -r requirements.lock
 ```
 
-To bump the pinned version (e.g. when LPSim ships a fix):
+On macOS the bundled binary needs the OpenMP runtime:
 
-1. Edit `lib/lpsim/manifest.json::lpsim.git_sha` (and `docker_tag` if needed) to the new commit/tag.
-2. Re-run `sbatch cluster/jobs/build_lpsim.sbatch` on Pitzer to rebuild.
-3. Commit the manifest change so every future build lands on the same binary.
+```bash
+brew install libomp
+```
 
-### LPSim install dependencies
+That's it — no compile step, no GPU drivers, no Singularity image.
 
-C++ build deps (already provided by the Singularity image; for a source build the sbatch loads them via Pitzer's lmod):
+### Verifying DTALite is staged
 
-| Library | Version | Pitzer module |
-|---|---|---|
-| CUDA | 11.2+ (LPSim Dockerfile) / 12.6.2 (Pitzer pin) | `module load cuda/12.6.2` |
-| GCC | 8+ / 13.2.0 (Pitzer pin) | `module load gcc/13.2.0` |
-| Qt5 | qt5-default + qtchooser | bundled in image |
-| Boost | 1.59+ | bundled in image |
-| OpenCV | 4.x | bundled in image |
-| Pandana | git@HEAD (UDST/pandana) | bundled in image |
+```bash
+python tools/env_report.py | grep -i dtalite
+# dtalite:       /path/to/.venv/lib/python3.13/site-packages/path4gmns/bin/DTALiteMM_arm.dylib
+# dtalite pin:   path4gmns==0.10.0 | upstream=https://github.com/jdlph/Path4GMNS
+```
 
-Full list and provenance in [`lib/lpsim/manifest.json`](lib/lpsim/manifest.json).
+### Bumping the pinned version
+
+1. Update `path4gmns==X.Y.Z` in `requirements.lock` and `requirements.txt`
+2. Update `lib/dtalite/manifest.json::dtalite.path4gmns_version`
+3. Re-run `uv pip sync requirements.lock`
+4. Commit all three changes so future installs land on the same binary
+
+### DTALite implementation choice
+
+The adapter calls `path4gmns.DTALiteClassic` (the stable C++ binary in
+path4gmns), not the newer `DTALiteMultimodal` wrapper. The multimodal
+binary in path4gmns 0.10.0 has a regression demanding a `mode_type.csv`
+schema upstream has not published — even path4gmns's own bundled
+samples fail with `[ERROR] File mode_type does not have information`
+when invoked fresh. See `adapters/dtalite/MAPPING.md` for the full
+implementation note.
 
 ---
 
@@ -370,7 +371,7 @@ SimForge/
 ├── adapters/               # Simulator-specific converters
 │   ├── sumo/               #   SUMO adapter (micro + meso)
 │   ├── matsim/             #   MATSim adapter
-│   └── lpsim/              #   LPSim adapter (GPU mesoscopic)
+│   └── dtalite/            #   DTALite adapter (CPU mesoscopic DTA, path4gmns)
 ├── canonical/              # Schema documentation (v0)
 ├── doc/                    # Architecture, reproduction, thesis chapters
 ├── evaluation/             # Metrics, analysis, plots

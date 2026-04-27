@@ -6,7 +6,113 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 Commit hashes refer to the `Version_2` branch.
 
-## [Unreleased] — Version_4
+## [Unreleased] — Version_5
+
+### Engine swap: LPSim removed, DTALite added
+
+After exhaustive Pitzer debugging (~12 commits across two debugging sessions in
+Version_4), LPSim was abandoned. The bundled `LivingCity` binary had a GPU
+kernel OOB at `b18CUDA_trafficSimulator.cu:1682` on networks larger than a few
+thousand nodes; an in-container source rebuild against the container's CUDA
+12.4 (with sm_70 arch + Boost 1.59 sed-patches for modern g++) succeeded but
+the rebuilt binary still SIGSEGV'd at "Starting simulation..." on the
+chicago_1k_car scenario. The full integration narrative is in
+[`doc/engines/LPSIM_RETROSPECTIVE.md`](doc/engines/LPSIM_RETROSPECTIVE.md).
+The third-engine selection rationale is in
+[`doc/engines/THIRD_ENGINE_OPTIONS.md`](doc/engines/THIRD_ENGINE_OPTIONS.md);
+DTALite was chosen on three grounds: (1) it actually works (smoke-tested
+locally during the selection research), (2) it's CPU-only so the full matrix
+runs on Mac as well as Linux, (3) it adds a paradigm-distinct comparator
+(mesoscopic Dynamic Traffic Assignment with user equilibrium) — vs LPSim
+which would have been "another mesoscopic queue-based engine" overlapping with
+MATSim. The cross-engine paradigm-spread argument now reads SUMO microscopic +
+MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
+
+### Removed (Phase 1)
+
+- `adapters/lpsim/` package + cli + MAPPING.md
+- `tests/test_lpsim_adapter.py` (39 tests)
+- `lib/lpsim/manifest.json`
+- `cluster/jobs/{build,smoke,diag}_lpsim.sbatch`
+- All `lpsim` runspec entries across `stress_test.yaml`,
+  `benchmark_small.yaml`, `benchmark_large.yaml`
+- `lpsim` membership in `execution/runspec.py::KNOWN_ENGINES`,
+  `execution/run_benchmark.py::supported_engines`, `run.py::ALL_ENGINES`,
+  and the `evaluation/{generate_plots,analyze_benchmark,compare_modes}.py`
+  engine-tuple registries
+- LPSim manifest detection in `tools/env_report.py`
+- LPSim references in `help.py`, `tests/test_engine_smoke.py`, and
+  `tests/conftest.py`
+- LPSim sections in `README.md`, `SETUP.md`, `TESTING.md`, `CONTRIBUTING.md`,
+  `doc/PITZER.md`, `doc/REPRODUCING.md`, `doc/ARCHITECTURE.md`,
+  `doc/RESULTS_GUIDE.md`, `doc/chapters/{methods,results,experiments}.md`
+- `cluster/jobs/benchmark_{small,large}.sbatch`: switched off
+  `--partition=gpu` (no engine needs CUDA), dropped `cuda/11.8.0` module
+  load and the LPSim binary-presence preflight
+
+### Added (Phase 2)
+
+- **`adapters/dtalite/` package** mirroring the SUMO/MATSim structure:
+  - `dtalite_adapter.py`: canonical → GMNS conversion (`prepare_dtalite_inputs`),
+    UE assignment via `path4gmns.DTALiteClassic` mode 1
+    (`run_dtalite`), `agent.csv` parsing with volume expansion + minute→second
+    conversion (`parse_dtalite_output`). Includes binary discovery
+    (`is_dtalite_available`, `find_dtalite_binary`) and the
+    `collect_demand_node_ids` helper that powers the demand-driven zoning
+    optimisation (zones only the ~1,800 demand-carrying nodes out of 20,058
+    on chicago_1k_car, dropping runtime from "5 minutes" to "5 seconds")
+  - `__init__.py` exports the public API
+  - `cli.py` standalone CLI mirroring `adapters/matsim/cli.py`
+  - `MAPPING.md` documents the canonical → GMNS schema mapping with
+    line-level cross-references, unit conversions (m→km, m/s→km/h,
+    min→s), the DTALiteClassic-vs-Multimodal choice, the macOS
+    multiprocessing wrapper bug workaround, and known limitations
+- **`lib/dtalite/manifest.json`** pins `path4gmns==0.10.0` + upstream URLs.
+  `.gitignore` updated to re-include the manifest under the otherwise-ignored
+  `lib/*` (replaces the LPSim re-include rule that became dead in Phase 1)
+- **`tests/test_dtalite_adapter.py`** — 46 unit tests covering all writers,
+  schema fidelity (LF endings, GMNS column names), unit conversions, demand
+  aggregation by OD pair, intra-zonal trip filtering, sub-meter edge filtering,
+  demand-driven zoning, determinism (byte-identical re-runs), output parsing,
+  binary discovery, and an end-to-end smoke test gated on path4gmns
+  availability that actually runs DTALite
+- **DTALite branches** in `execution/runspec.py`, `execution/run_benchmark.py`,
+  `run.py`, `evaluation/{generate_plots,analyze_benchmark,compare_modes}.py`,
+  `tools/env_report.py`, `help.py`, `tests/test_engine_smoke.py`
+- **`runspecs/{stress_test,benchmark_small,benchmark_large}.yaml`** — DTALite
+  cells replace the LPSim cells (same scenarios, same N=5 repeats)
+- **`requirements.txt` + `requirements.lock`** — `path4gmns>=0.10.0,<1` added
+  with a comment noting the macOS `brew install libomp` system dep
+
+### Documented
+
+- `doc/engines/LPSIM_RETROSPECTIVE.md` — full narrative of LPSim integration,
+  the five failure classes (4 resolved, GPU kernel SIGSEGV unresolved), and
+  why the abandonment frames as evidence FOR SimForge's adapter pattern
+- `doc/engines/QARSUMO_RETROSPECTIVE.md` — Version_4 Phase A drop story for
+  the QarSUMO 5th-engine slot
+- `doc/engines/THIRD_ENGINE_OPTIONS.md` — deep research verdicts on DTALite,
+  CityFlow, and POLARIS as third-engine candidates, with DTALite recommended
+- `doc/engines/ENGINE_COMPARISON.md` — thesis-writing reference consolidating
+  paradigm taxonomy, wallclock estimates, R-score expectations, output
+  fidelity comparison, and a thesis-defense quote bank
+
+### Verified
+
+- End-to-end smoke on Mac arm64 (Darwin 25.4): chicago_1k_car
+  (20,058 nodes / 58,505 links / 1,000 trips) prepared + run + parsed
+  in **8.4 s** total via `python run.py --scenario chicago_1k_car
+  --engine dtalite --mode meso`. Mean travel time 174 s (2.9 min),
+  P95 291 s, mean distance 2.89 km — values consistent with morning-peak
+  Chicago profile.
+- Full pytest suite: **429 passed, 1 failed (pre-existing arm64 netconvert
+  issue, not introduced by Version_5), 9 skipped** in 226 s.
+- `python tools/env_report.py | grep dtalite` surfaces the bundled binary
+  path and the path4gmns version pin.
+
+---
+
+## [Unreleased] — Version_4 (superseded by Version_5)
 
 ### Fixed (Phase B Pitzer landing patch)
 

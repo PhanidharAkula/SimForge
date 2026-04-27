@@ -16,7 +16,7 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 - 16+ GB RAM
 - 50+ GB disk space
-- NVIDIA GPU with CUDA 11+ (required for LPSim — SUMO + MATSim are CPU-only)
+- (No GPU required — all three primary engines (SUMO, MATSim, DTALite) are CPU-only after the LPSim removal in Version_5)
 
 ### Software Requirements
 
@@ -126,37 +126,40 @@ java -version                                 # openjdk 17.x or newer
 ls lib/matsim-15.0/matsim-15.0.jar            # should exist
 ```
 
-### LPSim (GPU only)
+### DTALite (CPU)
 
-LPSim is the 3rd primary engine: GPU-accelerated mesoscopic, MIT licensed (<https://github.com/Xuan-1998/LPSim>).
+DTALite is the 3rd primary engine in Version_5: CPU mesoscopic Dynamic Traffic Assignment, Apache 2.0 licensed, bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS).
 
-**Pinned for reproducibility** in [`lib/lpsim/manifest.json`](../lib/lpsim/manifest.json):
+**Pinned for reproducibility** in [`lib/dtalite/manifest.json`](../lib/dtalite/manifest.json):
 
 ```json
-{"lpsim": {
-  "git_repo":     "https://github.com/Xuan-1998/LPSim.git",
-  "git_sha":      "452067ee831e6ecb4c906bae96fb77fdf71fa92e",
-  "git_sha_date": "2024-11-27T16:52:04Z",
-  "docker_image": "yibo123/lpsim",
-  "docker_tag":   "cuda12.4"
+{"dtalite": {
+  "path4gmns_version": "0.10.0",
+  "upstream_repo":    "https://github.com/jdlph/Path4GMNS",
+  "dtalite_repo":     "https://github.com/asu-trans-ai-lab/DTALite",
+  "binary":           "DTALiteClassic (mode 1: path-based UE)",
+  "format_standard":  "GMNS",
+  "license":          "Apache-2.0"
 }}
 ```
 
-One-time build on a Pitzer GPU node:
+Install:
 
 ```bash
-sbatch cluster/jobs/build_lpsim.sbatch
+uv pip install path4gmns
+# On macOS the bundled binary needs the OpenMP runtime:
+brew install libomp
 ```
 
-The job reads the pinned SHA + Docker tag from the manifest, prefers `singularity pull docker://yibo123/lpsim:cuda12.4` to `$HOME/lpsim/lpsim.sif`, and falls back to `git clone Xuan-1998/LPSim && git checkout <sha> && make` with the binary symlinked to `$HOME/lpsim/LivingCity/LivingCity`. The adapter at `adapters/lpsim/` auto-finds either at run time. With no GPU available, every `lpsim` cell records a clean failure — there is no silent CPU fallback.
+The pinned version also lives in `requirements.lock` so a fresh `uv pip sync requirements.lock` brings it in. The adapter at `adapters/dtalite/` auto-detects the bundled binary via `is_dtalite_available()`. With path4gmns not installed, every `dtalite` cell records a clean failure with the install command — there is no silent fallback.
 
-LPSim is **not** in `requirements.lock` because it's a C++ binary, not a Python package. The manifest is the equivalent reproducibility artifact and is committed to git like the OSM PBF manifest.
+> Versions 1–4 reserved this slot for LPSim (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was abandoned in Version_5 — the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
 
 ---
 
 ## Running the Canonical Stress Test
 
-The thesis figures are produced by `runspecs/stress_test.yaml` — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, LPSim meso}` with **N=5 repeats per cell**.
+The thesis figures are produced by `runspecs/stress_test.yaml` — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` with **N=5 repeats per cell**.
 
 ```bash
 # 1. Sanity check (one run, ~30 s)
@@ -204,7 +207,7 @@ cd ~/SimForge && source .venv/bin/activate
 sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 ```
 
-> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix and (once Phase B lands) LPSim GPU runs** — see [doc/PITZER.md §1](PITZER.md). The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
+> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix at scale** — see [doc/PITZER.md §1](PITZER.md). The full Version_5 matrix is CPU-only; the GPU partition is no longer required since LPSim was removed. The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
 
 ### Cross-Platform Reproducibility (Verified)
 

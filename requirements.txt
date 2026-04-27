@@ -27,6 +27,11 @@ seaborn>=0.12
 # Testing
 pytest
 
+# DTALite engine (CPU mesoscopic Dynamic Traffic Assignment).
+# Bundled binary ships inside the path4gmns package — no separate install.
+# On macOS the bundled binary needs the OpenMP runtime: `brew install libomp`.
+path4gmns>=0.10.0,<1
+
 # ==============================================
 # EXTERNAL DEPENDENCIES (NOT PIP PACKAGES)
 # ==============================================
@@ -43,8 +48,6 @@ pytest
 #   - Install to: lib/matsim-15.0/matsim-15.0.jar
 #   - Requires: Java 17+ (brew install openjdk@17)
 #
-# QarSUMO (GPU-accelerated SUMO)
-#   - Requires NVIDIA CUDA GPU
-#   - Build from source with CUDA support
-#   - Falls back to SUMO on CPU-only systems
+# DTALite system dep on macOS only:
+#   brew install libomp     # OpenMP runtime for the bundled .dylib
 # ==============================================

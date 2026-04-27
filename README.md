@@ -23,7 +23,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | Scenario Validator           | ✅ Complete                         |
 | SUMO Adapter                 | ✅ Complete (microscopic + meso)    |
 | MATSim Adapter               | ✅ Complete (single-iteration meso) |
-| LPSim Adapter (3rd primary)  | ✅ Complete (GPU mesoscopic, needs CUDA) |
+| DTALite Adapter (3rd primary) | ✅ Complete (CPU mesoscopic DTA, runs on Mac/Linux) |
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (9 thesis figures)      |
@@ -92,7 +92,7 @@ python run.py --list
 python -m execution.run_benchmark runspecs/stress_test.yaml
 ```
 
-`stress_test.yaml` declares the canonical 4-cell matrix (`chicago_1k_car` × {SUMO meso, SUMO micro, MATSim meso, LPSim meso}) at N=5 repeats per cell. The LPSim cell only completes when the LPSim binary or Singularity image is staged; on a dev laptop it records a clean failure. After it finishes:
+`stress_test.yaml` declares the canonical 4-cell matrix (`chicago_1k_car` × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}) at N=5 repeats per cell. All three engines are CPU-only and run on Mac and Linux without special hardware. After it finishes:
 
 ```bash
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
@@ -120,7 +120,7 @@ SimForge/
 ├── adapters/               # Simulator-specific converters
 │   ├── sumo/               # SUMO adapter (micro + meso)
 │   ├── matsim/             # Activity-based simulator
-│   └── lpsim/              # GPU-accelerated mesoscopic (needs CUDA)
+│   └── dtalite/            # CPU mesoscopic Dynamic Traffic Assignment (path4gmns)
 ├── canonical/schema/       # Schema documentation (v0)
 ├── doc/                    # Architecture, reproduction, Pitzer, thesis chapters
 ├── evaluation/             # Metrics, analysis, plot generation
@@ -168,11 +168,11 @@ SimForge/
 | ------- | --------- | ---------------------------------- | ---------------------- |
 | SUMO    | eclipse-sumo 1.26+| Microscopic / Mesoscopic   | net.xml, rou.xml       |
 | MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml |
-| LPSim   | Xuan-1998/LPSim (CUDA) | GPU-accelerated mesoscopic | nodes.csv + edges.csv + od_demand.csv + INI |
+| DTALite | path4gmns 0.10+ (DTALiteClassic)| CPU mesoscopic Dynamic Traffic Assignment (UE) | node.csv + link.csv + demand.csv + settings.{csv,yml} |
 
-POLARIS and QarSUMO are documented backups (deferred / unavailable). See [todo.md](todo.md).
+LPSim, POLARIS, and QarSUMO were evaluated and rejected — see the retrospectives in [`doc/engines/`](doc/engines/).
 
-> **LPSim ≠ a Python package.** It's a CUDA C++ binary, so it isn't in `requirements.lock`. The pinned version (`git_sha`, `docker_image`, `docker_tag`) lives in [`lib/lpsim/manifest.json`](lib/lpsim/manifest.json) — same provenance pattern `osm_data/manifest.json` uses for state PBFs. Build via `sbatch cluster/jobs/build_lpsim.sbatch` on a Pitzer GPU node. On a Mac (no NVIDIA GPU) the LPSim adapter records a clean failure with a build pointer; the rest of the matrix (SUMO + MATSim) runs normally.
+> **DTALite ships inside `path4gmns`.** Pip-installable, CPU-only, runs on Mac (arm64/x86_64), Linux x86_64, and Windows. The pinned version is in [`lib/dtalite/manifest.json`](lib/dtalite/manifest.json). On macOS the bundled binary needs OpenMP: `brew install libomp`.
 
 ---
 
@@ -207,7 +207,7 @@ Data Sources → Generation Pipeline → Canonical Bundle → Adapter Layer → 
 | ------------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------- |
 | Generation Pipeline | `pipeline/network/`, `pipeline/demand/`, `pipeline/signals/` | OSM + Census → validated canonical bundles                                      |
 | Canonical Schema    | `canonical/schema/`                                          | 5-file intermediate representation (network, demand, signals, config, manifest) |
-| Adapter Layer       | `adapters/sumo/`, `adapters/matsim/`, `adapters/lpsim/`      | Canonical → simulator-specific format                                           |
+| Adapter Layer       | `adapters/sumo/`, `adapters/matsim/`, `adapters/dtalite/`    | Canonical → simulator-specific format                                           |
 | Execution Harness   | `execution/`                                                 | RunSpec-driven benchmark orchestration                                          |
 | Evaluation Metrics  | `evaluation/metrics/`                                        | Fidelity (RMSE, GEH, KS), Scalability, Reproducibility                          |
 

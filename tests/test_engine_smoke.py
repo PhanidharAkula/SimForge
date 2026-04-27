@@ -1,5 +1,5 @@
 """
-Real-binary smoke tests for the SUMO, MATSim, and LPSim engines.
+Real-binary smoke tests for the SUMO, MATSim, and DTALite engines.
 
 Every other test file exercises *adapter* code (input preparation, XML
 structure, determinism).  This file goes one step further: it actually
@@ -8,7 +8,7 @@ engine produced a non-empty results artefact.
 
 The tests skip gracefully when the binary is missing so `pytest -m "not
 slow"` stays green on developer machines without SUMO / Java / the MATSim
-JAR / a CUDA GPU + LPSim binary installed.
+JAR / path4gmns installed.
 
 These catch the class of regression where the adapter writes files the
 engine refuses to parse (e.g. an attribute added/removed in a breaking
@@ -24,12 +24,11 @@ from pathlib import Path
 
 import pytest
 
-from adapters.lpsim.lpsim_adapter import (
-    find_lpsim_binary,
-    find_lpsim_singularity_image,
-    parse_lpsim_output,
-    prepare_lpsim_inputs,
-    run_lpsim,
+from adapters.dtalite.dtalite_adapter import (
+    is_dtalite_available,
+    parse_dtalite_output,
+    prepare_dtalite_inputs,
+    run_dtalite,
 )
 from adapters.matsim.matsim_adapter import (
     check_java_available,
@@ -62,9 +61,10 @@ def _have_java_and_matsim() -> bool:
     return ok and find_matsim_jar() is not None
 
 
-def _have_lpsim() -> bool:
-    """LPSim is runnable iff a native binary or Singularity image is staged."""
-    return find_lpsim_binary() is not None or find_lpsim_singularity_image() is not None
+def _have_dtalite() -> bool:
+    """DTALite is runnable iff path4gmns is installed and its bundled
+    binary exists on disk for the current platform."""
+    return is_dtalite_available()
 
 
 pytestmark = pytest.mark.integration
@@ -156,43 +156,42 @@ def test_matsim_real_jar_produces_output_trips(bundled_scenario: Path, tmp_path:
 
 
 # ---------------------------------------------------------------------------
-# LPSim
+# DTALite
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.slow
-@pytest.mark.requires_gpu
-def test_lpsim_real_binary_produces_people_csv(bundled_scenario: Path, tmp_path: Path) -> None:
-    """`LivingCity` (native or Singularity) writes <NUM_PASSES>_people*.csv with ≥1 row.
+def test_dtalite_real_binary_produces_agent_csv(bundled_scenario: Path, tmp_path: Path) -> None:
+    """DTALite (via path4gmns) writes link_performance.csv + agent.csv with ≥1 row.
 
-    This is the LPSim equivalent of the SUMO/MATSim smoke tests above — proves
-    the adapter's input layout is what LPSim's B18 loader actually accepts and
+    This is the DTALite equivalent of the SUMO/MATSim smoke tests above — proves
+    the adapter's GMNS layout is what DTALite's UE loader actually accepts and
     that the binary produces the output schema we parse downstream.
 
-    Skips on macOS / any host without a CUDA GPU + LPSim binary, so
-    `pytest -m "not slow"` stays green for developers. On Pitzer (after
-    `sbatch cluster/jobs/build_lpsim.sbatch`) the test runs end-to-end.
+    Skips on hosts without path4gmns installed; otherwise runs the full
+    UE assignment (~5–10 s on the chicago_1k_car bundled scenario).
     """
-    if not _have_lpsim():
+    if not _have_dtalite():
         pytest.skip(
-            "LPSim binary / Singularity image not staged "
-            "(run `sbatch cluster/jobs/build_lpsim.sbatch` on Pitzer)"
+            "DTALite not available (uv pip install path4gmns; on Mac also brew install libomp)"
         )
 
-    out = tmp_path / "lpsim_run"
-    prepare_lpsim_inputs(bundled_scenario, out)
+    out = tmp_path / "dtalite_run"
+    prepare_dtalite_inputs(bundled_scenario, out)
 
-    success, runtime, error = run_lpsim(out, timeout_s=600)
-    assert success, f"LPSim failed after {runtime:.1f}s: {error}"
+    success, runtime, error = run_dtalite(
+        out, timeout_s=600, iterations=2, column_updating_iterations=2
+    )
+    assert success, f"DTALite failed after {runtime:.1f}s: {error}"
 
-    stats = parse_lpsim_output(out)
-    assert stats is not None, "LPSim ran but emitted no <NUM_PASSES>_people*.csv"
-    assert stats.trip_count > 0, "people CSV is empty — adapter or binary broke"
-    # We don't enforce a completion-rate floor here (LPSim's GPU code is less
-    # strict than SUMO about insertion failures); the assertion that any
-    # trips at all completed is the smoke-test guarantee.
+    # link_performance.csv is the success signal; agent.csv is the
+    # downstream-parseable artefact for travel-time stats.
+    assert (out / "link_performance.csv").is_file()
+    stats = parse_dtalite_output(out)
+    assert stats is not None, "DTALite ran but emitted no agent.csv"
+    assert stats.trip_count > 0, "agent.csv is empty — adapter or binary broke"
     assert stats.completed_count > 0, (
-        f"LPSim produced output but 0/{stats.trip_count} trips completed — "
+        f"DTALite produced output but 0/{stats.trip_count} trips completed — "
         f"likely an input mapping bug"
     )
 
@@ -207,9 +206,9 @@ def test_engine_availability_report() -> None:
     """Log which engines are available — helps debug skipped tests in CI."""
     sumo_present = _have_sumo()
     matsim_present = _have_java_and_matsim()
-    lpsim_present = _have_lpsim()
+    dtalite_present = _have_dtalite()
     # No assertion — this is a diagnostic.  We just want the test header to
     # show the binary availability for the running host.
-    print(f"\n  SUMO:   {'available' if sumo_present else 'not installed'}")
-    print(f"  MATSim: {'available' if matsim_present else 'not installed'}")
-    print(f"  LPSim:  {'available' if lpsim_present else 'not installed (needs CUDA + LivingCity)'}")
+    print(f"\n  SUMO:    {'available' if sumo_present else 'not installed'}")
+    print(f"  MATSim:  {'available' if matsim_present else 'not installed'}")
+    print(f"  DTALite: {'available' if dtalite_present else 'not installed (uv pip install path4gmns)'}")
