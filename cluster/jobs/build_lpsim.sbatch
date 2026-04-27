@@ -304,11 +304,23 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
     #             needed by 'obj/b18CUDA_trafficSimulator_cuda.o'.  Stop.
     # 3. Fix typo `cuda.dependcy_type` → `cuda.dependency_type` (line 210
     #    in upstream); harmless on its own but pairs with #2.
-    # All three diagnosed Pitzer 2026-04-27.
-    echo "--- Patching LivingCity.pro ---"
+    # 4. Bump CUDA_ARCH from sm_50 (Maxwell, the upstream default) to the
+    #    target Pitzer GPU's compute capability. Pitzer's gpu/gpudebug
+    #    partitions are V100 (sm_70). A binary built for sm_50 has only
+    #    Maxwell SASS; CUDA 12.4 dropped the PTX-JIT fallback for
+    #    pre-Maxwell, but more importantly the binary often SIGSEGVs at
+    #    first kernel launch on the wrong arch. Override:
+    #      sbatch --export=ALL,LPSIM_FORCE_SOURCE=1,LPSIM_CUDA_ARCH=sm_80 ...
+    #    for an A100 node. Diagnosed Pitzer 2026-04-27 (rebuilt binary
+    #    SIGSEGV at "Starting simulation ..." on V100 with sm_50 build).
+    # All four diagnosed Pitzer 2026-04-27.
+    LPSIM_CUDA_ARCH="${LPSIM_CUDA_ARCH:-sm_70}"
+    echo "--- Patching LivingCity.pro (CUDA arch: $LPSIM_CUDA_ARCH) ---"
     if [ -f "$SRC_DIR/LivingCity/LivingCity.pro" ]; then
         echo "  (original CUDA references):"
         grep -n 'cuda-' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
+        echo "  (original CUDA_ARCH lines):"
+        grep -n 'CUDA_ARCH' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
         sed -i \
             -e 's|/usr/local/cuda-11.2|/usr/local/cuda-12.4|g' \
             -e 's|/usr/local/cuda-10.1|/usr/local/cuda-12.4|g' \
@@ -318,11 +330,14 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
             -e 's|cuda-9.0|cuda-12.4|g' \
             -e 's|^\s*cuda\.dependcy_type|  cuda.dependency_type|' \
             -e '/^\s*cuda\.depend_command/d' \
+            -e "s|CUDA_ARCH\s*=\s*sm_[0-9]\+|CUDA_ARCH = $LPSIM_CUDA_ARCH|g" \
             "$SRC_DIR/LivingCity/LivingCity.pro"
         echo "  (after patch — CUDA refs):"
         grep -n 'cuda-' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
         echo "  (after patch — cuda.* directives):"
         grep -n '^\s*cuda\.' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
+        echo "  (after patch — CUDA_ARCH lines):"
+        grep -n 'CUDA_ARCH' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
     fi
 
     # Run qmake + make INSIDE the container, with the host source dir
