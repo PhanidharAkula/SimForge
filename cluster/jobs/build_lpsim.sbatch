@@ -251,14 +251,21 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
         echo "--- Boost 1.59 already extracted at $BOOST_HOST_DIR — reusing ---"
     fi
 
-    # Patch LivingCity.pro to use the container's CUDA 12.4 instead of
-    # hard-coded 11.2 / 10.1 / 9.0 paths. Without this, qmake falls
-    # through to the 9.0 default and make then dies on
-    # `/usr/local/cuda-9.0/bin/nvcc: No such file or directory`.
-    # Diagnosed Pitzer 2026-04-27.
-    echo "--- Patching LivingCity.pro to point at CUDA 12.4 ---"
+    # Patch LivingCity.pro:
+    # 1. Replace hard-coded CUDA 11.2 / 10.1 / 9.0 paths with cuda-12.4
+    #    (the version inside the container). Without this, qmake falls
+    #    through to the 9.0 default and make dies with nvcc-not-found.
+    # 2. Remove `cuda.depend_command = nvcc -O3 -M ...` — qmake mis-parses
+    #    nvcc's -M output into a broken Makefile rule with a phantom
+    #    `b18CUDA_trafficSimulator.o` dependency that has no recipe.
+    #    Result without this fix:
+    #      make: *** No rule to make target 'b18CUDA_trafficSimulator.o',
+    #             needed by 'obj/b18CUDA_trafficSimulator_cuda.o'.  Stop.
+    # 3. Fix typo `cuda.dependcy_type` → `cuda.dependency_type` (line 210
+    #    in upstream); harmless on its own but pairs with #2.
+    # All three diagnosed Pitzer 2026-04-27.
+    echo "--- Patching LivingCity.pro ---"
     if [ -f "$SRC_DIR/LivingCity/LivingCity.pro" ]; then
-        # Show the original CUDA references for the audit trail, then patch.
         echo "  (original CUDA references):"
         grep -n 'cuda-' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
         sed -i \
@@ -268,9 +275,13 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
             -e 's|cuda-11.2|cuda-12.4|g' \
             -e 's|cuda-10.1|cuda-12.4|g' \
             -e 's|cuda-9.0|cuda-12.4|g' \
+            -e 's|^\s*cuda\.dependcy_type|  cuda.dependency_type|' \
+            -e '/^\s*cuda\.depend_command/d' \
             "$SRC_DIR/LivingCity/LivingCity.pro"
-        echo "  (after patch):"
+        echo "  (after patch — CUDA refs):"
         grep -n 'cuda-' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
+        echo "  (after patch — cuda.* directives):"
+        grep -n '^\s*cuda\.' "$SRC_DIR/LivingCity/LivingCity.pro" || echo "    (none)"
     fi
 
     # Run qmake + make INSIDE the container, with the host source dir
