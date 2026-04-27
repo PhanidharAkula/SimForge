@@ -172,6 +172,8 @@ SimForge/
 
 POLARIS and QarSUMO are documented backups (deferred / unavailable). See [todo.md](todo.md).
 
+> **LPSim ≠ a Python package.** It's a CUDA C++ binary, so it isn't in `requirements.lock`. The pinned version (`git_sha`, `docker_image`, `docker_tag`) lives in [`lib/lpsim/manifest.json`](lib/lpsim/manifest.json) — same provenance pattern `osm_data/manifest.json` uses for state PBFs. Build via `sbatch cluster/jobs/build_lpsim.sbatch` on a Pitzer GPU node. On a Mac (no NVIDIA GPU) the LPSim adapter records a clean failure with a build pointer; the rest of the matrix (SUMO + MATSim) runs normally.
+
 ---
 
 ## 📈 Metrics

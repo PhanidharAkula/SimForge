@@ -1,0 +1,34 @@
+{
+  "_comment": [
+    "Pinned LPSim provenance — one source of truth for the GPU 3rd engine.",
+    "Mirrors the role osm_data/manifest.json plays for state PBFs.",
+    "",
+    "When the upstream repo or Docker image is updated and SimForge wants to",
+    "track that change, bump the values below and re-run:",
+    "  sbatch cluster/jobs/build_lpsim.sbatch",
+    "The sbatch reads LPSIM_GIT_SHA / LPSIM_DOCKER_REF from this file via the",
+    "`jq` helper — see the sbatch header for the exact lookup."
+  ],
+  "lpsim": {
+    "git_repo": "https://github.com/Xuan-1998/LPSim.git",
+    "git_sha": "452067ee831e6ecb4c906bae96fb77fdf71fa92e",
+    "git_sha_date": "2024-11-27T16:52:04Z",
+    "docker_image": "yibo123/lpsim",
+    "docker_tag": "cuda12.4",
+    "docker_digest": null,
+    "verified_at": "2026-04-26",
+    "verified_by": "build_lpsim.sbatch did not run on Pitzer yet — digest will be filled in once the first build succeeds. Until then the docker_tag is the pinning unit; flag any cache-bust as a reproducibility issue."
+  },
+  "build_dependencies": {
+    "_comment": "C++ system dependencies LPSim's Dockerfile + LivingCity Makefile need. On Pitzer these are loaded via lmod modules (see build_lpsim.sbatch); on a custom build the operator must provide them.",
+    "cuda": "11.2+ (Pitzer uses 12.6.2)",
+    "gcc": "8+ (Pitzer uses 13.2.0)",
+    "qt5": "qt5-default + qtchooser",
+    "boost": "1.59+",
+    "opencv": "4.x",
+    "pandana": "git@HEAD (built from UDST/pandana, no version pin upstream)",
+    "glew": "libglew-dev",
+    "fontconfig": "libfontconfig1",
+    "mesa": "mesa-common-dev"
+  }
+}

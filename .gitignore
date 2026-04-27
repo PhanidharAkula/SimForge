@@ -71,8 +71,14 @@ cache/
 # (download with: python tools/download_osm.py)
 osm_data/*.osm.pbf
 
-# External libraries / downloaded JARs (see SETUP.md for install)
-lib/
+# External libraries / downloaded JARs (see SETUP.md for install).
+# Use `lib/*` (not `lib/`) so we can re-include lib/lpsim/manifest.json — git
+# doesn't allow re-including paths under a fully-excluded parent directory.
+lib/*
+# LPSim version pin needs to be tracked — same role osm_data/manifest.json plays for PBFs.
+!lib/lpsim/
+lib/lpsim/*
+!lib/lpsim/manifest.json
 
 # Benchmark output runs (generated data)
 runs/

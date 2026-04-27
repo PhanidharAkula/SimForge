@@ -86,7 +86,7 @@ def bundled_scenario() -> Path:
 
     Replaces the per-file `_CANDIDATES` lookup that was duplicated across
     test_adapter_determinism, test_sumo_adapter, test_matsim_adapter,
-    test_validator, and test_pipeline_e2e.
+    test_lpsim_adapter, test_validator, and test_pipeline_e2e.
     """
     s = _discover_default_scenario()
     if s is None:

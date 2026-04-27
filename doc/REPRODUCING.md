@@ -128,13 +128,29 @@ ls lib/matsim-15.0/matsim-15.0.jar            # should exist
 
 ### LPSim (GPU only)
 
-LPSim is the 3rd primary engine: GPU-accelerated mesoscopic, MIT licensed (<https://github.com/Xuan-1998/LPSim>). One-time build on a Pitzer GPU node:
+LPSim is the 3rd primary engine: GPU-accelerated mesoscopic, MIT licensed (<https://github.com/Xuan-1998/LPSim>).
+
+**Pinned for reproducibility** in [`lib/lpsim/manifest.json`](../lib/lpsim/manifest.json):
+
+```json
+{"lpsim": {
+  "git_repo":     "https://github.com/Xuan-1998/LPSim.git",
+  "git_sha":      "452067ee831e6ecb4c906bae96fb77fdf71fa92e",
+  "git_sha_date": "2024-11-27T16:52:04Z",
+  "docker_image": "yibo123/lpsim",
+  "docker_tag":   "cuda12.4"
+}}
+```
+
+One-time build on a Pitzer GPU node:
 
 ```bash
 sbatch cluster/jobs/build_lpsim.sbatch
 ```
 
-The job pulls `yibo123/lpsim:cuda12.4` as a Singularity image to `$HOME/lpsim/lpsim.sif` (preferred), or clones+builds LPSim from source and symlinks the binary to `$HOME/lpsim/LivingCity/LivingCity`. The adapter at `adapters/lpsim/` auto-finds either at run time. With no GPU available, every `lpsim` cell records a clean failure — there is no silent CPU fallback.
+The job reads the pinned SHA + Docker tag from the manifest, prefers `singularity pull docker://yibo123/lpsim:cuda12.4` to `$HOME/lpsim/lpsim.sif`, and falls back to `git clone Xuan-1998/LPSim && git checkout <sha> && make` with the binary symlinked to `$HOME/lpsim/LivingCity/LivingCity`. The adapter at `adapters/lpsim/` auto-finds either at run time. With no GPU available, every `lpsim` cell records a clean failure — there is no silent CPU fallback.
+
+LPSim is **not** in `requirements.lock` because it's a C++ binary, not a Python package. The manifest is the equivalent reproducibility artifact and is committed to git like the OSM PBF manifest.
 
 ---
 

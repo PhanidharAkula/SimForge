@@ -383,22 +383,37 @@ python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress
 ### LPSim on GPU
 
 LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT) is the GPU
-mesoscopic comparator. One-time build:
+mesoscopic comparator. **Pinned** at SHA `452067ee…` (2024-11-27) and Docker
+image `yibo123/lpsim:cuda12.4` in [`lib/lpsim/manifest.json`](../lib/lpsim/manifest.json).
+The manifest is the source-of-truth for reproducibility — bump it to track
+upstream changes and re-run the build.
+
+One-time build:
 
 ```bash
 sbatch cluster/jobs/build_lpsim.sbatch
 ```
 
-That job tries Singularity first (pulls `yibo123/lpsim:cuda12.4` as a SIF to
-`$HOME/lpsim/lpsim.sif`) and falls back to a source build (clones the repo
-under `$HOME/lpsim/source/` and symlinks the binary to
-`$HOME/lpsim/LivingCity/LivingCity`). Either path is auto-discovered by the
-adapter at run time — no env var or config tweak needed.
+That job reads the pin from the manifest, tries Singularity first (pulls
+`yibo123/lpsim:cuda12.4` as a SIF to `$HOME/lpsim/lpsim.sif`) and falls
+back to a source build (clones the repo under `$HOME/lpsim/source/`,
+checks out the pinned SHA, then `make` under `LivingCity/`, with the
+binary symlinked to `$HOME/lpsim/LivingCity/LivingCity`). Either path is
+auto-discovered by the adapter at run time — no env var or config tweak
+needed.
 
-Re-run the build only when CUDA / GCC versions on Pitzer change. The
-benchmark sbatches (`benchmark_small.sbatch` / `benchmark_large.sbatch`)
-run on the gpu partition specifically so LPSim has a V100 available;
-SUMO and MATSim share the same node and don't touch the GPU.
+To override the pin for a one-off build:
+
+```bash
+sbatch --export=LPSIM_GIT_SHA=abc123…,LPSIM_DOCKER_REF=user/lpsim:tag \
+    cluster/jobs/build_lpsim.sbatch
+```
+
+Re-run the build only when CUDA / GCC versions on Pitzer change, or when
+the pin in the manifest is bumped. The benchmark sbatches
+(`benchmark_small.sbatch` / `benchmark_large.sbatch`) run on the gpu
+partition specifically so LPSim has a V100 available; SUMO and MATSim
+share the same node and don't touch the GPU.
 
 ---
 

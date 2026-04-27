@@ -14,6 +14,7 @@ Usage:
 from __future__ import annotations
 
 import glob
+import os
 import platform
 import subprocess
 import sys
@@ -80,6 +81,44 @@ def main() -> None:
     print(f"  osm pbfs:      {len(glob.glob('osm_data/*.osm.pbf'))}")
     print(f"  modelgen txts: {len(glob.glob('modelgen/*.txt'))}")
     print(f"  scenarios:     {len(glob.glob('scenarios/*/'))}")
+
+    # LPSim binary / Singularity image — adapter auto-finds whichever is present.
+    # Importing here keeps env_report runnable even if the LPSim adapter import
+    # itself ever breaks (it's a thin Python module, but defensive is cheap).
+    # Add repo root to sys.path so `python tools/env_report.py` works from
+    # any cwd without needing `python -m` invocation.
+    repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+    try:
+        from adapters.lpsim.lpsim_adapter import (
+            find_lpsim_binary, find_lpsim_singularity_image,
+        )
+        binary = find_lpsim_binary()
+        sif = find_lpsim_singularity_image()
+        if binary:
+            print(f"  lpsim binary:  {binary}")
+        elif sif:
+            print(f"  lpsim image:   {sif} (Singularity)")
+        else:
+            print("  lpsim binary:  NOT BUILT (run `sbatch cluster/jobs/build_lpsim.sbatch` on Pitzer)")
+    except ImportError as e:
+        print(f"  lpsim adapter: import failed ({e})")
+
+    # LPSim version pin — the source of truth for cross-machine reproducibility.
+    lpsim_manifest = "lib/lpsim/manifest.json"
+    if os.path.isfile(lpsim_manifest):
+        try:
+            import json
+            with open(lpsim_manifest, encoding="utf-8") as fh:
+                pin = json.load(fh).get("lpsim", {})
+            sha = (pin.get("git_sha") or "")[:12]
+            print(f"  lpsim pin:     git@{sha} | {pin.get('docker_image', '?')}:{pin.get('docker_tag', '?')}")
+        except (OSError, ValueError) as e:
+            print(f"  lpsim pin:     manifest unreadable ({e})")
+    else:
+        print(f"  lpsim pin:     {lpsim_manifest} not found")
+
     print("=" * 60)
 
 

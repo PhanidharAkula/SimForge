@@ -251,15 +251,66 @@ For a tour of every figure produced by `generate_plots.py`, see [doc/RESULTS_GUI
 
 ---
 
-## GPU Acceleration
+## GPU Acceleration — LPSim
 
-LPSim is the 3rd primary engine ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU mesoscopic). Build it once on a Pitzer GPU node via `sbatch cluster/jobs/build_lpsim.sbatch`. Without that build the LPSim adapter records a clean failure (it does **not** fall back to CPU silently — that was the QarSUMO trap we want to avoid).
+LPSim is the 3rd primary engine ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU mesoscopic).
 
 | Engine    | Hardware    | Use Case                          |
 | --------- | ----------- | --------------------------------- |
 | SUMO      | Any CPU     | Small/medium scenarios, debugging |
 | MATSim    | Any CPU     | Activity-based, multi-modal       |
 | LPSim     | NVIDIA CUDA | Large-scale mesoscopic on GPU     |
+
+### Will LPSim run on my Mac?
+
+**No.** LPSim needs an NVIDIA GPU with CUDA, which Apple Silicon and modern Intel Macs don't have. What does work on a Mac:
+
+- ✅ The LPSim adapter (`adapters/lpsim/`) and its 39 unit tests run fine — they exercise the input-preparation code, which is pure Python.
+- ✅ `prepare_lpsim_inputs()` writes the LPSim input bundle (`nodes.csv` / `edges.csv` / `od_demand.csv` / `command_line_options.ini`) on any platform.
+- ❌ `run_lpsim()` returns a clean failure with a build pointer — there is **no silent CPU fallback** (that was the QarSUMO trap we want to avoid).
+
+So on a dev Mac, `lpsim` cells in your runspecs record `failed: LPSim binary not found...` and the rest of the matrix (SUMO + MATSim) keeps running normally. The actual LPSim numbers come from Pitzer.
+
+### Installing LPSim (Pitzer)
+
+LPSim is **not** in `requirements.lock` because it's a C++ binary, not a Python package. It has its own pinned-version manifest at [`lib/lpsim/manifest.json`](lib/lpsim/manifest.json) (the same provenance pattern `osm_data/manifest.json` uses for state PBFs).
+
+One-time build on a Pitzer GPU node:
+
+```bash
+sbatch cluster/jobs/build_lpsim.sbatch
+```
+
+The sbatch tries Singularity first (pulls `yibo123/lpsim:cuda12.4` to `$HOME/lpsim/lpsim.sif`) and falls back to a source build (`git clone Xuan-1998/LPSim` at the SHA pinned in `lib/lpsim/manifest.json`, then `make` under `LivingCity/`). Either path is auto-discovered by the adapter at run time — no env var or config tweak needed.
+
+To check whether LPSim is staged on the current host:
+
+```bash
+python tools/env_report.py | grep -i lpsim
+# lpsim binary:  /Users/.../lpsim/LivingCity/LivingCity   (built)
+# lpsim pin:     git@452067ee831e | yibo123/lpsim:cuda12.4
+```
+
+To bump the pinned version (e.g. when LPSim ships a fix):
+
+1. Edit `lib/lpsim/manifest.json::lpsim.git_sha` (and `docker_tag` if needed) to the new commit/tag.
+2. Re-run `sbatch cluster/jobs/build_lpsim.sbatch` on Pitzer to rebuild.
+3. Commit the manifest change so every future build lands on the same binary.
+
+### LPSim install dependencies
+
+C++ build deps (already provided by the Singularity image; for a source build the sbatch loads them via Pitzer's lmod):
+
+| Library | Version | Pitzer module |
+|---|---|---|
+| CUDA | 11.2+ (LPSim Dockerfile) / 12.6.2 (Pitzer pin) | `module load cuda/12.6.2` |
+| GCC | 8+ / 13.2.0 (Pitzer pin) | `module load gcc/13.2.0` |
+| Qt5 | qt5-default + qtchooser | bundled in image |
+| Boost | 1.59+ | bundled in image |
+| OpenCV | 4.x | bundled in image |
+| Pandana | git@HEAD (UDST/pandana) | bundled in image |
+
+Full list and provenance in [`lib/lpsim/manifest.json`](lib/lpsim/manifest.json).
 
 ---
 

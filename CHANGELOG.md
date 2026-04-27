@@ -8,6 +8,14 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_4
 
+### Added (Phase B reproducibility patch)
+
+- **`lib/lpsim/manifest.json`** — pinned LPSim provenance: git SHA `452067ee831e6ecb4c906bae96fb77fdf71fa92e` (2024-11-27), Docker image `yibo123/lpsim:cuda12.4`, build dependency manifest. Same provenance pattern `osm_data/manifest.json` uses for OSM PBFs. LPSim is **not** in `requirements.lock` because it's a C++ binary — this manifest is the equivalent reproducibility artifact.
+- **`cluster/jobs/build_lpsim.sbatch`** now reads the pinned SHA + Docker tag from `lib/lpsim/manifest.json` (via `jq`) and `git checkout --detach` to that SHA before building. Overridable with `--export=LPSIM_GIT_SHA=…,LPSIM_DOCKER_REF=…`.
+- **`tools/env_report.py`** reports LPSim binary state (binary, Singularity image, or "NOT BUILT") plus the pinned `git@SHA` and `image:tag` from the manifest — surfaces cross-machine drift in the same diagnostic that already covers SUMO + MATSim.
+- **`tests/test_engine_smoke.py::test_lpsim_real_binary_produces_people_csv`** — real-binary smoke test that mirrors the SUMO and MATSim smoke tests. Skips gracefully on hosts without CUDA + LivingCity; runs end-to-end on Pitzer once `build_lpsim.sbatch` has staged the binary.
+- **README + SETUP + doc/REPRODUCING + doc/PITZER**: explicit "Will LPSim run on my Mac?" answer (no — but the rest of the matrix is unaffected) plus a step-by-step "how to bump the pin" workflow.
+
 ### Added (Phase B — LPSim integration)
 
 - **`adapters/lpsim/`** — full adapter package (`__init__.py`, `lpsim_adapter.py`, `cli.py`, `MAPPING.md`) targeting the LPSim B18 loader's exact column schemas:
