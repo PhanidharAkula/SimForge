@@ -180,6 +180,24 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
     rm -f "$SRC_DIR/LivingCity/LivingCity"
     rm -rf "$SRC_DIR/LivingCity/obj"
 
+    # LivingCity.pro references src/benchmarker.{h,cpp} and
+    # src/linux_host_memory_logger.{h,cpp}, but the upstream git repo
+    # is missing those files. The bundled SIF has them at /src/ inside
+    # the container (the image was built from a tree that included them).
+    # Extract them via `singularity exec cat ...` into the host source
+    # tree at LivingCity/src/ so qmake + make can find them.
+    # Diagnosed Pitzer 2026-04-27.
+    echo "--- Extracting missing src/ files from the SIF ---"
+    mkdir -p "$SRC_DIR/LivingCity/src"
+    for f in benchmarker.h benchmarker.cpp linux_host_memory_logger.h linux_host_memory_logger.cpp; do
+        singularity exec "$SIF_PATH" cat "/src/$f" > "$SRC_DIR/LivingCity/src/$f"
+        if [ ! -s "$SRC_DIR/LivingCity/src/$f" ]; then
+            echo "    FAILED to extract /src/$f from SIF — abort."
+            exit 1
+        fi
+        echo "    Extracted: $SRC_DIR/LivingCity/src/$f ($(wc -l < "$SRC_DIR/LivingCity/src/$f") lines)"
+    done
+
     # Boost 1.59 inside the SIF lives at /usr/local/boost_1_59_0/ but is
     # mode 0700 owned by nobody:nogroup under Apptainer's user-namespace
     # remapping — completely unreadable to our build user. The container
