@@ -569,38 +569,52 @@ def run_lpsim(
                 "cluster/jobs/build_lpsim.sbatch` to use the patched source build."
             )
 
-        # CUDA 11.x runtime injection.
+        # CUDA 11.x runtime injection — BUNDLED-BINARY ONLY.
+        #
         # The yibo123/lpsim:cuda12.4 image is mis-tagged: its installed CUDA
         # toolkit is 12.4, but the bundled LivingCity binary was compiled
-        # against libcudart.so.11.0. We therefore need a CUDA 11.x runtime
-        # available inside the container. On Pitzer:
+        # against libcudart.so.11.0. For the bundled binary we therefore need
+        # a CUDA 11.x runtime available inside the container. On Pitzer:
         #   module load cuda/11.8.0     # exposes /apps/.../cuda-11.8.0/lib64
         # Apptainer / Singularity:
         #   * does NOT auto-mount /apps (host modules dir) — needs --bind
         #   * does NOT inherit the host's LD_LIBRARY_PATH — needs --env
-        # We therefore bind /apps and explicitly point LD_LIBRARY_PATH at the
-        # host CUDA 11 lib dir, while preserving the container's own CUDA 12.4
-        # / pandana / driver-lib paths after it. The rebuilt source binary is
-        # built against CUDA 12.4 and doesn't need this — but the bind is
-        # harmless either way.
-        cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
-        if cuda_home and (Path(cuda_home) / "lib64" / "libcudart.so.11.0").is_file():
-            cmd.extend(["--bind", "/apps"])
-            ld_library_path = ":".join([
-                f"{cuda_home}/lib64",
-                "/usr/local/cuda-12.4/lib64",
-                "/usr/include/pandana/src",
-                "/.singularity.d/libs",
-            ])
-            cmd.extend(["--env", f"LD_LIBRARY_PATH={ld_library_path}"])
-            logger.info("LPSim: bound /apps + injected CUDA 11 runtime from %s", cuda_home)
+        # We bind /apps and put the host CUDA 11 lib dir AHEAD of the
+        # container's CUDA 12.4 in LD_LIBRARY_PATH so the bundled binary
+        # finds libcudart.so.11.0.
+        #
+        # The REBUILT source binary is linked against CUDA 12.4 (the
+        # container's toolkit), so this injection is not just unnecessary
+        # — it's actively harmful. With cuda-11.8 ahead in LD_LIBRARY_PATH,
+        # the rebuilt binary picks up CUDA-11 versions of libcublas /
+        # libcurand whose ABIs don't match what it linked against, and
+        # SIGSEGVs at first kernel launch ("Starting simulation ..." then
+        # exit -11 — diagnosed Pitzer 2026-04-27). Skip the injection on
+        # the rebuilt path; the container's own CUDA 12.4 is already on
+        # the in-container LD path.
+        if source_binary is None:
+            cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
+            if cuda_home and (Path(cuda_home) / "lib64" / "libcudart.so.11.0").is_file():
+                cmd.extend(["--bind", "/apps"])
+                ld_library_path = ":".join([
+                    f"{cuda_home}/lib64",
+                    "/usr/local/cuda-12.4/lib64",
+                    "/usr/include/pandana/src",
+                    "/.singularity.d/libs",
+                ])
+                cmd.extend(["--env", f"LD_LIBRARY_PATH={ld_library_path}"])
+                logger.info("LPSim: bound /apps + injected CUDA 11 runtime from %s", cuda_home)
+            else:
+                logger.warning(
+                    "LPSim: CUDA 11.x runtime not detected on host. "
+                    "Run `module load cuda/11.8.0` on Pitzer before launching — "
+                    "the bundled LPSim binary needs libcudart.so.11.0 which the "
+                    "container (CUDA 12.4) does not provide."
+                )
         else:
-            logger.warning(
-                "LPSim: CUDA 11.x runtime not detected on host. "
-                "Run `module load cuda/11.8.0` on Pitzer before launching — "
-                "the bundled LPSim binary needs libcudart.so.11.0 which the "
-                "container (CUDA 12.4) does not provide. (The rebuilt source "
-                "binary doesn't need this.)"
+            logger.info(
+                "LPSim: skipping CUDA 11 LD_LIBRARY_PATH injection — rebuilt "
+                "source binary is linked against the container's CUDA 12.4."
             )
 
         # The LPSim binary `chdir`'s to its install dir at startup (or
