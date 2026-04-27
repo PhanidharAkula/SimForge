@@ -72,13 +72,15 @@ cache/
 osm_data/*.osm.pbf
 
 # External libraries / downloaded JARs (see SETUP.md for install).
-# Use `lib/*` (not `lib/`) so we can re-include lib/lpsim/manifest.json — git
-# doesn't allow re-including paths under a fully-excluded parent directory.
+# Use `lib/*` (not `lib/`) so we can re-include per-engine manifest.json
+# files — git doesn't allow re-including paths under a fully-excluded parent.
 lib/*
-# LPSim version pin needs to be tracked — same role osm_data/manifest.json plays for PBFs.
-!lib/lpsim/
-lib/lpsim/*
-!lib/lpsim/manifest.json
+# DTALite version pin needs to be tracked — same role osm_data/manifest.json
+# plays for PBFs. (LPSim manifest was deleted in Version_5; see
+# doc/engines/LPSIM_RETROSPECTIVE.md.)
+!lib/dtalite/
+lib/dtalite/*
+!lib/dtalite/manifest.json
 
 # Benchmark output runs (generated data)
 runs/

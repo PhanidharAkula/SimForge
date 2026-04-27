@@ -1,0 +1,22 @@
+{
+  "dtalite": {
+    "path4gmns_version": "0.10.0",
+    "upstream_repo": "https://github.com/jdlph/Path4GMNS",
+    "dtalite_repo": "https://github.com/asu-trans-ai-lab/DTALite",
+    "binary": "DTALiteClassic (mode 1: path-based UE)",
+    "format_standard": "GMNS",
+    "format_spec_url": "https://github.com/zephyr-data-specs/GMNS",
+    "license": "Apache-2.0",
+    "platforms": [
+      "linux_x86_64",
+      "macos_arm64",
+      "macos_x86_64",
+      "windows_x86_64"
+    ],
+    "system_dependencies": {
+      "macos": "brew install libomp"
+    },
+    "pinned_at": "2026-04-27",
+    "notes": "Adopted in Version_5 after LPSim was abandoned. See doc/engines/THIRD_ENGINE_OPTIONS.md for the selection rationale and doc/engines/LPSIM_RETROSPECTIVE.md for the LPSim abandonment story."
+  }
+}

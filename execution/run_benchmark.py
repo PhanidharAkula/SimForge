@@ -482,10 +482,10 @@ class BenchmarkHarness:
                         "trip_count": stats.get("trip_count", 0)
                     }
         elif engine == "dtalite":
-            # DTALite reads settings.yml + node.csv + link.csv + demand.csv
+            # DTALite reads settings.csv + node.csv + link.csv + demand.csv
             # from CWD; the adapter writes them under run_dir during
             # prepare_dtalite_inputs.
-            settings_path = run_dir / "settings.yml"
+            settings_path = run_dir / "settings.csv"
             if not settings_path.exists():
                 return RunResult(
                     scenario=scenario_id,
@@ -496,11 +496,19 @@ class BenchmarkHarness:
                     status="failed",
                     runtime_s=0,
                     output_dir=run_dir,
-                    error_message="No settings.yml generated for DTALite"
+                    error_message="No settings.csv generated for DTALite"
                 )
 
             from adapters.dtalite import run_dtalite, parse_dtalite_output
-            success, runtime, error = run_dtalite(run_dir, timeout_s=timeout_s)
+            dtalite_opts = engine_options or {}
+            success, runtime, error = run_dtalite(
+                run_dir,
+                timeout_s=timeout_s,
+                iterations=dtalite_opts.get("iterations", 5),
+                column_updating_iterations=dtalite_opts.get(
+                    "column_updating_iterations", 5
+                ),
+            )
 
             metrics = {}
             tripinfo_path = None
