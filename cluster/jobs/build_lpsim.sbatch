@@ -205,22 +205,30 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
     # the Boost 1.59 tarball to a host-writable location and bind-mount
     # it OVER the broken path inside the container at build time.
     # Diagnosed Pitzer 2026-04-27.
-    BOOST_HOST_DIR="$LPSIM_DIR/boost_1_59_0"
+    # Boost version. Upstream LPSim pins to 1.59 (Aug 2015) but Boost
+    # 1.59's geometry/point_xy.hpp uses `this->template set<N>(v)`
+    # syntax that modern g++ mis-resolves as `std::set<N>(...)` —
+    # build error: "type/value mismatch at argument 1 in template
+    # parameter list for std::set". Fixed in Boost 1.65+. Diagnosed
+    # Pitzer 2026-04-27.
+    #
+    # We use Boost 1.78 (header-only deps stable, well past the fix)
+    # but mount it at the path the .pro expects (/usr/local/boost_1_59_0)
+    # so we don't have to touch LivingCity.pro or the bundled binary's
+    # link-time assumptions.
+    BOOST_VER_DOTS="1.78.0"
+    BOOST_VER_UNDERS="1_78_0"
+    BOOST_HOST_DIR="$LPSIM_DIR/boost_1_59_0"   # name kept for .pro compat
+    BOOST_RAW_DIR="$LPSIM_DIR/boost_${BOOST_VER_UNDERS}"
     if [ ! -d "$BOOST_HOST_DIR" ]; then
-        BOOST_TARBALL="$LPSIM_DIR/boost_1_59_0.tar.gz"
-        # Try multiple mirrors in order until one yields a real (~80 MB)
-        # gzipped tarball. Boost 1.59 is old (Aug 2015); some mirrors
-        # 404 or hand back HTML interstitials. Validate by file size +
-        # gzip magic bytes before trusting.
+        BOOST_TARBALL="$LPSIM_DIR/boost_${BOOST_VER_UNDERS}.tar.gz"
         BOOST_URLS=(
-          "https://archives.boost.org/release/1.59.0/source/boost_1_59_0.tar.gz"
-          "https://boostorg.jfrog.io/artifactory/main/release/1.59.0/source/boost_1_59_0.tar.gz"
-          "https://sourceforge.net/projects/boost/files/boost/1.59.0/boost_1_59_0.tar.gz/download"
+          "https://archives.boost.org/release/${BOOST_VER_DOTS}/source/boost_${BOOST_VER_UNDERS}.tar.gz"
+          "https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VER_DOTS}/source/boost_${BOOST_VER_UNDERS}.tar.gz"
+          "https://sourceforge.net/projects/boost/files/boost/${BOOST_VER_DOTS}/boost_${BOOST_VER_UNDERS}.tar.gz/download"
         )
 
         if [ -f "$BOOST_TARBALL" ]; then
-            # Validate any cached tarball — a previous run may have
-            # saved an HTML error page under this name.
             if file "$BOOST_TARBALL" | grep -q 'gzip compressed'; then
                 echo "--- Reusing cached Boost tarball $BOOST_TARBALL ---"
             else
@@ -234,39 +242,40 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
                 echo "--- Trying $url ---"
                 rm -f "$BOOST_TARBALL"
                 wget --quiet --show-progress -L \
-                    --tries=2 --timeout=30 \
+                    --tries=2 --timeout=60 \
                     -O "$BOOST_TARBALL" \
                     "$url" || true
                 size=$(stat -c%s "$BOOST_TARBALL" 2>/dev/null || echo 0)
-                # The real Boost 1.59 tarball is ~80 MB; anything < 1 MB
-                # is an HTML interstitial / 404 page.
-                if [ "$size" -gt 1000000 ] && file "$BOOST_TARBALL" | grep -q 'gzip compressed'; then
+                # Boost 1.78 tarball is ~150 MB; anything < 10 MB is an
+                # HTML interstitial / 404.
+                if [ "$size" -gt 10000000 ] && file "$BOOST_TARBALL" | grep -q 'gzip compressed'; then
                     echo "    OK: $((size/1024/1024)) MB gzip tarball"
                     break
                 fi
-                echo "    Bad: got $((size/1024)) KB (need ~80 MB gzip). Trying next mirror."
+                echo "    Bad: got $((size/1024)) KB (need ~150 MB gzip). Trying next mirror."
                 rm -f "$BOOST_TARBALL"
             done
         fi
 
         if [ ! -f "$BOOST_TARBALL" ]; then
             echo "    Boost download failed from every mirror. Abort."
-            echo "    Last-resort manual download to $BOOST_TARBALL:"
-            echo "      curl -L 'https://archives.boost.org/release/1.59.0/source/boost_1_59_0.tar.gz' -o $BOOST_TARBALL"
-            echo "    Then rerun this sbatch."
             exit 1
         fi
 
-        echo "--- Extracting Boost (~600 MB) ---"
+        echo "--- Extracting Boost ${BOOST_VER_DOTS} (~1 GB) ---"
         tar -xzf "$BOOST_TARBALL" -C "$LPSIM_DIR"
-        if [ ! -d "$BOOST_HOST_DIR" ]; then
-            echo "    Tarball extracted but $BOOST_HOST_DIR not present — wrong tarball layout?"
+        if [ ! -d "$BOOST_RAW_DIR" ]; then
+            echo "    Tarball extracted but $BOOST_RAW_DIR not present — wrong tarball layout?"
             exit 1
         fi
-        echo "    Extracted: $BOOST_HOST_DIR"
+        # Rename to the path .pro expects (/usr/local/boost_1_59_0).
+        # Done as `mv` so the directory's files keep their original perms
+        # (extracted as us, so readable — unlike the in-container Boost).
+        mv "$BOOST_RAW_DIR" "$BOOST_HOST_DIR"
+        echo "    Extracted + renamed: $BOOST_RAW_DIR -> $BOOST_HOST_DIR"
         ls -la "$BOOST_HOST_DIR" | head -5
     else
-        echo "--- Boost 1.59 already extracted at $BOOST_HOST_DIR — reusing ---"
+        echo "--- Boost already extracted at $BOOST_HOST_DIR — reusing ---"
     fi
 
     # Patch LivingCity.pro:
