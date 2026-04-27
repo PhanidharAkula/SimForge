@@ -547,6 +547,16 @@ def run_lpsim(
             in_container_binary = "/lpsim_src/LivingCity/LivingCity"
             binary_label = f"singularity://{sif.name}!{source_binary} (rebuilt)"
             logger.info("LPSim: using rebuilt source binary at %s", source_binary)
+
+            # The build also bind-mounted host Boost over the broken
+            # in-container path. Apply the same bind at run time so the
+            # rebuilt binary can resolve any Boost shared libs / headers
+            # it linked against.
+            host_boost = Path.home() / "lpsim" / "boost_1_59_0"
+            if host_boost.is_dir():
+                cmd.extend(["--bind",
+                            f"{host_boost}:/usr/local/boost_1_59_0"])
+                logger.info("LPSim: bound host Boost from %s", host_boost)
         else:
             # Fall back to the bundled binary at /LivingCity/LivingCity.
             in_container_binary = os.environ.get(

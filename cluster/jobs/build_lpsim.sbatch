@@ -180,6 +180,37 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
     rm -f "$SRC_DIR/LivingCity/LivingCity"
     rm -rf "$SRC_DIR/LivingCity/obj"
 
+    # Boost 1.59 inside the SIF lives at /usr/local/boost_1_59_0/ but is
+    # mode 0700 owned by nobody:nogroup under Apptainer's user-namespace
+    # remapping — completely unreadable to our build user. The container
+    # also has no system Boost at /usr/include/boost. Workaround: download
+    # the Boost 1.59 tarball to a host-writable location and bind-mount
+    # it OVER the broken path inside the container at build time.
+    # Diagnosed Pitzer 2026-04-27.
+    BOOST_HOST_DIR="$LPSIM_DIR/boost_1_59_0"
+    if [ ! -d "$BOOST_HOST_DIR" ]; then
+        echo "--- Downloading Boost 1.59.0 to $BOOST_HOST_DIR (~80 MB tarball, ~600 MB extracted) ---"
+        BOOST_TARBALL="$LPSIM_DIR/boost_1_59_0.tar.gz"
+        if [ ! -f "$BOOST_TARBALL" ]; then
+            # Boost.org's official jfrog mirror — reliable, no SourceForge
+            # interstitial nonsense.
+            wget --quiet --show-progress \
+                -O "$BOOST_TARBALL" \
+                "https://boostorg.jfrog.io/artifactory/main/release/1.59.0/source/boost_1_59_0.tar.gz" \
+                || { echo "    Boost download failed; abort."; exit 1; }
+        fi
+        echo "--- Extracting Boost ---"
+        tar -xzf "$BOOST_TARBALL" -C "$LPSIM_DIR"
+        if [ ! -d "$BOOST_HOST_DIR" ]; then
+            echo "    Tarball extracted but $BOOST_HOST_DIR not present — wrong tarball layout?"
+            exit 1
+        fi
+        echo "    Extracted: $BOOST_HOST_DIR"
+        ls -la "$BOOST_HOST_DIR" | head -5
+    else
+        echo "--- Boost 1.59 already extracted at $BOOST_HOST_DIR — reusing ---"
+    fi
+
     # Patch LivingCity.pro to use the container's CUDA 12.4 instead of
     # hard-coded 11.2 / 10.1 / 9.0 paths. Without this, qmake falls
     # through to the 9.0 default and make then dies on
@@ -203,17 +234,20 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
     fi
 
     # Run qmake + make INSIDE the container, with the host source dir
-    # bind-mounted at /lpsim_src. Capture the exit status explicitly so
-    # we don't get fooled by a partial-write binary.
+    # bind-mounted at /lpsim_src AND the host-side Boost bind-mounted
+    # over the broken /usr/local/boost_1_59_0/ inside. Capture the exit
+    # status explicitly so we don't get fooled by a partial-write binary.
     echo "--- Building LivingCity inside the container ---"
     echo "    (uses container's qmake / make / g++ / nvcc against its CUDA 12.4)"
+    echo "    (Boost mounted from $BOOST_HOST_DIR → /usr/local/boost_1_59_0)"
     set +e
     singularity exec --nv \
         --bind "$SRC_DIR:/lpsim_src" \
+        --bind "$BOOST_HOST_DIR:/usr/local/boost_1_59_0" \
         "$SIF_PATH" \
         bash -lc "set -eo pipefail; cd /lpsim_src/LivingCity && \
                   echo '--- qmake ---' && qmake LivingCity.pro && \
-                  echo '--- make ---' && make -j$SLURM_CPUS_PER_TASK 2>&1 | tail -60"
+                  echo '--- make ---' && make -j$SLURM_CPUS_PER_TASK 2>&1 | tail -80"
     BUILD_RC=$?
     set -e
     echo
@@ -232,6 +266,9 @@ if [ "${LPSIM_FORCE_SOURCE:-0}" = "1" ] && [ -f "$SIF_PATH" ]; then
         echo "    * Missing source file (benchmarker.cpp etc.) — already"
         echo "      ignored by upstream; the warnings above are benign."
         echo "    * nvcc -arch mismatch — V100 is sm_70; the .pro may pin sm_50."
+        echo "    * Boost permissions — confirm $BOOST_HOST_DIR is readable"
+        echo "      and the bind-mount in the singularity exec line above"
+        echo "      is correct."
         exit 1
     fi
 
