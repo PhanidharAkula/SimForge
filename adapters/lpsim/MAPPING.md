@@ -83,20 +83,33 @@ trip_id,origin_node_id,destination_node_id,departure_time_s,mode
 trip_0,n42,n100,25260,car
 ```
 
-**LPSim OD CSV** (schema from `roadGraphB2018Loader.cpp:319-321`):
+**LPSim OD CSV** — there are **two** loaders inside the binary; we satisfy both:
+
+  * `b18TrafficSP.cpp:108` (the SP loader — invoked when `USE_SP_ROUTING=true`):
+    `read_header(ignore_extra_column, "dep_time", "origin", "destination")`
+    then filters trips by `dep_time >= startSimulationH * 3600`.
+  * `roadGraphB2018Loader.cpp:319-321` (the Qt loader — fallback path):
+    declares `PERNO, origin, destination`.
+
+We emit the **union** header `dep_time, origin, destination, PERNO`. The
+SP loader's `ignore_extra_column` policy lets the trailing `PERNO` ride
+along; the Qt loader looks columns up by name so order doesn't matter.
 
 | canonical | LPSim column | how |
 |---|---|---|
-| `trip_id` | `PERNO` | copied verbatim |
+| `departure_time_s` | `dep_time` | copied as integer (seconds since midnight) |
 | `origin_node_id` | `origin` | strip "n" prefix → integer |
 | `destination_node_id` | `destination` | strip "n" prefix → integer |
-| `departure_time_s` | (none) | **dropped** — LPSim has no per-trip departure column |
+| `trip_id` | `PERNO` | copied verbatim |
 
-LPSim distributes departures inside `[START_HR, END_HR]` per its own
-heuristic; the `departure_time_s` precision available to SUMO and MATSim
-is not exposed to LPSim. This is documented as a fidelity trade-off in
-the methods chapter and is the single cleanest difference between the
-three engines from the demand-modeling perspective.
+> **Correction note (2026-04-27).** Earlier versions of this adapter
+> dropped `departure_time_s` under the false belief — taken from the
+> upstream README — that LPSim ignored per-trip times. Diagnosed on
+> Pitzer when LPSim's bundled binary actually launched and the SP
+> loader complained about a missing column: the SP path **does**
+> consume per-trip `dep_time` (seconds) and filters trips outside the
+> `START_HR..END_HR` window from the INI. Cross-engine fidelity for
+> departure timing is therefore preserved across SUMO, MATSim, and LPSim.
 
 Only trips that pass the cross-engine SCC feasibility filter
 (`adapters/common/feasibility.py`) are written, so SUMO, MATSim, and
