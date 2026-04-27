@@ -57,6 +57,9 @@ set -euo pipefail
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
+module load cuda/11.8.0      # LPSim runtime — bundled binary needs libcudart.so.11.0
+                             # despite the cuda12.4-tagged image; adapter bind-mounts
+                             # $CUDA_HOME/lib64 into the container at run time.
 cd ~/SimForge
 source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
 

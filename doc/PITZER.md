@@ -388,6 +388,27 @@ image `yibo123/lpsim:cuda12.4` in [`lib/lpsim/manifest.json`](../lib/lpsim/manif
 The manifest is the source-of-truth for reproducibility — bump it to track
 upstream changes and re-run the build.
 
+> ⚠️ **CUDA-version pitfall (Pitzer 2026-04, Apptainer 1.3.6).** The
+> `yibo123/lpsim:cuda12.4` image ships CUDA 12.4 dev tools **but** its
+> bundled `LivingCity` binary was compiled against `libcudart.so.11.0` —
+> confirmed via `ldd /LivingCity/LivingCity` inside the SIF. Two
+> consequences any benchmark sbatch must handle:
+>
+> 1. `module load cuda/11.8.0` is **required** before launching LPSim. CUDA
+>    11.8 ships `libcudart.so.11.0` (CUDA 11.x is binary-stable across
+>    11.0–11.8). The committed `benchmark_small.sbatch` and
+>    `benchmark_large.sbatch` already do this.
+> 2. Apptainer 1.3.6 does **not** auto-mount `/apps` and does **not**
+>    inherit the host's `LD_LIBRARY_PATH`. The adapter therefore launches
+>    LPSim with `singularity exec --nv --bind /apps --env
+>    LD_LIBRARY_PATH=$CUDA_HOME/lib64:…` so the host CUDA 11 lib dir is
+>    visible inside the container and on the linker's search path.
+>
+> If you ever bump the LPSim image to a build linked against the matching
+> CUDA 12.x runtime, drop the `module load cuda/11.8.0` and the bind-mount
+> can go too. Both are configured in one place
+> ([`adapters/lpsim/lpsim_adapter.run_lpsim`](../adapters/lpsim/lpsim_adapter.py)).
+
 One-time build:
 
 ```bash

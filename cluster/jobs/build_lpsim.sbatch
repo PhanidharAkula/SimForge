@@ -50,10 +50,14 @@ set -euo pipefail
 
 mkdir -p logs
 
-# Pitzer's lmod requires explicit versions. As of 2026-04 the matching pair is
-# gcc/13.2.0 + cuda/12.6.2 (check current options with `module avail gcc cuda`).
-# LPSim's Dockerfile pins cuda/11.2 but newer CUDA back-compat is fine.
-module load gcc/13.2.0 cuda/12.6.2
+# Pitzer's lmod requires explicit versions. As of 2026-04:
+#   * gcc/13.2.0 — for the source-build fall-through (Path B)
+#   * cuda/11.8.0 — REQUIRED at run time. The bundled LivingCity binary in
+#     yibo123/lpsim:cuda12.4 was compiled against libcudart.so.11.0; the
+#     container's own CUDA 12.4 toolkit is forward-incompatible with that
+#     ABI. cuda/11.8.0 ships libcudart.so.11.0 and the adapter bind-mounts
+#     $CUDA_HOME/lib64 into the container via --bind /apps + --env.
+module load gcc/13.2.0 cuda/11.8.0
 
 echo "=== Job starting on $(hostname) at $(date) ==="
 echo "CUDA:   $(nvcc --version 2>&1 | tail -1)"

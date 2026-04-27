@@ -457,7 +457,40 @@ def run_lpsim(
         in_container_binary = os.environ.get(
             "LPSIM_CONTAINER_BINARY", "/LivingCity/LivingCity"
         )
-        cmd = ["singularity", "exec", "--nv", str(sif), in_container_binary]
+        cmd = ["singularity", "exec", "--nv"]
+
+        # CUDA 11.x runtime injection.
+        # The yibo123/lpsim:cuda12.4 image is mis-tagged: its installed CUDA
+        # toolkit is 12.4, but the bundled LivingCity binary was compiled
+        # against libcudart.so.11.0. We therefore need a CUDA 11.x runtime
+        # available inside the container. On Pitzer:
+        #   module load cuda/11.8.0     # exposes /apps/.../cuda-11.8.0/lib64
+        # Apptainer / Singularity:
+        #   * does NOT auto-mount /apps (host modules dir) — needs --bind
+        #   * does NOT inherit the host's LD_LIBRARY_PATH — needs --env
+        # We therefore bind /apps and explicitly point LD_LIBRARY_PATH at the
+        # host CUDA 11 lib dir, while preserving the container's own CUDA 12.4
+        # / pandana / driver-lib paths after it.
+        cuda_home = os.environ.get("CUDA_HOME") or os.environ.get("CUDA_PATH")
+        if cuda_home and (Path(cuda_home) / "lib64" / "libcudart.so.11.0").is_file():
+            cmd.extend(["--bind", "/apps"])
+            ld_library_path = ":".join([
+                f"{cuda_home}/lib64",
+                "/usr/local/cuda-12.4/lib64",
+                "/usr/include/pandana/src",
+                "/.singularity.d/libs",
+            ])
+            cmd.extend(["--env", f"LD_LIBRARY_PATH={ld_library_path}"])
+            logger.info("LPSim: bound /apps + injected CUDA 11 runtime from %s", cuda_home)
+        else:
+            logger.warning(
+                "LPSim: CUDA 11.x runtime not detected on host. "
+                "Run `module load cuda/11.8.0` on Pitzer before launching — "
+                "the LPSim binary needs libcudart.so.11.0 which the container "
+                "(CUDA 12.4) does not provide."
+            )
+
+        cmd.extend([str(sif), in_container_binary])
         binary_label = f"singularity://{sif.name}!{in_container_binary}"
     elif binary is not None:
         cmd = [str(binary)]

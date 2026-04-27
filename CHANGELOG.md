@@ -8,6 +8,14 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_4
 
+### Fixed (Phase B Pitzer landing patch)
+
+- **LPSim binary failed with `libcudart.so.11.0: not found` on first Pitzer launch** — the `yibo123/lpsim:cuda12.4` image is mis-tagged. The image's installed CUDA toolkit is 12.4, but the bundled `LivingCity` binary was compiled against `libcudart.so.11.0`. Diagnosis: `ldd /LivingCity/LivingCity` inside the SIF showed `libcudart.so.11.0 => not found` as the only unresolved dependency. Resolution:
+  - `adapters/lpsim/lpsim_adapter.run_lpsim` now detects `$CUDA_HOME` on the host and, when `libcudart.so.11.0` is present, passes `singularity exec --nv --bind /apps --env LD_LIBRARY_PATH=$CUDA_HOME/lib64:/usr/local/cuda-12.4/lib64:/usr/include/pandana/src:/.singularity.d/libs …`. Apptainer 1.3.6 doesn't auto-mount `/apps` and doesn't inherit host `LD_LIBRARY_PATH`, so both the bind and the env var are required. Logs a clear warning if `$CUDA_HOME` isn't set.
+  - `cluster/jobs/benchmark_small.sbatch` + `benchmark_large.sbatch` + `build_lpsim.sbatch` now `module load cuda/11.8.0` (CUDA 11.8 is binary-stable with 11.0; ships `libcudart.so.11.0`).
+  - `lib/lpsim/manifest.json` gains `cuda_runtime_required` / `cuda_runtime_note` / `host_cuda_module_pitzer` fields documenting the requirement.
+  - `doc/PITZER.md` adds an explicit "CUDA-version pitfall" callout under the LPSim section.
+
 ### Added (Phase B reproducibility patch)
 
 - **`lib/lpsim/manifest.json`** — pinned LPSim provenance: git SHA `452067ee831e6ecb4c906bae96fb77fdf71fa92e` (2024-11-27), Docker image `yibo123/lpsim:cuda12.4`, build dependency manifest. Same provenance pattern `osm_data/manifest.json` uses for OSM PBFs. LPSim is **not** in `requirements.lock` because it's a C++ binary — this manifest is the equivalent reproducibility artifact.
