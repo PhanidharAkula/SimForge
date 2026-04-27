@@ -130,6 +130,13 @@ class TestNodesCsv:
         text = out.read_text(encoding="utf-8")
         assert text.splitlines()[0] == "osmid,x,y,highway,index"
 
+    def test_uses_lf_line_endings(self, tiny_graph, tmp_path):
+        # csv.h SP loader rejects CRLF — see write_lpsim_nodes_csv docstring.
+        out = tmp_path / "nodes.csv"
+        write_lpsim_nodes_csv(tiny_graph, out)
+        assert b"\r\n" not in out.read_bytes(), \
+            "nodes.csv must use LF line endings (csv.h rejects CRLF)"
+
     def test_index_matches_canonical_int(self, tiny_graph, tmp_path):
         out = tmp_path / "nodes.csv"
         write_lpsim_nodes_csv(tiny_graph, out)
@@ -159,6 +166,12 @@ class TestEdgesCsv:
         # All columns the LPSim B18 loader looks up by name
         for col in ("uniqueid", "u", "v", "length", "lanes", "speed_mph"):
             assert col in header.split(",")
+
+    def test_uses_lf_line_endings(self, tiny_graph, tmp_path):
+        out = tmp_path / "edges.csv"
+        write_lpsim_edges_csv(tiny_graph, out)
+        assert b"\r\n" not in out.read_bytes(), \
+            "edges.csv must use LF line endings (csv.h rejects CRLF)"
 
     def test_drops_self_loops(self, tiny_graph, tmp_path):
         out = tmp_path / "edges.csv"
@@ -223,27 +236,52 @@ class TestDemandCsv:
             data = list(csv.DictReader(f))
         assert {r["PERNO"] for r in data} == {"trip_a", "trip_c"}
 
-    def test_columns_match_b18_loader(self, tmp_path):
+    def test_columns_match_sp_loader(self, tmp_path):
+        # b18TrafficSP.cpp:108 (the loader USE_SP_ROUTING=true invokes):
+        #   read_header(ignore_extra_column, "dep_time", "origin", "destination")
+        # Plus we keep PERNO for the older Qt loader. Order MUST match
+        # what we expose on disk so a defender can inspect by eye.
         demand = tmp_path / "demand.csv"
         self._write_canonical_demand(demand)
         out = tmp_path / "od.csv"
         write_lpsim_demand_csv(demand, out, feasible_trip_ids={"trip_a"})
         header = out.read_text(encoding="utf-8").splitlines()[0]
-        assert header == "PERNO,origin,destination", (
-            "LPSim B18 loader looks up exactly these column names — "
-            "renaming them silently breaks every lpsim run."
+        assert header == "dep_time,origin,destination,PERNO", (
+            "LPSim's SP loader requires exactly dep_time/origin/destination "
+            "(in that order); PERNO is appended for the Qt loader's compat. "
+            "Renaming or reordering silently breaks every lpsim run."
         )
 
-    def test_drops_departure_time_column(self, tmp_path):
+    def test_keeps_departure_time_column(self, tmp_path):
+        # Earlier versions of the adapter dropped departure_time_s under
+        # the false belief that LPSim ignored per-trip times. The SP
+        # loader at b18TrafficSP.cpp:108 actually reads `dep_time` and
+        # filters trips by `dep_time >= startSimulationH * 3600`, so the
+        # column is required.
         demand = tmp_path / "demand.csv"
         self._write_canonical_demand(demand)
         out = tmp_path / "od.csv"
         write_lpsim_demand_csv(demand, out, feasible_trip_ids={"trip_a"})
         text = out.read_text(encoding="utf-8")
-        assert "25200" not in text, (
-            "departure_time_s is intentionally dropped — LPSim has no "
-            "per-trip departure column; START_HR/END_HR govern timing."
+        assert "dep_time" in text.splitlines()[0]
+        # The first data row's first column (dep_time) should be the
+        # canonical departure_time_s from trip_a (25200 = 07:00:00).
+        first_data_row = text.splitlines()[1]
+        assert first_data_row.startswith("25200,"), (
+            f"first data row should lead with dep_time=25200, got: {first_data_row}"
         )
+
+    def test_uses_lf_line_endings(self, tmp_path):
+        # csv.h's CSV reader (used by USE_SP_ROUTING=true) does NOT strip
+        # \r from CRLF endings — diagnosed on Pitzer 2026-04-27 when our
+        # initial CRLF-by-default Python writer produced "index\r" as
+        # the last column name and the loader couldn't find "index".
+        demand = tmp_path / "demand.csv"
+        self._write_canonical_demand(demand)
+        out = tmp_path / "od.csv"
+        write_lpsim_demand_csv(demand, out, feasible_trip_ids={"trip_a"})
+        raw = out.read_bytes()
+        assert b"\r\n" not in raw, "OD CSV must use LF line endings (csv.h rejects CRLF)"
 
 
 class TestIniWriter:

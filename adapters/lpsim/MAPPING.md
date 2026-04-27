@@ -20,8 +20,8 @@ primary engine in Version_4 — see `todo.md` for the gap audit and rationale.
 | Hardware | CPU | CPU + JVM | CUDA GPU (CPU fallback) |
 | Unit of simulation | Vehicle | Agent (person) | Person |
 | Routing | Pre-routed (BFS) | Replanning | Shortest-path or Johnson |
-| Demand format | OD with departure times | Activity plans | OD without departure times |
-| Time control | Per-trip departure | Per-trip departure | Global window (`START_HR`/`END_HR`) |
+| Demand format | OD with departure times | Activity plans | OD with per-trip `dep_time` (seconds) |
+| Time control | Per-trip departure | Per-trip departure | Per-trip `dep_time` filtered against `START_HR`/`END_HR` window in INI |
 | Config | XML (`.sumocfg`) | XML (config.xml) | INI (`command_line_options.ini`) |
 | Output | `tripinfo.xml` | `output_trips.csv.gz` | `<NUM_PASSES>_people*.csv` |
 

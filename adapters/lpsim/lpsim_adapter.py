@@ -179,12 +179,19 @@ def _to_int_index(canonical_id: str) -> int:
 def write_lpsim_nodes_csv(graph: NetworkGraph, out_path: Path) -> int:
     """Write LPSim ``nodes.csv``. Returns row count.
 
-    Schema (from ``roadGraphB2018Loader.cpp:116-119``):
-        osmid, x, y, highway, index
+    Schema (from both loaders the bundled binary uses):
+      * ``roadGraphB2018Loader.cpp:116-119`` (Qt path): ``osmid, x, y, highway, index``
+      * ``traffic/sp/graph.h:53`` (csv.h SP path): ``index`` (with ignore_extra_column)
+
+    Line endings MUST be ``\\n`` (Unix) — the csv.h library used by the SP
+    loader does not strip ``\\r`` from CRLF endings, so a CRLF header makes
+    the last column name parse as ``"index\\r"`` instead of ``"index"`` and
+    the loader throws missing_column_in_header. Python's csv.writer default
+    is ``\\r\\n``; we override via lineterminator.
     """
     sorted_nodes = sorted(graph.nodes.values(), key=lambda n: _to_int_index(n.id))
     with out_path.open("w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(["osmid", "x", "y", "highway", "index"])
         for node in sorted_nodes:
             idx = _to_int_index(node.id)
@@ -210,7 +217,9 @@ def write_lpsim_edges_csv(graph: NetworkGraph, out_path: Path) -> int:
     """
     rows = 0
     with out_path.open("w", encoding="utf-8", newline="") as f:
-        w = csv.writer(f)
+        # lineterminator="\n" — csv.h SP loader rejects CRLF (see
+        # write_lpsim_nodes_csv docstring for the failure mode).
+        w = csv.writer(f, lineterminator="\n")
         w.writerow(["uniqueid", "osmid_u", "osmid_v", "u", "v",
                     "length", "lanes", "speed_mph"])
         # Sort for determinism — adapter outputs must be byte-identical
@@ -236,21 +245,29 @@ def write_lpsim_demand_csv(
 ) -> int:
     """Write LPSim OD demand CSV. Returns row count.
 
-    Schema (from ``roadGraphB2018Loader.cpp:319-321``):
-        PERNO, origin, destination
+    Schema (from ``b18TrafficSP.cpp:108``, the loader the bundled binary
+    actually invokes when ``USE_SP_ROUTING=true``):
+        ``read_header(ignore_extra_column, "dep_time", "origin", "destination")``
+        + LPSim filters by ``dep_time >= startSimulationH * 3600``, so
+        ``dep_time`` is in seconds-since-midnight and MUST be present.
+
+    We also keep ``PERNO`` for the older Qt loader at
+    ``roadGraphB2018Loader.cpp:319-321`` (it asks for ``PERNO, origin,
+    destination``); ignore_extra_column on the SP path means extra cols
+    are harmless. So our header is the union: ``dep_time, origin,
+    destination, PERNO``.
 
     Only feasible trips (per the cross-engine SCC filter) are emitted —
     matches the SUMO and MATSim adapters so every engine simulates the
     same trip set.
 
-    LPSim does not consume per-trip departure times; departure spread is
-    governed by ``START_HR`` / ``END_HR`` in the .ini. The canonical
-    ``departure_time_s`` is therefore intentionally dropped.
+    Line endings MUST be ``\\n`` for the same reason as nodes.csv (see
+    write_lpsim_nodes_csv docstring).
     """
     written = 0
     with out_path.open("w", encoding="utf-8", newline="") as out_f:
-        w = csv.writer(out_f)
-        w.writerow(["PERNO", "origin", "destination"])
+        w = csv.writer(out_f, lineterminator="\n")
+        w.writerow(["dep_time", "origin", "destination", "PERNO"])
         with demand_path.open(encoding="utf-8", newline="") as in_f:
             reader = csv.DictReader(in_f)
             # Sort for deterministic output (see test_adapter_determinism).
@@ -261,17 +278,20 @@ def write_lpsim_demand_csv(
                     continue
                 origin = (row.get("origin_node_id") or "").strip()
                 dest = (row.get("destination_node_id") or "").strip()
-                if not origin or not dest:
+                dep_time_raw = (row.get("departure_time_s") or "").strip()
+                if not origin or not dest or not dep_time_raw:
                     continue
                 try:
                     o_idx = _to_int_index(origin)
                     d_idx = _to_int_index(dest)
+                    # LPSim wants seconds; canonical already stores it that way.
+                    dep_time = int(float(dep_time_raw))
                 except ValueError:
-                    # An origin/dest that isn't canonical-format gets
+                    # An origin/dest/time that isn't parseable gets
                     # skipped rather than crashing the whole bundle —
                     # surfaces as a low completion count downstream.
                     continue
-                w.writerow([trip_id, o_idx, d_idx])
+                w.writerow([dep_time, o_idx, d_idx, trip_id])
                 written += 1
     return written
 
