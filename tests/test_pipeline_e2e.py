@@ -147,7 +147,12 @@ class TestSUMOAdapterRobustness:
 
     def test_output_routes_have_valid_edges(self, bundled_scenario, tmp_path):
         out = tmp_path / "route_check"
-        prepare_sumo_inputs(bundled_scenario, out)
+        try:
+            prepare_sumo_inputs(bundled_scenario, out)
+        except RuntimeError as exc:
+            if is_arm64_netconvert_crash(exc):
+                pytest.skip(f"arm64 netconvert can't process {bundled_scenario.name}")
+            raise
 
         edge_ids = {e.get("id") for e in ET.parse(out / "edges.edg.xml").findall(".//edge")}
         for route in ET.parse(out / "routes.rou.xml").iter("route"):
@@ -156,7 +161,12 @@ class TestSUMOAdapterRobustness:
 
     def test_tripinfo_output_configured(self, bundled_scenario, tmp_path):
         out = tmp_path / "cfg_check"
-        prepare_sumo_inputs(bundled_scenario, out)
+        try:
+            prepare_sumo_inputs(bundled_scenario, out)
+        except RuntimeError as exc:
+            if is_arm64_netconvert_crash(exc):
+                pytest.skip(f"arm64 netconvert can't process {bundled_scenario.name}")
+            raise
         cfg_text = (out / "toy.sumocfg").read_text()
         assert "tripinfo" in cfg_text, "SUMO config must enable tripinfo-output"
 

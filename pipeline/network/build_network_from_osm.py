@@ -317,6 +317,7 @@ def extract_canonical_network(
     link_counter = 0
     seen_edges = set()
     skipped_zero_length = 0
+    skipped_self_loops = 0
 
     for u, v, key, data in sorted(G.edges(keys=True, data=True)):
         # Create unique edge identifier
@@ -324,6 +325,14 @@ def extract_canonical_network(
         if edge_id in seen_edges:
             continue
         seen_edges.add(edge_id)
+
+        # Drop self-loops (from == to). SUMO's netconvert 1.26+ refuses to
+        # produce a net file when it encounters them; pipeline.network.scc
+        # also ignores them. They have no traffic-engineering meaning, and
+        # osmnx 2.x emits more of them from circular OSM ways than 1.x did.
+        if u == v:
+            skipped_self_loops += 1
+            continue
 
         from_node = osm_to_canonical[u]
         to_node = osm_to_canonical[v]
@@ -395,10 +404,15 @@ def extract_canonical_network(
         ))
         link_counter += 1
     
+    drop_notes = []
     if skipped_zero_length:
+        drop_notes.append(f"{skipped_zero_length} zero-length")
+    if skipped_self_loops:
+        drop_notes.append(f"{skipped_self_loops} self-loops")
+    if drop_notes:
         logger.info(
-            "Extracted %d nodes, %d links (dropped %d degenerate zero-length edges)",
-            len(nodes), len(links), skipped_zero_length,
+            "Extracted %d nodes, %d links (dropped %s)",
+            len(nodes), len(links), ", ".join(drop_notes),
         )
     else:
         logger.info("Extracted %d nodes, %d links", len(nodes), len(links))

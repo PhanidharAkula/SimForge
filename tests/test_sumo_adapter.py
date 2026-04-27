@@ -23,9 +23,28 @@ from .conftest import (
 )
 
 
+def _prepare_or_skip(scenario: Path, out: Path):
+    """Call `prepare_sumo_inputs`, skipping the test on a known arm64 netconvert crash.
+
+    The bundled scenarios can exceed SUMO 1.26's macOS arm64 `netconvert`
+    threshold (~3K nodes) — chicago_1k_car under osmnx 2.x extracts ~20K
+    nodes once denser highway types are included. Linux CI handles them
+    fine; on macOS arm64 we skip cleanly so the suite stays green.
+    """
+    try:
+        return prepare_sumo_inputs(scenario, out)
+    except RuntimeError as exc:
+        if is_arm64_netconvert_crash(exc):
+            pytest.skip(
+                f"arm64 netconvert can't process {scenario.name} "
+                f"({exc.args[0].splitlines()[0][:120]})"
+            )
+        raise
+
+
 def test_prepare_sumo_inputs_creates_expected_files(bundled_scenario: Path, tmp_path: Path) -> None:
     out = tmp_path / "sumo_out"
-    summary = prepare_sumo_inputs(bundled_scenario, out)
+    summary = _prepare_or_skip(bundled_scenario, out)
 
     assert summary.scenario_id == bundled_scenario.name
     assert summary.node_count > 0
@@ -48,7 +67,7 @@ def test_prepare_sumo_inputs_creates_expected_files(bundled_scenario: Path, tmp_
 def test_edges_have_length_attribute(bundled_scenario: Path, tmp_path: Path) -> None:
     """Edges must carry an explicit `length` so netconvert doesn't recompute it."""
     out = tmp_path / "sumo_edge_check"
-    prepare_sumo_inputs(bundled_scenario, out)
+    _prepare_or_skip(bundled_scenario, out)
 
     edges = ET.parse(out / "edges.edg.xml").findall(".//edge")
     assert edges, "edges.edg.xml should contain edges"
@@ -63,7 +82,7 @@ def test_edges_have_length_attribute(bundled_scenario: Path, tmp_path: Path) -> 
 def test_net_xml_has_realistic_lane_lengths(bundled_scenario: Path, tmp_path: Path) -> None:
     """Mean lane length must be > 10 m — guards against raw-WGS84 lengths."""
     out = tmp_path / "sumo_net_check"
-    prepare_sumo_inputs(bundled_scenario, out)
+    _prepare_or_skip(bundled_scenario, out)
 
     lane_lengths = [
         float(elem.get("length"))

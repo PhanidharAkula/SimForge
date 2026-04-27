@@ -394,11 +394,19 @@ def build_sumo_nodes_xml(graph: NetworkGraph) -> str:
 def build_sumo_edges_xml(graph: NetworkGraph) -> str:
     """
     Build a SUMO edges XML file (input for netconvert).
+
+    Self-looped links (from_node == to_node) are filtered out: SUMO
+    1.26's netconvert exits non-zero with no output file when it sees
+    them, even though it only emits Warning lines. The canonical SCC
+    computation already drops self-loops, so this filter just keeps the
+    SUMO build path consistent with the routable subgraph.
     """
     lines: List[str] = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
     lines.append('<edges>')
     for link in graph.links:
+        if link.from_node == link.to_node:
+            continue
         lines.append(
             f'    <edge id="{link.id}" from="{link.from_node}" to="{link.to_node}" '
             f'numLanes="{link.lanes}" speed="{link.speed}" length="{link.length:.2f}"/>'

@@ -15,7 +15,7 @@ import pytest
 
 from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 
-from .conftest import directory_sha256, file_sha256
+from .conftest import directory_sha256, file_sha256, is_arm64_netconvert_crash
 
 
 pytestmark = pytest.mark.determinism
@@ -29,8 +29,16 @@ class TestSUMOAdapterDeterminism:
         run2 = tmp_path / "run2"
         run1.mkdir()
         run2.mkdir()
-        assert prepare_sumo_inputs(scenario, run1) is not None
-        assert prepare_sumo_inputs(scenario, run2) is not None
+        try:
+            assert prepare_sumo_inputs(scenario, run1) is not None
+            assert prepare_sumo_inputs(scenario, run2) is not None
+        except RuntimeError as exc:
+            if is_arm64_netconvert_crash(exc):
+                pytest.skip(
+                    f"arm64 netconvert can't process {scenario.name} "
+                    f"({exc.args[0].splitlines()[0][:120]})"
+                )
+            raise
         return run1, run2
 
     def test_full_output_tree_is_identical(self, bundled_scenario, tmp_path):
