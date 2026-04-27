@@ -3,7 +3,7 @@
 # =============================================================================
 #
 # Scenarios:  chicago_200k_car_transit, nyc_500k_car
-# Engines:    SUMO, MATSim, LPSim (GPU)
+# Engines:    SUMO, MATSim, DTALite (CPU mesoscopic DTA)
 # Modes:      mesoscopic only — microscopic at 200K+ trips would not finish
 #             in any reasonable wall.
 # Repeats:    5 across the board (advisor sign-off, Version_4).
@@ -37,7 +37,7 @@ runs:
   - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
      engine: matsim,  mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
   - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
-     engine: lpsim,   mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
+     engine: dtalite, mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
 
   # ----------------------------------------------------------------- nyc_500k
   - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
@@ -45,4 +45,4 @@ runs:
   - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
      engine: matsim,  mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 7200}
   - {scenario_id: nyc_500k_car, scenario_path: scenarios/nyc_500k_car,
-     engine: lpsim,   mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 7200}
+     engine: dtalite, mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 7200}

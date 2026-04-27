@@ -3,29 +3,27 @@
 # =============================================================================
 #
 # Scenarios:  chicago_1k_car, nyc_10k_car, la_50k_bike_car_transit
-# Engines:    SUMO, MATSim, LPSim (GPU)
+# Engines:    SUMO, MATSim, DTALite (CPU mesoscopic DTA)
 # Modes:      mesoscopic for all three engines, plus microscopic for SUMO on
-#             every scenario. MATSim and LPSim are mesoscopic-only by design.
-# Repeats:    5 across the board (advisor sign-off, Version_4).
+#             every scenario. MATSim and DTALite are mesoscopic-only by design.
+# Repeats:    5 across the board (advisor sign-off, Version_5).
 # Total:      12 entries → ~60 simulator invocations.
 #
-# This is the matrix you can actually finish in a single SLURM wall.
-# Designed for parallel-by-scenario launch via cluster/jobs/benchmark_small.sbatch
-# (3 backgrounded `python -m execution.run_benchmark` processes, one per
-# scenario, each with its own --output dir).
+# This is the matrix you can actually finish in a single SLURM wall — and
+# now also runs end-to-end on a Mac laptop because DTALite is CPU-only.
 #
 # Prerequisites:
 #   - All 3 bundles are tracked in git — `git pull` brings them down.
-#   - LPSim binary at $HOME/lpsim/LivingCity/LivingCity OR Singularity image
-#     at $HOME/lpsim/lpsim.sif — build via:
-#       sbatch cluster/jobs/build_lpsim.sbatch
+#   - DTALite ships inside the path4gmns Python package
+#     (`pip install path4gmns`). On Mac the bundled binary needs OpenMP:
+#       brew install libomp
 # =============================================================================
 
 name: benchmark_small
 description: >
   SimForge small-tier benchmark across the three reference scenarios
   (chicago_1k_car, nyc_10k_car, la_50k_bike_car_transit) with SUMO + MATSim
-  + LPSim in mesoscopic, plus microscopic for SUMO. N=5 repeats per cell.
+  + DTALite in mesoscopic, plus microscopic for SUMO. N=5 repeats per cell.
 output_dir: runs/benchmark_small
 
 runs:
@@ -37,7 +35,7 @@ runs:
   - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
      engine: matsim,  mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 300}
   - {scenario_id: chicago_1k_car, scenario_path: scenarios/chicago_1k_car,
-     engine: lpsim,   mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 600}
+     engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 600}
 
   # ----------------------------------------------------------------- nyc_10k
   - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
@@ -47,7 +45,7 @@ runs:
   - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
      engine: matsim,  mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 600}
   - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
-     engine: lpsim,   mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
+     engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
 
   # ---------------------------------------------------- la_50k_bike_car_transit
   - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
@@ -57,4 +55,4 @@ runs:
   - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
      engine: matsim,  mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
   - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
-     engine: lpsim,   mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
+     engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}

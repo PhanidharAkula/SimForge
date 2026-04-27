@@ -82,42 +82,36 @@ def main() -> None:
     print(f"  modelgen txts: {len(glob.glob('modelgen/*.txt'))}")
     print(f"  scenarios:     {len(glob.glob('scenarios/*/'))}")
 
-    # LPSim binary / Singularity image — adapter auto-finds whichever is present.
-    # Importing here keeps env_report runnable even if the LPSim adapter import
+    # DTALite — bundled binary inside path4gmns Python package.
+    # Importing here keeps env_report runnable even if the adapter import
     # itself ever breaks (it's a thin Python module, but defensive is cheap).
-    # Add repo root to sys.path so `python tools/env_report.py` works from
-    # any cwd without needing `python -m` invocation.
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
     try:
-        from adapters.lpsim.lpsim_adapter import (
-            find_lpsim_binary, find_lpsim_singularity_image,
+        from adapters.dtalite import (
+            is_dtalite_available, find_dtalite_binary,
         )
-        binary = find_lpsim_binary()
-        sif = find_lpsim_singularity_image()
-        if binary:
-            print(f"  lpsim binary:  {binary}")
-        elif sif:
-            print(f"  lpsim image:   {sif} (Singularity)")
+        if is_dtalite_available():
+            binary = find_dtalite_binary()
+            print(f"  dtalite:       {binary}")
         else:
-            print("  lpsim binary:  NOT BUILT (run `sbatch cluster/jobs/build_lpsim.sbatch` on Pitzer)")
+            print("  dtalite:       NOT INSTALLED (run `uv pip install path4gmns`; on Mac also `brew install libomp`)")
     except ImportError as e:
-        print(f"  lpsim adapter: import failed ({e})")
+        print(f"  dtalite adapter: import failed ({e})")
 
-    # LPSim version pin — the source of truth for cross-machine reproducibility.
-    lpsim_manifest = "lib/lpsim/manifest.json"
-    if os.path.isfile(lpsim_manifest):
+    # DTALite version pin — the source of truth for cross-machine reproducibility.
+    dtalite_manifest = "lib/dtalite/manifest.json"
+    if os.path.isfile(dtalite_manifest):
         try:
             import json
-            with open(lpsim_manifest, encoding="utf-8") as fh:
-                pin = json.load(fh).get("lpsim", {})
-            sha = (pin.get("git_sha") or "")[:12]
-            print(f"  lpsim pin:     git@{sha} | {pin.get('docker_image', '?')}:{pin.get('docker_tag', '?')}")
+            with open(dtalite_manifest, encoding="utf-8") as fh:
+                pin = json.load(fh).get("dtalite", {})
+            print(f"  dtalite pin:   path4gmns=={pin.get('path4gmns_version', '?')} | upstream={pin.get('upstream_repo', '?')}")
         except (OSError, ValueError) as e:
-            print(f"  lpsim pin:     manifest unreadable ({e})")
+            print(f"  dtalite pin:   manifest unreadable ({e})")
     else:
-        print(f"  lpsim pin:     {lpsim_manifest} not found")
+        print(f"  dtalite pin:   {dtalite_manifest} not found")
 
     print("=" * 60)
 

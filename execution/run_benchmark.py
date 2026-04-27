@@ -170,7 +170,7 @@ def print_banner(runspec_name: str, total_runs: int, scenarios: int, configs: in
 class RunResult:
     """Result of a single simulation run."""
     scenario: str                       # Base scenario name (e.g. "chicago_1k_car")
-    engine: str                         # "sumo", "matsim", "lpsim"
+    engine: str                         # "sumo", "matsim", "dtalite"
     mode: str                           # "micro" or "meso"
     seed: int
     repeat_index: int                   # 0-based
@@ -391,7 +391,7 @@ class BenchmarkHarness:
         logger.info("Starting run: %s / %s / seed=%d%s", scenario_id, engine, seed, mode_str)
 
         # Handle different engines
-        supported_engines = ["sumo", "matsim", "lpsim"]
+        supported_engines = ["sumo", "matsim", "dtalite"]
         if engine not in supported_engines:
             return RunResult(
                 scenario=scenario_id,
@@ -416,15 +416,18 @@ class BenchmarkHarness:
                     java_heap_gb=matsim_opts.get("heap_gb", 4),
                 )
                 prepare_matsim_inputs(scenario_path, run_dir, matsim_config, random_seed=seed)
-            elif engine == "lpsim":
-                # LPSim GPU-accelerated mesoscopic
-                from adapters.lpsim import prepare_lpsim_inputs, LPSimConfig
-                lpsim_opts = engine_options or {}
-                lpsim_config = LPSimConfig(
-                    use_cpu=lpsim_opts.get("use_cpu", False),
-                    num_passes=lpsim_opts.get("num_passes", 1),
+            elif engine == "dtalite":
+                # DTALite mesoscopic Dynamic Traffic Assignment (CPU)
+                from adapters.dtalite import prepare_dtalite_inputs, DTALiteConfig
+                dtalite_opts = engine_options or {}
+                dtalite_config = DTALiteConfig(
+                    iterations=dtalite_opts.get("iterations", 5),
+                    column_updating_iterations=dtalite_opts.get(
+                        "column_updating_iterations", 5
+                    ),
+                    simulation_output=dtalite_opts.get("simulation_output", 1),
                 )
-                prepare_lpsim_inputs(scenario_path, run_dir, lpsim_config)
+                prepare_dtalite_inputs(scenario_path, run_dir, dtalite_config)
             else:
                 # SUMO
                 self.prepare_sumo_inputs(scenario_path, run_dir, seed)
@@ -478,11 +481,12 @@ class BenchmarkHarness:
                         "p95": stats.get("p95_travel_time_s", 0),
                         "trip_count": stats.get("trip_count", 0)
                     }
-        elif engine == "lpsim":
-            # LPSim reads command_line_options.ini from CWD; the adapter
-            # writes it under run_dir during prepare_lpsim_inputs.
-            ini_path = run_dir / "command_line_options.ini"
-            if not ini_path.exists():
+        elif engine == "dtalite":
+            # DTALite reads settings.yml + node.csv + link.csv + demand.csv
+            # from CWD; the adapter writes them under run_dir during
+            # prepare_dtalite_inputs.
+            settings_path = run_dir / "settings.yml"
+            if not settings_path.exists():
                 return RunResult(
                     scenario=scenario_id,
                     engine=engine,
@@ -492,21 +496,16 @@ class BenchmarkHarness:
                     status="failed",
                     runtime_s=0,
                     output_dir=run_dir,
-                    error_message="No command_line_options.ini generated for LPSim"
+                    error_message="No settings.yml generated for DTALite"
                 )
 
-            from adapters.lpsim import run_lpsim, parse_lpsim_output
-            lpsim_opts = engine_options or {}
-            success, runtime, error = run_lpsim(
-                run_dir,
-                timeout_s=timeout_s,
-                use_singularity=lpsim_opts.get("use_singularity", True),
-            )
+            from adapters.dtalite import run_dtalite, parse_dtalite_output
+            success, runtime, error = run_dtalite(run_dir, timeout_s=timeout_s)
 
             metrics = {}
             tripinfo_path = None
             if success:
-                stats = parse_lpsim_output(run_dir)
+                stats = parse_dtalite_output(run_dir)
                 if stats is not None and stats.completed_count > 0:
                     metrics["travel_time"] = {
                         "mean": stats.mean_travel_time_s,

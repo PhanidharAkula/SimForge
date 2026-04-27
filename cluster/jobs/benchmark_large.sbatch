@@ -5,8 +5,8 @@
 # ⚠️ THIS JOB CURRENTLY EXCEEDS WALL TIME on the unmodified codebase.
 #    The SUMO adapter pre-routes every trip via BFS on the canonical graph
 #    BEFORE handing off to the simulator. Measured cost on chicago_200k:
-#    ~17 h per (engine, seed). With 5 sumo + 5 matsim + 5 lpsim runs that's
-#    ~255 h of SUMO routing alone — past the gpu-partition wall. LPSim and
+#    ~17 h per (engine, seed). With 5 sumo + 5 matsim + 5 dtalite runs that's
+#    ~255 h of SUMO routing alone — past the cpu-partition wall. DTALite and
 #    MATSim run from already-prepared inputs so they're not affected, but
 #    the SUMO bottleneck dominates the wall.
 #
@@ -15,15 +15,14 @@
 #    cluster/jobs/benchmark_small.sbatch for jobs that finish today.
 #
 # Resources:
-#   --partition=gpu, --gres=gpu:v100:1 — LPSim needs CUDA. SUMO and MATSim
-#                            run on the same node without touching the GPU.
-#   --cpus-per-task=16, --mem=96G, --time=96:00:00 (max for gpu partition).
+#   --partition=cpu — all three engines (SUMO, MATSim, DTALite) are CPU-only
+#                            after the LPSim removal in Version_5.
+#   --cpus-per-task=16, --mem=96G, --time=96:00:00.
 # ============================================================================
 
 #SBATCH --account=PMIU0110
 #SBATCH --job-name=simforge_benchmark_large
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:v100:1
+#SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -38,9 +37,6 @@ set -euo pipefail
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
-module load cuda/11.8.0      # LPSim runtime — bundled binary needs libcudart.so.11.0
-                             # despite the cuda12.4-tagged image; adapter bind-mounts
-                             # $CUDA_HOME/lib64 into the container at run time.
 cd ~/SimForge
 source .venv/bin/activate
 
@@ -49,15 +45,7 @@ echo "Python:    $(which python)"
 echo "SUMO:      $(sumo --version 2>&1 | head -1)"
 echo "Java:      $(java -version 2>&1 | head -1)"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>&1 | head -3 || echo "nvidia-smi unavailable"
-if [ -x "$HOME/lpsim/LivingCity/LivingCity" ]; then
-    echo "LPSim:     $HOME/lpsim/LivingCity/LivingCity (native binary)"
-elif [ -f "$HOME/lpsim/lpsim.sif" ]; then
-    echo "LPSim:     $HOME/lpsim/lpsim.sif (Singularity image)"
-else
-    echo "LPSim:     NOT BUILT — every lpsim run will record a clean failure."
-    echo "           Build once via: sbatch cluster/jobs/build_lpsim.sbatch"
-fi
+python -c "from adapters.dtalite import is_dtalite_available, find_dtalite_binary; print(f'DTALite:   {find_dtalite_binary() if is_dtalite_available() else \"NOT INSTALLED — run uv pip install path4gmns\"}')"
 echo
 echo "⚠️  Reminder: SUMO BFS routing pre-step may exceed the wall."
 echo "    See header comment for context."

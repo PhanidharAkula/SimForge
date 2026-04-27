@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge benchmark — small tier (3 scenarios × SUMO + MATSim + LPSim × meso+micro).
+# SimForge benchmark — small tier (3 scenarios × SUMO + MATSim + DTALite × meso+micro).
 #
 # Runs runspecs/benchmark_small.yaml with three parallel python workers,
 # one per scenario, each writing to its own --output dir to avoid the
@@ -15,22 +15,21 @@
 #   Budget set to 24 h for headroom.
 #
 # Resources:
-#   --partition=gpu        : LPSim needs CUDA. SUMO and MATSim run fine on
-#                            the same node — they don't touch the GPU.
-#   --gres=gpu:v100:1      : One V100; concurrent LPSim runs from the three
-#                            parallel scenarios share it via CUDA's scheduler.
+#   --partition=cpu        : All three engines (SUMO, MATSim, DTALite) are
+#                            CPU-only after the LPSim removal in Version_5.
 #   --cpus-per-task=16     : 3 parallel scenarios × ~2 cores each + python
 #                            overhead + post-step analyzer fits comfortably.
+#                            DTALite uses OpenMP and benefits from the extra
+#                            cores via number_of_cpu_processors in settings.yml.
 #   --mem=64G              : Peak per-scenario memory ~5 GB; 3 in parallel
 #                            ≤ 20 GB; 64 GB has headroom (la_50k microscopic
 #                            can spike).
 #   --time=24:00:00        : See wall-clock budget above.
 #
-# LPSim: build once on a GPU node before submitting:
-#   sbatch cluster/jobs/build_lpsim.sbatch
-# Once built at $HOME/lpsim/LivingCity/LivingCity (or pulled to
-# $HOME/lpsim/lpsim.sif), the lpsim adapter auto-finds it. Without it,
-# every lpsim run records a clean failure with a build pointer.
+# DTALite: ships inside the path4gmns Python package (already in
+# requirements.lock). No build step required on Pitzer; the bundled
+# Linux .so works against the system glibc when run inside the same
+# Apptainer/conda environment used for the rest of the harness.
 #
 # Edit before submitting on a different OSC project:
 #   --account=...     your project allocation (replaces PMIU0110)
@@ -41,8 +40,7 @@
 
 #SBATCH --account=PMIU0110
 #SBATCH --job-name=simforge_benchmark_small
-#SBATCH --partition=gpu
-#SBATCH --gres=gpu:v100:1
+#SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -57,26 +55,15 @@ set -euo pipefail
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
-module load cuda/11.8.0      # LPSim runtime — bundled binary needs libcudart.so.11.0
-                             # despite the cuda12.4-tagged image; adapter bind-mounts
-                             # $CUDA_HOME/lib64 into the container at run time.
 cd ~/SimForge
-source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
+source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim + path4gmns
 
 echo "=== Job starting on $(hostname) at $(date) ==="
 echo "Python:    $(which python)"
 echo "SUMO:      $(sumo --version 2>&1 | head -1)"
 echo "Java:      $(java -version 2>&1 | head -1)"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
-nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>&1 | head -3 || echo "nvidia-smi unavailable"
-if [ -x "$HOME/lpsim/LivingCity/LivingCity" ]; then
-    echo "LPSim:     $HOME/lpsim/LivingCity/LivingCity (native binary)"
-elif [ -f "$HOME/lpsim/lpsim.sif" ]; then
-    echo "LPSim:     $HOME/lpsim/lpsim.sif (Singularity image)"
-else
-    echo "LPSim:     NOT BUILT — every lpsim run will record a clean failure."
-    echo "           Build once via: sbatch cluster/jobs/build_lpsim.sbatch"
-fi
+python -c "from adapters.dtalite import is_dtalite_available, find_dtalite_binary; print(f'DTALite:   {find_dtalite_binary() if is_dtalite_available() else \"NOT INSTALLED — run uv pip install path4gmns\"}')"
 echo
 
 # ---------------------------------------------------------------------------

@@ -29,7 +29,7 @@ runs:
 
   - scenario_id: chicago_1k_car
     scenario_path: scenarios/chicago_1k_car
-    engine: lpsim
+    engine: dtalite
     mode: mesoscopic
     repeats: 5
     seed: 42

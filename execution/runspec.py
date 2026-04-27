@@ -42,7 +42,7 @@ class RunConfig:
     """Configuration for a single benchmark run."""
     scenario_id: str
     scenario_path: str
-    engine: str  # sumo, matsim, lpsim
+    engine: str  # sumo, matsim, dtalite
     environment: str = "local_cpu"  # local_cpu, local_gpu, hpc
     repeats: int = 1
     seed: int = 42
@@ -136,7 +136,7 @@ class RunSpec:
         
         return cls._from_dict(data, path)
     
-    KNOWN_ENGINES = {"sumo", "matsim", "lpsim"}
+    KNOWN_ENGINES = {"sumo", "matsim", "dtalite"}
 
     @classmethod
     def _from_dict(cls, data: dict, source_path: Path) -> "RunSpec":
