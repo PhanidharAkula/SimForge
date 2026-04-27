@@ -490,14 +490,27 @@ def run_lpsim(
                 "(CUDA 12.4) does not provide."
             )
 
-        # Bind the output dir into the container at the same path AND set
-        # --pwd so LPSim reads our command_line_options.ini instead of the
-        # bundled berkeley_2018 sample at /command_line_options.ini.
-        # Apptainer 1.3.6 does NOT inherit the host's CWD even when
-        # subprocess.run(cwd=...) is set, and may not auto-mount the parent
-        # of `output_dir` (e.g. /tmp on some OSC nodes). Belt-and-braces.
+        # The LPSim binary `chdir`'s to /LivingCity at startup (or hardcodes
+        # the INI path), so --pwd alone doesn't redirect *input reading* —
+        # only *output writing*. Diagnosed on Pitzer (Apptainer 1.3.6):
+        # /LivingCity/command_line_options.ini exists in the image with the
+        # default NETWORK_PATH=berkeley_2018/new_full_network/, and the
+        # binary reads that file regardless of CWD or which other INIs we
+        # bind into /tmp/.
+        #
+        # Fix: overlay our INI and our network/ directly on top of the paths
+        # /LivingCity/ inside the container. Output files (memory-consumption.csv,
+        # <NUM_PASSES>_people*.csv, timestamps.info) still land in --pwd
+        # because LPSim writes those to its process-CWD, not /LivingCity.
         output_str = str(output_dir)
-        cmd.extend(["--bind", output_str, "--pwd", output_str])
+        host_ini = f"{output_str}/command_line_options.ini"
+        host_network = f"{output_str}/network"
+        cmd.extend([
+            "--bind", output_str,
+            "--pwd", output_str,
+            "--bind", f"{host_ini}:/LivingCity/command_line_options.ini",
+            "--bind", f"{host_network}:/LivingCity/network",
+        ])
 
         cmd.extend([str(sif), in_container_binary])
         binary_label = f"singularity://{sif.name}!{in_container_binary}"
