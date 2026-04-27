@@ -203,6 +203,24 @@ class TestEdgesCsv:
         assert float(data[1]["speed_mph"]) == pytest.approx(11.1 * _MS_TO_MPH, abs=0.05)
         assert float(data[2]["speed_mph"]) == pytest.approx(22.2 * _MS_TO_MPH, abs=0.05)
 
+    def test_uniqueid_is_sequential(self, tiny_graph, tmp_path):
+        # LPSim's GPU kernel indexes per-edge arrays by `uniqueid`, so
+        # gappy IDs (from self-loop / short-edge filters) trigger an
+        # OOB at b18CUDA_trafficSimulator.cu:1682. Diagnosed on Pitzer
+        # 2026-04-27 — confirmed our edges.csv had max uniqueid 58917
+        # but only 58505 rows. The adapter therefore renumbers
+        # uniqueid sequentially 0..N-1 as it writes. Note: tiny_graph
+        # has 4 links incl. one self-loop, so we expect 3 written
+        # rows with uniqueids exactly {0, 1, 2}.
+        out = tmp_path / "edges.csv"
+        n = write_lpsim_edges_csv(tiny_graph, out)
+        with out.open() as f:
+            reader = csv.DictReader(f)
+            uniqueids = [int(r["uniqueid"]) for r in reader]
+        assert uniqueids == list(range(n)), (
+            f"uniqueid must be 0..N-1 contiguous, got {uniqueids}"
+        )
+
     def test_drops_sub_meter_edges(self, tmp_path):
         # LPSim's GPU lane-map kernel allocates `length / cell_size` cells
         # per edge; a sub-meter edge yields zero cells and the simulation

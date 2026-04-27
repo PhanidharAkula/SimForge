@@ -246,6 +246,17 @@ def write_lpsim_edges_csv(graph: NetworkGraph, out_path: Path) -> int:
                     "length", "lanes", "speed_mph"])
         # Sort for determinism — adapter outputs must be byte-identical
         # across re-runs (see test_adapter_determinism).
+        # `uniqueid` is renumbered SEQUENTIALLY 0..N-1 as we write,
+        # NOT taken from the canonical link ID. LPSim's edge loader
+        # (graph.cc:166) passes uniqueid to add_edge() as `edgeid`, and
+        # the GPU kernel indexes per-edge arrays by that value. If our
+        # canonical IDs have gaps (from self-loop drops, short-edge
+        # drops, canonical-generator drops), the kernel reads
+        # array[max_uniqueid] on an array sized to row_count and
+        # triggers the b18CUDA_trafficSimulator.cu:1682 OOB. Diagnosed
+        # on Pitzer 2026-04-27. The canonical link ID isn't used
+        # downstream (nothing references LPSim edges by external ID),
+        # so the renumbering is safe.
         for link in sorted(graph.links, key=lambda lk: _to_int_index(lk.id)):
             if link.from_node == link.to_node:
                 skipped_self += 1
@@ -253,12 +264,11 @@ def write_lpsim_edges_csv(graph: NetworkGraph, out_path: Path) -> int:
             if link.length < _LPSIM_MIN_EDGE_LENGTH_M:
                 skipped_short += 1
                 continue
-            uid = _to_int_index(link.id)
             u = _to_int_index(link.from_node)
             v = _to_int_index(link.to_node)
             speed_mph = link.speed * _MS_TO_MPH
             lanes = max(int(link.lanes), 1)
-            w.writerow([uid, u, v, u, v,
+            w.writerow([rows, u, v, u, v,
                         f"{link.length:.2f}", lanes, f"{speed_mph:.1f}"])
             rows += 1
     if skipped_short:
