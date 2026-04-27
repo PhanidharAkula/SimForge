@@ -70,6 +70,16 @@ logger = logging.getLogger(__name__)
 # 1 m/s ≈ 2.23694 mph. LPSim's edge schema is mph; canonical is m/s.
 _MS_TO_MPH = 2.23693629
 
+# Minimum edge length we'll send to LPSim (meters). LPSim's GPU lane-map
+# kernel allocates `edge_length / cell_size` cells per edge; a sub-meter
+# edge yields zero cells and the simulation kernel hits an illegal-memory
+# access (b18CUDA_trafficSimulator.cu:kernel_trafficSimulation, diagnosed
+# on Pitzer 2026-04-27). Canonical osmnx-derived networks routinely emit
+# 0.1–0.2 m osm-artifact edges (intersection micro-segments, parallel
+# duplicates), so we filter them below this threshold before handoff.
+# This is LPSim-specific — SUMO and MATSim don't share the bug.
+_LPSIM_MIN_EDGE_LENGTH_M = 1.0
+
 
 @dataclass
 class LPSimConfig:
@@ -226,6 +236,8 @@ def write_lpsim_edges_csv(graph: NetworkGraph, out_path: Path) -> int:
     consistent with the rest of the pipeline.
     """
     rows = 0
+    skipped_self = 0
+    skipped_short = 0
     with out_path.open("w", encoding="utf-8", newline="") as f:
         # lineterminator="\n" — csv.h SP loader rejects CRLF (see
         # write_lpsim_nodes_csv docstring for the failure mode).
@@ -236,6 +248,10 @@ def write_lpsim_edges_csv(graph: NetworkGraph, out_path: Path) -> int:
         # across re-runs (see test_adapter_determinism).
         for link in sorted(graph.links, key=lambda lk: _to_int_index(lk.id)):
             if link.from_node == link.to_node:
+                skipped_self += 1
+                continue
+            if link.length < _LPSIM_MIN_EDGE_LENGTH_M:
+                skipped_short += 1
                 continue
             uid = _to_int_index(link.id)
             u = _to_int_index(link.from_node)
@@ -245,6 +261,13 @@ def write_lpsim_edges_csv(graph: NetworkGraph, out_path: Path) -> int:
             w.writerow([uid, u, v, u, v,
                         f"{link.length:.2f}", lanes, f"{speed_mph:.1f}"])
             rows += 1
+    if skipped_short:
+        logger.info(
+            "LPSim edges.csv: dropped %d edges shorter than %.1f m "
+            "(LPSim GPU kernel can't handle sub-meter edges; SUMO/MATSim get "
+            "the unfiltered network)",
+            skipped_short, _LPSIM_MIN_EDGE_LENGTH_M,
+        )
     return rows
 
 

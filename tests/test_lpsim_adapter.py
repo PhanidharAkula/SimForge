@@ -203,6 +203,31 @@ class TestEdgesCsv:
         assert float(data[1]["speed_mph"]) == pytest.approx(11.1 * _MS_TO_MPH, abs=0.05)
         assert float(data[2]["speed_mph"]) == pytest.approx(22.2 * _MS_TO_MPH, abs=0.05)
 
+    def test_drops_sub_meter_edges(self, tmp_path):
+        # LPSim's GPU lane-map kernel allocates `length / cell_size` cells
+        # per edge; a sub-meter edge yields zero cells and the simulation
+        # kernel hits an illegal-memory access. Diagnosed on Pitzer
+        # 2026-04-27. The adapter therefore filters edges < 1 m.
+        nodes = {
+            "n0": CanonicalNode(id="n0", x=0, y=0),
+            "n1": CanonicalNode(id="n1", x=1, y=1),
+            "n2": CanonicalNode(id="n2", x=2, y=2),
+        }
+        links = [
+            CanonicalLink(id="l0", from_node="n0", to_node="n1",
+                          length=0.13, speed=10, lanes=1),  # too short
+            CanonicalLink(id="l1", from_node="n1", to_node="n2",
+                          length=120.0, speed=10, lanes=1),  # OK
+            CanonicalLink(id="l2", from_node="n0", to_node="n2",
+                          length=0.99, speed=10, lanes=1),  # too short by a hair
+        ]
+        graph = NetworkGraph(nodes=nodes, links=links,
+                             adjacency={}, edge_lookup={})
+        out = tmp_path / "edges.csv"
+        rows_written = write_lpsim_edges_csv(graph, out)
+        assert rows_written == 1, \
+            "only the 120 m edge survives; both sub-meter edges dropped"
+
     def test_lanes_clamped_to_at_least_1(self, tmp_path):
         # An edge with lanes=0 (rare but possible from osm data) should still
         # be writable as a 1-lane road.
