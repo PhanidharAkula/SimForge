@@ -8,6 +8,27 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_4
 
+### Added (Phase B — LPSim integration)
+
+- **`adapters/lpsim/`** — full adapter package (`__init__.py`, `lpsim_adapter.py`, `cli.py`, `MAPPING.md`) targeting the LPSim B18 loader's exact column schemas:
+  - `nodes.csv`: `osmid, x, y, highway, index`
+  - `edges.csv`: `uniqueid, osmid_u, osmid_v, u, v, length, lanes, speed_mph` (with self-loop filter and m/s → mph conversion)
+  - OD demand: `PERNO, origin, destination` (LPSim has no per-trip departure column; the canonical `departure_time_s` is intentionally dropped, with departures governed globally by `START_HR`/`END_HR` in the .ini)
+  - `command_line_options.ini`: `[General]` section with the keys SimForge controls (`USE_CPU`, `USE_SP_ROUTING`, `NUM_PASSES`, `START_HR`, `END_HR`, `OD_DEMAND_FILENAME`, etc.)
+  - Output parser handles `<NUM_PASSES>_people*.csv` and produces `mean_travel_time_s` / `p95_travel_time_s` / `completed_count` for the same KPI surface SUMO and MATSim use
+  - Binary discovery: `LPSIM_BINARY` env var → `$HOME/lpsim/LivingCity/LivingCity` → `$HOME/lpsim/LivingCity` → `LivingCity` on `PATH`
+  - Singularity fallback: `$HOME/lpsim/lpsim.sif` runs via `singularity exec --nv … LivingCity`
+  - **No silent CPU fallback** — when no GPU binary is available the adapter records a clean `RunResult` failure with a build pointer, avoiding the QarSUMO bit-identical-fallback trap.
+- **`tests/test_lpsim_adapter.py`** (39 tests) — covers helpers, all four writers (nodes/edges/demand/INI), determinism (byte-identical re-runs), end-to-end input prep on the bundled scenario, output parsing on synthetic `*_people.csv` fixtures, and binary discovery. No GPU required for the fast tier.
+- **`cluster/jobs/build_lpsim.sbatch`** — one-time GPU-partition job that pulls the `yibo123/lpsim:cuda12.4` Docker image as a Singularity SIF (preferred, fast) or clones+builds LPSim from source (`make` under `LivingCity/`) and symlinks the binary to `$HOME/lpsim/LivingCity/LivingCity` where the adapter looks for it. Module-loads `gcc/13.2.0` + `cuda/12.6.2` per Pitzer's lmod conventions.
+- **Engine registries widened** to include `lpsim` across `execution/runspec.py::KNOWN_ENGINES`, `execution/run_benchmark.py::supported_engines`, `run.py::ALL_ENGINES`, `evaluation/generate_plots.py::ENGINE_COLORS / KNOWN_ENGINES`, the engine tuples in `evaluation/analyze_benchmark.py` and `evaluation/compare_modes.py`. `help.py` lists LPSim alongside SUMO + MATSim.
+- **Runspec entries** — `runspecs/stress_test.yaml` is now a 4-cell matrix (SUMO meso, SUMO micro, MATSim meso, LPSim meso); `benchmark_small.yaml` adds an LPSim row per scenario (12 entries / 60 invocations); `benchmark_large.yaml` adds an LPSim row per scenario (6 entries / 30 invocations). All cells use **N=5** repeats per advisor sign-off.
+- **Cluster sbatches switched back to the GPU partition** — `cluster/jobs/benchmark_small.sbatch` and `benchmark_large.sbatch` now request `--partition=gpu --gres=gpu:v100:1` since LPSim needs CUDA. Pre-flight diagnostics surface whether the LPSim binary or Singularity image is present.
+
+### Changed (Phase B follow-on)
+
+- **N=5 across the matrix** — `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` all bumped from N=3/2 to N=5. The 95 % CI half-width shrinks ~3.5× vs N=3 (t-factor 2.776 vs 4.303 on top of √(5/3) variance reduction), which is the precision the plan §3.5 commitments need.
+
 ### Removed
 
 - **QarSUMO engine completely dropped** (Version_4 Phase A) — the plan listed QarSUMO as a 5th engine, but as of the 2026-04-26 audit no usable public source exists: LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper cited in the plan hasn't materialised into runnable code. The CPU-fallback path that shipped through Version_3 was bit-identical to standard SUMO meso, contributing no new comparison signal. Removed: `adapters/qarsumo/` package, `tests/test_qarsumo_adapter.py` (10 tests), `cluster/jobs/build_qarsumo.sbatch`, all `qarsumo` runspec entries (`stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml`), engine registry membership in `execution/runspec.py` and `run.py`, dispatcher branches in `execution/run_benchmark.py`, plot/analyze engine tuples, and all doc references. The 3rd primary engine slot is now reserved for **LPSim** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU-accelerated, Docker shipped) — see `todo.md` Phase B.

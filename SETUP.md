@@ -253,15 +253,13 @@ For a tour of every figure produced by `generate_plots.py`, see [doc/RESULTS_GUI
 
 ## GPU Acceleration
 
-The plan commits to a 3rd primary engine (LPSim, GPU-accelerated, MIT
-licensed) which will land in Version_4 Phase B — see [todo.md](todo.md). Until
-then the active engines (SUMO + MATSim) are CPU-only.
+LPSim is the 3rd primary engine ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU mesoscopic). Build it once on a Pitzer GPU node via `sbatch cluster/jobs/build_lpsim.sbatch`. Without that build the LPSim adapter records a clean failure (it does **not** fall back to CPU silently — that was the QarSUMO trap we want to avoid).
 
-| Mode             | Hardware    | Use Case                          |
-| ---------------- | ----------- | --------------------------------- |
-| CPU (SUMO)       | Any CPU     | Small/medium scenarios, debugging |
-| CPU (MATSim)     | Any CPU     | Activity-based, multi-modal       |
-| GPU (LPSim)      | NVIDIA CUDA | Planned (Version_4 Phase B)       |
+| Engine    | Hardware    | Use Case                          |
+| --------- | ----------- | --------------------------------- |
+| SUMO      | Any CPU     | Small/medium scenarios, debugging |
+| MATSim    | Any CPU     | Activity-based, multi-modal       |
+| LPSim     | NVIDIA CUDA | Large-scale mesoscopic on GPU     |
 
 ---
 
@@ -310,7 +308,7 @@ sbatch cluster/jobs/05_stress_test.sbatch       # or any of cluster/jobs/01..05
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
 | `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the test suite (~395 tests)            |
+| `python -m pytest tests/ -v`                           | Run the test suite (~434 tests)            |
 
 ---
 
@@ -320,7 +318,8 @@ sbatch cluster/jobs/05_stress_test.sbatch       # or any of cluster/jobs/01..05
 SimForge/
 ├── adapters/               # Simulator-specific converters
 │   ├── sumo/               #   SUMO adapter (micro + meso)
-│   └── matsim/             #   MATSim adapter
+│   ├── matsim/             #   MATSim adapter
+│   └── lpsim/              #   LPSim adapter (GPU mesoscopic)
 ├── canonical/              # Schema documentation (v0)
 ├── doc/                    # Architecture, reproduction, thesis chapters
 ├── evaluation/             # Metrics, analysis, plots

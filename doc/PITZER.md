@@ -34,14 +34,14 @@ that produced the published numbers.
 | Scenario generation (PBF + census)  | Works  | PBFs rsynced from local (see §5); no Overpass hits on compute node |
 | SUMO meso + micro                   | Works  | `pip install eclipse-sumo` inside the venv                         |
 | MATSim 15.0                         | Works  | `module load openjdk/21.0.3_9` + `lib/matsim-15.0/matsim-15.0.jar` |
-| LPSim (planned)                     | Pending| Phase B of `todo.md` — will use the `gpu` partition (V100)         |
+| LPSim (GPU)                         | Works  | Build once via `sbatch cluster/jobs/build_lpsim.sbatch` (gpu partition) |
 | Evaluation + plot rendering         | Works  | Pure Python (matplotlib in venv)                                   |
 | Bundle validation + SHA-256 hashing | Works  | Pure Python                                                        |
 
-The meaningful upgrade versus running locally will arrive with LPSim (Version_4
-Phase B): the GPU partition lets the LPSim adapter exercise real V100 kernels.
-Until then SUMO + MATSim are the only active engines and both run on the cpu
-partition.
+The meaningful upgrade versus running locally is LPSim: on a V100 node the
+adapter exercises real CUDA kernels instead of the clean-failure pathway dev
+laptops hit. SUMO and MATSim run unchanged on the same GPU node — they don't
+touch the device, the GPU is purely for LPSim.
 
 ---
 
@@ -189,7 +189,7 @@ versions rebump after cluster upgrades). As of 2026-04:
 | Python     | **not used**              | Use `uv` (installs Python 3.13.13 to match the locked dev env)      |
 | GCC        | `module load gcc`         | Usually unneeded (modern default)                                   |
 | OpenJDK    | `module load openjdk/21.0.3_9` | MATSim runtime — Pitzer's lmod requires an explicit version (`module spider openjdk` lists current options) |
-| CUDA       | `module load cuda/12.6.2` | LPSim build / run (Version_4 Phase B); not needed today              |
+| CUDA       | `module load cuda/12.6.2` | LPSim build / run                                                    |
 | Git        | pre-installed             | —                                                                   |
 | SUMO       | **not** a module          | Bundled in `requirements.lock` (`eclipse-sumo` wheel)               |
 
@@ -358,7 +358,7 @@ jobs. Always set `--time` to ≥ 1.5× the relevant row; the committed
 
 ### Running the benchmark matrix
 
-Once the bundles exist, run the 3-cell canonical matrix (or a subset):
+Once the bundles exist, run the 4-cell canonical matrix (or a subset):
 
 ```bash
 # ~/jobs/run_benchmark.sbatch
@@ -380,14 +380,25 @@ python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress
 python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
 ```
 
-### LPSim on GPU (planned — Version_4 Phase B)
+### LPSim on GPU
 
-LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT) ships a CUDA
-12.4 Docker image (`yibo123/lpsim:cuda12.4`). The plan is to either pull the
-image (via `singularity pull docker://yibo123/lpsim:cuda12.4`) or build LPSim
-from source on a GPU partition node, then expose a `run_lpsim()` adapter that
-dispatches LPSim like SUMO/MATSim. Until the adapter lands, no GPU work is
-queued on Pitzer for SimForge. See `todo.md` Phase B for the full roadmap.
+LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT) is the GPU
+mesoscopic comparator. One-time build:
+
+```bash
+sbatch cluster/jobs/build_lpsim.sbatch
+```
+
+That job tries Singularity first (pulls `yibo123/lpsim:cuda12.4` as a SIF to
+`$HOME/lpsim/lpsim.sif`) and falls back to a source build (clones the repo
+under `$HOME/lpsim/source/` and symlinks the binary to
+`$HOME/lpsim/LivingCity/LivingCity`). Either path is auto-discovered by the
+adapter at run time — no env var or config tweak needed.
+
+Re-run the build only when CUDA / GCC versions on Pitzer change. The
+benchmark sbatches (`benchmark_small.sbatch` / `benchmark_large.sbatch`)
+run on the gpu partition specifically so LPSim has a V100 available;
+SUMO and MATSim share the same node and don't touch the GPU.
 
 ---
 
@@ -462,15 +473,15 @@ scancel --user=$USER                # all your jobs (be careful!)
 ## 9. Benchmark matrix on Pitzer
 
 The thesis numbers come from running `runspecs/stress_test.yaml` on Pitzer
-with the active engines (SUMO + MATSim today; LPSim once Phase B lands). After
-a successful benchmark job you should have:
+with all three engines. After a successful benchmark job you should have:
 
 ```
 runs/stress_test/
 ├── benchmark_results_stress_test.json
 ├── chicago_1k_car/
-│   ├── sumo/     {seed_42,seed_43,seed_44}/tripinfo.xml
-│   └── matsim/   {seed_42,seed_43}/output_trips.csv.gz
+│   ├── sumo/     {seed_42,seed_43,seed_44,seed_45,seed_46}/tripinfo.xml
+│   ├── matsim/   {seed_42..seed_46}/output_trips.csv.gz
+│   └── lpsim/    {seed_42..seed_46}/1_people*.csv  (real V100 kernels)
 └── plots/
     └── fig_5_{1..9}.{png,pdf}
 ```

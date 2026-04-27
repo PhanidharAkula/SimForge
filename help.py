@@ -241,7 +241,7 @@ HELP_RUN = """
 
 FLAGS:
   --scenario, -s <name>    Scenario name(s), comma-separated
-  --engine, -e <name>      Engine(s): sumo, matsim
+  --engine, -e <name>      Engine(s): sumo, matsim, lpsim
   --mode, -m <name>        Mode(s): micro, meso
   --repeats, -r <n>        Repeats (default: 10)
   --seed <int>             Base random seed (default: 42)
@@ -314,6 +314,7 @@ CENSUS MODE MAPPING (JWTRNS codes):
 SIMULATOR SUPPORT:
   SUMO:    car (micro/meso), transit (with PT module)
   MATSim:  car, transit, bike, walk (full multi-modal)
+  LPSim:   car only (GPU mesoscopic, single-mode demand)
 """
 
 HELP_ADAPTERS = """
@@ -324,14 +325,15 @@ HELP_ADAPTERS = """
 SUPPORTED SIMULATORS:
   SUMO     1.26+     Microscopic/mesoscopic vehicle simulation (eclipse-sumo wheel)
   MATSim   15.0      Activity-based mesoscopic multi-agent sim
+  LPSim    cuda12+   GPU-accelerated mesoscopic simulator (MIT, Xuan-1998/LPSim)
 
-  LPSim is the planned 3rd primary engine (GPU-accelerated, MIT licensed);
-  see todo.md Phase B. POLARIS and QarSUMO are documented backups, deferred.
+  POLARIS and QarSUMO are documented backups, deferred (todo.md §1.1).
 
 ADAPTER CLI:
   python -m adapters.sumo.cli    <scenario_path> <output_dir>          # convert only
   python -m adapters.sumo.cli    <scenario_path> <output_dir> --run --mesoscopic
   python -m adapters.matsim.cli  <scenario_path> <output_dir> --run
+  python -m adapters.lpsim.cli   <scenario_path> <output_dir> --run    # needs CUDA + LivingCity
 
 SUMO NOTES:
   * `--run` invokes `sumo` with `--ignore-route-errors`. That flag is required:
@@ -345,6 +347,9 @@ SUMO NOTES:
 PREREQUISITES:
   SUMO:    bundled in requirements.lock (eclipse-sumo wheel) — `uv pip install -r requirements.lock` puts `sumo`, `netconvert`, `sumo-gui` directly in `.venv/bin/`. Verify: `sumo --version`.
   MATSim:  Download JAR to lib/matsim-15.0/, requires Java 17+
+  LPSim:   Build once on a Pitzer GPU node — `sbatch cluster/jobs/build_lpsim.sbatch`.
+           Needs NVIDIA CUDA. The adapter falls back to a clean error message
+           when no CUDA binary or Singularity image is present (no silent CPU fallback).
 """
 
 HELP_METRICS = """

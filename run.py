@@ -69,11 +69,15 @@ def check_engine_installed(engine: str) -> bool:
         matsim_jar = Path("lib/matsim-15.0/matsim-15.0.jar")
         java_ok = shutil.which("java") is not None
         return matsim_jar.exists() and java_ok
+    elif engine == "lpsim":
+        from adapters.lpsim import find_lpsim_binary
+        from adapters.lpsim.lpsim_adapter import find_lpsim_singularity_image
+        return find_lpsim_binary() is not None or find_lpsim_singularity_image() is not None
     return False
 
 
 # Available engines and modes
-ALL_ENGINES = ["sumo", "matsim"]
+ALL_ENGINES = ["sumo", "matsim", "lpsim"]
 ALL_MODES = ["micro", "meso"]
 
 
@@ -258,7 +262,46 @@ def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, time
     }
 
 
-def run_simulation(scenario: str, engine: str, mode: str, seed: int, 
+def run_lpsim_engine(scenario_path: Path, mode: str, seed: int,
+                     output_dir: Path, timeout: int) -> dict:
+    """Run LPSim simulation via the adapter (used by run.py one-off path)."""
+    _ = mode  # LPSim has no micro/meso flag — it's mesoscopic only
+    _ = seed  # LPSim seeding lives inside command_line_options.ini (not exposed)
+    from adapters.lpsim import (
+        prepare_lpsim_inputs, run_lpsim, parse_lpsim_output, LPSimConfig
+    )
+
+    native_dir = output_dir / "native_files"
+    native_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        prepare_lpsim_inputs(scenario_path, native_dir, LPSimConfig())
+    except (OSError, ValueError, RuntimeError) as e:
+        return {"status": "failed", "error": f"LPSim prep failed: {e}", "wall_time_s": 0}
+
+    success, wall_time, error = run_lpsim(native_dir, timeout_s=timeout)
+    if not success:
+        return {"status": "failed", "wall_time_s": round(wall_time, 2),
+                "error": error or "LPSim failed"}
+
+    metrics = {}
+    stats = parse_lpsim_output(native_dir)
+    if stats is not None and stats.completed_count > 0:
+        metrics["travel_time"] = {
+            "trip_count": stats.completed_count,
+            "mean": stats.mean_travel_time_s,
+            "p95": stats.p95_travel_time_s,
+        }
+
+    return {
+        "status": "success",
+        "wall_time_s": round(wall_time, 2),
+        "error": None,
+        "metrics": metrics,
+    }
+
+
+def run_simulation(scenario: str, engine: str, mode: str, seed: int,
                    output_base: Path, timeout: int) -> dict:
     """Run a single simulation."""
     scenario_path = Path("scenarios") / scenario
@@ -272,6 +315,8 @@ def run_simulation(scenario: str, engine: str, mode: str, seed: int,
             result = run_sumo(scenario_path, mode, seed, output_dir, timeout)
         elif engine == "matsim":
             result = run_matsim(scenario_path, mode, seed, output_dir, timeout)
+        elif engine == "lpsim":
+            result = run_lpsim_engine(scenario_path, mode, seed, output_dir, timeout)
         else:
             result = {"status": "failed", "error": f"Unknown engine: {engine}"}
         

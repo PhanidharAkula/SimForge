@@ -1,33 +1,36 @@
 #!/bin/bash
 # ============================================================================
-# SimForge benchmark — small tier (3 scenarios × SUMO + MATSim × meso+micro).
+# SimForge benchmark — small tier (3 scenarios × SUMO + MATSim + LPSim × meso+micro).
 #
 # Runs runspecs/benchmark_small.yaml with three parallel python workers,
 # one per scenario, each writing to its own --output dir to avoid the
 # per-runspec result JSON colliding (the harness names that JSON after
 # the runspec, not the scenario).
 #
-# Wall-clock budget:
-#   Sequential worst case ~16 h dominated by la_50k microscopic (sumo
-#   × 3 repeats × 4 h timeout each = 12 h). Parallelising per-scenario
+# Wall-clock budget (N=5 repeats):
+#   Sequential worst case ~24 h dominated by la_50k microscopic (sumo
+#   × 5 repeats × 4 h timeout each = 20 h). Parallelising per-scenario
 #   doesn't help la_50k itself, but chicago_1k and nyc_10k workers finish
-#   in ~30 min and ~2 h respectively, leaving la_50k as the wall-time floor.
-#   Budget set to 18 h for headroom.
+#   in ~1 h and ~3 h respectively, leaving la_50k as the wall-time floor.
+#   Budget set to 24 h for headroom.
 #
 # Resources:
-#   --partition=hugemem-cascade or cpu : SUMO + MATSim are CPU-only with
-#                            QarSUMO dropped. Use the standard cpu partition.
+#   --partition=gpu        : LPSim needs CUDA. SUMO and MATSim run fine on
+#                            the same node — they don't touch the GPU.
+#   --gres=gpu:v100:1      : One V100; concurrent LPSim runs from the three
+#                            parallel scenarios share it via CUDA's scheduler.
 #   --cpus-per-task=16     : 3 parallel scenarios × ~2 cores each + python
 #                            overhead + post-step analyzer fits comfortably.
 #   --mem=64G              : Peak per-scenario memory ~5 GB; 3 in parallel
 #                            ≤ 20 GB; 64 GB has headroom (la_50k microscopic
 #                            can spike).
-#   --time=18:00:00        : See wall-clock budget above.
+#   --time=24:00:00        : See wall-clock budget above.
 #
-# Note: the GPU partition is no longer required. Once LPSim lands as the
-# 3rd primary engine (todo.md Phase B), switch back to:
-#   --partition=gpu --gres=gpu:v100:1
-# since LPSim needs CUDA.
+# LPSim: build once on a GPU node before submitting:
+#   sbatch cluster/jobs/build_lpsim.sbatch
+# Once built at $HOME/lpsim/LivingCity/LivingCity (or pulled to
+# $HOME/lpsim/lpsim.sif), the lpsim adapter auto-finds it. Without it,
+# every lpsim run records a clean failure with a build pointer.
 #
 # Edit before submitting on a different OSC project:
 #   --account=...     your project allocation (replaces PMIU0110)
@@ -38,12 +41,13 @@
 
 #SBATCH --account=PMIU0110
 #SBATCH --job-name=simforge_benchmark_small
-#SBATCH --partition=cpu
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:v100:1
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
-#SBATCH --time=18:00:00
+#SBATCH --time=24:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 ##SBATCH --mail-type=END,FAIL
@@ -61,6 +65,15 @@ echo "Python:    $(which python)"
 echo "SUMO:      $(sumo --version 2>&1 | head -1)"
 echo "Java:      $(java -version 2>&1 | head -1)"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
+nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>&1 | head -3 || echo "nvidia-smi unavailable"
+if [ -x "$HOME/lpsim/LivingCity/LivingCity" ]; then
+    echo "LPSim:     $HOME/lpsim/LivingCity/LivingCity (native binary)"
+elif [ -f "$HOME/lpsim/lpsim.sif" ]; then
+    echo "LPSim:     $HOME/lpsim/lpsim.sif (Singularity image)"
+else
+    echo "LPSim:     NOT BUILT — every lpsim run will record a clean failure."
+    echo "           Build once via: sbatch cluster/jobs/build_lpsim.sbatch"
+fi
 echo
 
 # ---------------------------------------------------------------------------

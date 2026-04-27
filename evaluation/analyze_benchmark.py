@@ -84,7 +84,7 @@ def _resolve_identity(run: dict) -> tuple[str, str, str]:
         parsed_engine = "unknown"
         parsed_scenario = scenario_id or "unknown"
         parsed_mode = "unknown"
-        for eng in ("sumo", "matsim"):
+        for eng in ("sumo", "matsim", "lpsim"):
             if scenario_id.endswith(f"_{eng}") or f"_{eng}_" in scenario_id:
                 parsed_engine = eng
                 if f"_{eng}_meso" in scenario_id:

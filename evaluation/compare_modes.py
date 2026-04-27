@@ -412,7 +412,7 @@ def _compare_from_benchmark(results_path: Path) -> int:
         engine = r.get("engine")
         sid = r.get("scenario_id", "")
         if not engine:
-            for eng in ("sumo", "matsim"):
+            for eng in ("sumo", "matsim", "lpsim"):
                 if sid.endswith(f"_{eng}") or f"_{eng}_" in sid:
                     engine = eng
                     break

@@ -16,7 +16,7 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 - 16+ GB RAM
 - 50+ GB disk space
-- NVIDIA GPU with CUDA 11+ (only needed once the planned LPSim adapter lands in Version_4 Phase B; SUMO + MATSim are CPU-only)
+- NVIDIA GPU with CUDA 11+ (required for LPSim — SUMO + MATSim are CPU-only)
 
 ### Software Requirements
 
@@ -126,15 +126,21 @@ java -version                                 # openjdk 17.x or newer
 ls lib/matsim-15.0/matsim-15.0.jar            # should exist
 ```
 
-### LPSim (planned — Version_4 Phase B)
+### LPSim (GPU only)
 
-The plan lists LPSim as the 3rd primary engine (GPU-accelerated, MIT licensed, Docker image `yibo123/lpsim:cuda12.4`). The adapter is scheduled for Version_4 Phase B. Once it lands, this section will document the build/run flow and the canonical matrix below will gain a 4th cell. Source: <https://github.com/Xuan-1998/LPSim>.
+LPSim is the 3rd primary engine: GPU-accelerated mesoscopic, MIT licensed (<https://github.com/Xuan-1998/LPSim>). One-time build on a Pitzer GPU node:
+
+```bash
+sbatch cluster/jobs/build_lpsim.sbatch
+```
+
+The job pulls `yibo123/lpsim:cuda12.4` as a Singularity image to `$HOME/lpsim/lpsim.sif` (preferred), or clones+builds LPSim from source and symlinks the binary to `$HOME/lpsim/LivingCity/LivingCity`. The adapter at `adapters/lpsim/` auto-finds either at run time. With no GPU available, every `lpsim` cell records a clean failure — there is no silent CPU fallback.
 
 ---
 
 ## Running the Canonical Stress Test
 
-The thesis figures are produced by `runspecs/stress_test.yaml` — a 3-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso}` with 3 repeats each (MATSim runs 2 repeats since it is deterministic).
+The thesis figures are produced by `runspecs/stress_test.yaml` — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, LPSim meso}` with **N=5 repeats per cell**.
 
 ```bash
 # 1. Sanity check (one run, ~30 s)

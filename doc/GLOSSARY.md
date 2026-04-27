@@ -90,7 +90,7 @@ A *coverage diagnostic* class flagged when an `(engine, mode)` cell has fewer th
 Multi-Agent Transport Simulation; an activity-based, event-driven, queue-mobsim simulator written in Java. SimForge bundles MATSim 15.0 and runs it in single-iteration mode (`lastIteration = 0`) for reproducibility.
 
 ### Mesoscopic (meso)
-A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso and MATSim are mesoscopic. The planned LPSim adapter (Version_4 Phase B) will also be mesoscopic, GPU-accelerated.
+A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso, MATSim, and LPSim are all mesoscopic. LPSim runs the queue update on the GPU.
 
 ### Microscopic (micro)
 A simulation paradigm that models each vehicle individually with car-following and lane-changing dynamics. Higher fidelity at the cost of order-of-magnitude longer runtime. SUMO micro is the only microscopic engine in the canonical *RunSpec*.
@@ -146,7 +146,7 @@ A GPU-accelerated SUMO variant. Originally listed in the plan as one of five eng
 ## L
 
 ### LPSim
-A GPU-accelerated mesoscopic traffic simulator (<https://github.com/Xuan-1998/LPSim>), MIT-licensed, distributed via the `yibo123/lpsim:cuda12.4` Docker image. Planned as the 3rd primary engine in Version_4 Phase B (see `todo.md`). Replaces QarSUMO in the canonical experimental matrix.
+A GPU-accelerated mesoscopic traffic simulator (<https://github.com/Xuan-1998/LPSim>), MIT-licensed, distributed via the `yibo123/lpsim:cuda12.4` Docker image. Implemented as the 3rd primary engine in Version_4 Phase B. The adapter at `adapters/lpsim/` translates the canonical bundle into LPSim's CSV-based input layout and `command_line_options.ini`. Native binary at `$HOME/lpsim/LivingCity/LivingCity` or Singularity image at `$HOME/lpsim/lpsim.sif` — built via `sbatch cluster/jobs/build_lpsim.sbatch`.
 
 ---
 

@@ -2,7 +2,7 @@
 
 ## 5.0 Overview
 
-This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/stress_test.yaml`) — a 3-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso}` with 3 repeats per stochastic cell and 2 repeats for the deterministic MATSim cell, for **8 simulation runs** in total. The matrix grows to 4 cells / 11 runs once LPSim is integrated in Version_4 Phase B (`todo.md`).
+This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/stress_test.yaml`) — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, LPSim meso}` with **N=5 repeats per cell**, for **20 simulation runs** in total. The LPSim cell only produces numbers on a CUDA-capable host (Pitzer's gpu partition); on a dev laptop the cell records a clean failure with a build pointer instead of silent CPU fallback.
 
 All numbers in this chapter are reproduced verbatim from `runs/stress_test/benchmark_results_stress_test.json` and were measured on an Apple M4 Pro (2024) running macOS 25.4.0, Python 3.13.2, SUMO 1.20.0, MATSim 15.0, and Java 17.0.13. The tables and figures below are emitted by:
 

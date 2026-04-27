@@ -5,25 +5,25 @@
 # ⚠️ THIS JOB CURRENTLY EXCEEDS WALL TIME on the unmodified codebase.
 #    The SUMO adapter pre-routes every trip via BFS on the canonical graph
 #    BEFORE handing off to the simulator. Measured cost on chicago_200k:
-#    ~17 h per (engine, seed). With 3 sumo + 2 matsim runs that's ~85 h
-#    of routing — inside the cpu wall (168 h) but tight. nyc_500k is worse.
+#    ~17 h per (engine, seed). With 5 sumo + 5 matsim + 5 lpsim runs that's
+#    ~255 h of SUMO routing alone — past the gpu-partition wall. LPSim and
+#    MATSim run from already-prepared inputs so they're not affected, but
+#    the SUMO bottleneck dominates the wall.
 #
 #    Until the SUMO adapter caches routes per (origin, destination) — or
 #    parallelises the BFS pass — this sbatch may SLURM-timeout. Use
 #    cluster/jobs/benchmark_small.sbatch for jobs that finish today.
 #
-# Resources (when the bottleneck is fixed):
-#   --partition=cpu, 16 cores, 96 GB, 168 h wall (max for cpu partition).
-#
-# Note: the GPU partition is no longer required. Once LPSim lands as the
-# 3rd primary engine (todo.md Phase B), switch back to:
-#   --partition=gpu --gres=gpu:v100:1
-# since LPSim needs CUDA.
+# Resources:
+#   --partition=gpu, --gres=gpu:v100:1 — LPSim needs CUDA. SUMO and MATSim
+#                            run on the same node without touching the GPU.
+#   --cpus-per-task=16, --mem=96G, --time=96:00:00 (max for gpu partition).
 # ============================================================================
 
 #SBATCH --account=PMIU0110
 #SBATCH --job-name=simforge_benchmark_large
-#SBATCH --partition=cpu
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:v100:1
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
@@ -46,8 +46,17 @@ echo "Python:    $(which python)"
 echo "SUMO:      $(sumo --version 2>&1 | head -1)"
 echo "Java:      $(java -version 2>&1 | head -1)"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
+nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv 2>&1 | head -3 || echo "nvidia-smi unavailable"
+if [ -x "$HOME/lpsim/LivingCity/LivingCity" ]; then
+    echo "LPSim:     $HOME/lpsim/LivingCity/LivingCity (native binary)"
+elif [ -f "$HOME/lpsim/lpsim.sif" ]; then
+    echo "LPSim:     $HOME/lpsim/lpsim.sif (Singularity image)"
+else
+    echo "LPSim:     NOT BUILT — every lpsim run will record a clean failure."
+    echo "           Build once via: sbatch cluster/jobs/build_lpsim.sbatch"
+fi
 echo
-echo "⚠️  Reminder: BFS routing pre-step may exceed the wall."
+echo "⚠️  Reminder: SUMO BFS routing pre-step may exceed the wall."
 echo "    See header comment for context."
 echo
 

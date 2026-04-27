@@ -58,11 +58,11 @@ SimForge solves these challenges through five interacting subsystems:
 | SUMO simulator     | SUMO (eclipse-sumo)          | 1.20.0  | Microscopic + mesoscopic simulation     |
 | MATSim simulator   | MATSim                       | 15.0    | Activity-based mesoscopic simulation    |
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
-| LPSim (planned)    | LPSim                        | —       | GPU-accelerated mesoscopic engine (Version_4 Phase B) |
+| LPSim simulator    | LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim)) | — | GPU-accelerated mesoscopic engine |
 | GPU compute        | CUDA                         | 12.4+   | LPSim acceleration                      |
-| Testing            | pytest                       | 8.0+    | ~395 tests across all subsystems        |
+| Testing            | pytest                       | 8.0+    | ~434 tests across all subsystems        |
 
-> **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement, Version_4 narrows scope to **three primary engines** (SUMO, MATSim, LPSim) with POLARIS and QarSUMO as documented backups. QarSUMO was dropped after a 2026-04-26 audit confirmed no usable public source (LLNL/QarSUMO 404; QarSUMO/QarSUMO is an empty placeholder; the Boulmakoul 2023 IEEE HPCS paper has not produced runnable code). LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, Docker shipped) replaces it as the GPU comparator. See `todo.md` for the gap audit and rollout plan.
+> **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement, Version_4 narrows scope to **three primary engines** (SUMO, MATSim, LPSim) with POLARIS and QarSUMO as documented backups. QarSUMO was dropped after a 2026-04-26 audit confirmed no usable public source (LLNL/QarSUMO 404; QarSUMO/QarSUMO is an empty placeholder; the Boulmakoul 2023 IEEE HPCS paper has not produced runnable code). LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, Docker shipped) is implemented as the GPU comparator in Phase B. See `todo.md` for the gap audit and rollout history.
 
 ---
 
@@ -670,11 +670,24 @@ config.xml   ──► config.xml (MATSim config format) + vehicles.xml
 | Typical iterations    | 1             | 1 (forced for fair comparison) |
 | Startup overhead      | ~0.1s         | ~5-7s (JVM warmup)             |
 
-### 3.4.4 LPSim Adapter (planned — Version_4 Phase B)
+### 3.4.4 LPSim Adapter
 
-**Simulator**: LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim)) — GPU-accelerated mesoscopic traffic simulator distributed under MIT license. Provides the GPU comparator slot in the experimental matrix that the plan originally allocated to QarSUMO.
+**Simulator**: LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim)) — GPU-accelerated mesoscopic traffic simulator distributed under MIT license. Fills the GPU comparator slot in the experimental matrix that the plan originally allocated to QarSUMO.
 
-**Status**: Adapter not yet implemented. The integration plan is documented in `todo.md` (Phase B) and consists of: (1) translating canonical `network.xml` + `demand.csv` into LPSim's CSV/Parquet + JSON config format, (2) invoking the LPSim binary or `singularity exec docker://yibo123/lpsim:cuda12.4 …`, (3) parsing LPSim outputs into a SUMO-tripinfo-equivalent structure for the shared fidelity metrics.
+**Conversion** (Canonical → LPSim B18 schema):
+
+| File | Canonical | LPSim |
+|---|---|---|
+| Nodes | `network.xml` `<node id="n123" x="…" y="…"/>` | `nodes.csv` columns `osmid, x, y, highway, index` |
+| Edges | `network.xml` `<link id="l456" from="n10" to="n11" length="120.5" speed_limit="13.9" lanes="2"/>` | `edges.csv` columns `uniqueid, u, v, length, lanes, speed_mph` (m/s × 2.236936 → mph) |
+| Demand | `demand.csv` `trip_id, origin_node_id, destination_node_id, departure_time_s, mode` | OD CSV columns `PERNO, origin, destination` (departure time dropped — see fidelity note below) |
+| Config | `config.xml` `<time start_time_s="25200" end_time_s="28800"/>` | `command_line_options.ini` `[General]` with `START_HR=7`, `END_HR=8`, `OD_DEMAND_FILENAME=…`, etc. |
+
+**Fidelity trade-off — departure timing**: LPSim's B18 demand format does not include a per-trip departure column; the loader (`roadGraphB2018Loader.cpp:319-321`) reads only `PERNO, origin, destination`. Departures are distributed inside the `[START_HR, END_HR]` window per LPSim's internal heuristic. The canonical `departure_time_s` precision available to SUMO and MATSim is therefore not exposed to LPSim. This is the single cleanest difference between the three engines from a demand-modeling perspective and is documented in `adapters/lpsim/MAPPING.md` for full audit trail.
+
+**Determinism**: LPSim's GPU code path uses `atomicAdd` and other reduction operations that are not bit-deterministic across runs even with the same seed (documented LPSim behaviour, not a SimForge bug). Reproducibility (R-score) is therefore expected to be lower for LPSim than for SUMO meso (fully deterministic) or MATSim (R = 1.0 with `lastIteration=0`). The N=5 repeats give the framework statistical room to characterise the spread; the headline number is `mean ± 95 % CI` from `evaluation/metrics/confidence.py`.
+
+**Binary discovery**: `find_lpsim_binary()` checks (1) `$LPSIM_BINARY`, (2) `$HOME/lpsim/LivingCity/LivingCity` (the path produced by `cluster/jobs/build_lpsim.sbatch`), (3) `$HOME/lpsim/LivingCity`, (4) `LivingCity` on `$PATH`. `find_lpsim_singularity_image()` checks `$HOME/lpsim/lpsim.sif`. With no GPU binary or image staged, `run_lpsim()` returns a clean `RunResult` failure with an actionable build pointer — no silent CPU fallback (the failure mode that motivated dropping QarSUMO).
 
 **Performance expectation**: GPU-parallel mesoscopic queue updates target 5–20× speedup over CPU SUMO meso for the 200K and 500K trip tiers — the regime where SUMO's single-threaded queue scan is the binding constraint.
 
@@ -724,7 +737,7 @@ runs:
 | --------------- | ------ | ------------------------------------------------------ |
 | `scenario_id`   | string | Human-readable scenario identifier                     |
 | `scenario_path` | string | Path to canonical scenario bundle                      |
-| `engine`        | string | Simulator: `sumo`, `matsim` (LPSim coming in Version_4 Phase B) |
+| `engine`        | string | Simulator: `sumo`, `matsim`, `lpsim`                   |
 | `mode`          | enum   | `microscopic` or `mesoscopic`                          |
 | `repeats`       | int    | Number of repeated runs (for reproducibility analysis) |
 | `seed`          | int    | Base seed (incremented per repeat: 42, 43, 44)         |
@@ -961,9 +974,10 @@ The framework includes **406 tests** across all subsystems:
 | `test_analyze_benchmark.py`       | 25    | Mode-aware grouping + identity fallback + renderers     |
 | `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
+| `test_lpsim_adapter.py`           | 39    | LPSim adapter: writers, INI, determinism, output parsing |
 | `test_engine_smoke.py`            | 3     | Real-binary smoke on SUMO/MATSim                        |
 
-**All ~395 tests passing** as of Version_4. Marker registry in
+**All ~434 tests passing** as of Version_4 Phase B. Marker registry in
 `pyproject.toml`; shared fixtures in `tests/conftest.py`.  Line coverage
 sits at **76 %** across the adapter, pipeline, and evaluation packages;
 the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.

@@ -34,13 +34,14 @@ git checkout -b your-feature-branch
 
 ### 2. Write the test first
 
-The ~395-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The ~434-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |
 | `test_adapter_determinism.py`          | 8     | Byte-identical re-runs across all adapters                   |
 | `test_sumo_adapter.py`                 | 4     | SUMO adapter input/output shape                              |
 | `test_matsim_adapter.py`               | 24    | MATSim adapter, JAR discovery, classpath, config generation |
+| `test_lpsim_adapter.py`                | 39    | LPSim adapter — writers, INI, determinism, output parsing   |
 | `test_fidelity_metrics.py`             | 21    | RMSE, GEH, KS                                                |
 | `test_metrics_travel_time.py`          | 2     | tripinfo.xml parser                                          |
 | `test_reproducibility_metrics.py`      | 15    | R-score, edge cases (μ → 0)                                  |

@@ -60,9 +60,10 @@ except ImportError:
 ENGINE_COLORS = {
     'sumo': '#1f77b4',     # blue
     'matsim': '#2ca02c',   # green
+    'lpsim': '#d62728',    # red — GPU comparator
 }
 MODE_COLORS = {'meso': '#ff7f0e', 'micro': '#2ca02c'}
-KNOWN_ENGINES = ('sumo', 'matsim')
+KNOWN_ENGINES = ('sumo', 'matsim', 'lpsim')
 
 
 def _require_matplotlib():

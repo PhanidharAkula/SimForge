@@ -107,7 +107,17 @@ Tests the MATSim adapter's helpers (`seconds_to_time_string`, `MATSimConfig`,
 vehicles XML, network XML, plans XML, config XML) and the full
 `prepare_matsim_inputs` pipeline. No Java/JAR required.
 
-### 4. `test_fidelity_metrics.py` — Fidelity Metrics (21 tests)
+### 4. `test_lpsim_adapter.py` — LPSim Adapter (39 tests)
+
+Tests `LPSimConfig`, `_to_int_index`, `_hours_from_seconds`, the writers
+(`write_lpsim_nodes_csv`, `write_lpsim_edges_csv`, `write_lpsim_demand_csv`,
+`write_lpsim_ini`), the determinism guarantee (byte-identical re-runs),
+end-to-end input prep on the bundled scenario, output parsing on synthetic
+`*_people.csv` fixtures, and binary discovery. No GPU or LivingCity binary
+needed — those live in `test_engine_smoke.py` (a single skip-gracefully
+smoke test).
+
+### 5. `test_fidelity_metrics.py` — Fidelity Metrics (21 tests)
 
 RMSE, GEH (single + batch), KS statistic, and `compute_fidelity_metrics`.
 
@@ -235,6 +245,7 @@ scenarios are well below the threshold and never skip.
 | SUMO Adapter           | 4       | File generation, determinism, geo projection, sweep         |
 | SUMO / MATSim determinism | 8    | Byte-identical tripinfo across re-runs                      |
 | MATSim Adapter         | 24      | Helpers, builders, prepare path, sweep                      |
+| LPSim Adapter          | 39      | Helpers, writers, determinism, output parsing, discovery    |
 | Fidelity Metrics       | 21      | RMSE, GEH, KS, combined                                     |
 | Travel Time            | 2       | Tripinfo parser                                             |
 | Reproducibility        | 15      | R-score core, multi-KPI, thresholds                         |
@@ -248,7 +259,7 @@ scenarios are well below the threshold and never skip.
 | OSM fetch              | 20      | Mocked Overpass, bbox validation, cache pin                 |
 | Demand generators      | 21      | Synthetic generators + SCC restriction + seed               |
 | Engine smoke           | 3       | Real-binary SUMO/MATSim smoke, skip-gracefully              |
-| **Total**              | **~395** | **~22 s** full suite on M-series; **~7 s** with `-m "not slow"` (count scales with the number of committed scenarios — three reference bundles add ~108 parametrized integrity tests on top of the per-module suite) |
+| **Total**              | **~434** | **~25 s** full suite on M-series; **~9 s** with `-m "not slow"` (count scales with the number of committed scenarios — three reference bundles add ~108 parametrized integrity tests on top of the per-module suite) |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
 **~76 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**

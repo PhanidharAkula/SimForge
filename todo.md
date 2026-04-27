@@ -20,7 +20,7 @@ primary engines and POLARIS + QarSUMO as documented backups.
 |--------|-----------------|------------|------|
 | SUMO | Primary | ✅ adapter implemented and working (`adapters/sumo/`) | Keep |
 | MATSim | Primary | ✅ adapter implemented and working (`adapters/matsim/`) | Keep |
-| **LPSim** | Primary (with QarSUMO as the GPU comparator originally) | ❌ no adapter | **Implement** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, Docker shipped) |
+| **LPSim** | Primary (with QarSUMO as the GPU comparator originally) | ✅ adapter implemented (`adapters/lpsim/`, Phase B) — needs Pitzer GPU build to actually run | Keep |
 | POLARIS | Primary | ❌ no adapter | Drop to backup (per advisor scope) — document in thesis as deferred |
 | QarSUMO | Primary in plan, GPU variant | Adapter scaffold exists; **no usable public source** (LLNL/QarSUMO 404, QarSUMO/QarSUMO is empty placeholder, Boulmakoul 2023 paper cited in plan needs re-verification) | **Drop entirely** in Version_4 |
 
@@ -41,7 +41,7 @@ primary engines and POLARIS + QarSUMO as documented backups.
 
 | Commitment | Reality | Status |
 |------------|---------|--------|
-| N=10 repeats per (city, load, engine, hardware) | Currently 3 (sumo) / 2 (matsim) hard-coded in runspecs | **Decide with advisor**: target N=10, fallback N=5 if compute budget tight |
+| N=10 repeats per (city, load, engine, hardware) | **N=5 across the matrix** (Version_4, advisor-approved fallback). Bumping to 10 stays inside the harness — `repeats:` per cell — but ~doubles wall time. | Run at N=5 first; revisit N=10 once Pitzer wall-time budget is measured |
 
 ### 1.5 Reproducibility infrastructure (plan §2.7, §3.2, §4.2)
 
@@ -70,9 +70,9 @@ primary engines and POLARIS + QarSUMO as documented backups.
 | Fidelity: RMSE, GEH, KS | ✅ in `evaluation/metrics/fidelity.py` | aligned |
 | Scalability: runtime, throughput, vehicles/sec/core | ✅ in `evaluation/metrics/scalability.py` | aligned |
 | Reproducibility: R = 1 − σ/μ | ✅ in `evaluation/metrics/reproducibility.py` | aligned |
-| **95 % CIs on every KPI** | ❌ mean and std reported, but no explicit CIs | **Implement first** (lowest cost, highest defense value) |
+| **95 % CIs on every KPI** | ✅ implemented (Phase A) — Student's t with hard-coded table, no scipy dep | aligned |
 | **Per-watt normalization** (vehicles/sec/watt) | ❌ no power instrumentation | **Discuss with advisor** — defensible to defer |
-| 95% CIs in plots and markdown tables | ❌ point estimates only | Comes with the CI implementation |
+| 95% CIs in plots and markdown tables | ✅ implemented (Phase A) — `evaluation/metrics/confidence.py`, wired into Tables 5.1/5.2 + LaTeX/Markdown + error bars on Figs 5.1/5.3/5.6 | aligned |
 
 ### 1.8 Deliverables (plan §4.6)
 
@@ -90,10 +90,10 @@ These reduce scope from the written plan; document in the thesis methods chapter
 
 | Item | Plan | Approved scope |
 |------|----------|----------------|
-| Number of engines actually run | 5 | **3 primary** (SUMO, MATSim, LPSim) |
+| Number of engines actually run | 5 | **3 primary** (SUMO ✅, MATSim ✅, LPSim ✅ Phase B) |
 | Backup engines | — | **2 documented** (POLARIS, QarSUMO) — both deferred / unavailable; documented in methods |
 | Max scenario load | 5M trips | **500K trips** (5M deferred to future work pending route-cache fix) |
-| Repeats N | 10 | **5 minimum, 10 target** — final number depends on compute budget |
+| Repeats N | 10 | **5 across the matrix** (Version_4, advisor-approved). Revisit N=10 once Pitzer wall is measured |
 | Hardware tiers | 2 (CPU + GPU/HPC) | 2 (Pitzer cpu + gpu partitions) — aligned |
 
 ---
@@ -111,16 +111,17 @@ Ordered. Each item is one commit (or a small batch).
 
 > Pause here and talk to advisor about: (a) calibration scope, (b) per-watt scope, (c) target N for repeats.
 
-### Phase B — Add LPSim as the 3rd engine (~1 week)
+### Phase B — LPSim as the 3rd primary engine (✅ landed in Version_4)
 
-5. **Add `cluster/jobs/build_lpsim.sbatch`** — pull `yibo123/lpsim:cuda12.4` Docker image OR clone + build LPSim from source on a GPU node
-6. **Implement `adapters/lpsim/lpsim_adapter.py`**
-   - `prepare_lpsim_inputs(scenario_path, output_dir)` — translate canonical `network.xml` + `demand.csv` → LPSim's CSV/Parquet + JSON config (plan §3.2)
-   - `run_lpsim(scenario_path, output_dir)` — invoke binary or `singularity exec lpsim.sif ...`
-   - Parse LPSim outputs → `tripinfo.xml`-equivalent for fidelity metrics
-7. **Tests** — `tests/test_lpsim_adapter.py` covering input prep, smoke run, deterministic outputs
-8. **Wire LPSim into runspecs and sbatches** — add `engine: lpsim` rows to `benchmark_small.yaml`, `benchmark_large.yaml`
-9. **Update `cluster/jobs/benchmark_small.sbatch`** — switch back to `--partition=gpu --gres=gpu:v100:1` since LPSim needs CUDA
+5. ✅ **`cluster/jobs/build_lpsim.sbatch`** — Pitzer GPU job that prefers `singularity pull docker://yibo123/lpsim:cuda12.4` and falls back to `git clone Xuan-1998/LPSim && make` under `LivingCity/`. Output symlinked to `$HOME/lpsim/LivingCity/LivingCity` (or `$HOME/lpsim/lpsim.sif` for the Singularity path).
+6. ✅ **`adapters/lpsim/`** — full package: adapter, CLI, MAPPING.md, `__init__.py`
+   - `prepare_lpsim_inputs(scenario_path, output_dir, config)` writes LPSim's `nodes.csv` (osmid, x, y, highway, index), `edges.csv` (uniqueid, u, v, length, lanes, speed_mph), `od_demand.csv` (PERNO, origin, destination), and `command_line_options.ini` ([General] section with START_HR/END_HR derived from canonical config)
+   - `run_lpsim(output_dir, timeout_s, use_singularity)` invokes `LivingCity` (native or via `singularity exec --nv … LivingCity`) with CWD set to the prepared run dir
+   - `parse_lpsim_output(output_dir)` reads `<NUM_PASSES>_people*.csv` → `LPSimTripStats(trip_count, completed_count, mean_travel_time_s, p95_travel_time_s, mean_distance_m)`
+   - **No silent CPU fallback** — when no GPU binary is staged, `run_lpsim` returns a clean failure with a build pointer
+7. ✅ **`tests/test_lpsim_adapter.py`** (39 tests) — helpers, all 4 writers, determinism (byte-identical re-runs), end-to-end input prep on chicago_1k_car, output parsing on synthetic fixtures, binary discovery
+8. ✅ **Runspec entries** — `engine: lpsim` rows in `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` (12 LPSim cells across the matrix; 60 invocations at N=5)
+9. ✅ **Sbatches flipped back to GPU** — `benchmark_small.sbatch` and `benchmark_large.sbatch` now request `--partition=gpu --gres=gpu:v100:1`; SUMO + MATSim share the same node and don't touch the GPU
 
 ### Phase C — Containerization (~2-3 days)
 

@@ -170,7 +170,7 @@ def print_banner(runspec_name: str, total_runs: int, scenarios: int, configs: in
 class RunResult:
     """Result of a single simulation run."""
     scenario: str                       # Base scenario name (e.g. "chicago_1k_car")
-    engine: str                         # "sumo", "matsim"
+    engine: str                         # "sumo", "matsim", "lpsim"
     mode: str                           # "micro" or "meso"
     seed: int
     repeat_index: int                   # 0-based
@@ -391,7 +391,7 @@ class BenchmarkHarness:
         logger.info("Starting run: %s / %s / seed=%d%s", scenario_id, engine, seed, mode_str)
 
         # Handle different engines
-        supported_engines = ["sumo", "matsim"]
+        supported_engines = ["sumo", "matsim", "lpsim"]
         if engine not in supported_engines:
             return RunResult(
                 scenario=scenario_id,
@@ -416,6 +416,15 @@ class BenchmarkHarness:
                     java_heap_gb=matsim_opts.get("heap_gb", 4),
                 )
                 prepare_matsim_inputs(scenario_path, run_dir, matsim_config, random_seed=seed)
+            elif engine == "lpsim":
+                # LPSim GPU-accelerated mesoscopic
+                from adapters.lpsim import prepare_lpsim_inputs, LPSimConfig
+                lpsim_opts = engine_options or {}
+                lpsim_config = LPSimConfig(
+                    use_cpu=lpsim_opts.get("use_cpu", False),
+                    num_passes=lpsim_opts.get("num_passes", 1),
+                )
+                prepare_lpsim_inputs(scenario_path, run_dir, lpsim_config)
             else:
                 # SUMO
                 self.prepare_sumo_inputs(scenario_path, run_dir, seed)
@@ -448,7 +457,7 @@ class BenchmarkHarness:
                     output_dir=run_dir,
                     error_message="No config.xml file generated for MATSim"
                 )
-            
+
             from adapters.matsim import run_matsim, parse_matsim_output
             matsim_opts = engine_options or {}
             success, runtime, error = run_matsim(
@@ -456,7 +465,7 @@ class BenchmarkHarness:
                 timeout_s=timeout_s,
                 java_heap_gb=matsim_opts.get("heap_gb", 4)
             )
-            
+
             # Parse MATSim-specific metrics
             metrics = {}
             tripinfo_path = None
@@ -468,6 +477,41 @@ class BenchmarkHarness:
                         "mean": stats.get("mean_travel_time_s", 0),
                         "p95": stats.get("p95_travel_time_s", 0),
                         "trip_count": stats.get("trip_count", 0)
+                    }
+        elif engine == "lpsim":
+            # LPSim reads command_line_options.ini from CWD; the adapter
+            # writes it under run_dir during prepare_lpsim_inputs.
+            ini_path = run_dir / "command_line_options.ini"
+            if not ini_path.exists():
+                return RunResult(
+                    scenario=scenario_id,
+                    engine=engine,
+                    mode=mode,
+                    seed=seed,
+                    repeat_index=repeat_index,
+                    status="failed",
+                    runtime_s=0,
+                    output_dir=run_dir,
+                    error_message="No command_line_options.ini generated for LPSim"
+                )
+
+            from adapters.lpsim import run_lpsim, parse_lpsim_output
+            lpsim_opts = engine_options or {}
+            success, runtime, error = run_lpsim(
+                run_dir,
+                timeout_s=timeout_s,
+                use_singularity=lpsim_opts.get("use_singularity", True),
+            )
+
+            metrics = {}
+            tripinfo_path = None
+            if success:
+                stats = parse_lpsim_output(run_dir)
+                if stats is not None and stats.completed_count > 0:
+                    metrics["travel_time"] = {
+                        "mean": stats.mean_travel_time_s,
+                        "p95": stats.p95_travel_time_s,
+                        "trip_count": stats.completed_count,
                     }
         else:
             # SUMO uses .sumocfg
