@@ -224,6 +224,7 @@ class StickyProgress:
         self._stop = threading.Event()
         self._thread = None
         self._lock = threading.Lock()
+        self._spinner_idx = 0
         self._captured_loggers: list[tuple] = []  # (logger, removed_handlers)
         self._capture_handler: _ProgressBarLogHandler | None = None
         if capture_logs and self.is_tty:
@@ -411,17 +412,17 @@ class StickyProgress:
         if progress >= self.total:
             spinner = _SPINNER_COLOR + "✓" + _RESET
         else:
-            # Tie the spinner frame to wall-clock time, not a per-render
-            # counter. Advance() and print_above() can fire much faster
-            # than the heartbeat (e.g. pytest plowing through 500+ tests
-            # in seconds), and a counter-driven frame would freeze on
-            # the same glyph between heartbeat ticks. Time-driven means
-            # every render — whoever triggers it — picks the frame for
-            # the current 50 ms window: 20 fps frame change, 0.5 s per
-            # full Braille cycle.
-            frame_idx = int(time.monotonic() * 20) % len(_SPINNER_FRAMES)
+            # Advance the spinner once per render (whoever triggers it:
+            # advance(), print_above(), or the 50 ms heartbeat). Visible
+            # motion is then guaranteed regardless of thread scheduling
+            # or terminal output buffering — every redraw shows a fresh
+            # glyph. Earlier wall-clock-driven and heartbeat-only
+            # variants both got perceived as "frozen" under heavy event
+            # bursts when consecutive renders happened to fall in the
+            # same time bucket.
+            self._spinner_idx = (self._spinner_idx + 1) % len(_SPINNER_FRAMES)
             spinner = (_SPINNER_COLOR
-                       + _SPINNER_FRAMES[frame_idx]
+                       + _SPINNER_FRAMES[self._spinner_idx]
                        + _RESET)
         # Optional ✓N ✗N counters in the tail (used by run.py; for
         # generate.py these stay at 0 and we suppress them).
