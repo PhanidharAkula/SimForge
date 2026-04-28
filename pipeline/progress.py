@@ -250,16 +250,16 @@ class StickyProgress:
             filled = self.BAR_WIDTH
         else:
             filled = int(self.BAR_WIDTH * progress / self.total)
-        # Full-block █ glyphs (U+2588) for both filled and empty cells.
-        # Full blocks fill the entire character cell including the row
-        # gap, so there's no "vertical gap" or boundary artefact possible:
-        # the bar reads as a single continuous bar that changes colour
-        # at the progress boundary. Earlier ━ (heavy horizontal) sat at
-        # the row centre and left visible white space above/below, which
-        # looked like a height mismatch between the bold cyan and dim
-        # empty portions.
+        # Use full-block █ for filled cells and light-shade ░ for empty
+        # cells. Both glyphs fill the entire character cell vertically
+        # (so no height mismatch / boundary artefact between the two
+        # halves), but the fill DENSITY differs — solid block vs sparse
+        # texture — so the empty portion is visually obviously "not
+        # filled" even when its colour is gray. Using █ for both cells
+        # made the bar look uniformly solid at a glance because gray █
+        # on a dark terminal still reads as a full block.
         bar = (_BAR_FILL + ("█" * filled) + _RESET
-               + _BAR_EMPTY + ("█" * (self.BAR_WIDTH - filled)) + _RESET)
+               + _BAR_EMPTY + ("░" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
         if 0 < progress < self.total:
             eta = (elapsed / progress) * (self.total - progress)
