@@ -226,6 +226,7 @@ class StickyProgress:
         self._thread = None
         self._lock = threading.Lock()
         self._spinner_idx = 0
+        self._spinner_last_tick = 0.0  # monotonic timestamp of last advance
         self._captured_loggers: list[tuple] = []  # (logger, removed_handlers)
         self._capture_handler: _ProgressBarLogHandler | None = None
         # Open /dev/tty for the in-place bar redraws so writes bypass any
@@ -432,15 +433,15 @@ class StickyProgress:
         if progress >= self.total:
             spinner = _SPINNER_COLOR + "✓" + _RESET
         else:
-            # Advance the spinner once per render (whoever triggers it:
-            # advance(), print_above(), or the 50 ms heartbeat). Visible
-            # motion is then guaranteed regardless of thread scheduling
-            # or terminal output buffering — every redraw shows a fresh
-            # glyph. Earlier wall-clock-driven and heartbeat-only
-            # variants both got perceived as "frozen" under heavy event
-            # bursts when consecutive renders happened to fall in the
-            # same time bucket.
-            self._spinner_idx = (self._spinner_idx + 1) % len(_SPINNER_FRAMES)
+            # Rate-limit the spinner to ~8 fps regardless of how often
+            # render is called. Renders fire from advance(), print_above(),
+            # AND the 50 ms heartbeat — without the rate limit the
+            # spinner blurs at full event-stream speed (~20+ fps under
+            # pytest). The cap gives a calm 1.25 s per Braille cycle.
+            now = time.monotonic()
+            if now - self._spinner_last_tick >= 0.125:
+                self._spinner_idx = (self._spinner_idx + 1) % len(_SPINNER_FRAMES)
+                self._spinner_last_tick = now
             spinner = (_SPINNER_COLOR
                        + _SPINNER_FRAMES[self._spinner_idx]
                        + _RESET)
