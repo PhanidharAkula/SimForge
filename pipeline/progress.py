@@ -125,9 +125,9 @@ _SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 # bold subtly thickens characters in most terminal fonts which made the
 # cyan cells appear "taller" than the dim ones, and the bold/dim
 # transition at the boundary rendered the last cyan cell as half-filled.
-_BAR_FILL = "\033[36m"   # plain cyan (no bold)
-_BAR_EMPTY = "\033[90m"  # bright black / gray (no dim attribute)
-_SPINNER_COLOR = "\033[1;36m"  # bold cyan kept for the spinner only
+_BAR_FILL = "\033[32m"        # plain green (active / in-progress)
+_BAR_EMPTY = "\033[90m"        # bright black / gray (no dim attribute)
+_SPINNER_COLOR = "\033[1;32m"  # bold green for the spinner
 _RESET = "\033[0m"
 
 
@@ -281,7 +281,7 @@ class StickyProgress:
             counters = (f"  \033[32m✓{self.ok}\033[0m "
                         f"\033[31m✗{self.fail}\033[0m")
         label = self.current_label or "..."
-        bar_line = (f"  {bar}  {spinner}  {pct:5.1f}%  "
+        bar_line = (f"  {bar}  {spinner}  {pct:>3.0f}%  "
                     f"{self.unit} {min(progress + 1, self.total)}/{self.total}: "
                     f"{label}{counters}  "
                     f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
