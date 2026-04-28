@@ -233,15 +233,16 @@ class StickyProgress:
             return
         elapsed = time.time() - self.t0
         progress = self.completed
-        # Always show at least 1 cell of fill so a tiny color tip is
-        # visible at 0% — confirms the bar is alive even before the
-        # first advance() call.
+        # Honest fill: bar width tracks the actual completed fraction,
+        # nothing more. The spinner already provides the "still alive"
+        # visual cue (cyan + animated), so we don't fake a 1-cell tip
+        # at 0% — that lied about progress (bar showed something filled
+        # while the % label said 0.0%, which was confusing). Empty bar
+        # at start, spinner spinning, percentage honest.
         if progress >= self.total:
             filled = self.BAR_WIDTH
         else:
-            min_fill = 1
-            filled = max(min_fill,
-                         int(self.BAR_WIDTH * progress / self.total))
+            filled = int(self.BAR_WIDTH * progress / self.total)
         bar = (_BAR_FILL + ("━" * filled) + _RESET
                + _BAR_EMPTY + ("─" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
