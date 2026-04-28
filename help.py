@@ -157,20 +157,33 @@ HELP TOPICS:
   python help.py tests              Test suite reference
   python help.py troubleshooting    Common issues and fixes
 
-PROJECT STRUCTURE:
-  generate.py           Unified scenario generator (start here)
-  run.py                Simulation runner CLI
-  help.py               This help system
-  scripts/              5 ready-to-use generation scripts (01–05)
-  tools/                Operator utilities (clean.sh, download_osm.py)
-  scenarios/            Generated canonical data bundles
-  adapters/             Simulator-specific converters
-  pipeline/             Data generation pipeline modules
-  evaluation/           Metrics computation & analysis
-  execution/            Benchmark harness
+PROJECT STRUCTURE (alphabetical, repo root):
+  adapters/             Simulator-specific converters (sumo, matsim, dtalite)
+  canonical/            Canonical bundle schema spec (canonical/schema/)
+  cluster/              HPC cluster integration (Pitzer SLURM sbatches)
+  doc/                  Architecture, retrospectives, thesis chapters
+                        (doc/engines/ has LPSim/QarSUMO retrospectives +
+                        DTALite selection rationale + thesis quote bank)
+  evaluation/           Metrics, analysis, fairness audit, plot generation
+  execution/            Benchmark harness (runspec-driven, run_benchmark.py)
+  lib/                  Third-party JARs (matsim-15.0/) + version pins
+                        (lib/dtalite/manifest.json)
+  modelgen/             Census microdata files (ModelGen PUMS)
+  osm_data/             Hash-pinned OSM PBF snapshots + manifest.json
+                        (URL + SHA256 provenance for every PBF)
+  pipeline/             Data generation modules (network, demand, signals)
   runspecs/             Benchmark configuration files (YAML)
-  modelgen/             Census microdata files (ModelGen)
-  tests/                Test suite (pytest)
+  scenarios/            Generated canonical data bundles
+  scripts/              5 ready-to-use generation scripts (01–05)
+  tests/                Test suite (pytest, ~307 tests across 19 files)
+  tools/                Operator utilities (clean.sh, download_osm.py,
+                        env_report.py, inspect_network.py)
+
+  Top-level files:
+    generate.py         Unified scenario generator (start here)
+    run.py              Simulation runner CLI
+    help.py             This help system
+    setup_simforge.py   Bootstrap installer (creates .venv, installs deps)
 """
 
 HELP_GENERATE = """
@@ -592,24 +605,28 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m "integration and not slow"
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (17 files / ~395 tests):
+TEST FILES (19 files / ~307 tests, alphabetical):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
-  test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
-  test_matsim_adapter.py          (24)  MATSim helpers + end-to-end [slow sweep]
+  test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
+  test_confidence.py              (14)  Student's-t 95 % CI core + edge cases
+  test_demand_generators.py       (21)  Uniform / gravity / peak-hour
+  test_dtalite_adapter.py         (42)  DTALite adapter writers, settings,
+                                        demand-driven zoning, end-to-end smoke
+  test_engine_smoke.py            (4)   Real-binary SUMO/MATSim/DTALite [skip-on-miss]
+  test_feasibility.py             (16)  Shared cross-engine trip filter
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
+  test_matsim_adapter.py          (24)  MATSim helpers + end-to-end [slow sweep]
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
+  test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
+  test_parse_model_file.py        (12)  ModelGen file parser tests
+  test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_reproducibility_metrics.py (15)  R-score core + edge cases
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
-  test_validator.py               (2)   Bundle pass + corruption fail
-  test_scenario_data_integrity.py (35)  7 classes x the bundled scenario
-  test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_scc.py                     (14)  Iterative Kosaraju + parser
-  test_feasibility.py             (16)  Shared cross-engine trip filter
-  test_analyze_benchmark.py       (25)  Mode-aware grouping + all renderers
-  test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
-  test_demand_generators.py       (21)  Uniform / gravity / peak-hour
-  test_engine_smoke.py            (3)   Real-binary SUMO/MATSim [skips if missing]
+  test_scenario_data_integrity.py (36)  7 classes x the bundled scenario
+  test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
+  test_validator.py               (2)   Bundle pass + corruption fail
 
 test_scenario_data_integrity.py classes (7, parametrized over every scenario):
   TestFileExistence       All 5 canonical files exist

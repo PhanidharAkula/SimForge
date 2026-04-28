@@ -100,6 +100,24 @@ def check_sumo() -> bool:
     return True
 
 
+def check_libomp_macos() -> bool:
+    """On macOS the bundled DTALite binary inside path4gmns dynamically
+    links against libomp (OpenMP runtime). It is NOT shipped by default
+    and must be installed separately via Homebrew. We check for the
+    standard Homebrew install path; if missing, the dtalite engine will
+    fail at run-time with `dlopen: libomp.dylib not found`."""
+    if platform.system() != "Darwin":
+        return True  # not relevant outside macOS
+    libomp_path = Path("/opt/homebrew/opt/libomp/lib/libomp.dylib")
+    libomp_intel = Path("/usr/local/opt/libomp/lib/libomp.dylib")  # Intel Macs
+    if libomp_path.exists() or libomp_intel.exists():
+        _ok("libomp (OpenMP runtime for DTALite) found")
+        return True
+    _warn("libomp NOT found — DTALite engine will fail at run-time")
+    _warn("Install with: brew install libomp")
+    return False
+
+
 def create_venv() -> Path:
     """Create virtual environment if it doesn't exist."""
     if VENV_DIR.exists():
@@ -193,7 +211,7 @@ def verify_installation() -> dict:
 
     checks = {}
 
-    # Import check
+    # Core import check
     result = _run([pip_python, "-c", "import lxml, yaml, osmnx, networkx, matplotlib; print('ok')"])
     if result.returncode == 0 and "ok" in result.stdout:
         _ok("Core imports: lxml, yaml, osmnx, networkx, matplotlib")
@@ -201,6 +219,19 @@ def verify_installation() -> dict:
     else:
         _fail(f"Import check failed: {result.stderr.strip()}")
         checks["imports"] = False
+
+    # DTALite (path4gmns) import check — bundled binary inside the wheel,
+    # so successful import means the engine should run (modulo the libomp
+    # runtime dependency on macOS, checked separately above).
+    result = _run([pip_python, "-c",
+                   "from adapters.dtalite import is_dtalite_available; "
+                   "print('available' if is_dtalite_available() else 'missing')"])
+    if result.returncode == 0 and "available" in result.stdout:
+        _ok("DTALite (path4gmns) ready")
+        checks["dtalite"] = True
+    else:
+        _warn("DTALite not available — `uv pip install path4gmns` (Mac: also brew install libomp)")
+        checks["dtalite"] = False
 
     # Engine check
     result = _run([pip_python, str(PROJECT_ROOT / "run.py"), "--list"])
@@ -226,7 +257,7 @@ def verify_installation() -> dict:
     return checks
 
 
-def print_next_steps(has_java: bool, has_sumo: bool):
+def print_next_steps(has_java: bool, has_sumo: bool, has_libomp: bool = True):
     """Print getting-started instructions."""
     activate = "source .venv/bin/activate" if platform.system() != "Windows" else r".venv\Scripts\activate"
 
@@ -249,12 +280,14 @@ def print_next_steps(has_java: bool, has_sumo: bool):
 {CYAN}Validate:{RESET}
   python -m pipeline.validation.validate_bundle scenarios/chicago_5k_car
 
-{CYAN}Run simulation:{RESET}
-  python run.py --scenario chicago_5k_car --engine sumo --mode meso
+{CYAN}Run simulation (all 3 engines):{RESET}
+  python run.py --scenario chicago_5k_car --engine sumo,matsim,dtalite \\
+                --mode meso --repeats 3
 
-{CYAN}Analyze results:{RESET}
+{CYAN}Analyze results (canonical 3-step post-benchmark pipeline):{RESET}
   python -m evaluation.analyze_benchmark runs/benchmark_*/benchmark_results.json
-  python -m evaluation.generate_plots runs/benchmark_*/benchmark_results.json
+  python -m evaluation.audit_fairness    runs/benchmark_*
+  python -m evaluation.generate_plots    runs/benchmark_*/benchmark_results.json
 
 {CYAN}Run tests:{RESET}
   python -m pytest tests/ -v --tb=short
@@ -265,6 +298,8 @@ def print_next_steps(has_java: bool, has_sumo: bool):
         missing.append("  • Java 17+: brew install openjdk@17  (needed for MATSim)")
     if not has_sumo:
         missing.append("  • SUMO:     uv pip install -r requirements.lock  (bundles eclipse-sumo)")
+    if not has_libomp:
+        missing.append("  • libomp:   brew install libomp  (needed for DTALite on macOS)")
     if missing:
         print(f"{YELLOW}Missing external tools:{RESET}")
         for m in missing:
@@ -289,6 +324,7 @@ def main():
     _print_step(2, total_steps, "Checking external tools")
     has_java = check_java()
     has_sumo = check_sumo()
+    has_libomp = check_libomp_macos()
 
     # 3. Virtual environment
     _print_step(3, total_steps, "Setting up virtual environment")
@@ -312,7 +348,7 @@ def main():
     verify_installation()
 
     # Done
-    print_next_steps(has_java, has_sumo)
+    print_next_steps(has_java, has_sumo, has_libomp)
     return 0
 
 
