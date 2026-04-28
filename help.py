@@ -144,14 +144,14 @@ QUICK START:
 
 HELP TOPICS:
   python help.py setup              Install and bootstrap
-  python help.py generate           Data generation (generate.py)
-  python help.py run                Simulation execution (run.py)
+  python help.py generate           Data generation entry point — generate.py
+  python help.py run                Simulation execution entry point — run.py
   python help.py scripts            Built-in preset scripts
-  python help.py cities             Supported cities & census limits (LIVE DATA)
+  python help.py cities             Supported cities, census limits — live data
   python help.py modes              Travel modes reference
-  python help.py adapters           Simulator adapters (SUMO, MATSim, DTALite)
+  python help.py adapters           Simulator adapters — SUMO, MATSim, DTALite
   python help.py metrics            Evaluation metrics
-  python help.py evaluation         Analysis & plotting commands
+  python help.py evaluation         Analysis, fairness audit, plot generation
   python help.py schema             Canonical schema format reference
   python help.py benchmark          Benchmark harness and runspecs
   python help.py tests              Test suite reference
