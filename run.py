@@ -536,36 +536,58 @@ Examples:
     # Sticky progress bar: only show when stdout is an interactive
     # terminal. When the harness output is being piped (sbatch log files,
     # `python run.py | tee`, CI captures), the per-cell rows are
-    # sufficient progress info and the carriage-return escape sequences
-    # would just print as visible junk in the captured log.
+    # sufficient progress info and the carriage-return / cursor-move
+    # escape sequences would just print as visible junk in the captured
+    # log. The bar uses ━/─ (heavy/light box-drawing horizontal) with
+    # ANSI cyan-bold + dim colour for a clean modern look, and floats on
+    # its own line with a blank-line gap above it via two-line erase
+    # (clear bar line + cursor-up + clear blank line) on each redraw.
     _is_tty = sys.stdout.isatty()
+    _bar_state = {"drawn": False}
+
+    _BAR_FILL = "\033[1;36m"   # bold cyan
+    _BAR_EMPTY = "\033[2m"     # dim
+    _BAR_RESET = "\033[0m"
 
     def _redraw_progress(current: int, total: int, elapsed: float,
                          ok: int, fail: int) -> None:
-        """Sticky single-line progress bar that overwrites itself in place.
-        Called after every cell completes; per-cell rows are printed
-        BEFORE this so they persist above the bar. No-op on non-TTY."""
+        """Sticky progress bar with a blank line gap above. Erases its
+        previous render (bar + blank above) before printing the new one,
+        so per-cell rows printed in between accumulate cleanly. No-op
+        on non-TTY."""
         if not _is_tty:
             return
-        bar_len = 30
+        if _bar_state["drawn"]:
+            # Cursor sits at end of the previous bar line. Erase the
+            # bar line, move up one, erase the blank line. Cursor is now
+            # at the start of (where the blank line was), ready for the
+            # fresh blank + bar.
+            sys.stdout.write("\r\033[K\033[1A\r\033[K")
+        bar_len = 32
         filled = int(bar_len * current / max(total, 1))
-        bar = "█" * filled + "░" * (bar_len - filled)
+        bar = (_BAR_FILL + ("━" * filled) + _BAR_RESET
+               + _BAR_EMPTY + ("─" * (bar_len - filled)) + _BAR_RESET)
         pct = 100.0 * current / max(total, 1)
         if current > 0:
             eta = (elapsed / current) * (total - current)
             eta_s = _fmt_dur(eta)
         else:
             eta_s = "--"
-        line = (f"  [{bar}] {pct:5.1f}%  ({current}/{total})  "
-                f"✓{ok} ✗{fail}  elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
-        sys.stdout.write("\r\033[K" + line)
+        # Blank line, then the bar line.
+        sys.stdout.write("\n  " + bar
+                         + f"  {pct:5.1f}%  ({current}/{total})  "
+                         + f"\033[32m✓{ok}\033[0m \033[31m✗{fail}\033[0m  "
+                         + f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
         sys.stdout.flush()
+        _bar_state["drawn"] = True
 
     def _clear_progress() -> None:
-        if not _is_tty:
+        """Erase the rendered bar + blank line above (if any)."""
+        if not _is_tty or not _bar_state["drawn"]:
             return
-        sys.stdout.write("\r\033[K")
+        sys.stdout.write("\r\033[K\033[1A\r\033[K")
         sys.stdout.flush()
+        _bar_state["drawn"] = False
 
     results = []
     completed = 0
