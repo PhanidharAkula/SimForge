@@ -529,6 +529,30 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
     # Network graph for routing + edge mapping
     graph = parse_canonical_network(network_path)
 
+    # Cross-engine fairness: prune to the largest SCC before emitting,
+    # matching what MATSim's clean_network and DTALite's prepare path
+    # do. Without this filter, SUMO would emit the full canonical
+    # network (with non-SCC dead-end stubs) while MATSim and DTALite
+    # emit only the SCC subset — a documented fairness gap that made
+    # SUMO's input network read 314 nodes / 346 links larger than the
+    # other two on chicago_1k_car. The trips themselves are already
+    # restricted to SCC origins/destinations by the shared feasibility
+    # filter, so the dropped non-SCC nodes are unused either way; this
+    # change just makes the input artefacts byte-comparable across
+    # engines for the audit_fairness Q2 check.
+    from pipeline.network.scc import compute_largest_scc
+    scc_node_ids = compute_largest_scc(
+        set(graph.nodes.keys()),
+        [(lk.from_node, lk.to_node) for lk in graph.links],
+    )
+    graph = NetworkGraph(
+        nodes={nid: n for nid, n in graph.nodes.items() if nid in scc_node_ids},
+        links=[lk for lk in graph.links
+               if lk.from_node in scc_node_ids and lk.to_node in scc_node_ids],
+        adjacency={},
+        edge_lookup={},
+    )
+
     # Build SUMO nodes and edges XML (input for netconvert)
     nodes_content = build_sumo_nodes_xml(graph)
     nodes_path = output_dir / "nodes.nod.xml"
