@@ -209,15 +209,28 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
         if n.is_file() and l.is_file():
             net["dtalite"] = (_count_csv_rows(n), _count_csv_rows(l))
     if "sumo" in cells:
-        # SUMO emits .nod.xml + .edg.xml (canonical) and .net.xml (compiled);
-        # find .net.xml by glob since the basename varies per scenario.
-        nets = list(cells["sumo"].glob("*.net.xml"))
-        if nets:
-            tree = ET.parse(nets[0])
-            root = tree.getroot()
-            n = len(root.findall("junction"))
-            l = len(root.findall("edge"))
+        # Prefer the pre-netconvert .nod.xml + .edg.xml — those map 1:1 to
+        # canonical nodes/links. The compiled .net.xml inflates the count
+        # with internal lane junctions (one per turn-lane connection at
+        # each intersection) and internal lane edges, which is correct
+        # SUMO behaviour but confuses a cross-engine fairness count.
+        nods = list(cells["sumo"].glob("*.nod.xml"))
+        edgs = list(cells["sumo"].glob("*.edg.xml"))
+        if nods and edgs:
+            n = _count_xml_elements(nods[0], "node")
+            l = _count_xml_elements(edgs[0], "edge")
             net["sumo"] = (n, l)
+        else:
+            # Fallback: count road junctions from .net.xml, filtering out
+            # type="internal" entries that represent intra-junction lane geometry.
+            nets = list(cells["sumo"].glob("*.net.xml"))
+            if nets:
+                root = ET.parse(nets[0]).getroot()
+                n = sum(1 for j in root.findall("junction")
+                        if j.get("type") != "internal")
+                l = sum(1 for e in root.findall("edge")
+                        if e.get("function") != "internal")
+                net["sumo"] = (n, l)
     for eng, (n, l) in net.items():
         print(f"  {eng:8} emits: {n} nodes, {l} links")
     if len(net) >= 2:
