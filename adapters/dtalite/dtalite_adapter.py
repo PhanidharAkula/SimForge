@@ -64,6 +64,7 @@ from adapters.sumo.sumo_adapter import (
     parse_canonical_network,
     summarize_scenario,
 )
+from pipeline.network.scc import compute_largest_scc
 
 
 logger = logging.getLogger(__name__)
@@ -555,15 +556,35 @@ def prepare_dtalite_inputs(
         feas_report, output_dir / "feasibility_report.json"
     )
 
+    # Cross-engine fairness: prune the network to the largest SCC
+    # before writing it. This is the SAME filter the shared feasibility
+    # check uses, and matches what the MATSim adapter emits — so all
+    # three engines see byte-identical node and link sets, not just
+    # byte-identical trip sets. Without this filter, DTALite would emit
+    # the full canonical network (with non-SCC dead-ends) while MATSim
+    # emits the SCC-only network — a fairness gap that contaminates the
+    # cross-engine travel-time comparison.
+    scc_node_ids = compute_largest_scc(
+        set(graph.nodes.keys()),
+        [(lk.from_node, lk.to_node) for lk in graph.links],
+    )
+    scc_graph = NetworkGraph(
+        nodes={nid: n for nid, n in graph.nodes.items() if nid in scc_node_ids},
+        links=[lk for lk in graph.links
+               if lk.from_node in scc_node_ids and lk.to_node in scc_node_ids],
+        adjacency={},
+        edge_lookup={},
+    )
+
     # Compute zone set FIRST so write_dtalite_node_csv knows which
     # nodes to promote. DTALite's UE iteration cost is linear in the
     # number of zones, so restricting to demand-carrying nodes is the
     # difference between a 5-second run and a 5-minute run on chicago_1k.
     demand_node_ids = collect_demand_node_ids(demand_path, feasible)
     nodes_written = write_dtalite_node_csv(
-        graph, output_dir / "node.csv", zone_node_ids=demand_node_ids
+        scc_graph, output_dir / "node.csv", zone_node_ids=demand_node_ids
     )
-    links_written = write_dtalite_link_csv(graph, output_dir / "link.csv")
+    links_written = write_dtalite_link_csv(scc_graph, output_dir / "link.csv")
     od_pairs_written = write_dtalite_demand_csv(
         demand_path, output_dir / "demand.csv", feasible
     )
