@@ -427,10 +427,14 @@ class StickyProgress:
         if self.ok or self.fail:
             counters = (f"  \033[32m✓{self.ok}\033[0m "
                         f"\033[31m✗{self.fail}\033[0m")
-        label = self.current_label or "..."
+        # Only emit the ": <label>" segment when a caller actually set a
+        # label (run.py / run_benchmark.py / generate.py do per-cell or
+        # per-step). The pytest plugin doesn't, so the bar stays tight
+        # instead of showing a dummy "..." placeholder.
+        label_part = f": {self.current_label}" if self.current_label else ""
         bar_line = (f"  {bar}  {spinner}  {pct:>3.0f}%  "
-                    f"{self.unit} {min(progress + 1, self.total)}/{self.total}: "
-                    f"{label}{counters}  "
+                    f"{self.unit} {min(progress + 1, self.total)}/{self.total}"
+                    f"{label_part}{counters}  "
                     f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
         if _in_place and self._drawn:
             # Flicker-free in-place rewrite: cursor still on the bar
