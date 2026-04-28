@@ -314,13 +314,11 @@ def run_dtalite_engine(scenario_path: Path, mode: str, seed: int,
 
 def run_simulation(scenario: str, engine: str, mode: str, seed: int,
                    output_base: Path, timeout: int) -> dict:
-    """Run a single simulation."""
+    """Run a single simulation. Pure function — caller handles all output."""
     scenario_path = Path("scenarios") / scenario
     output_dir = output_base / f"{scenario}_{engine}_{mode}_seed{seed}"
     output_dir.mkdir(parents=True, exist_ok=True)
-    
-    print(f"  Running: {scenario} | {engine} | {mode} | seed={seed}...", end=" ", flush=True)
-    
+
     try:
         if engine == "sumo":
             result = run_sumo(scenario_path, mode, seed, output_dir, timeout)
@@ -330,16 +328,8 @@ def run_simulation(scenario: str, engine: str, mode: str, seed: int,
             result = run_dtalite_engine(scenario_path, mode, seed, output_dir, timeout)
         else:
             result = {"status": "failed", "error": f"Unknown engine: {engine}"}
-        
-        if result["status"] == "success":
-            print(f"✓ ({result['wall_time_s']}s)")
-        else:
-            print(f"✗ ({result.get('error', 'unknown error')})")
-        
         return result
-        
     except (OSError, RuntimeError, ValueError) as e:
-        print(f"✗ (Exception: {e})")
         return {"status": "failed", "error": str(e), "wall_time_s": 0}
 
 
@@ -508,20 +498,35 @@ Examples:
     print(f"\n  Output: {output_base}")
     print("\n" + "=" * 60)
     print("  Running Simulations")
-    print("=" * 60 + "\n")
-    
-    # Run simulations
+    print("=" * 60)
+
+    # Compute fixed column widths from the actual matrix so per-cell
+    # rows line up cleanly regardless of scenario/engine name length.
+    sc_w = max(len(s) for s in scenarios)
+    eng_w = max(len(e) for e in engines)
+    mode_w = max(len(m) for m in modes)
+    cell_idx_w = len(str(total_runs))
+
     results = []
     completed = 0
     failed = 0
-    
-    from pipeline.progress import ProgressBar
-    pb = ProgressBar(total=total_runs, desc="Benchmark")
-    
+    bench_started_at = time.perf_counter()
+    last_scenario = None
+    cell_idx = 0
+
     for scenario, engine, mode in valid_cells:
         for rep in range(repeats):
+            cell_idx += 1
             seed = args.seed + rep
 
+            # Print a scenario-divider header the first time we hit a
+            # new scenario, so the per-cell rows underneath are visually
+            # grouped.
+            if scenario != last_scenario:
+                print(f"\n▶ {scenario}")
+                last_scenario = scenario
+
+            cell_started_at = time.perf_counter()
             result = run_simulation(
                 scenario=scenario,
                 engine=engine,
@@ -530,6 +535,8 @@ Examples:
                 output_base=output_base,
                 timeout=args.timeout,
             )
+            elapsed = time.perf_counter() - cell_started_at
+            wall = result.get("wall_time_s") or round(elapsed, 2)
 
             result.update({
                 "scenario": scenario,
@@ -538,18 +545,29 @@ Examples:
                 "mode": mode,
                 "seed": seed,
                 "repeat": rep + 1,
-                "runtime_s": result.get("wall_time_s", 0),
+                "runtime_s": wall,
             })
             results.append(result)
 
             if result["status"] == "success":
                 completed += 1
+                mark = "✓"  # ✓
+                tail = f"{wall:>7.1f}s"
             else:
                 failed += 1
+                mark = "✗"  # ✗
+                err = (result.get("error") or "unknown error")
+                # Strip newlines and clip to keep the row on one line.
+                err = " ".join(err.split())[:60]
+                tail = f"FAIL  {err}"
 
-            pb.update()
-    
-    pb.finish()
+            print(f"  [{cell_idx:>{cell_idx_w}}/{total_runs}]  "
+                  f"{engine:<{eng_w}}  "
+                  f"{mode:<{mode_w}}  "
+                  f"seed={seed}  "
+                  f"{mark}  {tail}")
+
+    bench_wall = time.perf_counter() - bench_started_at
     
     # Save results
     results_file = output_base / "benchmark_results.json"
@@ -574,11 +592,31 @@ Examples:
     print("\n" + "=" * 60)
     print("  Summary")
     print("=" * 60)
-    print(f"  ✓ Completed: {completed}/{total_runs}")
-    print(f"  ✗ Failed:    {failed}/{total_runs}")
-    print(f"  📁 Results:  {results_file}")
+    pct = 100.0 * completed / max(total_runs, 1)
+    mins, secs = divmod(int(bench_wall), 60)
+    print(f"\n  Wall time:    {mins}m {secs:02d}s")
+    print(f"  ✓ Completed:  {completed}/{total_runs} ({pct:.1f}%)")
+    print(f"  ✗ Failed:     {failed}/{total_runs}")
+
+    # Per-cell-type timing breakdown (mean ± stdev across reps).
+    from statistics import mean, pstdev
+    by_cell: dict[tuple, list[float]] = {}
+    for r in results:
+        if r.get("status") != "success":
+            continue
+        key = (r["scenario"], r["engine"], r["mode"])
+        by_cell.setdefault(key, []).append(r["runtime_s"])
+    if by_cell:
+        print("\n  Per-cell timing (successful runs only):")
+        for (sc, eng, md), times in by_cell.items():
+            mu = mean(times)
+            sd = pstdev(times) if len(times) > 1 else 0.0
+            print(f"    {sc:<{sc_w}}  {eng:<{eng_w}}  {md:<{mode_w}}  "
+                  f"{mu:>7.1f}s ± {sd:>4.1f}s  ({len(times)} runs)")
+
+    print(f"\n  \U0001f4c1 Results:    {results_file}")
     print("=" * 60 + "\n")
-    
+
     return 0 if failed == 0 else 1
 
 
