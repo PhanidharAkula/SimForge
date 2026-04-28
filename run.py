@@ -79,6 +79,18 @@ def check_engine_installed(engine: str) -> bool:
 ALL_ENGINES = ["sumo", "matsim", "dtalite"]
 ALL_MODES = ["micro", "meso"]
 
+# Per-engine mode capability. Engines simulate exactly one paradigm each:
+# SUMO supports both microscopic (car-following) and mesoscopic (link queue);
+# MATSim is queue-based mesoscopic only; DTALite is mesoscopic Dynamic
+# Traffic Assignment only. Cells in the experimental matrix that pair an
+# engine with an unsupported mode are skipped — not silently re-run as
+# meso, which would inflate the result count with duplicated cells.
+ENGINE_SUPPORTED_MODES = {
+    "sumo": {"micro", "meso"},
+    "matsim": {"meso"},
+    "dtalite": {"meso"},
+}
+
 
 # =============================================================================
 # DISPLAY FUNCTIONS
@@ -450,10 +462,25 @@ Examples:
         print(f"\u274c --timeout must be \u2265 1 second, got {args.timeout}")
         return 1
 
-    # Calculate total runs
+    # Build the actual cell list, skipping (engine, mode) pairs the engine
+    # does not support. This avoids re-running MATSim and DTALite once per
+    # mode when only SUMO has a meaningful micro/meso distinction.
     repeats = args.repeats
-    total_runs = len(scenarios) * len(engines) * len(modes) * repeats
-    
+    valid_cells = [
+        (scenario, engine, mode)
+        for scenario in scenarios
+        for engine in engines
+        for mode in modes
+        if mode in ENGINE_SUPPORTED_MODES[engine]
+    ]
+    skipped_cells = [
+        (engine, mode)
+        for engine in engines
+        for mode in modes
+        if mode not in ENGINE_SUPPORTED_MODES[engine]
+    ]
+    total_runs = len(valid_cells) * repeats
+
     # Display experimental matrix
     print("\n" + "=" * 60)
     print("  SimForge Benchmark")
@@ -464,8 +491,13 @@ Examples:
     print(f"  Engines:   {len(engines)} ({', '.join(engines)})")
     print(f"  Modes:     {len(modes)} ({', '.join(modes)})")
     print(f"  Repeats:   {repeats}")
+    if skipped_cells:
+        print(f"  Skipped:   {len(skipped_cells)} engine/mode pair(s) "
+              f"(unsupported by engine):")
+        for engine, mode in sorted(set(skipped_cells)):
+            print(f"             - {engine} does not support mode={mode}")
     print("-" * 60)
-    print(f"  Total:     {len(scenarios)} × {len(engines)} × {len(modes)} × {repeats} = {total_runs} runs")
+    print(f"  Total:     {len(valid_cells)} cells × {repeats} repeats = {total_runs} runs")
     print("-" * 60)
     
     # Setup output directory
@@ -486,38 +518,36 @@ Examples:
     from pipeline.progress import ProgressBar
     pb = ProgressBar(total=total_runs, desc="Benchmark")
     
-    for scenario in scenarios:
-        for engine in engines:
-            for mode in modes:
-                for rep in range(repeats):
-                    seed = args.seed + rep
-                    
-                    result = run_simulation(
-                        scenario=scenario,
-                        engine=engine,
-                        mode=mode,
-                        seed=seed,
-                        output_base=output_base,
-                        timeout=args.timeout,
-                    )
-                    
-                    result.update({
-                        "scenario": scenario,
-                        "scenario_id": f"{scenario}_{engine}_{mode}",
-                        "engine": engine,
-                        "mode": mode,
-                        "seed": seed,
-                        "repeat": rep + 1,
-                        "runtime_s": result.get("wall_time_s", 0),
-                    })
-                    results.append(result)
-                    
-                    if result["status"] == "success":
-                        completed += 1
-                    else:
-                        failed += 1
-                    
-                    pb.update()
+    for scenario, engine, mode in valid_cells:
+        for rep in range(repeats):
+            seed = args.seed + rep
+
+            result = run_simulation(
+                scenario=scenario,
+                engine=engine,
+                mode=mode,
+                seed=seed,
+                output_base=output_base,
+                timeout=args.timeout,
+            )
+
+            result.update({
+                "scenario": scenario,
+                "scenario_id": f"{scenario}_{engine}_{mode}",
+                "engine": engine,
+                "mode": mode,
+                "seed": seed,
+                "repeat": rep + 1,
+                "runtime_s": result.get("wall_time_s", 0),
+            })
+            results.append(result)
+
+            if result["status"] == "success":
+                completed += 1
+            else:
+                failed += 1
+
+            pb.update()
     
     pb.finish()
     
