@@ -125,9 +125,9 @@ _SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 # bold subtly thickens characters in most terminal fonts which made the
 # cyan cells appear "taller" than the dim ones, and the bold/dim
 # transition at the boundary rendered the last cyan cell as half-filled.
-_BAR_FILL = "\033[32m"        # plain green (active / in-progress)
+_BAR_FILL = "\033[35m"        # plain magenta (active / in-progress)
 _BAR_EMPTY = "\033[90m"        # bright black / gray (no dim attribute)
-_SPINNER_COLOR = "\033[1;32m"  # bold green for the spinner
+_SPINNER_COLOR = "\033[1;35m"  # bold magenta for the spinner
 _RESET = "\033[0m"
 
 
