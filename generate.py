@@ -563,9 +563,17 @@ def generate_scenario(
     progress.advance()
 
     # ---- 4. Demand ----
-    demand_label = "census (ModelGen)" if use_census else "synthetic (gravity)"
-    progress.print_above(f"\n▶ Step 4/4: Demand ({demand_label})")
-    progress.set_label(f"Demand ({demand_label})")
+    if use_census:
+        demand_label = "census via ModelGen"
+        model_size_mb = model_path.stat().st_size / 1e6
+        demand_source = (f"modelgen/{model_path.name} "
+                         f"({model_size_mb:.0f} MB, PUMS microdata — hash-pinned)")
+    else:
+        demand_label = "synthetic via gravity model"
+        demand_source = "no input file (gravity model samples origins/destinations)"
+    progress.print_above(f"\n▶ Step 4/4: Demand — {demand_label}")
+    progress.print_above(f"           source: {demand_source}")
+    progress.set_label(f"Demand — {demand_label}")
     t_step = time.time()
     if use_census:
         multi_mode = len(modes) > 1
