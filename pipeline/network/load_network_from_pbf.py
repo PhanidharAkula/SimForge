@@ -117,11 +117,11 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
             f"  Download with: python tools/download_osm.py"
         )
 
-    size_mb = pbf_path.stat().st_size / 1e6
-    logger.info(
-        "Loading OSM network from local PBF: %s (%.0f MB)",
-        pbf_path.name, size_mb,
-    )
+    # The "Loading OSM network from local PBF: <name> (<size> MB)"
+    # info is now surfaced by generate.py's "source:" header, so we
+    # don't re-emit it here (avoids redundant lines in --verbose mode).
+    # The bbox info is genuinely verbose-only useful and not in the
+    # "source:" header, so it stays.
     logger.info(
         "  Bbox: N=%.4f S=%.4f E=%.4f W=%.4f",
         bbox.north, bbox.south, bbox.east, bbox.west,

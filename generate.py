@@ -514,7 +514,9 @@ def generate_scenario(
         progress.print_above(f"                   NOT hash-pinned — bundle won't be byte-reproducible")
         effective_pbf = None
     else:
-        progress.print_above(f"           source: osm_data/{pbf_path.name} (local PBF — hash-pinned)")
+        size_mb = pbf_path.stat().st_size / 1e6
+        progress.print_above(f"           source: osm_data/{pbf_path.name} "
+                             f"({size_mb:.0f} MB, local PBF — hash-pinned)")
         effective_pbf = pbf_path
     progress.set_label(f"OSM network ({radius_km:.1f} km)")
     t_step = time.time()
