@@ -145,6 +145,7 @@ class StickyProgressPlugin:
         self.progress = StickyProgress(self.total, unit="test")
         self.progress.start()
 
+    @pytest.hookimpl(tryfirst=True)
     def pytest_sessionfinish(self, session, exitstatus) -> None:
         if self.progress is None:
             return
@@ -152,6 +153,30 @@ class StickyProgressPlugin:
         self._flush_file()
         self.progress.stop()
         self.progress = None
+
+        # Mute pytest's own end-of-session output BEFORE any
+        # pytest_terminal_summary hook fires. That ordering matters:
+        # _pytest.warnings.pytest_terminal_summary iterates tr.stats
+        # ["warnings"] and tryfirst doesn't guarantee precedence among
+        # competing tryfirst hooks (registration order wins, and
+        # _pytest.warnings registers earlier). Doing the stat-pop here
+        # — strictly before any pytest_terminal_summary — kills the
+        # "warnings summary" block at its source. We've already
+        # captured every warning into self.warning_messages via
+        # pytest_warning_recorded; the rendering happens in our own
+        # pytest_terminal_summary below.
+        tr = session.config.pluginmanager.getplugin("terminalreporter")
+        if tr is None:
+            return
+        for key in ("warnings", "skipped", "xfailed", "xpassed",
+                    "deselected", "rerun"):
+            tr.stats.pop(key, None)
+        # Method monkey-patches: redundant with the stat-pop for some
+        # categories but defensive — pytest plugins occasionally render
+        # via their own paths instead of tr.stats iteration.
+        tr.summary_warnings = lambda: None
+        tr.short_test_summary = lambda: None
+        tr.summary_stats = lambda: None
 
     # ---- warning capture (replaces pytest's "warnings summary" block) ----
 
@@ -330,7 +355,6 @@ class StickyProgressPlugin:
 
     @pytest.hookimpl(tryfirst=True)
     def pytest_terminal_summary(self, terminalreporter, exitstatus, config):
-        tr = terminalreporter
         elapsed = time.time() - self.start_time
 
         print("\n" + "=" * 60)
@@ -382,25 +406,10 @@ class StickyProgressPlugin:
                 print(f"    ⚠ {_truncate(msg)}{multiplier}")
 
         print("\n" + "=" * 60 + "\n")
-
-        # Mute pytest's own three-block tail. tr.stats and the underlying
-        # writer are still intact so internal exit-code logic works.
-        # Drop the categories that drive the noise rows of "short test
-        # summary info". Failures stay in tr.stats["failed"] so
-        # summary_failures() still renders the FAILURES section (with
-        # tracebacks) — that's debugging gold.
-        for key in ("skipped", "xfailed", "xpassed", "deselected", "rerun"):
-            tr.stats.pop(key, None)
-        # Both `summary_warnings` and `short_test_summary` print blocks
-        # we already render in our Summary block above (Warnings + Skipped
-        # tests rollup). They have separate code paths from tr.stats — the
-        # only reliable way to suppress them is to no-op the methods on
-        # this TerminalReporter instance.
-        tr.summary_warnings = lambda: None
-        tr.short_test_summary = lambda: None
-        # `summary_stats` prints the final "N passed, M skipped in T s"
-        # one-liner — also redundant with our Wall time + counts block.
-        tr.summary_stats = lambda: None
+        # The actual muting of pytest's own end-of-session output
+        # (warnings summary, short test summary, stats line) happens
+        # in pytest_sessionfinish — it has to run before any
+        # pytest_terminal_summary hook fires.
 
 
 def pytest_configure(config) -> None:
