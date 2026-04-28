@@ -687,8 +687,11 @@ Examples:
     print(f"  ✓ Completed:  {completed}/{total_runs} ({pct:.1f}%)")
     print(f"  ✗ Failed:     {failed}/{total_runs}")
 
-    # Per-cell-type timing breakdown (mean ± stdev across reps).
-    from statistics import mean, pstdev
+    # Per-cell-type timing breakdown using the same Student's-t 95% CI
+    # convention the thesis tables and figures use (evaluation/metrics/
+    # confidence.py). With N>=2 reps the ± half-width is t_{0.025,N-1}
+    # × σ_sample / √N; with N=1 it's 0 (no spread to report).
+    from evaluation.metrics.confidence import confidence_interval_95
     by_cell: dict[tuple, list[float]] = {}
     for r in results:
         if r.get("status") != "success":
@@ -696,12 +699,13 @@ Examples:
         key = (r["scenario"], r["engine"], r["mode"])
         by_cell.setdefault(key, []).append(r["runtime_s"])
     if by_cell:
-        print("\n  Per-cell timing (successful runs only):")
+        print("\n  Per-cell timing (mean ± 95% CI across reps, successful runs only):")
         for (sc, eng, md), times in by_cell.items():
-            mu = mean(times)
-            sd = pstdev(times) if len(times) > 1 else 0.0
+            ci = confidence_interval_95(times)
+            note = "" if ci.n >= 2 else "  (N=1, no CI)"
             print(f"    {sc:<{sc_w}}  {eng:<{eng_w}}  {md:<{mode_w}}  "
-                  f"{mu:>7.1f}s ± {sd:>4.1f}s  ({len(times)} runs)")
+                  f"{ci.mean:>7.1f}s ± {ci.half_width:>5.1f}s  "
+                  f"({ci.n} runs){note}")
 
     print(f"\n  \U0001f4c1 Results:    {results_file}")
     print("=" * 60 + "\n")
