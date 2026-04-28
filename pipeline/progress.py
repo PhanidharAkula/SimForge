@@ -20,6 +20,20 @@ import sys
 import time
 
 
+# Module-level flag set by StickyProgress.start() / cleared by stop().
+# When True, the older ProgressBar (used by SUMO BFS routing and demand
+# generation) becomes a no-op so it doesn't compete with the sticky bar
+# for cursor position. Both classes share the same TTY; without this
+# coordination the inner ProgressBar's \r-overwrites and the sticky
+# bar's heartbeat redraws interleave and produce visible flicker.
+_STICKY_ACTIVE = False
+
+
+def _set_sticky_active(active: bool) -> None:
+    global _STICKY_ACTIVE
+    _STICKY_ACTIVE = active
+
+
 class ProgressBar:
     """Minimal progress bar using only stdlib."""
 
@@ -34,6 +48,11 @@ class ProgressBar:
 
     def update(self, n: int = 1) -> None:
         self.current = min(self.current + n, self.total)
+        # Suppress all output when a StickyProgress is on screen — the
+        # sticky bar's heartbeat would conflict with our \r-overwrite
+        # writes on the same TTY (see _STICKY_ACTIVE comment above).
+        if _STICKY_ACTIVE:
+            return
         now = time.time()
         # Rate-limit redraws to avoid terminal flooding
         if now - self._last_print >= self._print_interval or self.current >= self.total:
@@ -66,6 +85,8 @@ class ProgressBar:
 
     def finish(self, message: str = "") -> None:
         self.current = self.total
+        if _STICKY_ACTIVE:
+            return  # silent under sticky bar; see _STICKY_ACTIVE comment
         self._draw()
         _ = time.time() - self.start_time  # elapsed, reserved for future use
         if message:
@@ -215,6 +236,11 @@ class StickyProgress:
         """Spawn the heartbeat thread (no-op on non-TTY)."""
         if not self.is_tty or self._thread is not None:
             return
+        # Silence the older ProgressBar (used by SUMO BFS routing and
+        # demand generation) for the duration of this sticky bar's
+        # lifetime. Otherwise the two classes' \r-overwrites compete
+        # on the same TTY and produce visible flicker.
+        _set_sticky_active(True)
         self._thread = threading.Thread(target=self._heartbeat, daemon=True)
         self._thread.start()
 
@@ -247,8 +273,9 @@ class StickyProgress:
             self._render_locked()
 
     def stop(self) -> None:
-        """Halt the heartbeat thread, erase the bar, and uninstall any
-        log-capture handler so subsequent log calls work normally."""
+        """Halt the heartbeat thread, erase the bar, uninstall any
+        log-capture handler, and re-enable the older ProgressBar so
+        subsequent calls work normally."""
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2)
@@ -256,6 +283,7 @@ class StickyProgress:
         with self._lock:
             self._erase_locked()
         self._uninstall_log_capture()
+        _set_sticky_active(False)
 
     # ---- log capture (used by --verbose entry-points) ---------------
 
