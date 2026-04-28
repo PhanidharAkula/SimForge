@@ -298,19 +298,59 @@ def main() -> int:
         print(f"Run directory not found: {base}", file=sys.stderr)
         return 1
 
-    scenarios = sorted({
-        p.name.split("_meso_seed")[0].rsplit("_", 1)[0]
-        for p in base.iterdir()
-        if p.is_dir() and "_meso_seed" in p.name
-    })
+    scenarios = _discover_scenarios(base)
     if not scenarios:
-        print(f"No <scenario>_<engine>_meso_seed* dirs under {base}", file=sys.stderr)
+        print(f"No engine-cell directories found under {base}\n"
+              f"  Looked for layouts:\n"
+              f"    A. <base>/<scenario>_<engine>_<mode>_seed<N>/native_files/\n"
+              f"    B. <base>/<scenario>/<engine>/seed_<N>/\n"
+              f"    C. <base>/<scenario>/<scenario>/<engine>/seed_<N>/",
+              file=sys.stderr)
         return 1
 
     for sc in scenarios:
         audit_scenario(base, sc, seed)
         print()
     return 0
+
+
+def _discover_scenarios(base: Path) -> list[str]:
+    """Find scenario IDs under any of the three supported layouts."""
+    engines = ("sumo", "matsim", "dtalite")
+    found: set[str] = set()
+
+    # Layout A: flat run.py output — <scenario>_<engine>_<mode>_seed<N>
+    for p in base.iterdir():
+        if not p.is_dir() or "_meso_seed" not in p.name:
+            continue
+        stem = p.name.split("_meso_seed")[0]
+        for eng in engines:
+            suffix = f"_{eng}"
+            if stem.endswith(suffix):
+                found.add(stem[: -len(suffix)])
+                break
+
+    # Layouts B and C: <base>/<scenario>/.../<engine>/seed_<N>
+    # Walk one level down: any subdir that contains <engine>/seed_* OR
+    # <scenario>/<engine>/seed_* qualifies.
+    for sc_dir in base.iterdir():
+        if not sc_dir.is_dir():
+            continue
+        for eng in engines:
+            # Layout B: <base>/<scenario>/<engine>/seed_*
+            if (sc_dir / eng).is_dir() and any(
+                (sc_dir / eng).glob("seed_*")
+            ):
+                found.add(sc_dir.name)
+                break
+            # Layout C: <base>/<scenario>/<scenario>/<engine>/seed_*
+            if (sc_dir / sc_dir.name / eng).is_dir() and any(
+                (sc_dir / sc_dir.name / eng).glob("seed_*")
+            ):
+                found.add(sc_dir.name)
+                break
+
+    return sorted(found)
 
 
 if __name__ == "__main__":
