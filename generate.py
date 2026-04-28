@@ -82,6 +82,116 @@ def _fmt_dur(seconds: float) -> str:
     return f"{h}h {m:02d}m"
 
 
+# ---------------------------------------------------------------------------
+# Sticky progress bar with optional heartbeat thread.
+# Pattern matches run.py: TTY-only, two-line erase (bar + blank above),
+# cyan/dim ━/─ box-drawing fill. Plus a background thread that re-renders
+# the bar every second so long-running steps (60+s OSM extraction, 30+s
+# demand generation) don't look like the script is frozen.
+# ---------------------------------------------------------------------------
+
+import threading
+
+_TOTAL_STEPS = 4
+_BAR_FILL = "\033[1;36m"
+_BAR_EMPTY = "\033[2m"
+_BAR_RESET = "\033[0m"
+
+
+class _StepProgress:
+    """Single-line progress bar that re-renders every second on a TTY."""
+
+    def __init__(self, total_steps: int):
+        self.total = total_steps
+        self.completed = 0
+        self.current_label = ""
+        self.t0 = time.time()
+        self.is_tty = sys.stdout.isatty()
+        self._drawn = False
+        self._stop = threading.Event()
+        self._thread: threading.Thread | None = None
+
+    # ---- public API --------------------------------------------------
+    def start(self) -> None:
+        """Spawn the heartbeat thread (no-op on non-TTY)."""
+        if not self.is_tty:
+            return
+        self._thread = threading.Thread(target=self._heartbeat, daemon=True)
+        self._thread.start()
+
+    def begin_step(self, label: str) -> None:
+        """Record the label of the step currently in progress."""
+        self.current_label = label
+        self._render()
+
+    def complete_step(self) -> None:
+        """Mark the current step as finished and bump the count."""
+        self.completed += 1
+        self._render()
+
+    def stop(self) -> None:
+        """Halt the heartbeat thread and erase the bar."""
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2)
+        self._erase()
+
+    def print_above(self, line: str) -> None:
+        """Print a line that should appear ABOVE the sticky bar.
+        Erases the bar first so the line lands cleanly, then re-renders."""
+        if self.is_tty:
+            self._erase()
+        print(line)
+        if self.is_tty:
+            self._render()
+
+    # ---- rendering ---------------------------------------------------
+    def _heartbeat(self) -> None:
+        while not self._stop.is_set():
+            if self.is_tty:
+                self._render()
+            self._stop.wait(1.0)
+
+    def _render(self) -> None:
+        if not self.is_tty:
+            return
+        if self._drawn:
+            sys.stdout.write("\r\033[K\033[1A\r\033[K")
+        bar_len = 32
+        # Smooth within-step progress: completed_steps + fractional credit
+        # for the in-progress step (capped so we never display 100% before
+        # the final complete_step() call).
+        elapsed = time.time() - self.t0
+        progress = self.completed
+        pct = 100.0 * progress / max(self.total, 1)
+        filled = int(bar_len * progress / max(self.total, 1))
+        bar = (_BAR_FILL + ("━" * filled) + _BAR_RESET
+               + _BAR_EMPTY + ("─" * (bar_len - filled)) + _BAR_RESET)
+        if progress > 0 and progress < self.total:
+            eta = (elapsed / progress) * (self.total - progress)
+            eta_s = _fmt_dur(eta)
+        elif progress >= self.total:
+            eta_s = "0s"
+        else:
+            eta_s = "--"
+        label = self.current_label or "..."
+        sys.stdout.write(
+            "\n  " + bar
+            + f"  {pct:5.1f}%  "
+            + f"step {min(progress + 1, self.total)}/{self.total}: {label}  "
+            + f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}"
+        )
+        sys.stdout.flush()
+        self._drawn = True
+
+    def _erase(self) -> None:
+        if not self.is_tty or not self._drawn:
+            return
+        sys.stdout.write("\r\033[K\033[1A\r\033[K")
+        sys.stdout.flush()
+        self._drawn = False
+
+
 # =============================================================================
 # Toolchain capture — recorded into generation_metadata.json so any bundle
 # carries the exact code+dep stack that produced it. Critical for cross-machine
@@ -460,6 +570,8 @@ def generate_scenario(
 
     t0 = time.time()
     step_times: dict[str, float] = {}
+    progress = _StepProgress(_TOTAL_STEPS)
+    progress.start()
 
     # ---- 1. Network from OSM ----
     if out.exists():
@@ -476,17 +588,20 @@ def generate_scenario(
             f"  Provenance lives in osm_data/manifest.json (URL + SHA256)."
         )
 
-    print(f"\n▶ Step 1/4: OSM network ({radius_km:.1f} km radius)")
+    progress.print_above(f"\n▶ Step 1/4: OSM network ({radius_km:.1f} km radius)")
+    progress.begin_step(f"OSM network ({radius_km:.1f} km)")
     t_step = time.time()
     net = build_network_from_osm(
         bbox, out / "network.xml", network_type="drive", pbf_path=pbf_path
     )
     step_times["Network"] = time.time() - t_step
-    print(f"  ✓ network.xml: {net['node_count']:,} nodes, "
-          f"{net['link_count']:,} links  ({_fmt_dur(step_times['Network'])})")
+    progress.print_above(f"  ✓ network.xml: {net['node_count']:,} nodes, "
+                         f"{net['link_count']:,} links  ({_fmt_dur(step_times['Network'])})")
+    progress.complete_step()
 
     # ---- 2. Signals ----
-    print("\n▶ Step 2/4: Traffic signals")
+    progress.print_above("\n▶ Step 2/4: Traffic signals")
+    progress.begin_step("Traffic signals")
     t_step = time.time()
     sig = build_signals_default(
         network_path=out / "network.xml",
@@ -494,21 +609,25 @@ def generate_scenario(
         min_degree=4,
     )
     step_times["Signals"] = time.time() - t_step
-    print(f"  ✓ signals.xml: {sig['signal_count']:,} controllers  "
-          f"({_fmt_dur(step_times['Signals'])})")
+    progress.print_above(f"  ✓ signals.xml: {sig['signal_count']:,} controllers  "
+                         f"({_fmt_dur(step_times['Signals'])})")
+    progress.complete_step()
 
     # ---- 3. Config / Manifest ----
-    print("\n▶ Step 3/4: Config + manifest")
+    progress.print_above("\n▶ Step 3/4: Config + manifest")
+    progress.begin_step("Config + manifest")
     t_step = time.time()
     _write_config_xml(out / "config.xml", scenario_id, description,
                       start_time, end_time, seed)
     _write_manifest_xml(out / "manifest.xml", scenario_id)
     step_times["Config"] = time.time() - t_step
-    print(f"  ✓ config.xml + manifest.xml  ({_fmt_dur(step_times['Config'])})")
+    progress.print_above(f"  ✓ config.xml + manifest.xml  ({_fmt_dur(step_times['Config'])})")
+    progress.complete_step()
 
     # ---- 4. Demand ----
     demand_label = "census (ModelGen)" if use_census else "synthetic (gravity)"
-    print(f"\n▶ Step 4/4: Demand ({demand_label})")
+    progress.print_above(f"\n▶ Step 4/4: Demand ({demand_label})")
+    progress.begin_step(f"Demand ({demand_label})")
     t_step = time.time()
     if use_census:
         multi_mode = len(modes) > 1
@@ -554,7 +673,10 @@ def generate_scenario(
                           f"{provenance['gravity_fallback_count']:,} gravity)")
     else:
         demand_summary = f"{dem['trip_count']:,} trips"
-    print(f"  ✓ demand.csv: {demand_summary}  ({_fmt_dur(step_times['Demand'])})")
+    progress.print_above(f"  ✓ demand.csv: {demand_summary}  "
+                         f"({_fmt_dur(step_times['Demand'])})")
+    progress.complete_step()
+    progress.stop()
 
     # ---- Summary ----
     print("\n" + "=" * 60)
