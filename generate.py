@@ -471,15 +471,26 @@ def generate_scenario(
             f"  Provenance lives in osm_data/manifest.json (URL + SHA256)."
         )
 
+    pbf_name = pbf_path.name
     progress.print_above(f"\n▶ Step 1/4: OSM network ({radius_km:.1f} km radius)")
+    progress.print_above(f"           source: osm_data/{pbf_name} (local PBF)")
     progress.set_label(f"OSM network ({radius_km:.1f} km)")
     t_step = time.time()
     net = build_network_from_osm(
         bbox, out / "network.xml", network_type="drive", pbf_path=pbf_path
     )
     step_times["Network"] = time.time() - t_step
+    # Defensive: net["osm_source"] records whether the PBF or the Overpass
+    # fallback was used. generate.py's preflight raises FileNotFoundError
+    # when the PBF is missing so the fallback should never trigger here,
+    # but surface it in the ✓ line either way so the operator can audit.
+    src = net.get("osm_source", {})
+    src_label = (f"from {Path(src.get('path', pbf_name)).name}"
+                 if src.get("type") == "pbf"
+                 else f"from Overpass API ⚠ ({src.get('endpoint','?')})")
     progress.print_above(f"  ✓ network.xml: {net['node_count']:,} nodes, "
-                         f"{net['link_count']:,} links  ({_fmt_dur(step_times['Network'])})")
+                         f"{net['link_count']:,} links  {src_label}  "
+                         f"({_fmt_dur(step_times['Network'])})")
     progress.advance()
 
     # ---- 2. Signals ----
