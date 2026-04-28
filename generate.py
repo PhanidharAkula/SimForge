@@ -377,6 +377,7 @@ def generate_scenario(
     scenario_id: str | None = None,
     synthetic: bool = False,
     allow_oversample: bool = False,
+    allow_overpass_fallback: bool = False,
 ) -> dict:
     """
     Generate a complete canonical scenario bundle.
@@ -461,33 +462,52 @@ def generate_scenario(
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    # Resolve hash-pinned PBF for this city (required; see osm_data/manifest.json).
+    # Resolve hash-pinned PBF for this city. PBF is the canonical source
+    # (provenance recorded in osm_data/manifest.json with URL + SHA256).
+    # If missing, behaviour depends on allow_overpass_fallback:
+    #   - default (strict): raise FileNotFoundError, instruct user to
+    #     download via tools/download_osm.py
+    #   - --allow-overpass-fallback: pass pbf_path=None to the lower
+    #     level, which routes through ox.graph_from_bbox() against the
+    #     live Overpass endpoint. Bundles generated this way are NOT
+    #     byte-reproducible across days because Overpass returns
+    #     whatever OSM contributors edited that morning.
     pbf_rel = city_info.get("pbf_file")
     pbf_path = project_root / pbf_rel if pbf_rel else None
-    if pbf_path is None or not pbf_path.exists():
+    pbf_available = pbf_path is not None and pbf_path.exists()
+    if not pbf_available and not allow_overpass_fallback:
         raise FileNotFoundError(
             f"OSM PBF required for city '{city}' but not found: {pbf_path}\n"
             f"  Download it with:  python tools/download_osm.py\n"
-            f"  Provenance lives in osm_data/manifest.json (URL + SHA256)."
+            f"  Provenance lives in osm_data/manifest.json (URL + SHA256).\n"
+            f"  Or pass --allow-overpass-fallback to use the live Overpass API\n"
+            f"  (NOT byte-reproducible — see --help for the warning)."
         )
 
-    pbf_name = pbf_path.name
     progress.print_above(f"\n▶ Step 1/4: OSM network ({radius_km:.1f} km radius)")
-    progress.print_above(f"           source: osm_data/{pbf_name} (local PBF)")
+    if pbf_available:
+        progress.print_above(f"           source: osm_data/{pbf_path.name} (local PBF — hash-pinned)")
+        effective_pbf = pbf_path
+    else:
+        # User opted into --allow-overpass-fallback. Make the warning loud:
+        # this bundle won't be byte-reproducible across days.
+        progress.print_above(f"           source: Overpass API ⚠ (NOT hash-pinned — "
+                             f"bundle won't be byte-reproducible)")
+        effective_pbf = None
     progress.set_label(f"OSM network ({radius_km:.1f} km)")
     t_step = time.time()
     net = build_network_from_osm(
-        bbox, out / "network.xml", network_type="drive", pbf_path=pbf_path
+        bbox, out / "network.xml", network_type="drive", pbf_path=effective_pbf
     )
     step_times["Network"] = time.time() - t_step
     # Defensive: net["osm_source"] records whether the PBF or the Overpass
-    # fallback was used. generate.py's preflight raises FileNotFoundError
-    # when the PBF is missing so the fallback should never trigger here,
-    # but surface it in the ✓ line either way so the operator can audit.
+    # fallback was used. The ✓ line surfaces it either way so the operator
+    # has a paper trail for which path the simulation actually came from.
     src = net.get("osm_source", {})
-    src_label = (f"from {Path(src.get('path', pbf_name)).name}"
-                 if src.get("type") == "pbf"
-                 else f"from Overpass API ⚠ ({src.get('endpoint','?')})")
+    if src.get("type") == "pbf":
+        src_label = f"from {Path(src.get('path', '?')).name}"
+    else:
+        src_label = f"from Overpass API ⚠ ({src.get('endpoint','?')})"
     progress.print_above(f"  ✓ network.xml: {net['node_count']:,} nodes, "
                          f"{net['link_count']:,} links  {src_label}  "
                          f"({_fmt_dur(step_times['Network'])})")
@@ -718,6 +738,13 @@ Census limit:      ~500K car trips per city without --allow-oversample
                         help="Allow more trips than raw census commuters "
                              "(resamples origins)")
 
+    # Network source
+    parser.add_argument("--allow-overpass-fallback", action="store_true",
+                        help="Fall back to live Overpass API when osm_data/<pbf> is missing. "
+                             "WARNING: Overpass responses are not hash-pinned, so bundles "
+                             "produced this way are NOT byte-reproducible across days. "
+                             "Default: strict — generation fails if the PBF is missing.")
+
     # Verbosity
     parser.add_argument("--verbose", action="store_true",
                         help="Show pipeline INFO logs (default: WARNING and above only)")
@@ -741,6 +768,9 @@ def main() -> None:
         for name in ("pipeline", "pipeline.network", "pipeline.demand",
                      "pipeline.signals", "adapters"):
             logging.getLogger(name).setLevel(logging.WARNING)
+
+    # Stash the new flag on args so generate_scenario picks it up below.
+    allow_overpass_fallback = getattr(args, "allow_overpass_fallback", False)
 
     # Handle --list
     if args.list:
@@ -808,6 +838,7 @@ def main() -> None:
         scenario_id=args.id,
         synthetic=args.synthetic,
         allow_oversample=args.allow_oversample,
+        allow_overpass_fallback=allow_overpass_fallback,
     )
 
 
