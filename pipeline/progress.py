@@ -90,3 +90,215 @@ class ProgressBar:
 
     def __exit__(self, *args):
         self.finish()
+
+
+# ---------------------------------------------------------------------------
+# StickyProgress — used by the entry-point CLIs (run.py, generate.py)
+# ---------------------------------------------------------------------------
+#
+# A single-line progress bar that lives at the bottom of the screen while
+# log lines accumulate above it. Designed for benchmark / generation flows
+# where work happens in discrete steps and a heartbeat spinner gives visible
+# motion during long steps that have no internal progress signal.
+#
+# Differences from the older ProgressBar above:
+#   - Tracks DISCRETE steps (advance() bumps by 1) instead of continuous
+#     work units (update(n)).
+#   - Always-on heartbeat thread that re-renders the spinner every ~200 ms
+#     so the operator can see "still alive" during a 60+ s step.
+#   - Stays at the bottom of the screen with a blank-line gap above and
+#     accepts print_above() calls that emit persistent log lines without
+#     clobbering the bar.
+#   - Flicker-free: the heartbeat redraw uses `\r + content + \033[K`
+#     (clear-to-EOL AFTER writing), so the terminal never sees a cleared
+#     frame between renders. Only print_above() does a true erase + reflow.
+#   - TTY-only: silently no-ops when stdout is piped (sbatch logs, CI
+#     captures) — print_above() then just prints the log line.
+
+import threading
+
+
+_SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+_BAR_FILL = "\033[1;36m"   # bold cyan
+_BAR_EMPTY = "\033[2m"      # dim
+_RESET = "\033[0m"
+
+
+def _fmt_dur(seconds: float) -> str:
+    """Format a duration as Xs / Xm YYs / Xh YYm YYs for human consumption."""
+    s = int(seconds)
+    if s < 60:
+        return f"{s}s"
+    m, s = divmod(s, 60)
+    if m < 60:
+        return f"{m}m {s:02d}s"
+    h, m = divmod(m, 60)
+    return f"{h}h {m:02d}m"
+
+
+class StickyProgress:
+    """Sticky single-line progress bar with spinner heartbeat. See module
+    docstring above for the design rationale and usage patterns."""
+
+    BAR_WIDTH = 32
+
+    def __init__(self, total: int, *, unit: str = "step",
+                 ok_count: int = 0, fail_count: int = 0):
+        self.total = max(total, 1)
+        self.completed = 0
+        self.current_label = ""
+        self.unit = unit
+        self.ok = ok_count
+        self.fail = fail_count
+        self.t0 = time.time()
+        self.is_tty = sys.stdout.isatty()
+        self._drawn = False
+        self._stop = threading.Event()
+        self._thread = None
+        self._tick = 0
+        self._lock = threading.Lock()
+
+    # ---- public API --------------------------------------------------
+
+    def start(self) -> None:
+        """Spawn the heartbeat thread (no-op on non-TTY)."""
+        if not self.is_tty or self._thread is not None:
+            return
+        self._thread = threading.Thread(target=self._heartbeat, daemon=True)
+        self._thread.start()
+
+    def set_label(self, label: str) -> None:
+        """Update the in-progress step label without bumping the count."""
+        with self._lock:
+            self.current_label = label
+            self._render_locked()
+
+    def advance(self, label=None, *, ok: bool = True) -> None:
+        """Mark the current unit done and bump the percentage. Pass
+        ok=False to count as a failure (red ✗N in the bar tail)."""
+        with self._lock:
+            self.completed = min(self.completed + 1, self.total)
+            if label is not None:
+                self.current_label = label
+            if ok:
+                self.ok += 1
+            else:
+                self.fail += 1
+            self._render_locked()
+
+    def print_above(self, line: str = "") -> None:
+        """Emit a persistent log line above the sticky bar. Erases the
+        bar first so the line lands cleanly, then re-renders the bar at
+        the new bottom."""
+        with self._lock:
+            self._erase_locked()
+            print(line)
+            self._render_locked()
+
+    def stop(self) -> None:
+        """Halt the heartbeat thread and erase the bar from the screen."""
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=2)
+            self._thread = None
+        with self._lock:
+            self._erase_locked()
+
+    # ---- rendering ---------------------------------------------------
+
+    def _heartbeat(self) -> None:
+        # ~5 frames per second so the spinner motion is obvious without
+        # flooding the terminal.
+        while not self._stop.is_set():
+            with self._lock:
+                if self._drawn:
+                    # Tick only when the bar is currently on screen
+                    # (skip ticks during print_above transitions).
+                    self._tick += 1
+                    self._render_locked(_in_place=True)
+            self._stop.wait(0.2)
+
+    def _render_locked(self, *, _in_place: bool = False) -> None:
+        """Redraw the bar.
+
+        When _in_place=True (heartbeat path), only the bar line is
+        rewritten in place via `\\r + content + \\033[K`. The blank line
+        above stays untouched, so there is no perceptible flicker.
+
+        When _in_place=False (advance, set_label, post-print_above
+        re-render), the full blank+bar pair is drawn from scratch so
+        the bar appears below the most recently printed log line.
+        """
+        if not self.is_tty:
+            return
+        elapsed = time.time() - self.t0
+        progress = self.completed
+        # Always show at least 1 cell of fill so a tiny color tip is
+        # visible at 0% — confirms the bar is alive even before the
+        # first advance() call.
+        if progress >= self.total:
+            filled = self.BAR_WIDTH
+        else:
+            min_fill = 1
+            filled = max(min_fill,
+                         int(self.BAR_WIDTH * progress / self.total))
+        bar = (_BAR_FILL + ("━" * filled) + _RESET
+               + _BAR_EMPTY + ("─" * (self.BAR_WIDTH - filled)) + _RESET)
+        pct = 100.0 * progress / self.total
+        if 0 < progress < self.total:
+            eta = (elapsed / progress) * (self.total - progress)
+            eta_s = _fmt_dur(eta)
+        elif progress >= self.total:
+            eta_s = "0s"
+        else:
+            eta_s = "--"
+        if progress >= self.total:
+            spinner = _BAR_FILL + "✓" + _RESET
+        else:
+            spinner = (_BAR_FILL
+                       + _SPINNER_FRAMES[self._tick % len(_SPINNER_FRAMES)]
+                       + _RESET)
+        # Optional ✓N ✗N counters in the tail (used by run.py; for
+        # generate.py these stay at 0 and we suppress them).
+        counters = ""
+        if self.ok or self.fail:
+            counters = (f"  \033[32m✓{self.ok}\033[0m "
+                        f"\033[31m✗{self.fail}\033[0m")
+        label = self.current_label or "..."
+        bar_line = (f"  {bar}  {spinner}  {pct:5.1f}%  "
+                    f"{self.unit} {min(progress + 1, self.total)}/{self.total}: "
+                    f"{label}{counters}  "
+                    f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
+        if _in_place and self._drawn:
+            # Flicker-free in-place rewrite: cursor still on the bar
+            # line from the previous render. \r jumps to column 0,
+            # write new bar text, \033[K trims any leftover characters
+            # from a longer previous frame. Single-pass, single flush.
+            sys.stdout.write("\r" + bar_line + "\033[K")
+        else:
+            # Fresh draw (or post-print_above re-render): print blank
+            # line + bar text. clear-to-EOL on the bar line so any
+            # leftover characters on those screen rows are wiped.
+            if self._drawn:
+                sys.stdout.write("\r\033[K\033[1A\r\033[K")
+            sys.stdout.write("\n" + bar_line + "\033[K")
+        sys.stdout.flush()
+        self._drawn = True
+
+    def _erase_locked(self) -> None:
+        if not self.is_tty or not self._drawn:
+            return
+        # Clear bar line + blank line above. Cursor lands at the start
+        # of where the blank used to be, ready for caller's print().
+        sys.stdout.write("\r\033[K\033[1A\r\033[K")
+        sys.stdout.flush()
+        self._drawn = False
+
+    # ---- context-manager sugar ---------------------------------------
+
+    def __enter__(self):
+        self.start()
+        return self
+
+    def __exit__(self, *_exc):
+        self.stop()
