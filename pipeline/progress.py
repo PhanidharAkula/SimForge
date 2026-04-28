@@ -16,6 +16,7 @@ Usage:
             pb.update()
 """
 
+import os
 import sys
 import time
 
@@ -227,6 +228,19 @@ class StickyProgress:
         self._spinner_idx = 0
         self._captured_loggers: list[tuple] = []  # (logger, removed_handlers)
         self._capture_handler: _ProgressBarLogHandler | None = None
+        # Open /dev/tty for the in-place bar redraws so writes bypass any
+        # stdout capture (pytest's per-test capfd, shell redirection,
+        # etc.). The decorative bar belongs on the terminal regardless of
+        # where stdout is going. Falls back to sys.stdout when /dev/tty
+        # isn't available (CI containers, non-Unix). Per-row writes via
+        # print_above() still use sys.stdout so they end up in log files
+        # when the run is piped.
+        self._tty_fd: int | None = None
+        if self.is_tty:
+            try:
+                self._tty_fd = os.open("/dev/tty", os.O_WRONLY | os.O_NOCTTY)
+            except OSError:
+                self._tty_fd = None
         if capture_logs and self.is_tty:
             self._install_log_capture(capture_log_level, capture_log_names)
 
@@ -282,6 +296,12 @@ class StickyProgress:
             self._thread = None
         with self._lock:
             self._erase_locked()
+        if self._tty_fd is not None:
+            try:
+                os.close(self._tty_fd)
+            except OSError:
+                pass
+            self._tty_fd = None
         self._uninstall_log_capture()
         _set_sticky_active(False)
 
@@ -444,15 +464,14 @@ class StickyProgress:
             # line from the previous render. \r jumps to column 0,
             # write new bar text, \033[K trims any leftover characters
             # from a longer previous frame. Single-pass, single flush.
-            sys.stdout.write("\r" + bar_line + "\033[K")
+            self._tty_write("\r" + bar_line + "\033[K")
         else:
             # Fresh draw (or post-print_above re-render): print blank
             # line + bar text. clear-to-EOL on the bar line so any
             # leftover characters on those screen rows are wiped.
             if self._drawn:
-                sys.stdout.write("\r\033[K\033[1A\r\033[K")
-            sys.stdout.write("\n" + bar_line + "\033[K")
-        sys.stdout.flush()
+                self._tty_write("\r\033[K\033[1A\r\033[K")
+            self._tty_write("\n" + bar_line + "\033[K")
         self._drawn = True
 
     def _erase_locked(self) -> None:
@@ -460,9 +479,30 @@ class StickyProgress:
             return
         # Clear bar line + blank line above. Cursor lands at the start
         # of where the blank used to be, ready for caller's print().
-        sys.stdout.write("\r\033[K\033[1A\r\033[K")
-        sys.stdout.flush()
+        self._tty_write("\r\033[K\033[1A\r\033[K")
         self._drawn = False
+
+    def _tty_write(self, text: str) -> None:
+        """Write the bar to /dev/tty when available, else sys.stdout.
+
+        Bypassing sys.stdout matters under pytest: pytest's per-test
+        capfd swaps stdout to a captured file descriptor while a test
+        runs, so heartbeat writes during test bodies would be buffered
+        until the next hook boundary (~once per test). /dev/tty goes
+        straight to the controlling terminal — the heartbeat thread can
+        update the spinner at full 20 fps regardless of what pytest is
+        doing with stdout.
+        """
+        if self._tty_fd is not None:
+            try:
+                os.write(self._tty_fd, text.encode("utf-8", errors="replace"))
+                return
+            except OSError:
+                # /dev/tty became unavailable (closed terminal, daemon).
+                # Fall through to sys.stdout.
+                self._tty_fd = None
+        sys.stdout.write(text)
+        sys.stdout.flush()
 
     # ---- context-manager sugar ---------------------------------------
 
