@@ -96,6 +96,11 @@ _TOTAL_STEPS = 4
 _BAR_FILL = "\033[1;36m"
 _BAR_EMPTY = "\033[2m"
 _BAR_RESET = "\033[0m"
+# Braille spinner — 10 frames cycling once per second so the operator can
+# see motion even when a single step takes 60+ seconds (OSM extraction,
+# demand generation) with no internal progress signal to drive the bar
+# forward.
+_SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 
 
 class _StepProgress:
@@ -110,6 +115,7 @@ class _StepProgress:
         self._drawn = False
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
+        self._tick = 0  # spinner frame counter
 
     # ---- public API --------------------------------------------------
     def start(self) -> None:
@@ -147,10 +153,13 @@ class _StepProgress:
 
     # ---- rendering ---------------------------------------------------
     def _heartbeat(self) -> None:
+        # Cycle the spinner ~5x per second so the motion is obvious but
+        # the redraw rate stays modest.
         while not self._stop.is_set():
             if self.is_tty:
+                self._tick += 1
                 self._render()
-            self._stop.wait(1.0)
+            self._stop.wait(0.2)
 
     def _render(self) -> None:
         if not self.is_tty:
@@ -158,9 +167,6 @@ class _StepProgress:
         if self._drawn:
             sys.stdout.write("\r\033[K\033[1A\r\033[K")
         bar_len = 32
-        # Smooth within-step progress: completed_steps + fractional credit
-        # for the in-progress step (capped so we never display 100% before
-        # the final complete_step() call).
         elapsed = time.time() - self.t0
         progress = self.completed
         pct = 100.0 * progress / max(self.total, 1)
@@ -175,9 +181,14 @@ class _StepProgress:
         else:
             eta_s = "--"
         label = self.current_label or "..."
+        # Spinner: cyan-bold so it stands out; freeze on ✓ once all steps done
+        if progress >= self.total:
+            spinner = _BAR_FILL + "✓" + _BAR_RESET
+        else:
+            spinner = _BAR_FILL + _SPINNER_FRAMES[self._tick % len(_SPINNER_FRAMES)] + _BAR_RESET
         sys.stdout.write(
             "\n  " + bar
-            + f"  {pct:5.1f}%  "
+            + f"  {spinner}  {pct:5.1f}%  "
             + f"step {min(progress + 1, self.total)}/{self.total}: {label}  "
             + f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}"
         )
