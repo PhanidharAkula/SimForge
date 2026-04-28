@@ -58,13 +58,28 @@ from pipeline.modelgen_scanner import scan_modelgen_dir
 # force=True + explicit stream because library modules under pipeline/ call
 # basicConfig at import time; without force this entry-point config would be a
 # no-op and logs would land on stderr (SLURM .err) instead of stdout (.out).
+# Default level is WARNING so the user-facing print() banners aren't drowned
+# in pipeline INFO chatter (osmnx, demand, signals). Pass --verbose on the
+# CLI to restore INFO and see the firehose for debugging.
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING,
     format="%(levelname)s  %(message)s",
     stream=sys.stdout,
     force=True,
 )
 logger = logging.getLogger(__name__)
+
+
+def _fmt_dur(seconds: float) -> str:
+    """Format a duration as Xs / Xm YYs / Xh YYm YYs for human consumption."""
+    s = int(seconds)
+    if s < 60:
+        return f"{s}s"
+    m, s = divmod(s, 60)
+    if m < 60:
+        return f"{m}m {s:02d}s"
+    h, m = divmod(m, 60)
+    return f"{h}h {m:02d}m"
 
 
 # =============================================================================
@@ -424,21 +439,27 @@ def generate_scenario(
     description = (f"{city_info['name']} — {trips:,} {modes_desc} trips, "
                    f"{time_desc}, r={radius_km}km")
 
-    logger.info("=" * 65)
-    logger.info("SimForge Scenario Generator")
-    logger.info("=" * 65)
-    logger.info("  Scenario:   %s", scenario_id)
-    logger.info("  City:       %s", city_info["name"])
-    logger.info("  Trips:      %s", f"{trips:,}")
-    logger.info("  Modes:      %s", ", ".join(modes))
-    logger.info("  Time:       %s (%d–%d s)", time_desc, start_time, end_time)
-    logger.info("  Radius:     %.1f km", radius_km)
-    logger.info("  Seed:       %d", seed)
-    logger.info("  Demand:     %s", "census (ModelGen)" if use_census else "synthetic (gravity)")
-    logger.info("  Output:     %s", out)
-    logger.info("=" * 65)
+    print("\n" + "=" * 60)
+    print("  SimForge Scenario Generator")
+    print("=" * 60)
+    print("\n📊 CONFIGURATION:")
+    print("-" * 60)
+    print(f"  Scenario:   {scenario_id}")
+    print(f"  City:       {city_info['name']}")
+    print(f"  Trips:      {trips:,}")
+    print(f"  Modes:      {', '.join(modes)}")
+    print(f"  Time:       {time_desc} ({start_time}–{end_time} s)")
+    print(f"  Radius:     {radius_km:.1f} km")
+    print(f"  Seed:       {seed}")
+    print(f"  Demand:     {'census (ModelGen)' if use_census else 'synthetic (gravity)'}")
+    print(f"  Output:     {out}")
+    print("-" * 60)
+    print("\n" + "=" * 60)
+    print("  Generation Pipeline")
+    print("=" * 60)
 
     t0 = time.time()
+    step_times: dict[str, float] = {}
 
     # ---- 1. Network from OSM ----
     if out.exists():
@@ -455,36 +476,39 @@ def generate_scenario(
             f"  Provenance lives in osm_data/manifest.json (URL + SHA256)."
         )
 
-    logger.info("Step 1/4: Loading OSM network (%.1f km radius) from local PBF ...", radius_km)
+    print(f"\n▶ Step 1/4: OSM network ({radius_km:.1f} km radius)")
     t_step = time.time()
     net = build_network_from_osm(
         bbox, out / "network.xml", network_type="drive", pbf_path=pbf_path
     )
-    logger.info("  Network: %d nodes, %d links  (%.1fs)",
-                net["node_count"], net["link_count"], time.time() - t_step)
+    step_times["Network"] = time.time() - t_step
+    print(f"  ✓ network.xml: {net['node_count']:,} nodes, "
+          f"{net['link_count']:,} links  ({_fmt_dur(step_times['Network'])})")
 
     # ---- 2. Signals ----
-    logger.info("Step 2/4: Inferring traffic signals ...")
+    print("\n▶ Step 2/4: Traffic signals")
     t_step = time.time()
     sig = build_signals_default(
         network_path=out / "network.xml",
         output_path=out / "signals.xml",
         min_degree=4,
     )
-    logger.info("  Signals: %d controllers  (%.1fs)",
-                sig["signal_count"], time.time() - t_step)
+    step_times["Signals"] = time.time() - t_step
+    print(f"  ✓ signals.xml: {sig['signal_count']:,} controllers  "
+          f"({_fmt_dur(step_times['Signals'])})")
 
     # ---- 3. Config / Manifest ----
-    logger.info("Step 3/4: Writing config and manifest ...")
+    print("\n▶ Step 3/4: Config + manifest")
     t_step = time.time()
     _write_config_xml(out / "config.xml", scenario_id, description,
                       start_time, end_time, seed)
     _write_manifest_xml(out / "manifest.xml", scenario_id)
-    logger.info("  Done  (%.1fs)", time.time() - t_step)
+    step_times["Config"] = time.time() - t_step
+    print(f"  ✓ config.xml + manifest.xml  ({_fmt_dur(step_times['Config'])})")
 
     # ---- 4. Demand ----
-    logger.info("Step 4/4: Generating demand (%s) ...",
-                "census" if use_census else "synthetic")
+    demand_label = "census (ModelGen)" if use_census else "synthetic (gravity)"
+    print(f"\n▶ Step 4/4: Demand ({demand_label})")
     t_step = time.time()
     if use_census:
         multi_mode = len(modes) > 1
@@ -518,28 +542,43 @@ def generate_scenario(
             mode=modes[0] if len(modes) == 1 else "car",
         )
 
-    logger.info("  Demand: %d trips  (%.1fs)", dem["trip_count"], time.time() - t_step)
-
+    step_times["Demand"] = time.time() - t_step
     elapsed = round(time.time() - t0, 1)
     strategy = dem.get("strategy", "synthetic")
     provenance = dem.get("provenance")  # only present for census_schedule_first
 
-    logger.info("")
-    logger.info("=" * 65)
-    logger.info("  COMPLETE in %.1f s", elapsed)
-    logger.info("  Scenario:     %s", scenario_id)
-    logger.info("  Output:       %s/", out)
-    logger.info("  Network:      %d nodes, %d links", net["node_count"], net["link_count"])
-    logger.info("  Signals:      %d controllers", sig["signal_count"])
-    logger.info("  Demand (%s): %d trips", strategy, dem["trip_count"])
     if provenance:
-        logger.info(
-            "    schedule-driven: %d (%.1f%%)   gravity-fallback: %d",
-            provenance["schedule_driven_count"],
-            provenance["schedule_driven_pct"],
-            provenance["gravity_fallback_count"],
-        )
-    logger.info("=" * 65)
+        sched_pct = provenance["schedule_driven_pct"]
+        demand_summary = (f"{dem['trip_count']:,} trips "
+                          f"({sched_pct:.1f}% schedule-driven, "
+                          f"{provenance['gravity_fallback_count']:,} gravity)")
+    else:
+        demand_summary = f"{dem['trip_count']:,} trips"
+    print(f"  ✓ demand.csv: {demand_summary}  ({_fmt_dur(step_times['Demand'])})")
+
+    # ---- Summary ----
+    print("\n" + "=" * 60)
+    print("  Summary")
+    print("=" * 60)
+    print(f"\n  Wall time:    {_fmt_dur(elapsed)}")
+    print(f"  Scenario:     {scenario_id}")
+    print(f"  Output:       {out}/")
+
+    print("\n  Step timing:")
+    total_step = sum(step_times.values()) or 1.0
+    name_w = max(len(n) for n in step_times)
+    for name, dt in step_times.items():
+        pct = 100.0 * dt / total_step
+        print(f"    {name:<{name_w}}  {_fmt_dur(dt):>8}   ({pct:4.1f}%)")
+
+    print("\n  Artifacts:")
+    print(f"    network.xml   {net['node_count']:>7,} nodes  /  "
+          f"{net['link_count']:>7,} links")
+    print(f"    signals.xml   {sig['signal_count']:>7,} controllers")
+    print(f"    demand.csv    {dem['trip_count']:>7,} trips ({strategy})")
+    print(f"    config.xml    {time_desc} simulation window, seed={seed}")
+    print(f"    manifest.xml  SHA-256 checksummed")
+    print("=" * 60 + "\n")
 
     # Save generation metadata (includes OSM provenance so any scenario can be
     # traced back to the exact PBF snapshot it was built from).
@@ -663,11 +702,29 @@ Census limit:      ~500K car trips per city without --allow-oversample
                         help="Allow more trips than raw census commuters "
                              "(resamples origins)")
 
+    # Verbosity
+    parser.add_argument("--verbose", action="store_true",
+                        help="Show pipeline INFO logs (default: WARNING and above only)")
+
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
+
+    # Verbosity gate (matches the run.py pattern). Default-suppress
+    # pipeline.* INFO chatter so the user-facing print() banners are
+    # readable. WARNING+ from any source still surfaces. Pass --verbose
+    # to restore INFO when debugging a single failing step.
+    if args.verbose:
+        logging.getLogger().setLevel(logging.INFO)
+        for name in ("pipeline", "pipeline.network", "pipeline.demand",
+                     "pipeline.signals", "adapters"):
+            logging.getLogger(name).setLevel(logging.INFO)
+    else:
+        for name in ("pipeline", "pipeline.network", "pipeline.demand",
+                     "pipeline.signals", "adapters"):
+            logging.getLogger(name).setLevel(logging.WARNING)
 
     # Handle --list
     if args.list:
