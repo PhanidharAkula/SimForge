@@ -115,6 +115,7 @@ class ProgressBar:
 #   - TTY-only: silently no-ops when stdout is piped (sbatch logs, CI
 #     captures) — print_above() then just prints the log line.
 
+import logging as _logging
 import threading
 
 
@@ -143,6 +144,24 @@ def _fmt_dur(seconds: float) -> str:
     return f"{h}h {m:02d}m"
 
 
+class _ProgressBarLogHandler(_logging.Handler):
+    """Routes log records through StickyProgress.print_above() so they
+    land above the sticky bar without colliding with the bar's own
+    no-newline writes. Used by capture_logs=True to keep --verbose
+    output readable."""
+
+    def __init__(self, progress: "StickyProgress"):
+        super().__init__()
+        self.progress = progress
+
+    def emit(self, record: _logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+            self.progress.print_above(msg)
+        except Exception:  # noqa: BLE001 — logging mustn't crash callers
+            self.handleError(record)
+
+
 class StickyProgress:
     """Sticky single-line progress bar with spinner heartbeat. See module
     docstring above for the design rationale and usage patterns."""
@@ -151,13 +170,27 @@ class StickyProgress:
 
     def __init__(self, total: int, *, unit: str = "step",
                  ok_count: int = 0, fail_count: int = 0,
-                 enabled: bool = True):
-        """Initialise the bar. Pass ``enabled=False`` to suppress all
-        rendering (useful when the caller is in --verbose mode and the
-        sticky bar would collide with interleaved log lines on the same
-        stdout). When disabled, every method is a silent no-op except
-        ``print_above`` which still emits the line so per-step ✓ rows
-        appear in the output."""
+                 enabled: bool = True,
+                 capture_logs: bool = False,
+                 capture_log_level: int = _logging.INFO,
+                 capture_log_names: tuple = ("",)):
+        """Initialise the bar.
+
+        Pass ``enabled=False`` to suppress all rendering (useful when
+        stdout is not a TTY and the bar would just print escape-code
+        junk in the captured log). When disabled, every method becomes
+        a silent no-op except ``print_above`` which still emits the
+        line so per-step ✓ rows appear in the output.
+
+        Pass ``capture_logs=True`` to install a logging handler that
+        routes every log record through ``print_above()`` so log lines
+        land cleanly above the sticky bar instead of colliding with the
+        bar's own no-newline writes. Critical for --verbose mode where
+        adapter INFO chatter and the sticky bar would otherwise mush
+        together on the same stdout. Existing StreamHandlers writing to
+        stdout are removed to avoid duplication. Restore the previous
+        handlers by calling ``stop()`` (which is also a no-op-safe).
+        """
         self.total = max(total, 1)
         self.completed = 0
         self.current_label = ""
@@ -171,6 +204,10 @@ class StickyProgress:
         self._thread = None
         self._tick = 0
         self._lock = threading.Lock()
+        self._captured_loggers: list[tuple] = []  # (logger, removed_handlers)
+        self._capture_handler: _ProgressBarLogHandler | None = None
+        if capture_logs and self.is_tty:
+            self._install_log_capture(capture_log_level, capture_log_names)
 
     # ---- public API --------------------------------------------------
 
@@ -210,13 +247,55 @@ class StickyProgress:
             self._render_locked()
 
     def stop(self) -> None:
-        """Halt the heartbeat thread and erase the bar from the screen."""
+        """Halt the heartbeat thread, erase the bar, and uninstall any
+        log-capture handler so subsequent log calls work normally."""
         self._stop.set()
         if self._thread is not None:
             self._thread.join(timeout=2)
             self._thread = None
         with self._lock:
             self._erase_locked()
+        self._uninstall_log_capture()
+
+    # ---- log capture (used by --verbose entry-points) ---------------
+
+    def _install_log_capture(self, level: int,
+                             logger_names: tuple) -> None:
+        """Replace stdout-bound StreamHandlers on the named loggers with
+        a handler that routes through print_above(). Cached so stop()
+        can restore the previous handlers."""
+        handler = _ProgressBarLogHandler(self)
+        handler.setLevel(level)
+        handler.setFormatter(_logging.Formatter("%(levelname)s  %(message)s"))
+        self._capture_handler = handler
+        for name in logger_names:
+            logger = _logging.getLogger(name)
+            removed = []
+            for h in list(logger.handlers):
+                # Only displace handlers that would write to stdout (the
+                # bar's stream). Leave file handlers, syslog handlers,
+                # etc. in place so other audit trails keep working.
+                if (isinstance(h, _logging.StreamHandler)
+                        and getattr(h, "stream", None) is sys.stdout):
+                    logger.removeHandler(h)
+                    removed.append(h)
+            logger.addHandler(handler)
+            if level < logger.level or logger.level == _logging.NOTSET:
+                logger.setLevel(level)
+            self._captured_loggers.append((logger, removed))
+
+    def _uninstall_log_capture(self) -> None:
+        if self._capture_handler is None:
+            return
+        for logger, removed in self._captured_loggers:
+            try:
+                logger.removeHandler(self._capture_handler)
+            except ValueError:
+                pass
+            for h in removed:
+                logger.addHandler(h)
+        self._captured_loggers.clear()
+        self._capture_handler = None
 
     # ---- rendering ---------------------------------------------------
 

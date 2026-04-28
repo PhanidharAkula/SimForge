@@ -536,11 +536,17 @@ Examples:
     # Sticky progress bar from the shared pipeline.progress.StickyProgress
     # module. TTY-only with a heartbeat spinner, flicker-free in-place
     # updates, ✓N ✗N counters in the tail. Suppressed silently when
-    # stdout is piped (sbatch logs, CI captures) and when --verbose is
-    # on (the bar would collide with the interleaved adapter INFO logs).
+    # stdout is piped (sbatch logs, CI captures). With --verbose the bar
+    # stays visible and adapter INFO logs are routed above it via
+    # capture_logs=True.
     from pipeline.progress import StickyProgress
-    progress = StickyProgress(total_runs, unit="run",
-                              enabled=not args.verbose)
+    progress = StickyProgress(
+        total_runs, unit="run",
+        capture_logs=args.verbose,
+        capture_log_names=("", "adapters", "adapters.sumo",
+                           "adapters.matsim", "adapters.dtalite",
+                           "adapters.common", "pipeline"),
+    )
     progress.start()
 
     results = []

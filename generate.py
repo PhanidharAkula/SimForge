@@ -456,12 +456,17 @@ def generate_scenario(
 
     t0 = time.time()
     step_times: dict[str, float] = {}
-    # Disable the sticky bar when verbose is on -- the bar's no-newline
-    # writes collide with the interleaved INFO log lines on the same
-    # stdout and produce visual mush. With --verbose the operator wants
-    # the raw log firehose, not a competing progress visualisation.
-    progress = StickyProgress(_TOTAL_STEPS, unit="step",
-                              enabled=not verbose)
+    # When verbose is on, route adapter INFO logs through the bar's
+    # print_above() so they land above the sticky bar instead of
+    # colliding with its no-newline writes. Bar stays visible the whole
+    # time; the firehose flows above it.
+    progress = StickyProgress(
+        _TOTAL_STEPS, unit="step",
+        capture_logs=verbose,
+        capture_log_names=("", "pipeline", "pipeline.network",
+                           "pipeline.demand", "pipeline.signals",
+                           "adapters"),
+    )
     progress.start()
 
     # ---- 1. Network from OSM ----
