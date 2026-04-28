@@ -261,28 +261,48 @@ class StickyProgress:
 
     def _install_log_capture(self, level: int,
                              logger_names: tuple) -> None:
-        """Replace stdout-bound StreamHandlers on the named loggers with
-        a handler that routes through print_above(). Cached so stop()
-        can restore the previous handlers."""
+        """Install the print_above-routed handler on the ROOT logger
+        (only). Python's logger hierarchy propagates records up to the
+        root, so installing once at root means each record is emitted
+        exactly once regardless of which child logger produced it.
+
+        ``logger_names`` is used only to set the per-logger LEVEL so
+        records aren't filtered out before they propagate (the named
+        loggers may have been pinned to WARNING by the entry-point's
+        verbosity gate; we drop them to ``level`` so records reach
+        root). We also clear `propagate=False` if any caller had
+        disabled propagation, otherwise records would never reach
+        the root handler.
+        """
         handler = _ProgressBarLogHandler(self)
         handler.setLevel(level)
         handler.setFormatter(_logging.Formatter("%(levelname)s  %(message)s"))
         self._capture_handler = handler
+
+        # Ensure named loggers are permissive and propagating.
         for name in logger_names:
+            if not name:
+                continue  # root handled below
             logger = _logging.getLogger(name)
-            removed = []
-            for h in list(logger.handlers):
-                # Only displace handlers that would write to stdout (the
-                # bar's stream). Leave file handlers, syslog handlers,
-                # etc. in place so other audit trails keep working.
-                if (isinstance(h, _logging.StreamHandler)
-                        and getattr(h, "stream", None) is sys.stdout):
-                    logger.removeHandler(h)
-                    removed.append(h)
-            logger.addHandler(handler)
+            logger.propagate = True
             if level < logger.level or logger.level == _logging.NOTSET:
                 logger.setLevel(level)
-            self._captured_loggers.append((logger, removed))
+
+        # Single attachment point: the root logger.
+        root = _logging.getLogger()
+        removed = []
+        for h in list(root.handlers):
+            # Displace any handler that would write to stdout (the bar's
+            # stream). Leave file handlers, syslog handlers, etc. alone
+            # so other audit trails keep working.
+            if (isinstance(h, _logging.StreamHandler)
+                    and getattr(h, "stream", None) is sys.stdout):
+                root.removeHandler(h)
+                removed.append(h)
+        root.addHandler(handler)
+        if level < root.level or root.level == _logging.NOTSET:
+            root.setLevel(level)
+        self._captured_loggers.append((root, removed))
 
     def _uninstall_log_capture(self) -> None:
         if self._capture_handler is None:
