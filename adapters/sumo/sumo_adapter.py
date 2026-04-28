@@ -545,12 +545,26 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
         set(graph.nodes.keys()),
         [(lk.from_node, lk.to_node) for lk in graph.links],
     )
+    scc_nodes = {nid: n for nid, n in graph.nodes.items() if nid in scc_node_ids}
+    scc_links = [lk for lk in graph.links
+                 if lk.from_node in scc_node_ids and lk.to_node in scc_node_ids]
+    # Critical: rebuild adjacency + edge_lookup against the filtered link
+    # set. These two indices are consumed by shortest_path_nodes (BFS) when
+    # SUMO's prepare path routes every trip; leaving them empty made BFS
+    # return no edges, which silently dropped every trip into the
+    # "SCC-feasible but SUMO failed to route" bucket and produced an empty
+    # routes.rou.xml. Diagnosed via audit_fairness Q3=0 on chicago_1k_car
+    # smoke2 (Pitzer 2026-04-27).
+    scc_adjacency: Dict[str, List[str]] = {}
+    scc_edge_lookup: Dict[Tuple[str, str], CanonicalLink] = {}
+    for lk in scc_links:
+        scc_adjacency.setdefault(lk.from_node, []).append(lk.to_node)
+        scc_edge_lookup[(lk.from_node, lk.to_node)] = lk
     graph = NetworkGraph(
-        nodes={nid: n for nid, n in graph.nodes.items() if nid in scc_node_ids},
-        links=[lk for lk in graph.links
-               if lk.from_node in scc_node_ids and lk.to_node in scc_node_ids],
-        adjacency={},
-        edge_lookup={},
+        nodes=scc_nodes,
+        links=scc_links,
+        adjacency=scc_adjacency,
+        edge_lookup=scc_edge_lookup,
     )
 
     # Build SUMO nodes and edges XML (input for netconvert)

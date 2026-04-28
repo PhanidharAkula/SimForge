@@ -278,9 +278,20 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
         if a.is_file():
             tts["dtalite"] = _dtalite_travel_times(a)
     if "sumo" in cells:
-        ti = list(cells["sumo"].glob("*tripinfo*.xml"))
-        if ti:
-            tts["sumo"] = _sumo_travel_times(ti[0])
+        # SUMO writes tripinfo.xml to the run output dir (parent of
+        # native_files/ in layout A; alongside the engine seed dir in
+        # layouts B/C/D).
+        sumo_search_dirs = [cells["sumo"]]
+        if cells["sumo"].name == "native_files":
+            sumo_search_dirs.append(cells["sumo"].parent)
+        ti_path = None
+        for d in sumo_search_dirs:
+            candidates = list(d.glob("*tripinfo*.xml"))
+            if candidates:
+                ti_path = candidates[0]
+                break
+        if ti_path is not None:
+            tts["sumo"] = _sumo_travel_times(ti_path)
 
     for eng in engines:
         if eng not in tts or not tts[eng]:
