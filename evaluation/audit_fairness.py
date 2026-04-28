@@ -114,6 +114,39 @@ def _sumo_travel_times(tripinfo_xml: Path) -> list[float]:
     return out
 
 
+def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int) -> Path | None:
+    """Locate the engine-cell directory for a given (scenario, engine, seed).
+
+    SimForge writes benchmark results under two layouts depending on the
+    entry point:
+
+      A. ``python run.py``           — flat layout
+         ``<base>/<scenario>_<engine>_<mode>_seed<N>/native_files/``
+
+      B. ``python -m execution.run_benchmark`` — nested by scenario/engine
+         ``<base>/<scenario>/<engine>/seed_<N>/``
+
+      C. Layout B inside a parallel-by-scenario sbatch wrapper
+         ``<base>/<scenario>/<scenario>/<engine>/seed_<N>/`` (double-nested)
+
+    Returns the path containing the per-cell prepared inputs and outputs,
+    or None if no matching directory exists. Tries the layouts in order
+    A → B → C and returns the first hit.
+    """
+    candidates = [
+        # Layout A: flat run.py output, native_files subdir
+        base / f"{scenario}_{engine}_meso_seed{seed}" / "native_files",
+        # Layout B: nested execution.run_benchmark output
+        base / scenario / engine / f"seed_{seed}",
+        # Layout C: doubly-nested when sbatch wraps run_benchmark per scenario
+        base / scenario / scenario / engine / f"seed_{seed}",
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c
+    return None
+
+
 def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
     print("=" * 80)
     print(f"FAIRNESS AUDIT — {scenario} (seed {seed})")
@@ -122,13 +155,14 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
     engines = ("sumo", "matsim", "dtalite")
     cells = {}
     for eng in engines:
-        nf = base / f"{scenario}_{eng}_meso_seed{seed}" / "native_files"
-        if nf.is_dir():
-            cells[eng] = nf
+        cell = _find_cell_dir(base, scenario, eng, seed)
+        if cell is not None:
+            cells[eng] = cell
 
     if not cells:
         print(f"  (no cells found for {scenario} seed {seed})")
         return
+    print(f"  layout: {next(iter(cells.values())).relative_to(base)} (... etc)")
 
     # --------------------------------------------------------------- Q1
     print("\n--- Q1: Same feasibility verdict across all engines? ---")
@@ -170,9 +204,8 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
         if n.is_file() and l.is_file():
             net["dtalite"] = (_count_csv_rows(n), _count_csv_rows(l))
     if "sumo" in cells:
-        # SUMO emits .nod.xml + .edg.xml (canonical) and .net.xml (compiled)
-        nx = cells["sumo"] / "chicago_1k_car.net.xml"
-        # generic glob — find .net.xml in the dir
+        # SUMO emits .nod.xml + .edg.xml (canonical) and .net.xml (compiled);
+        # find .net.xml by glob since the basename varies per scenario.
         nets = list(cells["sumo"].glob("*.net.xml"))
         if nets:
             tree = ET.parse(nets[0])
