@@ -523,6 +523,50 @@ Examples:
     mode_w = max(len(m) for m in modes)
     cell_idx_w = len(str(total_runs))
 
+    def _fmt_dur(seconds: float) -> str:
+        s = int(seconds)
+        if s < 60:
+            return f"{s}s"
+        m, s = divmod(s, 60)
+        if m < 60:
+            return f"{m}m {s:02d}s"
+        h, m = divmod(m, 60)
+        return f"{h}h {m:02d}m"
+
+    # Sticky progress bar: only show when stdout is an interactive
+    # terminal. When the harness output is being piped (sbatch log files,
+    # `python run.py | tee`, CI captures), the per-cell rows are
+    # sufficient progress info and the carriage-return escape sequences
+    # would just print as visible junk in the captured log.
+    _is_tty = sys.stdout.isatty()
+
+    def _redraw_progress(current: int, total: int, elapsed: float,
+                         ok: int, fail: int) -> None:
+        """Sticky single-line progress bar that overwrites itself in place.
+        Called after every cell completes; per-cell rows are printed
+        BEFORE this so they persist above the bar. No-op on non-TTY."""
+        if not _is_tty:
+            return
+        bar_len = 30
+        filled = int(bar_len * current / max(total, 1))
+        bar = "█" * filled + "░" * (bar_len - filled)
+        pct = 100.0 * current / max(total, 1)
+        if current > 0:
+            eta = (elapsed / current) * (total - current)
+            eta_s = _fmt_dur(eta)
+        else:
+            eta_s = "--"
+        line = (f"  [{bar}] {pct:5.1f}%  ({current}/{total})  "
+                f"✓{ok} ✗{fail}  elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
+        sys.stdout.write("\r\033[K" + line)
+        sys.stdout.flush()
+
+    def _clear_progress() -> None:
+        if not _is_tty:
+            return
+        sys.stdout.write("\r\033[K")
+        sys.stdout.flush()
+
     results = []
     completed = 0
     failed = 0
@@ -537,8 +581,9 @@ Examples:
 
             # Print a scenario-divider header the first time we hit a
             # new scenario, so the per-cell rows underneath are visually
-            # grouped.
+            # grouped. Clear any sticky progress bar first.
             if scenario != last_scenario:
+                _clear_progress()
                 print(f"\n▶ {scenario}")
                 last_scenario = scenario
 
@@ -567,22 +612,28 @@ Examples:
 
             if result["status"] == "success":
                 completed += 1
-                mark = "✓"  # ✓
+                mark = "✓"
                 tail = f"{wall:>7.1f}s"
             else:
                 failed += 1
-                mark = "✗"  # ✗
+                mark = "✗"
                 err = (result.get("error") or "unknown error")
-                # Strip newlines and clip to keep the row on one line.
                 err = " ".join(err.split())[:60]
                 tail = f"FAIL  {err}"
 
+            # Clear the sticky progress bar, print the cell row above it,
+            # then redraw the progress bar at the new position.
+            _clear_progress()
             print(f"  [{cell_idx:>{cell_idx_w}}/{total_runs}]  "
                   f"{engine:<{eng_w}}  "
                   f"{mode:<{mode_w}}  "
                   f"seed={seed}  "
                   f"{mark}  {tail}")
+            _redraw_progress(cell_idx, total_runs,
+                             time.perf_counter() - bench_started_at,
+                             completed, failed)
 
+    _clear_progress()
     bench_wall = time.perf_counter() - bench_started_at
     
     # Save results
