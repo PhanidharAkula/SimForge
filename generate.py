@@ -377,7 +377,8 @@ def generate_scenario(
     scenario_id: str | None = None,
     synthetic: bool = False,
     allow_oversample: bool = False,
-    allow_overpass_fallback: bool = False,
+    allow_overpass: bool = False,
+    force_overpass: bool = False,
 ) -> dict:
     """
     Generate a complete canonical scenario bundle.
@@ -462,38 +463,48 @@ def generate_scenario(
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
-    # Resolve hash-pinned PBF for this city. PBF is the canonical source
-    # (provenance recorded in osm_data/manifest.json with URL + SHA256).
-    # If missing, behaviour depends on allow_overpass_fallback:
-    #   - default (strict): raise FileNotFoundError, instruct user to
-    #     download via tools/download_osm.py
-    #   - --allow-overpass-fallback: pass pbf_path=None to the lower
-    #     level, which routes through ox.graph_from_bbox() against the
-    #     live Overpass endpoint. Bundles generated this way are NOT
-    #     byte-reproducible across days because Overpass returns
-    #     whatever OSM contributors edited that morning.
+    # Resolve OSM source. Three modes:
+    #   default               : require local PBF, fail hard if missing
+    #   allow_overpass=True   : prefer PBF; fall back to Overpass if missing
+    #   force_overpass=True   : always use Overpass, ignore PBF
+    # PBF is the canonical source (provenance recorded in osm_data/manifest.json
+    # with URL + SHA256). Overpass responses are NOT hash-pinned and produce
+    # bundles that are NOT byte-reproducible across days.
     pbf_rel = city_info.get("pbf_file")
     pbf_path = project_root / pbf_rel if pbf_rel else None
     pbf_available = pbf_path is not None and pbf_path.exists()
-    if not pbf_available and not allow_overpass_fallback:
+    if force_overpass:
+        use_overpass = True
+    elif pbf_available:
+        use_overpass = False
+    elif allow_overpass:
+        use_overpass = True
+    else:
         raise FileNotFoundError(
             f"OSM PBF required for city '{city}' but not found: {pbf_path}\n"
             f"  Download it with:  python tools/download_osm.py\n"
             f"  Provenance lives in osm_data/manifest.json (URL + SHA256).\n"
-            f"  Or pass --allow-overpass-fallback to use the live Overpass API\n"
-            f"  (NOT byte-reproducible — see --help for the warning)."
+            f"  Or pass --allow-overpass to use the live Overpass API as fallback\n"
+            f"  when the PBF is missing, or --force-overpass to always use it.\n"
+            f"  WARNING: Overpass bundles are NOT byte-reproducible across days."
         )
 
     progress.print_above(f"\n▶ Step 1/4: OSM network ({radius_km:.1f} km radius)")
-    if pbf_available:
+    if use_overpass:
+        # Loud warning so the operator never confuses an Overpass bundle
+        # with a hash-pinned reproducible one.
+        if force_overpass and pbf_available:
+            note = "forced via --force-overpass; local PBF ignored"
+        elif force_overpass:
+            note = "forced via --force-overpass"
+        else:
+            note = f"fallback (PBF not found at osm_data/{pbf_path.name if pbf_path else '?'})"
+        progress.print_above(f"           source: Overpass API ⚠ ({note})")
+        progress.print_above(f"                   NOT hash-pinned — bundle won't be byte-reproducible")
+        effective_pbf = None
+    else:
         progress.print_above(f"           source: osm_data/{pbf_path.name} (local PBF — hash-pinned)")
         effective_pbf = pbf_path
-    else:
-        # User opted into --allow-overpass-fallback. Make the warning loud:
-        # this bundle won't be byte-reproducible across days.
-        progress.print_above(f"           source: Overpass API ⚠ (NOT hash-pinned — "
-                             f"bundle won't be byte-reproducible)")
-        effective_pbf = None
     progress.set_label(f"OSM network ({radius_km:.1f} km)")
     t_step = time.time()
     net = build_network_from_osm(
@@ -738,12 +749,22 @@ Census limit:      ~500K car trips per city without --allow-oversample
                         help="Allow more trips than raw census commuters "
                              "(resamples origins)")
 
-    # Network source
-    parser.add_argument("--allow-overpass-fallback", action="store_true",
-                        help="Fall back to live Overpass API when osm_data/<pbf> is missing. "
-                             "WARNING: Overpass responses are not hash-pinned, so bundles "
-                             "produced this way are NOT byte-reproducible across days. "
-                             "Default: strict — generation fails if the PBF is missing.")
+    # Network source — three mutually-exclusive modes:
+    #   default            : require osm_data/<pbf>, fail hard if missing
+    #   --allow-overpass   : prefer PBF if present; fall back to Overpass if missing
+    #   --force-overpass   : always use Overpass, ignore PBF even when present
+    overpass_group = parser.add_mutually_exclusive_group()
+    overpass_group.add_argument("--allow-overpass", action="store_true",
+                                help="Use the live Overpass API as a fallback when "
+                                     "osm_data/<pbf> is missing. PBF is still preferred "
+                                     "when available. WARNING: bundles produced from "
+                                     "Overpass are NOT byte-reproducible.")
+    overpass_group.add_argument("--force-overpass", action="store_true",
+                                help="Always use the live Overpass API, ignoring any "
+                                     "local PBF. WARNING: bundles produced this way are "
+                                     "NOT byte-reproducible. Use only for one-off "
+                                     "experimentation or when you specifically want "
+                                     "today's OSM data.")
 
     # Verbosity
     parser.add_argument("--verbose", action="store_true",
@@ -769,8 +790,9 @@ def main() -> None:
                      "pipeline.signals", "adapters"):
             logging.getLogger(name).setLevel(logging.WARNING)
 
-    # Stash the new flag on args so generate_scenario picks it up below.
-    allow_overpass_fallback = getattr(args, "allow_overpass_fallback", False)
+    # Pull through the new OSM-source mode flags.
+    allow_overpass = getattr(args, "allow_overpass", False)
+    force_overpass = getattr(args, "force_overpass", False)
 
     # Handle --list
     if args.list:
@@ -838,7 +860,8 @@ def main() -> None:
         scenario_id=args.id,
         synthetic=args.synthetic,
         allow_oversample=args.allow_oversample,
-        allow_overpass_fallback=allow_overpass_fallback,
+        allow_overpass=allow_overpass,
+        force_overpass=force_overpass,
     )
 
 
