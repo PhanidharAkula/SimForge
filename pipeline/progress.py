@@ -119,8 +119,15 @@ import threading
 
 
 _SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
-_BAR_FILL = "\033[1;36m"   # bold cyan
-_BAR_EMPTY = "\033[2m"      # dim
+# Plain (non-bold, non-dim) colours so filled and empty cells render at
+# identical glyph weight and height. Earlier we used \033[1;36m (bold
+# cyan) for the filled portion and \033[2m (dim) for the empty portion;
+# bold subtly thickens characters in most terminal fonts which made the
+# cyan cells appear "taller" than the dim ones, and the bold/dim
+# transition at the boundary rendered the last cyan cell as half-filled.
+_BAR_FILL = "\033[36m"   # plain cyan (no bold)
+_BAR_EMPTY = "\033[90m"  # bright black / gray (no dim attribute)
+_SPINNER_COLOR = "\033[1;36m"  # bold cyan kept for the spinner only
 _RESET = "\033[0m"
 
 
@@ -243,13 +250,16 @@ class StickyProgress:
             filled = self.BAR_WIDTH
         else:
             filled = int(self.BAR_WIDTH * progress / self.total)
-        # Use the same heavy-line glyph for both filled and empty cells —
-        # only the colour changes. Mixing ━ (heavy) for filled and ─
-        # (light) for empty produced a visible "step" at the boundary
-        # because the two glyphs have different vertical weights, which
-        # rendered as a stray `-` artefact in the user's terminal.
-        bar = (_BAR_FILL + ("━" * filled) + _RESET
-               + _BAR_EMPTY + ("━" * (self.BAR_WIDTH - filled)) + _RESET)
+        # Full-block █ glyphs (U+2588) for both filled and empty cells.
+        # Full blocks fill the entire character cell including the row
+        # gap, so there's no "vertical gap" or boundary artefact possible:
+        # the bar reads as a single continuous bar that changes colour
+        # at the progress boundary. Earlier ━ (heavy horizontal) sat at
+        # the row centre and left visible white space above/below, which
+        # looked like a height mismatch between the bold cyan and dim
+        # empty portions.
+        bar = (_BAR_FILL + ("█" * filled) + _RESET
+               + _BAR_EMPTY + ("█" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
         if 0 < progress < self.total:
             eta = (elapsed / progress) * (self.total - progress)
@@ -259,9 +269,9 @@ class StickyProgress:
         else:
             eta_s = "--"
         if progress >= self.total:
-            spinner = _BAR_FILL + "✓" + _RESET
+            spinner = _SPINNER_COLOR + "✓" + _RESET
         else:
-            spinner = (_BAR_FILL
+            spinner = (_SPINNER_COLOR
                        + _SPINNER_FRAMES[self._tick % len(_SPINNER_FRAMES)]
                        + _RESET)
         # Optional ✓N ✗N counters in the tail (used by run.py; for
