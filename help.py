@@ -210,6 +210,25 @@ DEMAND SOURCE FLAGS:
   --synthetic              Force synthetic gravity model
   --allow-oversample       Allow more trips than census commuters
 
+OSM SOURCE FLAGS (mutually exclusive):
+  (default)                Use osm_data/<pbf> for the city; FAIL HARD if the
+                           PBF is missing. Bundle is byte-reproducible because
+                           the PBF is hash-pinned in osm_data/manifest.json.
+  --allow-overpass         If osm_data/<pbf> is missing, fall back to the live
+                           Overpass API. PBF is still preferred when available.
+                           WARNING: Overpass bundles are NOT byte-reproducible.
+  --force-overpass         Always use the live Overpass API, ignoring any local
+                           PBF. WARNING: NOT byte-reproducible. Use only for
+                           one-off experiments or when you specifically want
+                           today's OSM data.
+
+OUTPUT FLAGS:
+  --verbose                Show pipeline INFO logs (osmnx, demand, signals).
+                           Default: WARNING and above only — clean per-step
+                           ✓ rows + sticky progress bar. With --verbose the
+                           bar stays visible and INFO logs are routed above
+                           it cleanly.
+
 DISPLAY FLAGS:
   --list                   Show all cities, presets, modes, and limits
   --preset, -p <name>      Use a preset configuration
@@ -225,6 +244,8 @@ EXAMPLES:
   python generate.py --city chicago --trips 10000 --radius 8.0 --seed 7
   python generate.py --city la --trips 2000000 --allow-oversample
   python generate.py --city chicago --trips 5000 --synthetic
+  python generate.py --city chicago --trips 5000 --force-overpass    # today's OSM
+  python generate.py --city chicago --trips 5000 --verbose           # firehose
   python generate.py --preset morning_rush
   python generate.py --preset small_commute --trips 100000 --city la
 
@@ -241,22 +262,52 @@ HELP_RUN = """
 
 FLAGS:
   --scenario, -s <name>    Scenario name(s), comma-separated
-  --engine, -e <name>      Engine(s): sumo, matsim, dtalite
-  --mode, -m <name>        Mode(s): micro, meso
+  --engine, -e <name>      Engine(s): sumo, matsim, dtalite (comma-separated)
+  --mode, -m <name>        Mode(s): micro, meso (comma-separated)
   --repeats, -r <n>        Repeats (default: 10)
   --seed <int>             Base random seed (default: 42)
   --timeout, -t <seconds>  Per-run timeout (default: 3600)
   --output, -o <path>      Output directory (default: runs/)
+  --verbose                Show adapter INFO logs (default: WARNING+ only).
+                           Bar stays visible; logs routed above it.
   --list, -l               List available options
   --validate-only, -v      Only validate, don't simulate
 
+ENGINE / MODE COMPATIBILITY:
+  SUMO supports both meso and micro. MATSim and DTALite are mesoscopic
+  only. Cells with an unsupported (engine, mode) pair are skipped — not
+  silently re-run as meso. The startup banner prints which pairs were
+  skipped and why.
+
+  --engine sumo,matsim,dtalite --mode meso,micro --repeats 3 across 2
+  scenarios is 8 valid cells × 3 reps = 24 runs (NOT 36 — the 4 invalid
+  matsim/micro and dtalite/micro pairs are skipped).
+
+OUTPUT FORMAT:
+  Per-cell rows show: [N/total] engine mode seed=N ✓/✗ runtime
+  Scenario dividers (▶ scenario_name) group cells visually.
+  Sticky progress bar at the bottom (TTY only) shows overall %, ETA,
+  ✓N ✗N counters, and a Braille spinner heartbeat (5 Hz) so long-running
+  cells don't look stuck.
+  Final summary includes per-cell timing breakdown (mean ± 95% CI across
+  reps, computed via evaluation/metrics/confidence.py — same Student's-t
+  table the thesis tables/figures use).
+
 EXAMPLES:
   python run.py --engine sumo --mode meso
-  python run.py --scenario chicago_1k_car --engine sumo --mode meso
+  python run.py --scenario chicago_1k_car --engine sumo,matsim,dtalite \\
+         --mode meso --repeats 3
+  python run.py --scenario chicago_1k_car --engine sumo --mode meso,micro \\
+         --repeats 5 --verbose
   python run.py --validate-only
 
-BENCHMARK HARNESS:
-  python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical 11-run matrix
+POST-BENCHMARK PIPELINE (canonical 3-step):
+  python -m evaluation.analyze_benchmark <run-dir>/benchmark_results.json
+  python -m evaluation.audit_fairness    <run-dir>
+  python -m evaluation.generate_plots    <run-dir>/benchmark_results.json
+
+BENCHMARK HARNESS (runspec-driven, for full matrices):
+  python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical matrix
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
   python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
 """
@@ -417,6 +468,21 @@ ANALYZE BENCHMARK:
     the sample bias from SUMO dropping ~5 trips that MATSim always completes.
     Populated automatically when run-artifact directories exist next to the JSON.
 
+AUDIT CROSS-ENGINE FAIRNESS:
+  python -m evaluation.audit_fairness <run-dir> [seed]
+
+  Read-only methodology check that every engine in <run-dir> received the
+  same problem and was measured the same way. Four checks per scenario:
+
+    Q1 — same trip set across engines (feasibility verdict byte-identical)
+    Q2 — same network across engines (SCC node + link counts match)
+    Q3 — same trip count actually simulated (per-engine output count)
+    Q4 — cross-engine travel-time spread (mean / P95 / pairwise ratios)
+
+  Auto-detects four output layouts (run.py flat, run_benchmark nested,
+  parallel-by-scenario sbatch nested, per-scenario worker dir). Use this
+  before claiming any cross-engine number in the thesis.
+
 COMPARE MICRO vs MESO:
   python -m evaluation.compare_modes <scenario_path>                  # live run
   python -m evaluation.compare_modes --from-benchmark <results.json>  # from existing
@@ -445,6 +511,7 @@ GENERATE THESIS PLOTS:
 EXAMPLES (using the canonical stress-test runspec):
   python -m evaluation.analyze_benchmark \\
          runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+  python -m evaluation.audit_fairness runs/stress_test
   python -m evaluation.compare_modes --from-benchmark \\
          runs/stress_test/benchmark_results_stress_test.json
   python -m evaluation.generate_plots \\
@@ -474,6 +541,7 @@ REPRODUCE THE THESIS NUMBERS END-TO-END (about one minute):
   python -m execution.run_benchmark runspecs/stress_test.yaml
   python -m evaluation.analyze_benchmark \\
          runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+  python -m evaluation.audit_fairness runs/stress_test
   python -m evaluation.generate_plots \\
          runs/stress_test/benchmark_results_stress_test.json --output doc/figures
 
