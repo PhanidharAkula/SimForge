@@ -243,8 +243,13 @@ class StickyProgress:
             filled = self.BAR_WIDTH
         else:
             filled = int(self.BAR_WIDTH * progress / self.total)
+        # Use the same heavy-line glyph for both filled and empty cells —
+        # only the colour changes. Mixing ━ (heavy) for filled and ─
+        # (light) for empty produced a visible "step" at the boundary
+        # because the two glyphs have different vertical weights, which
+        # rendered as a stray `-` artefact in the user's terminal.
         bar = (_BAR_FILL + ("━" * filled) + _RESET
-               + _BAR_EMPTY + ("─" * (self.BAR_WIDTH - filled)) + _RESET)
+               + _BAR_EMPTY + ("━" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
         if 0 < progress < self.total:
             eta = (elapsed / progress) * (self.total - progress)
