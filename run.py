@@ -372,8 +372,24 @@ Examples:
                         help="List available scenarios, engines, and modes")
     parser.add_argument("--validate-only", "-v", action="store_true",
                         help="Only validate scenarios, don't run")
-    
+    parser.add_argument("--verbose", action="store_true",
+                        help="Show adapter INFO logs (default: WARNING and above only)")
+
     args = parser.parse_args()
+
+    # Quiet adapter INFO chatter by default — the per-cell summary lines
+    # are enough for the operator. The harness only suppresses INFO from
+    # SimForge's own adapter modules; WARNING+ from any source still
+    # surfaces. Pass --verbose to restore the firehose (useful when
+    # debugging a single failing cell).
+    import logging as _logging
+    if args.verbose:
+        _logging.basicConfig(level=_logging.INFO, force=True)
+    else:
+        _logging.basicConfig(level=_logging.WARNING, force=True)
+        for _name in ("adapters", "adapters.sumo", "adapters.matsim",
+                      "adapters.dtalite", "adapters.common", "pipeline"):
+            _logging.getLogger(_name).setLevel(_logging.WARNING)
     
     # Handle --list
     if args.list:
