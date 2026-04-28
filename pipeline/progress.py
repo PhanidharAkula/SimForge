@@ -288,15 +288,21 @@ class StickyProgress:
             if level < logger.level or logger.level == _logging.NOTSET:
                 logger.setLevel(level)
 
-        # Single attachment point: the root logger.
+        # Single attachment point: the root logger. Displace EVERY
+        # StreamHandler from root (any stream — stdout, stderr, or
+        # custom) so we don't get duplicate emissions. The SimForge
+        # codebase has 8+ library modules that call logging.basicConfig
+        # at import time, each leaving a StreamHandler on root with
+        # its own format. Without this displacement those handlers
+        # fire alongside our capture handler, producing duplicate log
+        # lines in --verbose mode (one with `INFO:adapters.matsim:` and
+        # one with `INFO  ` formats). Non-Stream handlers (file,
+        # syslog, etc.) are intentionally left in place so other
+        # audit trails keep working.
         root = _logging.getLogger()
         removed = []
         for h in list(root.handlers):
-            # Displace any handler that would write to stdout (the bar's
-            # stream). Leave file handlers, syslog handlers, etc. alone
-            # so other audit trails keep working.
-            if (isinstance(h, _logging.StreamHandler)
-                    and getattr(h, "stream", None) is sys.stdout):
+            if isinstance(h, _logging.StreamHandler):
                 root.removeHandler(h)
                 removed.append(h)
         root.addHandler(handler)
