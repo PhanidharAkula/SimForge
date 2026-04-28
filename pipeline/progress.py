@@ -223,7 +223,6 @@ class StickyProgress:
         self._drawn = False
         self._stop = threading.Event()
         self._thread = None
-        self._tick = 0
         self._lock = threading.Lock()
         self._captured_loggers: list[tuple] = []  # (logger, removed_handlers)
         self._capture_handler: _ProgressBarLogHandler | None = None
@@ -354,16 +353,16 @@ class StickyProgress:
     # ---- rendering ---------------------------------------------------
 
     def _heartbeat(self) -> None:
-        # ~5 frames per second so the spinner motion is obvious without
-        # flooding the terminal.
+        # 10 ticks/sec — guarantees the spinner advances at least once
+        # every 100 ms even when no advance() / print_above() fires
+        # (e.g. during a long-running single test). The spinner frame
+        # itself is wall-clock-driven, so each redraw — heartbeat or
+        # work-triggered — picks the correct frame for that moment.
         while not self._stop.is_set():
             with self._lock:
                 if self._drawn:
-                    # Tick only when the bar is currently on screen
-                    # (skip ticks during print_above transitions).
-                    self._tick += 1
                     self._render_locked(_in_place=True)
-            self._stop.wait(0.2)
+            self._stop.wait(0.1)
 
     def _render_locked(self, *, _in_place: bool = False) -> None:
         """Redraw the bar.
@@ -411,8 +410,16 @@ class StickyProgress:
         if progress >= self.total:
             spinner = _SPINNER_COLOR + "✓" + _RESET
         else:
+            # Tie the spinner frame to wall-clock time, not a per-render
+            # counter. Advance() and print_above() can fire much faster
+            # than the heartbeat (e.g. pytest plowing through 500+ tests
+            # in seconds), and a counter-driven frame would freeze on
+            # the same glyph between heartbeat ticks. Time-driven means
+            # every render — whoever triggers it — picks the frame for
+            # the current 100 ms window.
+            frame_idx = int(elapsed * 10) % len(_SPINNER_FRAMES)
             spinner = (_SPINNER_COLOR
-                       + _SPINNER_FRAMES[self._tick % len(_SPINNER_FRAMES)]
+                       + _SPINNER_FRAMES[frame_idx]
                        + _RESET)
         # Optional ✓N ✗N counters in the tail (used by run.py; for
         # generate.py these stay at 0 and we suppress them).
