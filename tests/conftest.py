@@ -69,18 +69,6 @@ def _discover_all_scenarios() -> list[Path]:
 
 
 @pytest.fixture(scope="session")
-def repo_root() -> Path:
-    """Absolute path to the repo root."""
-    return REPO_ROOT
-
-
-@pytest.fixture(scope="session")
-def scenarios_dir() -> Path:
-    """Absolute path to the bundled scenarios directory."""
-    return SCENARIOS_DIR
-
-
-@pytest.fixture(scope="session")
 def bundled_scenario() -> Path:
     """First available bundled scenario; skips the test if none exist.
 
@@ -113,11 +101,6 @@ def small_bundled_scenarios(all_bundled_scenarios: list[Path]) -> list[Path]:
 
 def _is_large(scenario_name: str) -> bool:
     return any(p in scenario_name for p in LARGE_SCENARIO_PATTERNS)
-
-
-def is_large_scenario(scenario_name: str) -> bool:
-    """Public wrapper so test modules don't import the underscore helper."""
-    return _is_large(scenario_name)
 
 
 def is_arm64_netconvert_crash(exc: BaseException) -> bool:

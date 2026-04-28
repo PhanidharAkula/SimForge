@@ -18,9 +18,7 @@ import pytest
 
 from adapters.dtalite.dtalite_adapter import (
     DTALiteConfig,
-    DTALiteTripStats,
     _DEFAULT_CAPACITY_VPH_PER_LANE,
-    _DTALITE_MIN_EDGE_LENGTH_M,
     _DTALITE_MIN_SPEED_KMH,
     _M_TO_KM,
     _MS_TO_KMH,
@@ -40,7 +38,6 @@ from adapters.sumo.sumo_adapter import (
     CanonicalLink,
     CanonicalNode,
     NetworkGraph,
-    ScenarioSummary,
 )
 
 from .conftest import directory_sha256
@@ -569,9 +566,8 @@ class TestBinaryDiscovery:
     reason="path4gmns not installed (uv pip install path4gmns; brew install libomp on Mac)",
 )
 class TestRunSmoke:
-    """End-to-end run on the bundled scenario. Slow (~5-10s) — skipped when
-    DTALite is not installed. The test_lpsim_adapter.py equivalent skipped
-    on missing GPU; here we skip on missing path4gmns."""
+    """End-to-end run on the bundled scenario (~5-10 s). Skipped when
+    path4gmns is not installed."""
 
     def test_run_to_completion(self, bundled_scenario, tmp_path):
         from adapters.dtalite import run_dtalite

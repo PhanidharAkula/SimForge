@@ -11,7 +11,6 @@ score from 0.998+ to 0.81.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 import pytest
 

@@ -6,9 +6,9 @@ structure, determinism).  This file goes one step further: it actually
 invokes the engine binary on the smallest bundled scenario and asserts the
 engine produced a non-empty results artefact.
 
-The tests skip gracefully when the binary is missing so `pytest -m "not
-slow"` stays green on developer machines without SUMO / Java / the MATSim
-JAR / path4gmns installed.
+The tests skip gracefully when the binary is missing so the suite stays
+green on developer machines without SUMO / Java / the MATSim JAR /
+path4gmns installed.
 
 These catch the class of regression where the adapter writes files the
 engine refuses to parse (e.g. an attribute added/removed in a breaking
@@ -75,7 +75,6 @@ pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.slow
 @pytest.mark.requires_sumo
 def test_sumo_real_binary_produces_tripinfo(bundled_scenario: Path, tmp_path: Path) -> None:
     """`sumo -c toy.sumocfg` writes non-empty tripinfo.xml with ≥1 tripinfo row."""
@@ -121,7 +120,6 @@ def test_sumo_real_binary_produces_tripinfo(bundled_scenario: Path, tmp_path: Pa
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.slow
 @pytest.mark.requires_java
 def test_matsim_real_jar_produces_output_trips(bundled_scenario: Path, tmp_path: Path) -> None:
     """`java -jar matsim-15.0.jar ... config.xml` writes output_trips.csv.gz."""
@@ -150,17 +148,10 @@ def test_matsim_real_jar_produces_output_trips(bundled_scenario: Path, tmp_path:
 
 
 # ---------------------------------------------------------------------------
-# Availability report — always runs, always passes, just surfaces what's on
-# the host.  Makes debugging CI/local skips instant.
-# ---------------------------------------------------------------------------
-
-
-# ---------------------------------------------------------------------------
 # DTALite
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.slow
 def test_dtalite_real_binary_produces_agent_csv(bundled_scenario: Path, tmp_path: Path) -> None:
     """DTALite (via path4gmns) writes link_performance.csv + agent.csv with ≥1 row.
 

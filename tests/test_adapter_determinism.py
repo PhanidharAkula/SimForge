@@ -21,6 +21,7 @@ from .conftest import directory_sha256, file_sha256, is_arm64_netconvert_crash
 pytestmark = pytest.mark.determinism
 
 
+@pytest.mark.requires_sumo
 class TestSUMOAdapterDeterminism:
     """Two runs of `prepare_sumo_inputs` must agree byte-for-byte."""
 

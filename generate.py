@@ -75,6 +75,23 @@ from pipeline.progress import StickyProgress, _fmt_dur
 _TOTAL_STEPS = 4
 
 
+def _display_path(p: Path) -> str:
+    """Render a Path as it would appear if the user typed it.
+
+    When the path lives under cwd, show the cwd-relative form (e.g.
+    ``scenarios/chicago_1k_car``) so the default-output case looks the
+    same as ``--output scenarios/foo``. When it doesn't (``/tmp/...``,
+    ``--output`` outside the repo), fall back to the absolute path.
+    Avoids the inconsistency where the default output was always
+    absolute (built from ``Path(__file__).parent``) while user-provided
+    ``--output`` values stayed short.
+    """
+    try:
+        return str(p.resolve().relative_to(Path.cwd()))
+    except ValueError:
+        return str(p)
+
+
 # =============================================================================
 # Toolchain capture — recorded into generation_metadata.json so any bundle
 # carries the exact code+dep stack that produced it. Critical for cross-machine
@@ -448,7 +465,7 @@ def generate_scenario(
     print(f"  Radius:     {radius_km:.1f} km")
     print(f"  Seed:       {seed}")
     print(f"  Demand:     {'census (ModelGen)' if use_census else 'synthetic (gravity)'}")
-    print(f"  Output:     {out}")
+    print(f"  Output:     {_display_path(out)}")
     print("-" * 60)
     print("\n" + "=" * 60)
     print("  Generation Pipeline")
@@ -630,22 +647,24 @@ def generate_scenario(
     print("=" * 60)
     print(f"\n  Wall time:    {_fmt_dur(elapsed)}")
     print(f"  Scenario:     {scenario_id}")
-    print(f"  Output:       {out}/")
+    print(f"  Output:       {_display_path(out)}/")
 
     print("\n  Step timing:")
     total_step = sum(step_times.values()) or 1.0
     name_w = max(len(n) for n in step_times)
+    dur_w = max(len(_fmt_dur(dt)) for dt in step_times.values())
     for name, dt in step_times.items():
         pct = 100.0 * dt / total_step
-        print(f"    {name:<{name_w}}  {_fmt_dur(dt):>8}   ({pct:4.1f}%)")
+        print(f"    {name:<{name_w}}  {_fmt_dur(dt):<{dur_w}}  ({pct:5.1f}%)")
 
     print("\n  Artifacts:")
-    print(f"    network.xml   {net['node_count']:>7,} nodes  /  "
-          f"{net['link_count']:>7,} links")
-    print(f"    signals.xml   {sig['signal_count']:>7,} controllers")
-    print(f"    demand.csv    {dem['trip_count']:>7,} trips ({strategy})")
-    print(f"    config.xml    {time_desc} simulation window, seed={seed}")
-    print(f"    manifest.xml  SHA-256 checksummed")
+    art_w = len("manifest.xml")  # 12 — widest filename in the block
+    print(f"    {'network.xml':<{art_w}}  {net['node_count']:,} nodes / "
+          f"{net['link_count']:,} links")
+    print(f"    {'signals.xml':<{art_w}}  {sig['signal_count']:,} controllers")
+    print(f"    {'demand.csv':<{art_w}}  {dem['trip_count']:,} trips ({strategy})")
+    print(f"    {'config.xml':<{art_w}}  {time_desc} simulation window, seed={seed}")
+    print(f"    {'manifest.xml':<{art_w}}  SHA-256 checksummed")
     print("=" * 60 + "\n")
 
     # Save generation metadata (includes OSM provenance so any scenario can be

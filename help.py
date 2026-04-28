@@ -175,7 +175,7 @@ PROJECT STRUCTURE (alphabetical, repo root):
   runspecs/             Benchmark configuration files (YAML)
   scenarios/            Generated canonical data bundles
   scripts/              5 ready-to-use generation scripts (01–05)
-  tests/                Test suite (pytest, ~307 tests across 19 files)
+  tests/                Test suite (pytest, ~495 tests across 19 files)
   tools/                Operator utilities (clean.sh, download_osm.py,
                         env_report.py, inspect_network.py)
 
@@ -259,7 +259,7 @@ EXAMPLES:
   python generate.py --city chicago --trips 5000 --synthetic
   python generate.py --city chicago --trips 5000 --force-overpass    # today's OSM
   python generate.py --city chicago --trips 5000 --verbose           # firehose
-  python generate.py --preset morning_rush
+  python generate.py --preset quick_test
   python generate.py --preset small_commute --trips 100000 --city la
 
 OUTPUT:
@@ -323,6 +323,16 @@ BENCHMARK HARNESS (runspec-driven, for full matrices):
   python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical matrix
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
   python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
+
+run.py vs run_benchmark.py:
+  Both call the same adapters; the wrapping differs. run.py writes a flat
+  per-cell layout and a benchmark_results.json with a {timestamp, matrix,
+  summary, results} top-level. run_benchmark.py writes a nested
+  scenario/engine/seed_N layout and a benchmark_results_<runspec>.json
+  with a {runspec_name, started_at, completed_at, total_runs, ..., summary,
+  results} top-level. Use run.py for ad-hoc work, run_benchmark for locked
+  thesis matrices. audit_fairness, analyze_benchmark, and generate_plots
+  consume both layouts. Full side-by-side: doc/RESULTS_GUIDE.md sec 2.
 """
 
 HELP_SCRIPTS = """
@@ -330,13 +340,13 @@ HELP_SCRIPTS = """
   BUILT-IN SCRIPTS (scripts/)
 ====================================================================
 
-5 ready-to-use generation scripts, from small to big:
+5 ready-to-use generation scripts, from small to big. All accept --verbose / -v:
 
-  python scripts/01_quick_test.py          Tiny quick test
-  python scripts/02_small_commute.py       Small morning commute
-  python scripts/03_medium_multimodal.py   Medium multi-modal city
-  python scripts/04_large_full_day.py      Large full-day simulation
-  python scripts/05_stress_test.py         Stress test at scale
+  python scripts/01_quick_test.py [--verbose]          Tiny quick test
+  python scripts/02_small_commute.py [--verbose]       Small morning commute
+  python scripts/03_medium_multimodal.py [--verbose]   Medium multi-modal city
+  python scripts/04_large_full_day.py [--verbose]      Large full-day simulation
+  python scripts/05_stress_test.py [--verbose]         Stress test at scale
 
   +----+------------------------+----------+---------+------------------+----------+
   | #  | Script                 | City     | Trips   | Modes            | Time     |
@@ -348,14 +358,18 @@ HELP_SCRIPTS = """
   | 05 | stress_test            | NYC      | 500,000 | car              | 06-10 AM |
   +----+------------------------+----------+---------+------------------+----------+
 
-ALTERNATIVE -- via generate.py presets:
+EQUIVALENT -- via generate.py presets (same code path, prefer this form):
   python generate.py --preset quick_test
   python generate.py --preset small_commute
   python generate.py --preset medium_multimodal
   python generate.py --preset large_full_day
   python generate.py --preset stress_test
 
-  Presets accept overrides: python generate.py --preset small_commute --city la
+  scripts/0X are thin wrappers that import generate_scenario() and call it
+  with hardcoded kwargs. They accept --verbose / -v only. The preset form
+  is preferred when you need other overrides (--output, --seed, --city,
+  --modes, --synthetic, OSM source mode):
+    python generate.py --preset small_commute --city la --verbose
 """
 
 HELP_MODES = """
@@ -541,14 +555,35 @@ COMMANDS:
   python -m execution.run_benchmark <runspec.yaml>
   python -m execution.run_benchmark <runspec.yaml> --mesoscopic
   python -m execution.run_benchmark <runspec.yaml> --dry-run
+  python -m execution.run_benchmark <runspec.yaml> --scenario chicago_1k_car
+  python -m execution.run_benchmark <runspec.yaml> --verbose
+  python -m execution.run_benchmark <runspec.yaml> --output runs/test1
+
+FLAGS:
+  --scenario, -s <id>   Only run scenarios matching this ID
+  --dry-run, -n         Validate + print plan; no execution
+  --output, -o <path>   Override the runspec's output_dir
+  --mesoscopic, -m      Force every row to mesoscopic (overrides per-row mode:)
+  --verbose             Show adapter INFO logs above the sticky bar
 
 BUILT-IN RUNSPECS:
-  stress_test.yaml       Canonical 8-run matrix: chicago_1k_car x
-                         {SUMO meso, SUMO micro, MATSim meso},
-                         3 repeats per stochastic cell (2 for MATSim).
-                         All thesis Chapter 5 numbers come from this runspec.
+  stress_test.yaml       Canonical 4-cell matrix: chicago_1k_car x
+                         {SUMO meso, SUMO micro, MATSim meso, DTALite meso},
+                         5 repeats per cell = 20 runs total. All thesis
+                         Chapter 5 numbers come from this runspec.
   benchmark_small.yaml   1K-50K trips, 600 s per-run timeout (laptop tier).
   benchmark_large.yaml   200K-500K trips, 3600 s per-run timeout (HPC tier).
+
+OUTPUT FORMAT:
+  Banner with the matrix dimensions (Runspec, Scenarios, Engines, Modes,
+  Repeats, Total). Pre-validation block (each unique bundle once).
+  Scenario dividers (▶ scenario_id) group cells visually. Per-cell rows:
+  [N/total] engine mode seed=N ✓/✗ runtime. Sticky progress bar at the
+  bottom (TTY only) shows %, ETA, ✓N ✗N counters, Braille spinner heartbeat.
+  Final summary mirrors run.py: Wall time + ✓ Completed + ✗ Failed + per-cell
+  timing breakdown (mean ± 95% CI across reps, Student's-t via
+  evaluation/metrics/confidence.py). With --verbose the bar stays visible
+  and adapter INFO logs are routed cleanly above it.
 
 REPRODUCE THE THESIS NUMBERS END-TO-END (about one minute):
   python -m execution.run_benchmark runspecs/stress_test.yaml
@@ -561,9 +596,21 @@ REPRODUCE THE THESIS NUMBERS END-TO-END (about one minute):
 OUTPUT SHAPE:
   runs/<runspec_name>/
     benchmark_results_<runspec_name>.json   # canonical result schema
-    run_<i>/                                # per-run engine artefacts
+    <scenario_id>/<engine>/seed_<N>/        # per-cell engine artefacts
       feasibility_report.json               # SCC filter audit trail
       tripinfo.xml / output_trips.csv.gz    # engine-native outputs
+
+  Top-level JSON keys: runspec_name, started_at, completed_at, total_runs,
+  successful_runs, failed_runs, summary, results[]. Each results[] entry
+  carries scenario, scenario_id, engine, mode, seed, repeat, repeat_index,
+  status, runtime_s, wall_time_s, output_dir, tripinfo_path, error_message,
+  metrics. Schema is BenchmarkResult.to_dict() in execution/run_benchmark.py.
+
+  This layout differs from run.py's flat output (runs/benchmark_<timestamp>/
+  <scenario>_<engine>_<mode>_seed<N>/ + benchmark_results.json with a
+  {timestamp, matrix, summary, results} top-level). The downstream tools
+  (audit_fairness, analyze_benchmark, generate_plots) handle both. Full
+  side-by-side comparison: doc/RESULTS_GUIDE.md sec 2.
 """
 
 HELP_TESTS = """
@@ -571,18 +618,17 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships ~395 tests across 17 files. The fast tier (~7 s) is
-what developers run locally; the full suite (~22 s on M-series) adds
-adapter sweeps and real-binary smoke tests.
+SimForge ships ~524 tests across 20 files. The full suite runs in
+~3-4 min on arm64 (~22 s on a Linux box where SUMO doesn't crash, since
+the SUMO sweeps actually skip on arm64).
 
 Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 --strict-markers + --tb=short. Shared fixtures and platform-skip
 helpers live in tests/conftest.py.
 
 RUN COMMANDS:
-  python -m pytest                              # Full suite (~22 s)
-  python -m pytest -m "not slow"                # Fast tier (~12 s)
-  python -m pytest -v                           # Verbose — named lines per test
+  python -m pytest                              # Full suite — per-FILE rollup rows
+  python -m pytest -v                           # Verbose — per-TEST ✓/✗/⊘ rows
   python -m pytest -v -x                        # Verbose, stop on first failure
   python -m pytest tests/test_feasibility.py    # One file
   python -m pytest tests/test_feasibility.py -v # One file, verbose
@@ -591,32 +637,35 @@ RUN COMMANDS:
   python -m pytest --cov --cov-fail-under=70            # Enforce 70 % floor
   python -m pytest -n auto                      # Parallel (needs pytest-xdist)
   python -m pytest --collect-only               # List tests without running
+  python -m pytest -p no:sticky_progress        # Plain pytest output (no plugin)
 
 MARKERS (registered in pyproject.toml; --strict-markers enforced):
-  slow            Test takes > 2 s or sweeps every bundled scenario
   integration     Exercises multiple subsystems end-to-end
   determinism     Verifies byte-identical adapter outputs across re-runs
   requires_sumo   Needs sumo / netconvert on PATH
   requires_java   Needs Java 17+ and the MATSim JAR
+  requires_gpu    Needs an NVIDIA GPU + a built LPSim binary (no CPU
+                  fallback; preserved for the LPSim retrospective)
 
   Filter examples:
-    python -m pytest -m slow
     python -m pytest -m determinism
-    python -m pytest -m "integration and not slow"
+    python -m pytest -m integration
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (19 files / ~307 tests, alphabetical):
+TEST FILES (20 files / ~524 tests, alphabetical):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
-  test_confidence.py              (14)  Student's-t 95 % CI core + edge cases
+  test_audit_fairness.py          (29)  Q1-Q4 audit helpers + 4-layout detector
+                                        + synthetic-run-dir orchestrator test
+  test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
   test_demand_generators.py       (21)  Uniform / gravity / peak-hour
-  test_dtalite_adapter.py         (42)  DTALite adapter writers, settings,
+  test_dtalite_adapter.py         (46)  DTALite adapter writers, settings,
                                         demand-driven zoning, end-to-end smoke
   test_engine_smoke.py            (4)   Real-binary SUMO/MATSim/DTALite [skip-on-miss]
   test_feasibility.py             (16)  Shared cross-engine trip filter
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
-  test_matsim_adapter.py          (24)  MATSim helpers + end-to-end [slow sweep]
+  test_matsim_adapter.py          (24)  MATSim helpers + end-to-end + sweep
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
   test_parse_model_file.py        (12)  ModelGen file parser tests
@@ -624,8 +673,10 @@ TEST FILES (19 files / ~307 tests, alphabetical):
   test_reproducibility_metrics.py (15)  R-score core + edge cases
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
   test_scc.py                     (14)  Iterative Kosaraju + parser
-  test_scenario_data_integrity.py (36)  7 classes x the bundled scenario
-  test_sumo_adapter.py            (4)   SUMO input bundle + sweep [slow]
+  test_scenario_data_integrity.py (216) 7 classes x every bundled scenario
+                                        (parametrized — count scales with
+                                        scenarios/ contents)
+  test_sumo_adapter.py            (4)   SUMO input bundle + sweep
   test_validator.py               (2)   Bundle pass + corruption fail
 
 test_scenario_data_integrity.py classes (7, parametrized over every scenario):
@@ -638,20 +689,25 @@ test_scenario_data_integrity.py classes (7, parametrized over every scenario):
   TestSignalsIntegrity    Signal junction references exist in the network
 
 WHAT THE OUTPUT LOOKS LIKE:
-  Default (quiet) — one dot per passing test:
-    tests/test_feasibility.py ................             [100%]
-    =================== 16 passed in 0.03s ===================
+  Default — per-file rollup rows + sticky progress bar:
+    tests/test_feasibility.py    PASSED
+    tests/test_engine_smoke.py   SKIPPED
+    [████████████░░░░░░░░░░░░░░] 50%  ✓ 247  ✗ 0  ⠼  test 247/495
 
-  With -v — a named line per test (useful for learning the suite):
-    tests/test_feasibility.py::test_drops_outside_scc PASSED    [  6%]
-    tests/test_feasibility.py::test_drops_unknown_nodes PASSED  [ 12%]
-    ...
+  With -v — per-test ✓/✗/⊘ rows:
+    ✓ tests/test_feasibility.py::test_drops_outside_scc
+    ⊘ tests/test_engine_smoke.py::test_sumo_real_binary  (SUMO binaries not on PATH)
+    ✗ tests/test_x.py::test_y  (AssertionError: expected 5 got 6)
 
-  With --cov — a coverage table is appended:
+  With --cov — a coverage table is appended below the Summary block:
     Name                              Stmts   Miss  Cover   Missing
     adapters/common/feasibility.py       94      8    91%   42-49
     ...
     TOTAL                              2847    677    76%
+
+  With -p no:sticky_progress — plain pytest output (dots, file headers,
+  short test summary info, etc.). Useful when piping to a log file or
+  diagnosing the plugin itself.
 
 COVERAGE:
   python -m pytest --cov                        # Terminal summary
@@ -672,7 +728,6 @@ SHARED FIXTURES (tests/conftest.py):
   bundled_scenario           Canonical chicago_1k_car scenario path
   all_bundled_scenarios      Every complete scenarios/ entry
   small_bundled_scenarios    Scenarios under the arm64 netconvert threshold
-  repo_root                  Absolute path to the project root
   file_sha256, directory_sha256           Deterministic hashing helpers
   is_arm64_netconvert_crash               Platform skip detector
   warn_skipped                            Emits a single UserWarning summary
@@ -750,7 +805,9 @@ HELP_TROUBLESHOOTING = """
 
 11. "Tests fail with 'binary not found' errors"
    -> test_engine_smoke.py needs real SUMO / MATSim / Java on PATH.
-      Skip them with: python -m pytest -m "not slow"
+      Tests skip individually when binaries are missing, so the suite
+      stays green. Filter the SUMO-dependent ones with:
+          python -m pytest -m "not requires_sumo"
 
 12. "Coverage numbers look low (~40 %)"
    -> setup_simforge.py installs the dev deps; if you used a manual venv,
@@ -817,7 +874,7 @@ DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
 
 VERIFY THE INSTALL (full sanity check):
   source .venv/bin/activate
-  python -m pytest -m "not slow"                # Fast tier, ~12 s
+  python -m pytest                              # Full test suite
   python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
   python -m execution.run_benchmark runspecs/stress_test.yaml      # ~27 s

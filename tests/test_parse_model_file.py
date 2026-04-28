@@ -8,8 +8,6 @@ that schedule-driven demand generation depends on.
 
 from __future__ import annotations
 
-import pytest
-
 from pipeline.demand.parse_model_file import (
     Building,
     Household,

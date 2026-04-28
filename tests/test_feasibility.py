@@ -251,4 +251,5 @@ class TestRealBundledFeasibility:
             f"{bundled_scenario.name}: only "
             f"{report.feasible_trips}/{report.total_trips} trips feasible"
         )
-        assert feasible == set(feasible)  # idempotent identity check
+        assert isinstance(feasible, set)
+        assert len(feasible) == report.feasible_trips

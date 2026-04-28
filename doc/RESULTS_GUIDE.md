@@ -65,11 +65,34 @@ Writes to `runs/<timestamp>/benchmark_results_<timestamp>.json`.
 python run.py --list
 ```
 
+### `run.py` vs `run_benchmark.py` — what differs
+
+Both call the same adapters and produce the same per-cell engine artefacts (`tripinfo.xml`, `output_trips.csv.gz`, `link_performance.csv`, `feasibility_report.json` …). They differ in the wrapping: how the per-cell directories are laid out, what the summary JSON is named, and the top-level schema of that JSON.
+
+| Aspect                       | `run.py`                                                | `python -m execution.run_benchmark`                                       |
+| ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Matrix source                | CLI flags (`--scenario --engine --mode --repeats`)      | Locked YAML in `runspecs/*.yaml`                                          |
+| Output base                  | `runs/benchmark_<timestamp>/` (or `--output`)           | `runs/<runspec.output_dir>/` (or `--output`)                              |
+| Per-cell directory           | flat: `<scenario>_<engine>_<mode>_seed<seed>/`          | nested: `<scenario_id>/<engine>/seed_<seed>/`                             |
+| Summary JSON file            | `benchmark_results.json`                                | `benchmark_results_<runspec_name>.json`                                   |
+| Summary JSON top-level keys  | `timestamp`, `matrix`, `summary`, `results`             | `runspec_name`, `started_at`, `completed_at`, `total_runs`, `successful_runs`, `failed_runs`, `summary`, `results` |
+| Per-cell record fields       | `status`, `scenario`, `scenario_id`, `engine`, `mode`, `seed`, `repeat`, `runtime_s`, `metrics` (+ adapter extras) | same plus `repeat_index`, `wall_time_s`, `output_dir`, `tripinfo_path`, `error_message` (always present) |
+| `--verbose` flag             | yes (sticky bar + log capture)                          | no                                                                        |
+| Other flags                  | `--list --validate-only --timeout --seed --repeats`     | `--dry-run --mesoscopic`                                                  |
+| Cluster sbatch wrappers      | none                                                    | `cluster/jobs/benchmark_*.sbatch`, `cluster/jobs/05_stress_test.sbatch`   |
+| Used for                     | Quick exploration, one-offs, ad-hoc matrices            | Reproducible thesis numbers; locked, version-controllable                 |
+
+`evaluation/audit_fairness.py` autodetects both layouts (plus the two sbatch-nested variants), so the same `audit_fairness <run-dir>` invocation works regardless of which entry point produced the run. `analyze_benchmark` and `generate_plots` consume either summary JSON unchanged — they key off `results[].{scenario,engine,mode,seed,runtime_s,metrics}`, all of which exist in both schemas.
+
+Why both still exist: `run.py` predates the runspec harness and grew the nicer interactive ergonomics (sticky progress bar, `--verbose`, `--list`, `--validate-only`); `run_benchmark.py` was added when locked, citable matrices became thesis-critical. Neither has been retired. See `help.py run` and `help.py benchmark` for the per-script flag list.
+
 ---
 
 ## 3. Result JSON Structure
 
-Each run produces a JSON object:
+Two shapes — one per entry point. The `results[]` array fields mostly overlap; the top-level wrapper is what differs.
+
+### 3.1 `benchmark_results.json` — written by `run.py`
 
 ```json
 {
@@ -85,6 +108,7 @@ Each run produces a JSON object:
     {
       "status": "success",
       "scenario": "chicago_1k_car",
+      "scenario_id": "chicago_1k_car_sumo_meso",
       "engine": "sumo",
       "mode": "meso",
       "seed": 42,
@@ -101,6 +125,46 @@ Each run produces a JSON object:
   ]
 }
 ```
+
+### 3.2 `benchmark_results_<runspec_name>.json` — written by `run_benchmark.py`
+
+```json
+{
+  "runspec_name": "stress_test",
+  "started_at": "2026-04-25T18:00:00Z",
+  "completed_at": "2026-04-25T18:27:14Z",
+  "total_runs": 20,
+  "successful_runs": 20,
+  "failed_runs": 0,
+  "summary": { "total": 20, "completed": 20, "failed": 0 },
+  "results": [
+    {
+      "scenario": "chicago_1k_car",
+      "scenario_id": "chicago_1k_car_sumo_meso",
+      "engine": "sumo",
+      "mode": "meso",
+      "seed": 42,
+      "repeat": 1,
+      "repeat_index": 0,
+      "status": "success",
+      "runtime_s": 0.27,
+      "wall_time_s": 0.27,
+      "output_dir": "runs/stress_test/chicago_1k_car/sumo/seed_42",
+      "tripinfo_path": "runs/stress_test/chicago_1k_car/sumo/seed_42/tripinfo.xml",
+      "error_message": null,
+      "metrics": {
+        "travel_time": {
+          "trip_count": 995,
+          "mean": 204.05,
+          "p95": 412.3
+        }
+      }
+    }
+  ]
+}
+```
+
+The harness shape is defined by `BenchmarkResult.to_dict()` / `RunResult.to_dict()` in `execution/run_benchmark.py` (lines ~170–245). The `run.py` shape is built inline at `run.py` ~623.
 
 ### Key fields
 

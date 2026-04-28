@@ -7,7 +7,6 @@ Tests the scalability measurement implementations.
 from __future__ import annotations
 
 import time
-import pytest
 
 from evaluation.metrics.scalability import (
     HardwareInfo,

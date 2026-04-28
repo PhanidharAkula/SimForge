@@ -16,11 +16,7 @@ import pytest
 
 from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 
-from .conftest import (
-    is_arm64_netconvert_crash,
-    is_large_scenario,
-    warn_skipped,
-)
+from .conftest import is_arm64_netconvert_crash, warn_skipped
 
 
 def _prepare_or_skip(scenario: Path, out: Path):
@@ -42,6 +38,7 @@ def _prepare_or_skip(scenario: Path, out: Path):
         raise
 
 
+@pytest.mark.requires_sumo
 def test_prepare_sumo_inputs_creates_expected_files(bundled_scenario: Path, tmp_path: Path) -> None:
     out = tmp_path / "sumo_out"
     summary = _prepare_or_skip(bundled_scenario, out)
@@ -64,6 +61,7 @@ def test_prepare_sumo_inputs_creates_expected_files(bundled_scenario: Path, tmp_
     assert 'route-files value="routes.rou.xml"' in cfg_text
 
 
+@pytest.mark.requires_sumo
 def test_edges_have_length_attribute(bundled_scenario: Path, tmp_path: Path) -> None:
     """Edges must carry an explicit `length` so netconvert doesn't recompute it."""
     out = tmp_path / "sumo_edge_check"
@@ -79,6 +77,7 @@ def test_edges_have_length_attribute(bundled_scenario: Path, tmp_path: Path) -> 
         )
 
 
+@pytest.mark.requires_sumo
 def test_net_xml_has_realistic_lane_lengths(bundled_scenario: Path, tmp_path: Path) -> None:
     """Mean lane length must be > 10 m — guards against raw-WGS84 lengths."""
     out = tmp_path / "sumo_net_check"
@@ -97,7 +96,6 @@ def test_net_xml_has_realistic_lane_lengths(bundled_scenario: Path, tmp_path: Pa
     )
 
 
-@pytest.mark.slow
 @pytest.mark.requires_sumo
 def test_sumo_adapter_all_scenarios(small_bundled_scenarios: list[Path], tmp_path: Path) -> None:
     """
@@ -111,10 +109,6 @@ def test_sumo_adapter_all_scenarios(small_bundled_scenarios: list[Path], tmp_pat
     tested = 0
     skipped: list[str] = []
     for scenario_path in small_bundled_scenarios:
-        if is_large_scenario(scenario_path.name):
-            skipped.append(scenario_path.name)
-            continue
-
         out = tmp_path / scenario_path.name
         try:
             summary = prepare_sumo_inputs(scenario_path, out)
@@ -132,4 +126,8 @@ def test_sumo_adapter_all_scenarios(small_bundled_scenarios: list[Path], tmp_pat
         tested += 1
 
     warn_skipped("SUMO sweep", skipped)
-    assert tested > 0, "No scenarios were tested"
+    if tested == 0:
+        pytest.skip(
+            f"All {len(skipped)} candidate scenarios were filtered "
+            f"by the arm64 netconvert detector."
+        )

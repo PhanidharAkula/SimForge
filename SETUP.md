@@ -72,8 +72,8 @@ rm matsim-15.0-release.zip
 # Toolchain + dep + binary report — same output expected on any locked machine
 python tools/env_report.py
 
-# Fast unit suite
-python -m pytest tests/ -m "not slow" -q
+# Run the test suite
+python -m pytest
 ```
 
 `env_report.py` prints Python version, all 12 watched dep versions, SUMO/Java/MATSim binary status, and counts of OSM PBFs / ModelGen files / scenarios. It's the canonical cross-platform parity check (run it on any second machine and `diff` the outputs to verify they match).
@@ -161,19 +161,28 @@ Larger scenarios are not committed — generate them locally with the helper scr
 
 ### Generating Scenarios
 
-```bash
-# Preset scripts (one-shot)
-python scripts/01_quick_test.py        # 1K car, Chicago
-python scripts/02_small_commute.py     # 10K car, NYC
-python scripts/03_medium_multimodal.py # 50K car+transit+bike, LA
-python scripts/04_large_full_day.py    # 200K car+transit, Chicago
-python scripts/05_stress_test.py       # 500K car, NYC
+The two columns of the table above (`Preset` and `Helper script`) are equivalent surfaces — `scripts/0X_*.py` is a thin wrapper that imports `generate_scenario()` and calls it with the same hardcoded kwargs the preset already encodes. The `generate.py --preset <name>` form remains preferred when you need overrides (`--output`, `--seed`, `--city`, `--modes`, `--synthetic`, OSM source mode); the scripts accept `--verbose` / `-v` only.
 
-# Or generate.py directly
+```bash
+# Preset form (preferred — accepts the full override set)
 python generate.py --preset quick_test
+python generate.py --preset small_commute
+python generate.py --preset medium_multimodal
+python generate.py --preset large_full_day
+python generate.py --preset stress_test
+
+# Custom (override any preset field)
 python generate.py --city chicago --trips 5000 --modes car
 python generate.py --city nyc --trips 10000 --synthetic
+python generate.py --preset small_commute --city la --verbose
 python generate.py --list              # Show cities, presets, modes
+
+# Equivalent legacy script form (--verbose / -v only; same generated bundle)
+python scripts/01_quick_test.py [--verbose]
+python scripts/02_small_commute.py [--verbose]
+python scripts/03_medium_multimodal.py [--verbose]
+python scripts/04_large_full_day.py [--verbose]
+python scripts/05_stress_test.py [--verbose]
 ```
 
 See [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) for what each tier produces and how realism is measured.

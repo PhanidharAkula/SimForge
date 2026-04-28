@@ -109,12 +109,14 @@ canonical interpretation of audit output.
 ### Generate New Scenarios
 
 ```bash
-python scripts/01_quick_test.py        # 1K car, Chicago, 7–8 AM
-python scripts/02_small_commute.py     # 10K car, NYC, 7–9 AM
-python scripts/03_medium_multimodal.py # 50K car+transit+bike, LA, 6–10 AM
-python scripts/04_large_full_day.py    # 200K car+transit, Chicago, 24h
-python scripts/05_stress_test.py       # 500K car, NYC, 6–10 AM
+python generate.py --preset quick_test         # 1K car, Chicago, 7–8 AM
+python generate.py --preset small_commute      # 10K car, NYC, 7–9 AM
+python generate.py --preset medium_multimodal  # 50K car+transit+bike, LA, 6–10 AM
+python generate.py --preset large_full_day     # 200K car+transit, Chicago, 24h
+python generate.py --preset stress_test        # 500K car, NYC, 6–10 AM
 ```
+
+The numbered files in `scripts/` (`01_quick_test.py` … `05_stress_test.py`) are thin wrappers that call the **same** `generate_scenario()` with the same hardcoded kwargs as the preset above. They accept `--verbose` / `-v` only; the `--preset` form remains preferred when you need other overrides (`--output`, `--seed`, `--city`, `--modes`, `--synthetic`, OSM source mode).
 
 See [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) for what each tier generates and how realism is calibrated.
 

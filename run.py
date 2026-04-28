@@ -444,20 +444,19 @@ Examples:
     else:
         modes = ALL_MODES
     
-    # Handle validation-only
+    # Handle validation-only. validate_bundle() prints its own ✓ VALID /
+    # ✗ INVALID line per scenario, so we don't wrap it with redundant
+    # status prints.
     if args.validate_only:
         print("\n" + "=" * 60)
         print("  Validating Scenarios")
         print("=" * 60 + "\n")
-        
+        from pipeline.validation.validate_bundle import validate_bundle
         for scenario in scenarios:
-            print(f"  Validating {scenario}...", end=" ", flush=True)
             try:
-                from pipeline.validation.validate_bundle import validate_bundle
-                is_valid = validate_bundle(Path(scenarios_available[scenario]["path"]))
-                print("✓" if is_valid else "✗")
+                validate_bundle(Path(scenarios_available[scenario]["path"]))
             except (OSError, ValueError, KeyError) as e:
-                print(f"✗ ({e})")
+                print(f"  ✗ EXCEPTION  {scenario}: {e}")
         return 0
     
     # Validate repeats and timeout

@@ -176,9 +176,9 @@ unzip matsim-15.0-release.zip -d lib/
 rm matsim-15.0-release.zip
 ls lib/matsim-15.0/matsim-15.0.jar       # should exist
 
-# 4.7 — verify the env matches your dev machine + run the fast test suite
+# 4.7 — verify the env matches your dev machine + run the test suite
 python tools/env_report.py                # diff against your laptop's output
-python -m pytest tests/ -m "not slow" -q
+python -m pytest
 ```
 
 ### Module cheatsheet

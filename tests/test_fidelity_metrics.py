@@ -6,7 +6,6 @@ Tests the RMSE, GEH, and KS statistic implementations.
 
 from __future__ import annotations
 
-import math
 import pytest
 
 from evaluation.metrics.fidelity import (

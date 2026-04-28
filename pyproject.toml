@@ -2,17 +2,18 @@
 minversion = "7.0"
 testpaths = ["tests"]
 addopts = [
-    "-ra",
     "--strict-markers",
     "--strict-config",
     "--tb=short",
+    "--no-header",
+    "-q",
+    "-p", "tests._sticky_plugin",
 ]
 filterwarnings = [
     "error::pytest.PytestUnraisableExceptionWarning",
     "ignore::DeprecationWarning:lxml.*",
 ]
 markers = [
-    "slow: tests that take > 2 s or sweep every bundled scenario",
     "integration: tests that exercise multiple subsystems end-to-end",
     "requires_sumo: tests that require the SUMO `netconvert` / `sumo` binaries",
     "requires_java: tests that require Java + the MATSim JAR",
@@ -39,6 +40,7 @@ omit = [
     "pipeline/demand/generate_census_demand.py",   # requires PUMS model files (external data)
     "pipeline/demand/parse_model_file.py",         # requires PUMS model files
     "pipeline/modelgen_scanner.py",                # requires modelgen binary + real data
+    "pipeline/network/load_network_from_pbf.py",   # requires hash-pinned PBF in osm_data/
     "pipeline/signals/build_signals_default.py",   # signal inference exercised via full-bundle tests
 ]
 

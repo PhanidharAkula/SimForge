@@ -25,7 +25,6 @@ from adapters.matsim.matsim_adapter import (
     seconds_to_time_string,
 )
 
-from .conftest import is_large_scenario, warn_skipped
 
 
 # ---------------------------------------------------------------------------
@@ -186,24 +185,14 @@ class TestPrepareMATSimInputs:
         root = ET.parse(out / "plans.xml").getroot()
         assert root.findall("person")
 
-    @pytest.mark.slow
     def test_all_scenarios(self, small_bundled_scenarios, tmp_path):
         """Run the MATSim adapter on every small bundled scenario."""
         if not small_bundled_scenarios:
             pytest.skip("No bundled scenarios to sweep")
 
-        tested = 0
-        skipped: list[str] = []
         for scenario_path in small_bundled_scenarios:
-            if is_large_scenario(scenario_path.name):
-                skipped.append(scenario_path.name)
-                continue
             out = tmp_path / scenario_path.name
             config_path = prepare_matsim_inputs(scenario_path, out)
             assert config_path.is_file(), f"{scenario_path.name}: no config"
             assert (out / "network.xml").is_file()
             assert (out / "plans.xml").is_file()
-            tested += 1
-
-        warn_skipped("MATSim sweep", skipped)
-        assert tested > 0

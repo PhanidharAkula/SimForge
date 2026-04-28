@@ -10,7 +10,6 @@ answers as well as against the bundled real network.
 from __future__ import annotations
 
 from pathlib import Path
-from xml.etree import ElementTree as ET
 
 import pytest
 
