@@ -423,7 +423,14 @@ class StickyProgress:
         bar = (_BAR_FILL + ("█" * filled) + _RESET
                + _BAR_EMPTY + ("░" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
-        if 0 < progress < self.total:
+        # Need at least 3 completed units for a sensible average. With
+        # 1-2 samples the first cold-start unit (e.g. pytest's first
+        # test paying for all the imports) dominates and ETA blows up
+        # to absurd values like "10 h" before settling. Suppress until
+        # we have enough data to amortise.
+        if 0 < progress < 3:
+            eta_s = "--"
+        elif 0 < progress < self.total:
             eta = (elapsed / progress) * (self.total - progress)
             eta_s = _fmt_dur(eta)
         elif progress >= self.total:
