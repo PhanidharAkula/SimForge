@@ -125,9 +125,9 @@ _SPINNER_FRAMES = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
 # bold subtly thickens characters in most terminal fonts which made the
 # cyan cells appear "taller" than the dim ones, and the bold/dim
 # transition at the boundary rendered the last cyan cell as half-filled.
-_BAR_FILL = "\033[35m"        # plain magenta (active / in-progress)
+_BAR_FILL = "\033[97m"         # bright white (active / in-progress)
 _BAR_EMPTY = "\033[90m"        # bright black / gray (no dim attribute)
-_SPINNER_COLOR = "\033[1;35m"  # bold magenta for the spinner
+_SPINNER_COLOR = "\033[1;97m"  # bold bright white for the spinner
 _RESET = "\033[0m"
 
 
@@ -150,7 +150,14 @@ class StickyProgress:
     BAR_WIDTH = 32
 
     def __init__(self, total: int, *, unit: str = "step",
-                 ok_count: int = 0, fail_count: int = 0):
+                 ok_count: int = 0, fail_count: int = 0,
+                 enabled: bool = True):
+        """Initialise the bar. Pass ``enabled=False`` to suppress all
+        rendering (useful when the caller is in --verbose mode and the
+        sticky bar would collide with interleaved log lines on the same
+        stdout). When disabled, every method is a silent no-op except
+        ``print_above`` which still emits the line so per-step ✓ rows
+        appear in the output."""
         self.total = max(total, 1)
         self.completed = 0
         self.current_label = ""
@@ -158,7 +165,7 @@ class StickyProgress:
         self.ok = ok_count
         self.fail = fail_count
         self.t0 = time.time()
-        self.is_tty = sys.stdout.isatty()
+        self.is_tty = sys.stdout.isatty() and enabled
         self._drawn = False
         self._stop = threading.Event()
         self._thread = None

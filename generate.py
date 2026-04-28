@@ -379,6 +379,7 @@ def generate_scenario(
     allow_oversample: bool = False,
     allow_overpass: bool = False,
     force_overpass: bool = False,
+    verbose: bool = False,
 ) -> dict:
     """
     Generate a complete canonical scenario bundle.
@@ -455,7 +456,12 @@ def generate_scenario(
 
     t0 = time.time()
     step_times: dict[str, float] = {}
-    progress = StickyProgress(_TOTAL_STEPS, unit="step")
+    # Disable the sticky bar when verbose is on -- the bar's no-newline
+    # writes collide with the interleaved INFO log lines on the same
+    # stdout and produce visual mush. With --verbose the operator wants
+    # the raw log firehose, not a competing progress visualisation.
+    progress = StickyProgress(_TOTAL_STEPS, unit="step",
+                              enabled=not verbose)
     progress.start()
 
     # ---- 1. Network from OSM ----
@@ -862,6 +868,7 @@ def main() -> None:
         allow_oversample=args.allow_oversample,
         allow_overpass=allow_overpass,
         force_overpass=force_overpass,
+        verbose=args.verbose,
     )
 
 
