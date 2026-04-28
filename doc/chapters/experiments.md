@@ -269,6 +269,32 @@ Fidelity ▲
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown
 ```
 
+### 4.5.4 Cross-engine fairness audit
+
+`evaluation/audit_fairness.py` is the methodology check that verifies
+the cross-engine comparison was actually fair before any of its results
+are reported. For each scenario, it compares the inputs each engine
+consumed and the outputs each engine produced, organised as four
+checks:
+
+| Check | What it verifies | Pass condition |
+|---|---|---|
+| **Q1** | Cross-engine feasibility verdict | All engines' `feasibility_report.json` byte-identical (same `feasible_trips`, `total_trips`, `scc_nodes`, `scc_links`, skip counts) |
+| **Q2** | Engine input network | All engines emit identical SCC-filtered node + link counts (modulo documented OSM-noise drops) |
+| **Q3** | Trips actually simulated | Each engine simulates exactly the cross-engine `feasible_trips` count (MATSim plans, DTALite demand-volume sum, SUMO routes) |
+| **Q4** | Cross-engine travel-time spread | Per-engine mean / P95 / completion + pairwise mean-TT ratios — this is the paradigm-spread signal |
+
+```bash
+python -m evaluation.audit_fairness runs/stress_test
+```
+
+The audit is read-only and emits a defender-friendly report. PASS/WARN/FAIL
+verdicts on Q1–Q3 are the methodology-section evidence that "the engines
+were given the same problem"; the Q4 ratios are the paradigm-spread
+signal at the heart of the cross-engine comparison. Sample audit output
+on the bundled chicago_1k_car (Pitzer, all three engines) is recorded in
+`doc/EXPERIMENT_LOG.md` §3.
+
 ---
 
 ## 4.6 Threats to Validity
@@ -316,5 +342,6 @@ For any researcher to reproduce these experiments:
 - [ ] Validate the bundled scenarios: `python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car`.
 - [ ] Run the canonical benchmark: `python -m execution.run_benchmark runspecs/stress_test.yaml`.
 - [ ] Analyse: `python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown`.
+- [ ] Audit fairness: `python -m evaluation.audit_fairness runs/stress_test`.
 - [ ] Render figures: `python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json`.
 - [ ] Verify: all 406 tests pass (`python -m pytest tests/ -q`).

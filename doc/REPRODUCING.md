@@ -171,7 +171,11 @@ python -m execution.run_benchmark runspecs/stress_test.yaml
 # 3. Generate analysis tables
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
 
-# 4. Render the 9 thesis figures
+# 4. Audit cross-engine fairness (Q1: same trip set, Q2: same network,
+#    Q3: same trip count, Q4: paradigm-spread travel-time ratios)
+python -m evaluation.audit_fairness runs/stress_test
+
+# 5. Render the 9 thesis figures
 python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
 ```
 
@@ -310,6 +314,7 @@ runs/stress_test/
 
 ```bash
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --markdown --latex
+python -m evaluation.audit_fairness    runs/stress_test
 ```
 
 Produces:

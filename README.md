@@ -96,8 +96,15 @@ python -m execution.run_benchmark runspecs/stress_test.yaml
 
 ```bash
 python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.audit_fairness    runs/stress_test
 python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
 ```
+
+The middle step (`audit_fairness`) is the cross-engine fairness check —
+verifies that all engines saw the same trip set, the same SCC-filtered
+network, and the same trip count, and reports per-engine travel-time
+ratios. See [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md) for the
+canonical interpretation of audit output.
 
 ### Generate New Scenarios
 

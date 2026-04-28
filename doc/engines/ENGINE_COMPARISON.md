@@ -150,9 +150,11 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ## 9. Cross-references to supporting material
 
-- **Methodology chapter:** `doc/chapters/methods.md` §3.4 (per-engine adapter descriptions). Update §3.4.4 (LPSim) to reference `LPSIM_RETROSPECTIVE.md` when LPSim is moved out of "primary" status. Add §3.4.X for DTALite when the spike passes.
-- **Results chapter:** `doc/chapters/results.md` — replace LPSim columns with DTALite columns once the integration completes.
-- **CHANGELOG:** Add a `[Version_4]` Phase C entry for the LPSim abandonment + DTALite addition.
-- **Glossary:** `doc/GLOSSARY.md` — keep LPSim and QarSUMO entries with their existing "superseded" language; add a DTALite entry once integrated.
+- **Methodology chapter:** `doc/chapters/methods.md` §3.4 (per-engine adapter descriptions, all three primary engines updated for Version_5).
+- **Results chapter:** `doc/chapters/results.md` — DTALite columns replace LPSim columns; §5.4 GPU-speedup limitation rewritten as the paradigm-spread claim with retrospective links.
+- **CHANGELOG:** Version_5 unreleased section enumerates the LPSim removal and DTALite addition; SCC-fairness fixes and audit_fairness landings tracked separately under Phase 4.
+- **Glossary:** `doc/GLOSSARY.md` — DTALite entry added under §D; LPSim entry rewritten as "abandoned" with retrospective pointer.
 - **Stress-test audit:** `doc/STRESS_TEST_AUDIT.md` — historical Version_3 snapshot, no updates needed; the existing "Superseded by Version_4" header is correct.
-- **Todo:** `todo.md` — update the gap-audit table to reflect LPSim abandonment and DTALite as the new third engine slot.
+- **Todo:** `todo.md` — Version_5 Phase B' (DTALite landing) replaces Phase B (LPSim landing); engine matrix marks LPSim/POLARIS/CityFlow as evaluated-and-rejected with retrospective links.
+- **Experiment log:** `doc/EXPERIMENT_LOG.md` — chronological journal of every commit, job ID, and measured number; the source for any specific Q1–Q4 fairness audit result you want to cite.
+- **Fairness audit script:** `evaluation/audit_fairness.py` — invoke as `python -m evaluation.audit_fairness <run_dir>` to verify any benchmark run was actually fair across engines (Q1–Q4 PASS/WARN/FAIL report).

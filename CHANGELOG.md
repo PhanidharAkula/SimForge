@@ -8,6 +8,78 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 4: cross-engine fairness audit + paradigm-spread validation
+
+After Phase 3 landed the engine swap end-to-end, Phase 4 added the fairness
+audit infrastructure and used it to verify (and fix) the cross-engine
+input contract on Pitzer. The narrative log of every commit, job ID, and
+measured number lives in [`doc/EXPERIMENT_LOG.md`](doc/EXPERIMENT_LOG.md);
+Phase 4-relevant headlines:
+
+- **`evaluation/audit_fairness.py`** — read-only cross-engine fairness
+  audit (commits `d42a7f8`, `7c576f6`, `542bd4a`, `59fc7cc`, `4a8eded`,
+  `ff33f06`). Four checks per scenario: Q1 same trip set, Q2 same network,
+  Q3 same trip count simulated, Q4 cross-engine travel-time spread. Auto-
+  detects four output layouts (`run.py` flat, `execution.run_benchmark`
+  nested, parallel-by-scenario sbatch nested, and per-scenario worker
+  dir). Counts SUMO nodes from `.nod.xml` / `.edg.xml` rather than the
+  compiled `.net.xml` (which inflates with internal lane junctions).
+  Invocation: `python -m evaluation.audit_fairness <run_dir>`.
+- **DTALite SCC-fairness fix** (commit `861c971`) — `prepare_dtalite_inputs`
+  now prunes the canonical graph to the largest SCC before emitting
+  `node.csv` / `link.csv`, matching MATSim's `clean_network` and (after
+  `df5fe4e`) SUMO's prepare path. Verified on chicago_1k_car: DTALite
+  emits 19,744 nodes (== MATSim) / 1,184 zones / 58,162 links. The 270-link
+  gap from MATSim's 58,432 is the documented self-loop + sub-meter OSM-
+  noise filter (BPR cost would divide by zero on those edges).
+- **SUMO SCC-fairness fix** (commit `df5fe4e`) — `prepare_sumo_inputs`
+  now applies the same `compute_largest_scc` filter the other adapters
+  use. Closed the last fairness gap: previously SUMO emitted the full
+  canonical network (314 non-SCC dead-end nodes more than MATSim/DTALite
+  on chicago_1k_car) because SUMO tolerates dangling links and the prune
+  was historically skipped. Trips themselves were already SCC-feasibility-
+  filtered, so the dropped nodes were unused; the fix is for cross-engine
+  fairness audit defensibility, not for changing simulation results.
+- **Engine/mode skip** (commit `c31e087`) — `run.py` now skips
+  (engine, mode) cells the engine doesn't support, instead of silently
+  re-running mesoscopic-only engines as `mode=micro`. New
+  `ENGINE_SUPPORTED_MODES` constant: SUMO supports both, MATSim and
+  DTALite support meso only. `--engine sumo,matsim,dtalite --mode meso,micro`
+  with N=3 reps × 2 scenarios is now 24 runs (8 valid cells × 3 reps),
+  down from 36 in the naive Cartesian product. Banner prints the
+  skipped pairs so the operator can audit.
+- **`doc/EXPERIMENT_LOG.md`** — chronological journal of every commit,
+  SLURM job ID, and measured number on the Version_5 branch. Format
+  spec at the top of the file; new entries land at the top of §3.
+  Source-of-truth for the thesis writeup: every results-chapter claim
+  should cite back to a specific dated entry here.
+
+### Pitzer benchmark_small chicago_1k_car (job 47116156, 2026-04-27)
+
+First three-engine fairness data (Mac couldn't run SUMO due to arm64
+`netconvert`). chicago_1k_car worker finished in 8.6 min with 20/20
+successful runs:
+
+| Engine | Mean TT | P95 | R-score | Completed |
+|---|---|---|---|---|
+| SUMO meso | 372.4 s | 689.0 s | 0.9963 | 932/1000 |
+| SUMO micro | — | — | 0.9966 | 1000/1000 |
+| MATSim meso | 244.5 s | 423.0 s | 1.0000 | 1000/1000 |
+| DTALite meso | 174.1 s | 291.4 s | 1.0000 | 997/1000 |
+
+Cross-engine TT ratios (paradigm-spread signal):
+
+- DTALite/MATSim mean-TT: 0.712 (-28.8%) — DTA equilibrium finds optimal
+  routes, undercuts queue-mobsim by ~29%
+- SUMO/MATSim mean-TT: 1.523 (+52.3%) — SUMO meso adds intersection
+  delays, ~52% above MATSim
+- SUMO/DTALite mean-TT: 2.139 (+113.9%) — full paradigm spread is 2.1×
+
+This is the headline thesis result the cross-engine framework was built
+to produce.
+
+---
+
 ### Engine swap: LPSim removed, DTALite added
 
 After exhaustive Pitzer debugging (~12 commits across two debugging sessions in

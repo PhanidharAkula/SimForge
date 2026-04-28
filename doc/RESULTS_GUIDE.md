@@ -9,18 +9,29 @@ This document explains the complete results workflow: what happens after running
 ```
 RunSpec ──► run_benchmark ──► runs/<name>/benchmark_results_<name>.json
                                       │
-            ┌─────────────────────────┤
-            ▼                         ▼
-  analyze_benchmark.py        generate_plots.py
-            │                         │
-            ▼                         ▼
-   Tables 5.1, 5.2 + Coverage     Figures 5.1 – 5.9
-   (LaTeX + Markdown)             (PNG + PDF in plots/)
-            │                         │
-            └─────────┬───────────────┘
-                      ▼
-              Thesis Chapter 5
+            ┌─────────────────────────┼─────────────────────────┐
+            ▼                         ▼                         ▼
+  analyze_benchmark.py        audit_fairness.py        generate_plots.py
+            │                         │                         │
+            ▼                         ▼                         ▼
+   Tables 5.1, 5.2 + Coverage     Q1–Q4 PASS/WARN/FAIL    Figures 5.1 – 5.9
+   (LaTeX + Markdown)             across all engines       (PNG + PDF in plots/)
+            │                         │                         │
+            └─────────────────────────┼─────────────────────────┘
+                                      ▼
+                              Thesis Chapter 5
 ```
+
+The middle step — `audit_fairness` — is the methodology check the
+thesis defense relies on. It verifies four things across all three
+engines on each scenario:
+
+  - **Q1: same trip set** (cross-engine feasibility verdict byte-identical)
+  - **Q2: same network** (SCC-filtered nodes/links match across adapters)
+  - **Q3: same trip count simulated** (per-engine simulated count = feasibility target)
+  - **Q4: cross-engine travel-time spread** (mean / P95 + pairwise ratios — this is the paradigm-spread signal)
+
+See `evaluation/audit_fairness.py` docstring for invocation and `doc/EXPERIMENT_LOG.md` §3 for measured Q1–Q4 results from the canonical Pitzer runs.
 
 ### Mode comparison (separate path)
 
