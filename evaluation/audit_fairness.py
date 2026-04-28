@@ -117,8 +117,8 @@ def _sumo_travel_times(tripinfo_xml: Path) -> list[float]:
 def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int) -> Path | None:
     """Locate the engine-cell directory for a given (scenario, engine, seed).
 
-    SimForge writes benchmark results under two layouts depending on the
-    entry point:
+    SimForge writes benchmark results under several layouts depending on
+    the entry point and any sbatch wrapping:
 
       A. ``python run.py``           — flat layout
          ``<base>/<scenario>_<engine>_<mode>_seed<N>/native_files/``
@@ -129,17 +129,22 @@ def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int) -> Path | 
       C. Layout B inside a parallel-by-scenario sbatch wrapper
          ``<base>/<scenario>/<scenario>/<engine>/seed_<N>/`` (double-nested)
 
+      D. Pointed at the per-scenario subdir of a parallel-by-scenario run
+         ``<base>/<engine>/seed_<N>/`` — scenario name is implicit
+         (= ``base.name``)
+
     Returns the path containing the per-cell prepared inputs and outputs,
-    or None if no matching directory exists. Tries the layouts in order
-    A → B → C and returns the first hit.
+    or None if no matching directory exists.
     """
     candidates = [
-        # Layout A: flat run.py output, native_files subdir
+        # A: flat run.py output, native_files subdir
         base / f"{scenario}_{engine}_meso_seed{seed}" / "native_files",
-        # Layout B: nested execution.run_benchmark output
+        # B: nested execution.run_benchmark output
         base / scenario / engine / f"seed_{seed}",
-        # Layout C: doubly-nested when sbatch wraps run_benchmark per scenario
+        # C: doubly-nested when sbatch wraps run_benchmark per scenario
         base / scenario / scenario / engine / f"seed_{seed}",
+        # D: pointed at <runs>/<scenario>/ (per-worker output of parallel sbatch)
+        base / engine / f"seed_{seed}",
     ]
     for c in candidates:
         if c.is_dir():
@@ -304,7 +309,8 @@ def main() -> int:
               f"  Looked for layouts:\n"
               f"    A. <base>/<scenario>_<engine>_<mode>_seed<N>/native_files/\n"
               f"    B. <base>/<scenario>/<engine>/seed_<N>/\n"
-              f"    C. <base>/<scenario>/<scenario>/<engine>/seed_<N>/",
+              f"    C. <base>/<scenario>/<scenario>/<engine>/seed_<N>/\n"
+              f"    D. <base>/<engine>/seed_<N>/  (base = the scenario dir itself)",
               file=sys.stderr)
         return 1
 
@@ -315,9 +321,16 @@ def main() -> int:
 
 
 def _discover_scenarios(base: Path) -> list[str]:
-    """Find scenario IDs under any of the three supported layouts."""
+    """Find scenario IDs under any of the four supported layouts."""
     engines = ("sumo", "matsim", "dtalite")
     found: set[str] = set()
+
+    # Layout D first: <base>/<engine>/seed_<N> — base IS the scenario
+    # (parallel-by-scenario sbatch worker output dir).
+    for eng in engines:
+        if (base / eng).is_dir() and any((base / eng).glob("seed_*")):
+            found.add(base.name)
+            break
 
     # Layout A: flat run.py output — <scenario>_<engine>_<mode>_seed<N>
     for p in base.iterdir():
@@ -331,8 +344,6 @@ def _discover_scenarios(base: Path) -> list[str]:
                 break
 
     # Layouts B and C: <base>/<scenario>/.../<engine>/seed_<N>
-    # Walk one level down: any subdir that contains <engine>/seed_* OR
-    # <scenario>/<engine>/seed_* qualifies.
     for sc_dir in base.iterdir():
         if not sc_dir.is_dir():
             continue
