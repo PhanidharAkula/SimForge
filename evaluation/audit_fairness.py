@@ -8,10 +8,18 @@ count) so a defender can verify that "the engines were given the same
 problem and we measured each one fairly."
 
 Usage:
-    python tools/audit_fairness.py runs/pitzer_smoke/
+    python -m evaluation.audit_fairness runs/pitzer_smoke/
 
 Optional second arg picks a single seed (default: 42):
-    python tools/audit_fairness.py runs/pitzer_smoke/ 43
+    python -m evaluation.audit_fairness runs/pitzer_smoke/ 43
+
+Sits alongside ``analyze_benchmark.py`` (headline tables) and
+``generate_plots.py`` (figures) as the third post-benchmark step. The
+canonical post-benchmark pipeline is::
+
+    python -m evaluation.analyze_benchmark   <results.json> --markdown
+    python -m evaluation.audit_fairness      <run_dir>
+    python -m evaluation.generate_plots      <results.json>
 
 The script makes no edits and emits no files — pure read-only audit
 suitable for committing to thesis appendix or pasting into a defense
