@@ -67,6 +67,26 @@ from adapters.sumo.sumo_adapter import (
 from pipeline.network.scc import compute_largest_scc
 
 
+def _import_path4gmns():
+    """Import path4gmns without its noisy `path4gmns, version 0.10.0`
+    print on stdout. The package's __init__.py unconditionally calls
+    `print(f'path4gmns, version {__version__}')` at module-load time;
+    we suppress that single line by redirecting stdout for the duration
+    of the import. Subsequent imports are no-ops (module is cached) so
+    the suppression is paid exactly once per Python process.
+
+    Returns the path4gmns module, or raises ImportError if missing.
+    """
+    import io
+    saved = sys.stdout
+    sys.stdout = io.StringIO()
+    try:
+        import path4gmns as pg
+        return pg
+    finally:
+        sys.stdout = saved
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -149,7 +169,7 @@ def is_dtalite_available() -> bool:
     layout.
     """
     try:
-        import path4gmns as pg  # noqa: F401
+        _import_path4gmns()
     except ImportError:
         return False
     return find_dtalite_binary() is not None
@@ -167,7 +187,7 @@ def find_dtalite_binary() -> Optional[Path]:
     binary is missing from the package.
     """
     try:
-        import path4gmns as pg
+        pg = _import_path4gmns()
     except ImportError:
         return None
     bin_dir = Path(pg.__file__).parent / "bin"
@@ -651,10 +671,15 @@ def run_dtalite(
             "On Mac, the bundled binary also needs OpenMP: brew install libomp"
         )
 
+    # The subprocess prints path4gmns's noisy "version 0.10.0" banner on
+    # import; route it to /dev/null via a brief stdout redirect inside
+    # the same -c snippet so the harness's per-cell row stays clean.
     cmd = [
         sys.executable, "-c",
-        f"import path4gmns as pg; pg.DTALiteClassic(1, "
-        f"{int(iterations)}, {int(column_updating_iterations)})",
+        "import sys, io; _saved = sys.stdout; sys.stdout = io.StringIO();"
+        " import path4gmns as pg; sys.stdout = _saved;"
+        f" pg.DTALiteClassic(1, {int(iterations)}, "
+        f"{int(column_updating_iterations)})",
     ]
     logger.info("Running DTALite: %s  (cwd=%s)", " ".join(cmd), output_dir)
     start = time.time()
