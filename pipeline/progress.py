@@ -353,16 +353,17 @@ class StickyProgress:
     # ---- rendering ---------------------------------------------------
 
     def _heartbeat(self) -> None:
-        # 10 ticks/sec — guarantees the spinner advances at least once
-        # every 100 ms even when no advance() / print_above() fires
-        # (e.g. during a long-running single test). The spinner frame
-        # itself is wall-clock-driven, so each redraw — heartbeat or
-        # work-triggered — picks the correct frame for that moment.
+        # 20 ticks/sec — fast enough that the wall-clock-driven spinner
+        # frame visibly advances even under heavy event bursts (pytest
+        # plowing through 500+ tests). The frame itself rotates at 20 fps
+        # below; heartbeat at 50 ms guarantees a forced redraw whenever
+        # advance() / print_above() haven't fired in a while (e.g. during
+        # a single slow test).
         while not self._stop.is_set():
             with self._lock:
                 if self._drawn:
                     self._render_locked(_in_place=True)
-            self._stop.wait(0.1)
+            self._stop.wait(0.05)
 
     def _render_locked(self, *, _in_place: bool = False) -> None:
         """Redraw the bar.
@@ -416,8 +417,9 @@ class StickyProgress:
             # in seconds), and a counter-driven frame would freeze on
             # the same glyph between heartbeat ticks. Time-driven means
             # every render — whoever triggers it — picks the frame for
-            # the current 100 ms window.
-            frame_idx = int(elapsed * 10) % len(_SPINNER_FRAMES)
+            # the current 50 ms window: 20 fps frame change, 0.5 s per
+            # full Braille cycle.
+            frame_idx = int(time.monotonic() * 20) % len(_SPINNER_FRAMES)
             spinner = (_SPINNER_COLOR
                        + _SPINNER_FRAMES[frame_idx]
                        + _RESET)
