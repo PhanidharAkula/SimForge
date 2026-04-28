@@ -419,7 +419,7 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
                     ▼
 ┌─────────────────────────────────────────────────┐
 │  GitHub                                           │
-│  Branch: Version_5_dtalite (active), main         │
+│  Branch: Version_5 (active), main                 │
 └───────────────────┬──────────────────────────────┘
                     │ git clone
                     ▼
