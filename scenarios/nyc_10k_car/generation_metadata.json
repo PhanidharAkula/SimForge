@@ -13,16 +13,16 @@
   "seed": 42,
   "demand_strategy": "census_schedule_first",
   "node_count": 34121,
-  "link_count": 105302,
-  "signal_count": 30647,
-  "generation_time_s": 141.3,
+  "link_count": 105171,
+  "signal_count": 1637,
+  "generation_time_s": 165.0,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/new-york-2026-04-22.osm.pbf",
     "name": "new-york-2026-04-22.osm.pbf"
   },
   "toolchain": {
-    "python": "3.13.2",
+    "python": "3.13.13",
     "platform": "Darwin arm64",
     "osmnx": "2.0.7",
     "numpy": "2.3.5",
@@ -34,13 +34,14 @@
     "pandas": "2.3.3"
   },
   "demand_provenance": {
-    "schedule_driven_count": 801,
-    "gravity_fallback_count": 9199,
-    "schedule_driven_pct": 8.01,
-    "scheduled_pool_size": 801,
+    "schedule_driven_count": 1284,
+    "gravity_fallback_count": 8716,
+    "schedule_driven_pct": 12.84,
+    "scheduled_pool_size": 1284,
     "fallback_reasons": {
-      "schedule_dest_orphan_or_outside_bbox": 28234,
-      "home_outside_scc": 45
+      "schedule_dest_orphan_or_outside_bbox": 27055,
+      "home_outside_scc": 32,
+      "schedule_dest_outside_scc": 10
     }
   }
 }

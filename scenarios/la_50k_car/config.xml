@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<config>
+  <metadata scenario_id="la_50k_car" created_by="simforge_generator">
+    <description>Los Angeles, CA — 50,000 car trips, 06:00–10:00, r=10.0km</description>
+  </metadata>
+  <time start_time_s="21600" end_time_s="36000" time_step_s="1"/>
+  <random seed="42" engine_seed_mode="fixed"/>
+  <units length="meters" speed="m/s" time="seconds"/>
+  <simulation warmup_time_s="0" aggregation_interval_s="300"/>
+</config>

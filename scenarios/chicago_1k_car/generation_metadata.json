@@ -14,8 +14,8 @@
   "demand_strategy": "census_schedule_first",
   "node_count": 20058,
   "link_count": 58778,
-  "signal_count": 16959,
-  "generation_time_s": 90.0,
+  "signal_count": 560,
+  "generation_time_s": 111.6,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/illinois-2026-04-22.osm.pbf",
@@ -34,13 +34,13 @@
     "pandas": "2.3.3"
   },
   "demand_provenance": {
-    "schedule_driven_count": 200,
-    "gravity_fallback_count": 800,
-    "schedule_driven_pct": 20.0,
+    "schedule_driven_count": 208,
+    "gravity_fallback_count": 792,
+    "schedule_driven_pct": 20.8,
     "scheduled_pool_size": 200,
     "fallback_reasons": {
-      "schedule_dest_orphan_or_outside_bbox": 13095,
-      "home_outside_scc": 397,
+      "schedule_dest_orphan_or_outside_bbox": 12652,
+      "home_outside_scc": 328,
       "schedule_dest_outside_scc": 2
     }
   }

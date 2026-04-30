@@ -1,0 +1,48 @@
+{
+  "scenario_id": "la_50k_car",
+  "city": "la",
+  "city_name": "Los Angeles, CA",
+  "trips_requested": 50000,
+  "trips_generated": 50000,
+  "modes": [
+    "car"
+  ],
+  "start_time_s": 21600,
+  "end_time_s": 36000,
+  "radius_km": 10.0,
+  "seed": 42,
+  "demand_strategy": "census_schedule_first",
+  "node_count": 159042,
+  "link_count": 466938,
+  "signal_count": 2153,
+  "generation_time_s": 420.5,
+  "osm_source": {
+    "type": "pbf",
+    "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/california-2026-04-22.osm.pbf",
+    "name": "california-2026-04-22.osm.pbf"
+  },
+  "toolchain": {
+    "python": "3.13.13",
+    "platform": "Darwin arm64",
+    "osmnx": "2.0.7",
+    "numpy": "2.3.5",
+    "networkx": "3.6.1",
+    "lxml": "6.0.2",
+    "shapely": "2.1.2",
+    "osmium": "4.3.1",
+    "geopandas": "1.1.2",
+    "pandas": "2.3.3"
+  },
+  "demand_provenance": {
+    "schedule_driven_count": 50000,
+    "gravity_fallback_count": 0,
+    "schedule_driven_pct": 100.0,
+    "scheduled_pool_size": 85469,
+    "fallback_reasons": {
+      "schedule_dest_orphan_or_outside_bbox": 257073,
+      "home_outside_scc": 97,
+      "schedule_dest_outside_scc": 642,
+      "schedule_dest_equals_home": 5
+    }
+  }
+}
