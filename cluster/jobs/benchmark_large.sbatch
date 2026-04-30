@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge benchmark — large tier (chicago_200k_car_transit + nyc_500k_car).
+# SimForge benchmark — large tier (chicago_200k_car + nyc_500k_car).
 #
 # ⚠️ THIS JOB CURRENTLY EXCEEDS WALL TIME on the unmodified codebase.
 #    The SUMO adapter pre-routes every trip via BFS on the canonical graph
@@ -56,7 +56,7 @@ echo
 #    rsync from your dev box first).
 # ---------------------------------------------------------------------------
 echo "=== Preflight: validating bundles ==="
-SCENARIOS=(chicago_200k_car_transit nyc_500k_car)
+SCENARIOS=(chicago_200k_car nyc_500k_car)
 for s in "${SCENARIOS[@]}"; do
     if [ ! -f "scenarios/$s/manifest.xml" ]; then
         echo "MISSING bundle: scenarios/$s/ — rsync from your dev box first."

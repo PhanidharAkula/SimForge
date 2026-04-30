@@ -95,7 +95,7 @@ Mean TT **203.6 s** matches thesis Table 5.1's **203.5 s** for SUMO-meso on chic
 - Default `--start-time`: 0 → **25200** (07:00 AM)
 - Default `--end-time`: 3600 → **28800** (08:00 AM)
 
-These defaults match the bundled `chicago_1k_car` scenario (which came from `scripts/01_quick_test.py` / the `quick_test` preset). At the time of the audit an `nyc_1k_car` bundle also shipped in the repo; it was later removed in favour of generating the NYC tiers on demand via `scripts/02_…05_`.
+These defaults match the bundled `chicago_1k_car` scenario (which came from `scripts/01_chicago_1k_car.py` / the `quick_test` preset). At the time of the audit an `nyc_1k_car` bundle also shipped in the repo; it was later removed in favour of generating the NYC tiers on demand via `scripts/02_…05_`.
 
 Byte-for-byte reproduction verified:
 ```

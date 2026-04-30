@@ -139,11 +139,11 @@ Larger scenarios are not committed — generate them locally with the helper scr
 
 | Preset             | Trips   | Horizon  | Helper script                       |
 | ------------------ | ------- | -------- | ----------------------------------- |
-| `quick_test`       | 1,000   | 7–8 AM   | `scripts/01_quick_test.py`          |
-| `small_commute`    | 10,000  | 7–9 AM   | `scripts/02_small_commute.py`       |
-| `medium_multimodal`| 50,000  | 6–10 AM  | `scripts/03_medium_multimodal.py`   |
-| `large_full_day`   | 200,000 | 24 h     | `scripts/04_large_full_day.py`      |
-| `stress_test`      | 500,000 | 6–10 AM  | `scripts/05_stress_test.py`         |
+| `quick_test`       | 1,000   | 7–8 AM   | `scripts/01_chicago_1k_car.py`          |
+| `small_commute`    | 10,000  | 7–9 AM   | `scripts/02_nyc_10k_car.py`       |
+| `medium_multimodal`| 50,000  | 6–10 AM  | `scripts/03_la_50k_car.py`   |
+| `large_full_day`   | 200,000 | 24 h     | `scripts/04_chicago_200k_car.py`      |
+| `stress_test`      | 500,000 | 6–10 AM  | `scripts/05_nyc_500k_car.py`         |
 
 ### Data Sources
 
@@ -165,24 +165,24 @@ The two columns of the table above (`Preset` and `Helper script`) are equivalent
 
 ```bash
 # Preset form (preferred — accepts the full override set)
-python generate.py --preset quick_test
-python generate.py --preset small_commute
-python generate.py --preset medium_multimodal
-python generate.py --preset large_full_day
-python generate.py --preset stress_test
+python generate.py --preset chicago_1k_car
+python generate.py --preset nyc_10k_car
+python generate.py --preset la_50k_car
+python generate.py --preset chicago_200k_car
+python generate.py --preset nyc_500k_car
 
 # Custom (override any preset field)
 python generate.py --city chicago --trips 5000 --modes car
 python generate.py --city nyc --trips 10000 --synthetic
-python generate.py --preset small_commute --city la --verbose
+python generate.py --preset nyc_10k_car --city la --verbose
 python generate.py --list              # Show cities, presets, modes
 
 # Equivalent legacy script form (--verbose / -v only; same generated bundle)
-python scripts/01_quick_test.py [--verbose]
-python scripts/02_small_commute.py [--verbose]
-python scripts/03_medium_multimodal.py [--verbose]
-python scripts/04_large_full_day.py [--verbose]
-python scripts/05_stress_test.py [--verbose]
+python scripts/01_chicago_1k_car.py [--verbose]
+python scripts/02_nyc_10k_car.py [--verbose]
+python scripts/03_la_50k_car.py [--verbose]
+python scripts/04_chicago_200k_car.py [--verbose]
+python scripts/05_nyc_500k_car.py [--verbose]
 ```
 
 See [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) for what each tier produces and how realism is measured.
@@ -218,20 +218,20 @@ python run.py                                 # All bundled scenarios × all ins
 
 ```bash
 # Canonical 4-cell stress test (matches the thesis figures)
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 # Dry run (validate without executing)
-python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
+python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
 
 # Filter to one scenario
-python -m execution.run_benchmark runspecs/stress_test.yaml --scenario chicago_1k_car
+python -m execution.run_benchmark runspecs/benchmark_small.yaml --scenario chicago_1k_car
 ```
 
 After the benchmark finishes:
 
 ```bash
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
-python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
+python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
 ### Run Individual Adapter CLI
@@ -350,7 +350,7 @@ uv pip install -r requirements.lock             # 42 packages including SUMO
 rsync -avh osm_data/ pitzer:SimForge/osm_data/
 rsync -avh modelgen/ pitzer:SimForge/modelgen/
 
-sbatch cluster/jobs/05_stress_test.sbatch       # or any of cluster/jobs/01..05
+sbatch cluster/jobs/05_nyc_500k_car.sbatch       # or any of cluster/jobs/01..05
 ```
 
 ---
@@ -396,7 +396,7 @@ SimForge/
 │   ├── demand/             #   Synthetic + census demand generation
 │   ├── signals/            #   Traffic signal inference
 │   └── validation/         #   Bundle validators
-├── scripts/                # Per-tier scenario generation (01_quick_test.py … 05_stress_test.py)
+├── scripts/                # Per-tier scenario generation (01_chicago_1k_car.py … 05_nyc_500k_car.py)
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark YAML configurations
 ├── scenarios/              # Bundled canonical scenarios

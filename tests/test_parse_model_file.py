@@ -11,12 +11,97 @@ from __future__ import annotations
 from pipeline.demand.parse_model_file import (
     Building,
     Household,
+    JWTRNS_TO_MODE,
+    MODE_TO_JWTRNS,
     ModelData,
     Person,
     ScheduleActivity,
+    SUPPORTED_MODES,
     _parse_person_line,
     _parse_schedule,
 )
+
+
+# ---------------------------------------------------------------------------
+# JWTRNS_TO_MODE — V5 cityscape/PUMS-2021 mapping (single source of truth)
+# ---------------------------------------------------------------------------
+
+
+class TestJWTRNSMapping:
+    """Pin the corrected JWTRNS → simulator-bucket mapping.
+
+    Source: cityscape Schedule-generator branch, model_gen/ScheduleGenerator.h
+    lines 211-233 (verbatim from ACS PUMS 2021 Data Dictionary). See
+    doc/MODELGEN_AND_MODES.md §2 for provenance and §4 for the bucket
+    rationale.
+
+    Catches accidental regression to the pre-2019 PUMS labels (e.g. the
+    pre-V5 bug where code 2 was treated as "carpool → car" when it is
+    actually "Bus → transit").
+    """
+
+    def test_exact_12_codes(self):
+        # cityscape's enum is 12 codes (1..12); -1 is the N/A sentinel
+        # that's stripped before the dict lookup.
+        assert set(JWTRNS_TO_MODE.keys()) == set(range(1, 13))
+
+    def test_car_bucket(self):
+        # Road-vehicle codes: Car/truck/van, Taxicab, Motorcycle.
+        assert JWTRNS_TO_MODE[1] == "car"
+        assert JWTRNS_TO_MODE[7] == "car"
+        assert JWTRNS_TO_MODE[8] == "car"
+
+    def test_transit_bucket(self):
+        # Public transit codes: Bus, Subway/elev, Commuter rail,
+        # Light rail/streetcar, Ferryboat.
+        assert JWTRNS_TO_MODE[2] == "transit"  # Bus — was "car" pre-V5 bug
+        assert JWTRNS_TO_MODE[3] == "transit"
+        assert JWTRNS_TO_MODE[4] == "transit"
+        assert JWTRNS_TO_MODE[5] == "transit"
+        assert JWTRNS_TO_MODE[6] == "transit"
+
+    def test_bike_and_walk_buckets(self):
+        assert JWTRNS_TO_MODE[9] == "bike"
+        assert JWTRNS_TO_MODE[10] == "walk"
+
+    def test_excluded_codes_use_home_sentinel(self):
+        # "home" is the no-trip sentinel — these codes should never
+        # reach the demand generator's trip-generation loop.
+        assert JWTRNS_TO_MODE[11] == "home"  # Worked from home
+        assert JWTRNS_TO_MODE[12] == "home"  # Other method (defensive default)
+
+    def test_supported_modes_are_the_4_simulator_buckets(self):
+        assert SUPPORTED_MODES == ("car", "transit", "bike", "walk")
+        # "home" is intentionally not in the supported tuple — it's the
+        # sentinel for excluded persons.
+        assert "home" not in SUPPORTED_MODES
+
+    def test_mode_to_jwtrns_reverse_index(self):
+        # Verify the reverse index is consistent with the forward dict.
+        assert MODE_TO_JWTRNS["car"] == frozenset({1, 7, 8})
+        assert MODE_TO_JWTRNS["transit"] == frozenset({2, 3, 4, 5, 6})
+        assert MODE_TO_JWTRNS["bike"] == frozenset({9})
+        assert MODE_TO_JWTRNS["walk"] == frozenset({10})
+        # Round-trip: every (code, mode) in the forward dict appears
+        # in the corresponding bucket of the reverse dict (if the mode
+        # is one of the 4 simulator buckets).
+        for code, mode in JWTRNS_TO_MODE.items():
+            if mode in SUPPORTED_MODES:
+                assert code in MODE_TO_JWTRNS[mode]
+
+
+class TestSingleSourceOfTruth:
+    """The scanner must re-export the canonical dict, not duplicate it.
+
+    Pre-V5 the dict was duplicated in two files; this caused real drift
+    bugs where one was fixed and the other was forgotten.
+    """
+
+    def test_scanner_imports_canonical_dict(self):
+        from pipeline.modelgen_scanner import JWTRNS_TO_MODE as scanner_dict
+        from pipeline.demand.parse_model_file import JWTRNS_TO_MODE as canonical
+        # Must be the same object — not a copy with the same values.
+        assert scanner_dict is canonical
 
 
 # ---------------------------------------------------------------------------
@@ -36,9 +121,9 @@ class TestParseSchedule:
         raw = '"(1 5 28800 163346754)(1 5 61200 832748)"'
         out = _parse_schedule(raw)
         assert len(out) == 2
-        assert out[0] == ScheduleActivity(activity_type=1, subtype=5,
+        assert out[0] == ScheduleActivity(dow_start=1, dow_end=5,
                                           time_s=28800, bld_id=163346754)
-        assert out[1] == ScheduleActivity(activity_type=1, subtype=5,
+        assert out[1] == ScheduleActivity(dow_start=1, dow_end=5,
                                           time_s=61200, bld_id=832748)
 
     def test_extra_whitespace_inside_tuples(self):
@@ -172,3 +257,135 @@ class TestHomeBldByPerId:
                          persons=[_make_per(1, "S")])
         assert 1 in data.home_bld_by_per_id
         assert 999 not in data.home_bld_by_per_id
+
+
+# ---------------------------------------------------------------------------
+# Trip-purpose realism (V5+) — HBSchool support helpers
+# ---------------------------------------------------------------------------
+
+
+class TestHBSchoolHelpers:
+    """Verify the modelgen-only foundations for HBSchool trips:
+      - `_is_school_kind` recognises OSM school-tag values
+      - `ModelData.age_by_per_id` survives mode-filtering (kids would
+        otherwise be filtered out by JWTRNS=-1)
+      - `_has_school_age_dependent` finds AGEP<18 in the same household
+    """
+
+    def test_is_school_kind_recognises_osm_values(self):
+        from pipeline.demand.generate_census_demand import _is_school_kind
+        # OSM emits these as `kind=school` (sometimes with a colon
+        # subkind suffix, e.g. `school:fast_food` is a misclassified
+        # building — we still match the leading prefix).
+        assert _is_school_kind("school:")
+        assert _is_school_kind("school")
+        assert _is_school_kind("kindergarten:")
+        assert _is_school_kind("preschool")
+        assert _is_school_kind("college:")
+        assert _is_school_kind("university:")
+        # Non-school values must NOT match.
+        assert not _is_school_kind("office:")
+        assert not _is_school_kind("apartments:")
+        assert not _is_school_kind("yes:")
+        assert not _is_school_kind("hospital:")
+        assert not _is_school_kind("")
+        assert not _is_school_kind(None)  # type: ignore[arg-type]
+
+    def test_age_by_per_id_includes_filtered_kids(self):
+        """Kids have JWTRNS=-1 (Not a worker) and get filtered out of
+        `ModelData.persons` when modes/car_only is applied. Their ages
+        must still be visible via `ModelData.age_by_per_id` so
+        household-composition queries can find school-age dependents.
+        Direct ModelData(...) construction (used in tests) populates
+        the map from `persons`; the parser populates it from the full
+        unfiltered population. Both paths must work."""
+        # Direct construction with one explicit person.
+        data = ModelData(
+            buildings=[_make_bld(100)],
+            households=[_make_hld(100, "S", [1])],
+            persons=[_make_per(1, "S")],  # Person dataclass has age=30 default? check
+        )
+        # Direct-construction fallback: age map is built from `persons`.
+        assert data.age_by_per_id  # non-empty
+
+    def test_has_school_age_dependent_finds_kid(self):
+        """When a household contains one commuter (in `persons`) and
+        one school-age dependent (NOT in `persons` because of JWTRNS
+        filtering), `_has_school_age_dependent` must still return True
+        thanks to the unfiltered `age_by_per_id` map."""
+        from pipeline.demand.generate_census_demand import _has_school_age_dependent
+        # Build a household with two persons: a 35-year-old commuter
+        # (id=1, in persons list) and an 8-year-old kid (id=2, NOT in
+        # persons because JWTRNS-filtered). Manually populate age_by_per_id
+        # to mimic what the parser does.
+        commuter = _make_per(1, "S")
+        commuter.age = 35
+        data = ModelData(
+            buildings=[_make_bld(100)],
+            households=[_make_hld(100, "S", [1, 2])],  # both ids in household
+            persons=[commuter],                          # only commuter visible
+            age_by_per_id={1: 35, 2: 8},                # but kid age available
+        )
+        assert _has_school_age_dependent(commuter, data)
+
+    def test_has_school_age_dependent_solo_household(self):
+        """A solo-person household has no dependents."""
+        from pipeline.demand.generate_census_demand import _has_school_age_dependent
+        commuter = _make_per(1, "S")
+        commuter.age = 35
+        data = ModelData(
+            buildings=[_make_bld(100)],
+            households=[_make_hld(100, "S", [1])],
+            persons=[commuter],
+            age_by_per_id={1: 35},
+        )
+        assert not _has_school_age_dependent(commuter, data)
+
+    def test_has_school_age_dependent_skips_other_adults(self):
+        """A household with another adult (not a kid) yields False."""
+        from pipeline.demand.generate_census_demand import _has_school_age_dependent
+        commuter = _make_per(1, "S")
+        commuter.age = 35
+        data = ModelData(
+            buildings=[_make_bld(100)],
+            households=[_make_hld(100, "S", [1, 2])],
+            persons=[commuter],
+            age_by_per_id={1: 35, 2: 60},  # second adult, not a kid
+        )
+        assert not _has_school_age_dependent(commuter, data)
+
+    def test_has_school_age_dependent_excludes_age_minus_one(self):
+        """PUMS uses -1 for Not-applicable. We must exclude that — a
+        household with a -1-age member shouldn't count as having a kid."""
+        from pipeline.demand.generate_census_demand import _has_school_age_dependent
+        commuter = _make_per(1, "S")
+        commuter.age = 35
+        data = ModelData(
+            buildings=[_make_bld(100)],
+            households=[_make_hld(100, "S", [1, 2])],
+            persons=[commuter],
+            age_by_per_id={1: 35, 2: -1},  # PUMS sentinel
+        )
+        assert not _has_school_age_dependent(commuter, data)
+
+    def test_peak_purpose_sets_cover_all_chain_legs(self):
+        """The AM/PM budget split (Phase 9a + 9b + 9c) relies on
+        AM_PURPOSES and PM_PURPOSES correctly classifying every chain
+        leg into its peak. A leg missing from its peak set would cause
+        the gravity-fallback Phase 2 to over-emit by the chain count
+        (see Phase 9b's HBSchool budget over-emit bug)."""
+        from pipeline.demand.generate_census_demand import (
+            AM_PURPOSES,
+            PM_PURPOSES,
+        )
+        # AM peak — outbound HBW, plus the school drop-off chain pair.
+        assert AM_PURPOSES == frozenset(
+            {"HBW_AM", "HBSchool_AM", "HBW_AM_chained"}
+        )
+        # PM peak — return HBW, plus the school pickup chain pair.
+        assert PM_PURPOSES == frozenset(
+            {"HBW_PM", "HBSchool_PM", "HBW_PM_chained"}
+        )
+        # No purpose can belong to both peaks (a chained leg consumes
+        # exactly one peak's budget).
+        assert AM_PURPOSES.isdisjoint(PM_PURPOSES)

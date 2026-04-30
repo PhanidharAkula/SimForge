@@ -38,7 +38,7 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 - **Pre-existing arm64 SUMO failure** on macOS for chicago_1k_car (`netconvert` "Ambiguity in turnarounds" warning treated as error on Apple Silicon). Documented in commit `6acfce8`. Unaffects Pitzer Linux runs. Test `tests/test_sumo_adapter.py::test_sumo_adapter_all_scenarios` skipped on arm64.
 - **DTALite agent.csv volume rounding** introduces ~0.3–5.6 % over/under-counting in DTALite's reported trip count vs canonical (chicago_1k: 997/1000; nyc_10k: 10564/10000). Path-based UE outputs fractional volumes per path; we round per-row when expanding to per-vehicle stats. Cosmetic for travel-time means; would matter only if we report DTALite trip counts as ground-truth-accurate.
 - **DTALite path4gmns wrapper crashes on macOS** after the binary writes output (multiprocessing SemLock issue in path4gmns 0.10.0). Adapter detects success via `link_performance.csv` presence rather than subprocess exit code. Documented in `adapters/dtalite/MAPPING.md` "macOS multiprocessing wrapper bug".
-- **la_50k_bike_car_transit microscopic SUMO** wall time (~25 hr per N=5 cell) exceeds Pitzer's 24 hr CPU partition wall — currently impossible without a route-cache fix to the SUMO adapter (BFS pre-routing is the bottleneck, ~17 h alone for chicago_200k).
+- **la_50k_car microscopic SUMO** wall time (~25 hr per N=5 cell) exceeds Pitzer's 24 hr CPU partition wall — currently impossible without a route-cache fix to the SUMO adapter (BFS pre-routing is the bottleneck, ~17 h alone for chicago_200k).
 
 ---
 
@@ -111,7 +111,7 @@ Audit Q1–Q4 results (post-SCC-fix interpretation):
 **Commit:** `f887eb7` (latest at submission time)
 **Job ID:** 47116156
 **What changed:** First Pitzer benchmark_small run on Version_5 — full 3 scenarios × 4 cells × N=5 = 60 runs via parallel-by-scenario sbatch.
-**Result:** Submitted 20:39 EDT. chicago_1k_car worker complete at 20:48 (8.6 min). nyc_10k_car worker on track for ~60 min total. la_50k_bike_car_transit worker stuck in BFS pre-routing for SUMO meso seed=42 — projected ~25 hr per scenario, will likely SLURM-timeout at the 24 hr wall (SUMO microscopic at 50k trips is the known wall-time bottleneck per `cluster/jobs/benchmark_large.sbatch` header).
+**Result:** Submitted 20:39 EDT. chicago_1k_car worker complete at 20:48 (8.6 min). nyc_10k_car worker on track for ~60 min total. la_50k_car worker stuck in BFS pre-routing for SUMO meso seed=42 — projected ~25 hr per scenario, will likely SLURM-timeout at the 24 hr wall (SUMO microscopic at 50k trips is the known wall-time bottleneck per `cluster/jobs/benchmark_large.sbatch` header).
 **Decision / lesson:** Accept la_50k partial results; chicago + nyc give the headline thesis numbers. The SUMO BFS routing bottleneck (~17h per (engine, seed) at 200k trips) is a known limitation requiring route-caching to fix; tracked as future work in `todo.md`.
 
 ### 2026-04-27 — Mac local 18-cell smoke (chicago_1k + nyc_10k)

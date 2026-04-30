@@ -27,7 +27,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (9 thesis figures)      |
-| Test Suite                   | ✅ ~434 tests passing               |
+| Test Suite                   | ✅ ~513 tests passing               |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 
 Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
@@ -89,15 +89,20 @@ python run.py --list
 ### Run the Full Benchmark
 
 ```bash
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
-`stress_test.yaml` declares the canonical 4-cell matrix (`chicago_1k_car` × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}) at N=5 repeats per cell. All three engines are CPU-only and run on Mac and Linux without special hardware. After it finishes:
+`benchmark_small.yaml` declares the canonical 11-cell matrix
+(`chicago_1k_car` × {SUMO meso/micro, MATSim meso, DTALite meso} +
+`nyc_10k_car` × {SUMO meso/micro, MATSim meso, DTALite meso} +
+`la_50k_car` × {SUMO meso, MATSim meso, DTALite meso}) at N=5 repeats per
+cell. All three engines are CPU-only and run on Mac and Linux without
+special hardware. After it finishes:
 
 ```bash
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
-python -m evaluation.audit_fairness    runs/stress_test
-python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
+python -m evaluation.audit_fairness    runs/benchmark_small
+python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
 The middle step (`audit_fairness`) is the cross-engine fairness check —
@@ -109,14 +114,16 @@ canonical interpretation of audit output.
 ### Generate New Scenarios
 
 ```bash
-python generate.py --preset quick_test         # 1K car, Chicago, 7–8 AM
-python generate.py --preset small_commute      # 10K car, NYC, 7–9 AM
-python generate.py --preset medium_multimodal  # 50K car+transit+bike, LA, 6–10 AM
-python generate.py --preset large_full_day     # 200K car+transit, Chicago, 24h
-python generate.py --preset stress_test        # 500K car, NYC, 6–10 AM
+python generate.py --preset chicago_1k_car      # 1K car, Chicago, 7–8 AM
+python generate.py --preset nyc_10k_car         # 10K car, NYC, 7–9 AM
+python generate.py --preset la_50k_car          # 50K car, LA, 6–10 AM
+python generate.py --preset chicago_200k_car    # 200K car, Chicago, 24h
+python generate.py --preset nyc_500k_car        # 500K car, NYC, 6–10 AM
 ```
 
-The numbered files in `scripts/` (`01_quick_test.py` … `05_stress_test.py`) are thin wrappers that call the **same** `generate_scenario()` with the same hardcoded kwargs as the preset above. They accept `--verbose` / `-v` only; the `--preset` form remains preferred when you need other overrides (`--output`, `--seed`, `--city`, `--modes`, `--synthetic`, OSM source mode).
+All five presets generate **car-only** demand because SimForge's three engine adapters (SUMO, MATSim, DTALite) currently only simulate car traffic — see [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md) §5 for adapter mode handling and §8 for the future-work pathway to multi-modal simulation.
+
+The numbered files in `scripts/` (`01_chicago_1k_car.py` … `05_nyc_500k_car.py`) are thin wrappers that call the **same** `generate_scenario()` with the same hardcoded kwargs as the preset above. They accept `--verbose` / `-v` only; the `--preset` form remains preferred when you need other overrides (`--output`, `--seed`, `--city`, `--modes`, `--synthetic`, OSM source mode).
 
 See [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md) for what each tier generates and how realism is calibrated.
 
@@ -142,7 +149,7 @@ SimForge/
 │   ├── demand/             # Synthetic + census-calibrated trip generation
 │   ├── signals/            # Traffic signal inference
 │   └── validation/         # Bundle validator
-├── scripts/                # Per-tier scenario generation (01_quick_test.py … 05_stress_test.py)
+├── scripts/                # Per-tier scenario generation (01_chicago_1k_car.py … 05_nyc_500k_car.py)
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark configurations (YAML)
 ├── scenarios/              # Bundled canonical scenarios
@@ -150,7 +157,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache — only populated if the fallback path runs (gitignored)
-├── tests/                  # pytest test suite (~434 tests)
+├── tests/                  # pytest test suite (~513 tests)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -196,7 +203,7 @@ LPSim, POLARIS, and QarSUMO were evaluated and rejected — see the retrospectiv
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all ~434 tests
+pytest tests/ -v          # Run all ~513 tests
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 
@@ -222,10 +229,13 @@ Data Sources → Generation Pipeline → Canonical Bundle → Adapter Layer → 
 
 **Key design decisions:**
 
-- **BFS routing at conversion time** — deterministic, version-independent routes
+- **State-aware BFS routing at conversion time** (V5+) — deterministic, version-independent routes that respect OSM-extracted turn restrictions
 - **MATSim `lastIteration=0`** — single-pass execution for fair cross-simulator comparison
 - **SHA-256 manifest** — integrity verification before every simulation run
-- **Census-calibrated demand** — population-weighted origins, real commute times (~60–65 % realism)
+- **Census-calibrated demand** — population-weighted origins, real commute times, V5+ per-person empirical departures from PUMS JWMNP (~70–72 % realism after Phases 5-10)
+- **OSM-grounded signal placement** (V5+) — signals only at nodes carrying `highway=traffic_signals`, replacing the pre-V5 `degree ≥ 4` heuristic
+- **Modelgen-grounded trip purposes** (V5+) — HBW (AM + PM) commutes plus parent-with-kid HBSchool chains derived from cityscape `schedule[0,1]` + AGEP + OSM `building.kind`; six-purpose taxonomy on `demand.csv`
+- **Cross-engine vehicle parameter alignment** (V11+) — single canonical car description in `adapters/common/vehicle_types.py` consumed by all three adapters; SUMO `length+minGap` ≡ MATSim effective `length` ≡ DTALite PCE 1.0, regression-pinned by `tests/test_vehicle_types.py`
 
 For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md).
 

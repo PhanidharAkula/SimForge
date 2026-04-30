@@ -49,7 +49,7 @@ Order-of-magnitude estimates. Actual numbers will be measured by the SimForge be
 |---|---|---|---|---|---|
 | chicago_1k_car (20k nodes, 1k trips) | ~5 s | ~30 s | ~60 s | 30–120 s | 5–10 s on V100 |
 | nyc_10k_car | ~30 s | ~5 min | ~3 min | 2–5 min | ~30 s |
-| chicago_200k_car_transit | ~5 min | ~30 min | ~15 min | 10–20 min | ~3 min |
+| chicago_200k_car | ~5 min | ~30 min | ~15 min | 10–20 min | ~3 min |
 | nyc_500k_car | ~10 min | ~1+ hr | ~30 min | ~30 min | ~5 min |
 
 **What the table tells the thesis:**

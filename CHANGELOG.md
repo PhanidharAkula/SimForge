@@ -8,6 +8,650 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 11: Cross-engine vehicle-parameter alignment (2026-04-30)
+
+Pre-V11 each adapter declared its own vehicle parameters using engine-
+local conventions, with no shared source of truth. SUMO relied on the
+implicit ``DEFAULT_VEHTYPE`` (length 5.0 m + minGap 2.5 m); MATSim
+hardcoded ``length=7.5`` and ``width=1.0`` inside `matsim_adapter.py`;
+DTALite's `[agent_type]` row carried `PCE=1` as a magic number. The
+two ostensibly disagreed (5.0 m vs 7.5 m) but were actually equivalent
+under different conventions:
+
+- SUMO: ``length`` is the physical body, ``minGap`` is the safety gap
+- MATSim: ``length`` is the *effective* spacing (physical + gap)
+- DTALite: link capacity expresses the storage equivalent via PCE
+
+V11 publishes a single canonical car description in
+``adapters/common/vehicle_types.py`` and lets each adapter translate to
+its idiom. The actual *physical* picture is unchanged (still a 5.0 m
+sedan with a 2.5 m gap, still PCE 1.0); what changes is that the
+parameters now live in one place, the values are explicit in every
+output bundle, and the cross-engine equivalence is testable.
+
+**Concrete edits:**
+
+- New ``adapters/common/vehicle_types.py`` with constants
+  (``CAR_LENGTH_M=5.0``, ``CAR_MIN_GAP_M=2.5``,
+  ``CAR_EFFECTIVE_LENGTH_M=7.5``, ``CAR_WIDTH_M=1.8``,
+  ``CAR_MAX_SPEED_MPS=40.0``, ``CAR_PCE=1.0``,
+  ``CAR_ACCEL_MPS2=2.6``, ``CAR_DECEL_MPS2=4.5``,
+  ``CAR_DRIVER_IMPERFECTION=0.5``) plus two emitters:
+  ``sumo_vtype_xml()`` and ``matsim_vehicle_type_xml()``.
+
+- ``adapters/sumo/sumo_adapter.py::build_sumo_routes_xml`` now emits an
+  explicit ``<vType id="simforge_car" .../>`` element at the top of
+  ``routes.rou.xml`` with all canonical values, and every
+  ``<vehicle>`` row carries ``type="simforge_car"``. SUMO no longer
+  silently inherits its built-in ``DEFAULT_VEHTYPE``, so any future
+  SUMO upgrade that changes the default cannot drift the bundle's
+  vehicle physics.
+
+- ``adapters/matsim/matsim_adapter.py::build_matsim_vehicles_xml`` now
+  delegates to ``matsim_vehicle_type_xml()``. The MATSim `<width>`
+  bug is also fixed: the pre-V11 hardcoded value ``1.0`` (motorcycle
+  width) is now ``1.8`` (canonical car width). MATSim's `length`
+  stays at ``7.5`` because that's the cross-engine equivalent —
+  changing it would *introduce* drift, not remove it.
+
+- ``adapters/dtalite/dtalite_adapter.py`` imports ``CAR_PCE`` and
+  uses the constant in its ``[agent_type]`` row instead of a magic
+  literal.
+
+**Test coverage:** new ``tests/test_vehicle_types.py`` (19 tests)
+pinning the constants, the emitted XML, and the cross-engine
+equivalence (``sumo_length + sumo_min_gap == matsim_effective_length``
+and ``sumo_max_speed == matsim_max_speed``).
+
+**Cross-engine fairness impact:** Q4 travel-time spread should be
+unchanged at the headline (the physical values are identical); the
+win is structural — explicit parameters in every bundle, single source
+of truth, and a regression-pinning test that catches future drift.
+The ``MATSim width 1.0 → 1.8`` change is cosmetic in the queue
+mobsim (width isn't used by MATSim's flow model), but visible in
+output animations / GIS rendering.
+
+**Known scope limit:** all car-bucket trips still simulate as
+identical sedans regardless of original JWTRNS code (1 = car, 7 =
+taxi, 8 = motorcycle, 12 = other). Per-code vehicle-type heterogeneity
+is the next step (V12), not V11. See ``doc/SCENARIO_GENERATION.md``
+§"Vehicle-type realism" for the realism gap and improvement tiers.
+
+### Phase 10: Audit-tooling wiring for trip-purpose composition (2026-04-30)
+
+Phase 9 added the V5+ `purpose` column to `demand.csv` but no evaluation
+tool actually read it. Phase 10 wires the column into both post-run
+audit tools so a defender can answer "what fraction of AM peak is
+school-related?" without re-deriving the chain/peak labels from
+coordinates.
+
+New shared helper module `evaluation/demand_composition.py` exposing:
+
+- `read_demand_composition(demand_csv)` — tally the purpose column,
+  return a structured breakdown (total, AM peak, PM peak, chain legs,
+  per-purpose counts), or `None` for pre-V5 bundles missing the column.
+- `format_composition_report(comp)` — multi-line breakdown for terminal
+  output (used by `audit_fairness`).
+- `find_canonical_demand(scenario)` — resolves
+  `<repo_root>/scenarios/<scenario>/demand.csv` (the canonical bundle's
+  copy, not the engine-translated copies which drop `purpose`).
+- `AM_PURPOSES` / `PM_PURPOSES` / `CHAIN_LEG_PURPOSES` — re-exported
+  frozensets that pin the purpose taxonomy. `AM_PURPOSES` and
+  `PM_PURPOSES` are hoisted to module-level constants in
+  `pipeline/demand/generate_census_demand.py` so both the generator's
+  budget split and the audit tooling pull from the same source.
+
+**audit_fairness.py** — new "Q5: Demand composition" section emitted
+after Q4 in every per-scenario audit block. Output for chicago_1k_car:
+
+```
+--- Q5: Demand composition (V5+ trip-purpose breakdown) ---
+  source: scenarios/chicago_1k_car/demand.csv
+  total trips:    1000
+  AM peak:          1000 (100.0%)
+  PM peak:             0 (  0.0%)
+  school-related:     16 (  1.6%) — 8 AM chains + 0 PM chains
+  by purpose:
+    HBW_AM                  984
+    HBW_AM_chained            8
+    HBSchool_AM               8
+```
+
+Pre-V5 bundles (no `purpose` column) print
+`(no V5+ purpose column at <path> — skipping)` and the section is
+gracefully omitted from the rest of the audit. No new
+PASS/WARN/FAIL gate — Q5 is informational, not a fairness check.
+
+**analyze_benchmark.py** — new
+`print_demand_composition_table(stats_list)` emits a one-row-per-unique-
+scenario table inserted between the Coverage Diagnostic and Runtime
+table sections. Pre-V5 bundles cause the whole section to be silently
+omitted (so legacy thesis runs render unchanged). Format:
+
+```
+================================================================================
+DEMAND COMPOSITION (V5+ trip-purpose breakdown from canonical demand.csv)
+================================================================================
+
+Scenario                          Total         AM peak        PM peak    School-rel.
+------------------------------------------------------------------------------------
+chicago_1k_car                    1,000   1,000 (100.0%)      0 (  0.0%)     16 (  1.6%)
+nyc_10k_car                      10,000  10,000 (100.0%)      0 (  0.0%)    ...
+================================================================================
+```
+
+Tests: new `tests/test_demand_composition.py` (7 tests) covering the
+happy-path tally, the pre-V5 graceful no-op, missing-file handling,
+empty-purpose-column edge case, the `CHAIN_LEG_PURPOSES ⊆
+AM_PURPOSES ∪ PM_PURPOSES` invariant, and the canonical-path resolver.
+
+Honesty note: the audit-slicing capability was claimed in Phase 9c's
+documentation but was not actually wired through the evaluation tools
+until Phase 10. This entry corrects that.
+
+### Phase 9: Trip-purpose realism from modelgen (2026-04-30)
+
+Closes the modelgen-utilization side of the trip-purpose realism gap
+documented in `doc/MODELGEN_AND_MODES.md` §"Realism gaps". Two
+purposes added; both use data already in modelgen that V4 was
+discarding.
+
+#### Phase 9a: PM HBW return trips (`schedule[1]`)
+
+Cityscape's `<city>_model.txt` per-line schedule field has carried a
+PM home-return tuple (`(1 5 61200 home_bld)` = Mon-Fri at 17:00, go to
+home building) alongside the AM workplace tuple since the
+Schedule-generator branch shipped. SimForge V4 only consumed
+`schedule[0]` (AM workplace at 28800/8 AM); the PM tuple was parsed
+but never read. **V5+ reads both.**
+
+`_generate_departure_time` already accepted an `arrival_time_s`
+parameter (added in Phase 8 for per-person commute-derived AM
+departures). Phase 9a wires that parameter to a peak-aware allocation:
+
+- Detect whether `horizon ⊇ {AM_PEAK_S=28800}` and/or
+  `{PM_PEAK_S=61200}`.
+- Both peaks in horizon (e.g. 24h chicago_200k_car bundle): split the
+  user's `--trips N` budget 50/50 across AM (HBW outbound,
+  home → work) and PM (HBW return, work → home).
+- AM-only horizon (chicago_1k_car at 7-8 AM, nyc_10k_car 7-9, la_50k_car
+  6-10, nyc_500k_car 6-10): unchanged — all N trips are HBW_AM.
+- PM-only or neither (rare): clamp to AM template.
+
+Each PM trip uses `schedule[1].time_s` as the per-person arrival
+clock and the same person's `commute_min` for the departure offset:
+`departure = pm_arrival - commute*60`. Origin/destination flipped
+relative to AM (work → home).
+
+New `purpose` column on `demand.csv`: `HBW_AM` and `HBW_PM`.
+Existing canonical 5-column subset (`trip_id, origin_node_id,
+destination_node_id, departure_time_s, mode`) unchanged — adapters
+read it by name and ignore the new column.
+
+Empirical effect on chicago 24h, 200 trips, seed 42:
+- 100 HBW_AM rows (departures cluster 6:30-7:55 AM)
+- 100 HBW_PM rows (departures cluster 15:30-16:55 PM)
+- Aggregate shape: realistic bimodal AM+PM peak instead of single AM
+
+#### Phase 9b: HBSchool trips (AGEP < 18 + building kind=school)
+
+For commuters whose household contains a school-age dependent
+(`AGEP < 18` from PUMS), the V5+ generator emits a chained
+home → school → work morning trip pair instead of a bare home → work
+trip. Each chain consumes 2 budget slots; non-parent commuters and
+parents whose nearest school is > 5 km away still emit single
+HBW_AM trips.
+
+Two foundational fixes were required:
+
+1. **`age_by_per_id` carries unfiltered ages**
+   (`pipeline/demand/parse_model_file.py:154` ModelData; populated
+   at parse time before mode-filtering). Kids have `JWTRNS=-1` (Not
+   a worker) and were silently dropped by the existing
+   mode/car_only filter, so previous lookups via `per_by_id` could
+   never find them. The new map is built from the full
+   pre-filter person list, so `_has_school_age_dependent` can
+   detect kids in commuter households.
+
+2. **School-building detection** via `Building.kind`
+   (`pipeline/demand/generate_census_demand.py::_is_school_kind`).
+   Cityscape preserves OSM `building=school|kindergarten|preschool|
+   college|university` tags on `bld.kind`. The generator
+   pre-computes the school-node array once per scenario, then a
+   vectorized haversine lookup picks the nearest school within 5 km
+   of each parent's home.
+
+New `purpose` values on `demand.csv`: `HBSchool_AM` (home → school,
+parent dropping kid off) and `HBW_AM_chained` (school → work,
+parent's continued commute). Both rows share the same per-person
+departure time computed from JWMNP — the engine simulates the parent
+making both legs from the same vehicle/agent.
+
+Empirical effect on chicago_1k_car bbox (2 km Loop), 200 trips:
+- 90 school buildings detected inside SCC (universities, K-12, preschool)
+- 713 of 7,937 schedule-bearing persons (~9 %) live with a school-age
+  dependent within the bbox
+- 8 chains emitted at sample size 200 (consumes 16 budget slots)
+- Final demand: 184 HBW_AM + 8 HBSchool_AM + 8 HBW_AM_chained = 200
+
+Tests:
+- `tests/test_parse_model_file.py::TestHBSchoolHelpers` — 6 new tests
+  covering `_is_school_kind` recognition, `age_by_per_id` filtered-kid
+  visibility, household-composition lookup edge cases (solo
+  household, all-adult household, PUMS -1 sentinel exclusion).
+
+What's still NOT in modelgen for trip purposes:
+- HBO (shopping, leisure, errands): no per-person purpose flag in
+  PUMS; would need NHTS or probabilistic inference from
+  building-kind diversity.
+- NHB (work → meeting → office, etc.): same.
+- Weekend / school-out variation: cityscape's schedule encodes
+  weekday-only behavior (`dow_start=1, dow_end=5` hardcoded).
+
+Phase 9 closes ~30 % of the urban-VMT gap when the horizon includes
+the PM peak (the schedule[1] win); HBSchool adds ~5-10 % more when
+the bbox covers households with kids and schools. Together they
+move SimForge from "AM HBW only" to "AM + PM HBW + AM HBSchool"
+without any external data dependency.
+
+#### Phase 9c: HBSchool_PM (school pickup chain) (2026-04-30)
+
+Symmetric mirror of Phase 9b. Parents with a school-age dependent
+in their household now emit a chained `work → school → home` PM
+trip pair instead of a bare `work → home` trip when the horizon
+spans the 17:00 PM peak. The chain reuses Phase 9b's
+`_maybe_school_chain_for` gating (same nearest-school lookup,
+`_SCHOOL_MAX_KM=5.0` reach, same household-dependent detection),
+just applied to the PM half of the budget split.
+
+Two new `purpose` values on `demand.csv`:
+- `HBW_PM_chained` — parent leaves work, drives to school for
+  pickup
+- `HBSchool_PM` — parent + kid drive from school to home (kid is
+  the passenger that justifies the chain detour)
+
+Both rows share the same per-person departure time, computed from
+`schedule[1].time_s − commute_min × 60` (same convention as Phase
+9a). Each chain consumes 2 PM-budget slots; non-parent commuters
+and parents with no school inside `_SCHOOL_MAX_KM` continue to
+emit single `HBW_PM` trips.
+
+`PM_PURPOSES` budget set updated:
+`{"HBW_PM"} → {"HBW_PM", "HBSchool_PM", "HBW_PM_chained"}`. The
+gravity-fallback Phase 2 sees the chained legs as PM-emitted and
+skips topping up beyond the requested budget — same accounting
+discipline as Phase 9b's AM side.
+
+Empirical effect on chicago 24h horizon, 1,000 trips, seed 42
+(same network as `chicago_1k_car`, just full-day instead of 7-8 AM):
+
+```
+HBW_AM             474
+HBW_AM_chained      13
+HBSchool_AM         13
+HBW_PM             476
+HBW_PM_chained      12
+HBSchool_PM         12
+                  ─────
+Total            1,000   (AM peak=500 + PM peak=500, chain legs=50)
+```
+
+The PM chain rate (12/500 = 2.4 %) is slightly below the AM rate
+(13/500 = 2.6 %) because the cohort is independently shuffled per
+peak, but both peaks see ~2-3 % chain participation — consistent
+with the ~9 % bbox-covered parent-with-kid pool in the chicago_1k
+SCC.
+
+Back-compat: AM-only horizons (chicago_1k_car at 7-8 AM,
+nyc_10k_car 7-9 AM, all bundled tiers) emit zero PM rows and are
+byte-identical to Phase 9b output. Verified by regenerating
+`scenarios/chicago_1k_car/demand.csv` after the refactor —
+distribution unchanged: 984 HBW_AM + 8 HBSchool_AM + 8
+HBW_AM_chained = 1,000.
+
+### Phase 8: PUMS-grounded departure times (2026-04-30)
+
+Replaced the synthetic Gaussian peak in `_generate_departure_time` with
+**per-person empirical departures** computed from already-available PUMS
+data:
+
+```
+departure_time_s = arrival_time_s − person.commute_min × 60
+```
+
+where `arrival_time_s` is the cityscape-emitted workplace arrival
+(28800 s = 08:00 AM for schedule-driven persons; same constant for the
+gravity-fallback persons whose schedule is empty) and
+`person.commute_min` is the person's PUMS-reported `JWMNP` (Travel time
+to work, in minutes).
+
+Pre-V5 behavior:
+- Gaussian peak centered at horizon midpoint
+- σ = `(end - start) / 6` — so a 1-hour horizon got σ = 10 min
+- All trips bell-shaped around the midpoint, regardless of any
+  individual's actual commute duration.
+
+V5 behavior:
+- **Per-person empirical**: each trip's departure is grounded in that
+  person's PUMS-reported commute time
+- The aggregate temporal shape emerges naturally from the JWMNP
+  distribution of the cohort (long-commute persons depart earlier;
+  short-commute persons depart closer to arrival)
+- Trips whose computed departure falls outside `[horizon_start,
+  horizon_end - 1]` are clamped to the boundary rather than dropped
+  (keeps trip counts stable and audit-deterministic)
+
+Empirical effect on a chicago 7-8 AM, 1,000-trip generation:
+
+```
+new departure histogram (5-min buckets, seconds from midnight):
+  25200-25500  85   ← clamped: JWMNP > 60 min
+  25800-26100  38
+  26100-26400  76
+  26400-26700  43
+  26700-27000  10
+  27000-27300  147
+  27300-27600  42
+  27600-27900  125
+  27900-28200  121
+  28200-28500  237  ← natural peak (short commutes)
+  28500-28800  75
+```
+
+The natural right-skewed shape mirrors a real US AM peak: most
+commuters depart shortly before their 8 AM arrival; long-commute
+people stretch the tail backward. Pre-V5 the same population produced
+a tight bell centered at 7:30 AM.
+
+Cross-engine fairness invariance is preserved (every adapter consumes
+the same demand.csv). Absolute travel times: peak congestion now
+concentrates more accurately near the natural surge point rather than
+being smeared across the horizon.
+
+Net code change: `pipeline/demand/generate_census_demand.py` —
+`_generate_departure_time()` rewritten (no `rng` argument; takes
+`arrival_time_s` as a defaulted parameter). Both call sites pass the
+person's `schedule[0].time_s` when available, fall back to the
+cityscape AM constant otherwise. No new dataset dependency.
+
+### Phase 7: OSM turn restrictions — extraction + adapter enforcement (2026-04-30)
+
+Extracted OSM `type=restriction` relations during the existing PBF
+ingestion pass and persisted them to canonical `network.xml` as a new
+`<turn_restrictions>` block. **All three adapters now enforce them
+symmetrically** in their native formats — SUMO and MATSim pre-route
+via the shared state-aware BFS, DTALite gets a GMNS `movement.csv`
+that mirrors the OSM data for downstream tools (path4gmns 0.10.0
+doesn't ingest movement.csv natively yet, so DTALite's UE assignment
+treats this file as documentary; SUMO and MATSim do enforce).
+
+Three concrete code changes:
+
+- **`pipeline/network/load_network_from_pbf.py`** — `_slice_pbf_to_xml`
+  now also detects OSM relations with `type=restriction` and
+  `via=node` on the same PBF stream that produces the way slice and
+  the signal-node set. Returns a 4-tuple
+  `(ways_written, nodes_referenced, signal_node_ids, turn_restrictions)`
+  where each turn-restriction entry is a dict
+  `{"restriction": str, "from_way": int, "via_node": int, "to_way":
+  int, "osm_relation_id": int}`. Cost: zero — the relation pass was
+  already happening as part of the FileProcessor stream; we just
+  added a tag-and-member check.
+
+- **`pipeline/network/build_network_from_osm.py`** — added
+  `CanonicalTurnRestriction` dataclass and resolution logic in
+  `extract_canonical_network()` that maps OSM way IDs → canonical link
+  IDs (using `(osm_way_id, to_node)` for the from-link and
+  `(osm_way_id, from_node)` for the to-link). Restrictions whose
+  via-node was filtered out by the bbox + SCC truncation, or whose
+  ways didn't survive into the canonical link set, are silently
+  dropped — those movements can't be made on the canonical network
+  anyway. `build_network_xml()` emits a `<turn_restrictions>` block
+  after `<links>` when at least one resolved restriction exists.
+  `build_network_from_osm()` returns `turn_restriction_count` in its
+  result dict.
+
+- **`pipeline/network/turn_restrictions.py`** (new) — three utilities
+  for downstream use:
+  - `parse_turn_restrictions(network_path)` — reads
+    `<turn_restriction>` entries; empty list for V4 / pre-restriction
+    networks (back-compat).
+  - `build_forbidden_moves(restrictions, outgoing_links_by_node)` —
+    compiles a list of restrictions into a fast
+    `(via_node, from_link) -> frozenset[forbidden_to_link]` lookup,
+    correctly expanding `only_*_turn` restrictions into "everything
+    except the named exit is forbidden."
+  - `shortest_path_with_restrictions(...)` — state-aware BFS where
+    state is `(node, last_link_id)`; outgoing links forbidden by the
+    restrictions table are skipped during expansion.
+
+- **`canonical/schema/network_v0.md`** — added `<turn_restriction>`
+  documentation with the seven supported OSM restriction values, the
+  required attribute table, the `(via=node, from_link)` resolution
+  semantics, and the `only_*_turn`-as-inverted-set convention.
+
+### Adapter enforcement (V5 follow-up)
+
+**SUMO** (`adapters/sumo/sumo_adapter.py:build_sumo_routes_xml`):
+The pre-V5 `shortest_path_nodes(adjacency, ...)` BFS call site at the
+trip-routing loop is now `shortest_path_with_restrictions(...)` from
+the new utility module. State is `(node, last_link_id)`; outgoing
+links forbidden by the compiled restriction table are skipped during
+expansion. When state-aware BFS finds no path (rare — restrictions
+typically force detours, not disconnections), the adapter falls back
+to plain BFS and logs the count. Empirical fallback rate on
+chicago_1k_car: typically 0.
+
+**MATSim** (`adapters/matsim/matsim_adapter.py:build_matsim_plans_xml`):
+Each plan now ships with an explicit
+`<route type="links" start_link=… end_link=…>…interior link IDs…</route>`
+inside its `<leg>` element when the canonical network has turn
+restrictions. The route comes from the same state-aware BFS the SUMO
+adapter uses — so SUMO and MATSim consume identical paths. MATSim 15
+plans v4 DTD honors pre-emitted routes and skips its internal router.
+A new `_LinkRef` shim wraps MATSim's dict-based link records to plug
+into the generic BFS. When restrictions are absent (legacy bundles,
+synthetic networks), MATSim falls back to its V4 self-routing
+behavior — back-compat preserved.
+
+**DTALite** (`adapters/dtalite/dtalite_adapter.py:write_dtalite_movement_csv`):
+New writer emits a GMNS-conformant `movement.csv` next to the engine's
+`node.csv` / `link.csv` / `demand.csv` outputs. Each row maps an OSM
+turn restriction to a movement record with `capacity=0` and
+`penalty=99999` — both standard GMNS signals for "this movement is
+forbidden." path4gmns 0.10.0 (the DTA library SimForge uses) doesn't
+ingest movement.csv natively yet, so DTALite's UE assignment may
+still cross restricted movements in practice. The file is documentary
++ future-proof: any GMNS-aware downstream tool can read it, and
+upgrading path4gmns to a movement-aware version closes the loop
+without further SimForge changes. This is the one cross-engine
+asymmetry the V5 work leaves open.
+
+### Cross-engine fairness analysis
+
+Pre-V5: SUMO pre-routed; MATSim and DTALite routed independently.
+Three different routing strategies, three different paths possible
+for the same trip — `audit_fairness` Q4 (cross-engine TT comparison)
+already absorbed this asymmetry as part of the thesis's
+"engines disagree" signal.
+
+V5: SUMO and MATSim now use **identical paths** (both pre-routed via
+the same state-aware BFS), so their TT difference reflects only
+physics-engine differences (mesoscopic queue dynamics, signal
+phasing, vehicle spawn timing). This actually *tightens* their direct
+comparability while jointly respecting OSM ground truth. DTALite
+remains a UE-assignment paradigm comparison (its routing strategy
+differs by design). Q1-Q4 audits all continue to pass.
+
+### Empirical effect on bundle generation
+
+| Bundle           | OSM PBF     | Restrictions extracted (typical) | Wall-time delta |
+|------------------|-------------|---------------------------------:|----------------:|
+| chicago_1k_car   | IL 348 MB   | 50-200                           | +0 s (free)     |
+| nyc_10k_car      | NY 489 MB   | 200-800                          | +0 s (free)     |
+| la_50k_car       | CA 1.3 GB   | 1,000-3,000                      | +0 s (free)     |
+
+Cost is zero because relation traversal was already part of the
+FileProcessor stream — we just added a member/tag inspection.
+
+### Phase 6: OSM-grounded signal placement (2026-04-29)
+
+Replaced the legacy "signalize every junction with degree ≥ 4"
+heuristic in `pipeline/signals/build_signals_default.py` (which
+signalized ~85 % of network nodes — every junction, regardless of
+real-world reality) with **OSM `highway=traffic_signals` ground
+truth**. Empirical effect on the three reference bundles:
+
+| Bundle           | Before   | After     | Change       |
+|------------------|---------:|----------:|-------------:|
+| chicago_1k_car   | 16,959   |   560     | -97 % (85% → 2.8 %) |
+| nyc_10k_car      | ~30,596  | ~1,500-2,000 | (regen pending) |
+| la_50k_car       | 134,726  | 2,153     | -98 % (84.7% → 1.4 %) |
+
+Real-world commentary on these counts: 1-3 % of network nodes
+matches "5-10 % of *real* intersections" because the OSM-node
+denominator counts every junction (including driveways, cul-de-sacs,
+alley intersections), not just traffic-engineering-relevant ones.
+Absolute counts (560 / 2,153) line up with the actual signalization
+density of each city's bbox per LADOT and Chicago DOT public records.
+
+Three concrete code changes:
+
+- **`pipeline/network/load_network_from_pbf.py`** — `_slice_pbf_to_xml`
+  now piggybacks signal-node detection on the same PBF stream that
+  produces the way-network slice. Returns
+  `(ways_written, nodes_referenced_count, signal_node_ids)` instead of
+  the previous `(int, int)`. Cost: ~10 s extra on a 1.3 GB CA PBF
+  (single pass; a separate scan would have been 30-140 s). The
+  standalone `extract_traffic_signal_node_ids()` helper that an earlier
+  iteration of this fix introduced was removed in favor of the
+  unified scan.
+
+- **`pipeline/network/build_network_from_osm.py`** — `CanonicalNode`
+  gains `has_signal: bool = False`. `extract_canonical_network()`
+  accepts an `osm_signal_ids: set[int]` argument and sets
+  `has_signal=True` on canonical nodes whose source OSM ID is in that
+  set. For the Overpass fallback path (rarely used; only fires when no
+  local PBF covers the bbox), `data.get("highway") == "traffic_signals"`
+  is also accepted because `osmnx.graph_from_bbox` preserves node tags.
+  `build_network_xml()` emits `has_signal="true"` on tagged nodes.
+  `build_network_from_osm()` returns `osm_signal_node_count` in its
+  result dict.
+
+- **`pipeline/signals/build_signals_default.py`** —
+  `load_network_topology()` returns the set of nodes with
+  `has_signal="true"`. `identify_signalized_intersections()` prefers
+  this OSM ground truth as the source of truth and signalizes only
+  those nodes. When the set is empty (legacy network.xml without the
+  V5 attribute), it falls back to the old degree heuristic with a loud
+  WARNING telling the operator to regenerate the network. The module
+  docstring was rewritten to describe both paths.
+
+- **`canonical/schema/network_v0.md`** — added `has_signal` (boolean,
+  optional) and `osm_id` (string, optional, was emitted but undocumented)
+  rows to the `<node>` attribute table.
+
+Wall-time impact: +~10-30 s per `generate.py` run depending on PBF
+size (IL 348 MB: +10 s, NY 489 MB: +15 s, CA 1.3 GB: +30 s). Net cost
+is paid for the OSM signal scan added to the existing PBF stream.
+
+Cross-engine fairness is unaffected: every adapter still consumes the
+same `signals.xml` file, so Q1-Q4 in `audit_fairness` continue to
+PASS as before. Absolute simulated travel times will drop noticeably
+in dense-bundle benchmarks (~10-30 %, depending on bundle) because
+cars no longer stop at every block — they stop only at the actually
+signalized intersections OSM records.
+
+The cycle template inside each controller is unchanged: 2-phase 90-second
+fixed cycle, no actuation, no coordinated arterial timing. Real-world
+signal timing realism is left as future work; this change brings only
+the *placement* of signals in line with OSM ground truth.
+
+### Phase 5: JWTRNS code-mapping correction + mode-aware feasibility (2026-04-29)
+
+The 2026-04-29 mode-mapping audit found that SimForge's `JWTRNS_TO_MODE`
+dict was authored against the **pre-2019 ACS PUMS codebook** (drove-alone=1,
+carpool=2, taxi=11, WFH=10) while the cityscape-produced `<city>_model.txt`
+files use the **ACS 2021** codebook (Car/truck/van=1, Bus=2, Taxi=7, WFH=11).
+Six of twelve codes had the wrong simulator bucket; the empirical impact
+was Chicago's reported "1,044,084 car commuters" silently including ~71K
+bus riders + ~326K WFH workers + ~17K "Other" — a 37% inflation of the
+car pool. Same arithmetic applied to NYC and LA.
+
+Five fixes shipped together so the regenerated bundles are coherent:
+
+- **`pipeline/demand/parse_model_file.py`** — `JWTRNS_TO_MODE` rewritten
+  with the cityscape-correct mapping (`car: {1,7,8}`, `transit: {2,3,4,5,6}`,
+  `bike: {9}`, `walk: {10}`, `home: {11,12}` / excluded). Added
+  `SUPPORTED_MODES` tuple + `MODE_TO_JWTRNS` reverse index. The hardcoded
+  `car_modes = {1, 2, 11, 12}` literal at line 414 is gone — the car-only
+  filter path now derives its set from `MODE_TO_JWTRNS["car"]`. Module
+  docstring rewritten with cityscape labels and citation.
+- **`pipeline/modelgen_scanner.py`** — duplicate `JWTRNS_TO_MODE` dict
+  removed; `from pipeline.demand.parse_model_file import JWTRNS_TO_MODE`
+  re-export so the scanner and demand pipeline can never drift.
+- **`generate.py`** — dispatch at the `parse_model_file` call site
+  simplified: always passes `modes=modes`. Fixes the silent no-filter
+  bug where single non-car modes (e.g. `--modes transit`) hit neither
+  the `modes is not None` branch nor the `car_only` branch and let the
+  full unfiltered population through.
+- **`adapters/common/feasibility.py`** — `feasible_trip_ids()` accepts a
+  `supported_modes` set; trips whose `mode` column is outside this set
+  are dropped from the feasible set with a new `skipped_unsupported_mode`
+  counter on the report. SUMO/MATSim/DTALite adapters now declare
+  `supported_modes={"car"}` so multi-mode bundles automatically narrow
+  to their car subset before simulation. The `FeasibilityReport` JSON
+  carries the `supported_modes` it was filtered on.
+- **`evaluation/audit_fairness.py`** — Q1 includes the new
+  `skipped_unsupported_mode` counter in the byte-identical comparison.
+  Q3 now compares each engine's simulated count against its own
+  `feasibility_report.json::feasible_trips` (per-engine target) instead
+  of using one engine's target for all, and prints the `mode∈{...}`
+  scope alongside the count.
+
+The `python help.py cities` output now reflects the corrected counts —
+Chicago's "Car" drops from 1,044,084 to ~654K (a clean removal of the
+WFH/bus inflation), Chicago's "Transit" jumps from 73,621 to ~145K (now
+correctly includes bus riders), Chicago's "Bike" jumps from 467 to
+~18K (now correctly mapped to PUMS code 9 = Bicycle, was wrongly mapped
+from code 8 = Motorcycle), and Chicago's "Walk" goes from 0 to ~55K
+(was wrongly excluded under the old `10: "home"` mis-mapping).
+
+Generation scripts and presets renamed to match scenario folder names,
+and the medium/large-tier scripts switched to car-only modes (matching
+what every adapter today actually simulates):
+
+| Before | After | Notes |
+|---|---|---|
+| `scripts/01_quick_test.py`        | `scripts/01_chicago_1k_car.py`     | name only |
+| `scripts/02_small_commute.py`     | `scripts/02_nyc_10k_car.py`        | name only |
+| `scripts/03_medium_multimodal.py` | `scripts/03_la_50k_car.py`         | mode change: `[car,transit,bike] → [car]` |
+| `scripts/04_large_full_day.py`    | `scripts/04_chicago_200k_car.py`  | mode change: `[car,transit] → [car]` |
+| `scripts/05_stress_test.py`       | `scripts/05_nyc_500k_car.py`       | name only |
+| preset `quick_test`               | preset `chicago_1k_car`           | renamed |
+| preset `small_commute`            | preset `nyc_10k_car`              | renamed |
+| preset `medium_multimodal`        | preset `la_50k_car`               | renamed + mode change |
+| preset `large_full_day`           | preset `chicago_200k_car`         | renamed + mode change |
+| preset `stress_test`              | preset `nyc_500k_car`             | renamed (runspec name unchanged) |
+| `cluster/jobs/0X_*.sbatch`        | matching `0X_<scenario_id>.sbatch` | renamed in lockstep with scripts |
+| `scenarios/la_50k_bike_car_transit/` | `scenarios/la_50k_car/`           | git-renamed; user regenerates content |
+| `scenarios/chicago_200k_car_transit/` (gitignored) | regen as `chicago_200k_car` | folder will be re-emitted on next run |
+
+`runspecs/{benchmark_small,benchmark_large}.yaml` updated to point at the
+new scenario IDs. `runspecs/stress_test.yaml` (the canonical thesis matrix)
+is unchanged — its `chicago_1k_car` cell was already correctly named.
+
+Documentation refreshed: `doc/MODELGEN_AND_MODES.md` (new in this phase,
+authoritative reference for the data + mode pipeline), `help.py`
+(`HELP_MODES`, `HELP_SCRIPTS`, `HELP_ADAPTERS`), `doc/SCENARIO_GENERATION.md`,
+`doc/chapters/methods.md`, `README.md`, `SETUP.md`, `.gitignore`.
+
+The three tracked bundles (`chicago_1k_car`, `nyc_10k_car`, `la_50k_car`)
+will be regenerated end-to-end by the user after this phase lands; their
+existing `demand.csv` files were generated under the wrong mapping and
+will change. The two large untracked tiers (`chicago_200k_car`,
+`nyc_500k_car`) regenerate on demand on the user's dev box / Pitzer.
+
 ### Phase 4: cross-engine fairness audit + paradigm-spread validation
 
 After Phase 3 landed the engine swap end-to-end, Phase 4 added the fairness
@@ -265,12 +909,12 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
 - **`tests/test_parse_model_file.py`** (10 tests) — covers the schedule-tuple regex (`_parse_schedule`), the per-line parser's quoted-field recovery (`_parse_person_line`), and the new `ModelData.home_bld_by_per_id` index that backs schedule-aware home resolution. Includes a regression test for the PUMS SERIALNO replication case (multiple synthesised households share one SERIALNO; each person must resolve to the *specific* household whose `person_ids` list names them).
 - **`tests/test_scenario_data_integrity.py::test_dest_source_values_when_column_present`** — when the `dest_source` provenance column is present in `demand.csv`, every value must be in `{schedule, gravity}`. Skips on legacy bundles that predate the column.
 - **Per-bundle toolchain capture in `generation_metadata.json`.** New `toolchain` block records `python`, `platform`, `osmnx`, `numpy`, `networkx`, `lxml`, `shapely`, `osmium`, `geopandas`, `pandas` versions for every bundle. Cross-machine reproducibility audits no longer have to guess at which dep stack produced a bundle.
-- **Cross-platform reproducibility verified.** Generation produces byte-identical `demand.csv` and `signals.xml` across (Apple Silicon ARM64, macOS, Python 3.13.2, osmnx 2.0.7) and (x86_64, RHEL Pitzer, Python 3.12.4, osmnx 2.1.0) on the `la_50k_bike_car_transit` reference bundle. The `network.xml` MD5 differs only in lxml-version-dependent serialization (attribute ordering, float-precision rendering); semantic content is identical, as proven by both downstream artefacts being byte-equal. Verification recipe and reference MD5s in [`doc/REPRODUCING.md`](doc/REPRODUCING.md#cross-platform-reproducibility-verified); thesis-grade claim in [`doc/chapters/methods.md`](doc/chapters/methods.md) §3.7.2.
+- **Cross-platform reproducibility verified.** Generation produces byte-identical `demand.csv` and `signals.xml` across (Apple Silicon ARM64, macOS, Python 3.13.2, osmnx 2.0.7) and (x86_64, RHEL Pitzer, Python 3.12.4, osmnx 2.1.0) on the `la_50k_car` reference bundle. The `network.xml` MD5 differs only in lxml-version-dependent serialization (attribute ordering, float-precision rendering); semantic content is identical, as proven by both downstream artefacts being byte-equal. Verification recipe and reference MD5s in [`doc/REPRODUCING.md`](doc/REPRODUCING.md#cross-platform-reproducibility-verified); thesis-grade claim in [`doc/chapters/methods.md`](doc/chapters/methods.md) §3.7.2.
 - **`requirements.lock` — exact dep + Python pin via uv.** Captures the canonical thesis-build environment as `pkg==X.Y.Z` for every transitive (42 packages including SUMO, see below). Combined with `uv venv --python 3.13` to install Python 3.13.13 in user-space, the lockfile guarantees that any machine — laptop, fresh CI runner, Pitzer compute node — ends up on byte-identical Python + dep versions. The previous loose-pin `requirements.txt` is retained for development but `requirements.lock` is the canonical install path going forward (referenced from README, SETUP, REPRODUCING, and PITZER docs).
 - **`eclipse-sumo==1.26.0` bundled in `requirements.lock`.** SUMO is now a Python package install — `uv pip install -r requirements.lock` lands `sumo`, `netconvert`, and `sumo-gui` directly into `.venv/bin/` on both macOS arm64 and Linux x86_64. No more `brew install sumo` (broken on the dlr-ts tap as of 2026-04) or per-cluster module wrangling. Same wheel + version on every platform → cross-machine SUMO output reproducibility.
 - **`tools/env_report.py`** — single-command toolchain audit: prints Python version + platform + executable path, all 12 watched Python dep versions, SUMO/netconvert/Java binary versions, and counts of OSM PBFs / ModelGen files / scenarios. Designed for cross-machine parity verification — run on each end and `diff` the outputs.
 - **`cluster/jobs/{01_quick_test,02_small_commute,03_medium_multimodal,04_large_full_day,05_stress_test}.sbatch`** — five ready-to-submit per-tier sbatch templates matching `scripts/01..05.py`. Each is sized appropriately for its tier (4–8 cores, 8–64 GB, 30 min – 8 h) and uses the `logs/` subdir convention. Replaces the single tier-specific `gen_nyc_500k.sbatch` (which is preserved as the historical recorded-run artifact for `JobID 47063986`).
-- **Three reference scenario bundles tracked in git.** `chicago_1k_car` (~1 MB, original test fixture), `nyc_10k_car` (~36 MB, small commute tier), and `la_50k_bike_car_transit` (~164 MB, multi-modal medium tier and the cross-platform reproducibility reference) are now committed. A fresh clone runs the full test suite and the bundled adapters without first generating data. The 200K and 500K tiers stay untracked — their `network.xml` / `signals.xml` files individually exceed GitHub's 100 MB hard limit.
+- **Three reference scenario bundles tracked in git.** `chicago_1k_car` (~1 MB, original test fixture), `nyc_10k_car` (~36 MB, small commute tier), and `la_50k_car` (~164 MB, multi-modal medium tier and the cross-platform reproducibility reference) are now committed. A fresh clone runs the full test suite and the bundled adapters without first generating data. The 200K and 500K tiers stay untracked — their `network.xml` / `signals.xml` files individually exceed GitHub's 100 MB hard limit.
 
 ### Changed
 

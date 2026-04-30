@@ -36,6 +36,12 @@ import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from evaluation.demand_composition import (
+    find_canonical_demand,
+    format_composition_report,
+    read_demand_composition,
+)
+
 
 def _hms_to_seconds(hms: str) -> float:
     """MATSim trav_time is HH:MM:SS — convert to seconds."""
@@ -183,10 +189,14 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
                   f"{r['scc_links']}/{r['total_links']} links")
     if len(reports) >= 2:
         keys = ["feasible_trips", "total_trips", "scc_nodes", "scc_links",
-                "skipped_outside_scc", "skipped_unknown_nodes", "skipped_missing_fields"]
+                "skipped_outside_scc", "skipped_unknown_nodes",
+                "skipped_missing_fields", "skipped_unsupported_mode"]
         first_eng = next(iter(reports))
+        # Use .get(...) so reports written before mode-aware feasibility shipped
+        # (without `skipped_unsupported_mode`) still compare cleanly — they
+        # default to 0 alongside fresh reports' 0 for car-only bundles.
         same = all(
-            reports[eng][k] == reports[first_eng][k]
+            reports[eng].get(k, 0) == reports[first_eng].get(k, 0)
             for eng in reports for k in keys
         )
         mark = "PASS" if same else "FAIL"
@@ -261,10 +271,18 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
         if rou:
             sims["sumo"] = len(ET.parse(rou[0]).getroot().findall("vehicle")) + \
                            len(ET.parse(rou[0]).getroot().findall("trip"))
-    target = reports.get(next(iter(reports), ""), {}).get("feasible_trips", 0) if reports else 0
+    # Each engine's feasibility report carries its own mode-filtered target
+    # (engines today all declare supported_modes={"car"}, so the targets
+    # match across engines for car-only bundles; for multi-mode bundles
+    # each engine's target is its car-only subset). Compare each engine
+    # against its own target so audit Q3 stays correct under mode filtering.
     for eng, n in sims.items():
+        target = reports.get(eng, {}).get("feasible_trips", 0)
+        modes = reports.get(eng, {}).get("supported_modes") or []
+        modes_clause = f" mode∈{{{','.join(modes)}}}" if modes else ""
         mark = "PASS" if n == target else "WARN"
-        print(f"  {eng:8} simulates {n} trips/persons  [{mark} vs target {target}]")
+        print(f"  {eng:8} simulates {n} trips/persons  "
+              f"[{mark} vs target {target}{modes_clause}]")
 
     # --------------------------------------------------------------- Q4
     print("\n--- Q4: Cross-engine travel time comparison ---")
@@ -315,6 +333,21 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
         ratio = statistics.mean(tts["sumo"]) / statistics.mean(tts["dtalite"])
         print(f"  SUMO/DTALite   mean-TT ratio: {ratio:.3f}  "
               f"({'+' if ratio > 1 else ''}{(ratio-1)*100:.1f}%)")
+
+    # --------------------------------------------------------------- Q5
+    # Demand composition (V5+ trip-purpose breakdown). Reads the
+    # canonical bundle's demand.csv (engines may overwrite their cell
+    # copy with engine-specific columns — DTALite drops `purpose` to
+    # use `o_zone_id, d_zone_id, volume`). Pre-V5 bundles return None
+    # and we skip the section gracefully.
+    print("\n--- Q5: Demand composition (V5+ trip-purpose breakdown) ---")
+    canonical_demand = find_canonical_demand(scenario)
+    comp = read_demand_composition(canonical_demand)
+    if comp is None:
+        print(f"  (no V5+ purpose column at {canonical_demand} — skipping)")
+    else:
+        print(f"  source: {canonical_demand}")
+        print(format_composition_report(comp))
 
 
 def main() -> int:

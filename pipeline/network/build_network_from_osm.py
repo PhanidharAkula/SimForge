@@ -72,6 +72,24 @@ class CanonicalNode:
     y: float  # Latitude or projected Y
     osm_id: Optional[int] = None
     node_type: str = "intersection"  # intersection, dead_end, etc.
+    has_signal: bool = False  # True if OSM tags this node as highway=traffic_signals
+
+
+@dataclass
+class CanonicalTurnRestriction:
+    """A turn restriction at a junction (e.g. no-left, only-straight).
+
+    Sourced from OSM `type=restriction` relations with `via=node`.
+    Resolved to canonical link IDs at extraction time so consumers
+    don't need to round-trip back to OSM.
+    """
+    restriction: str            # OSM restriction value: no_left_turn, no_right_turn,
+                                # no_u_turn, no_straight_on, only_left_turn,
+                                # only_right_turn, only_straight_on
+    from_link: str              # canonical link ID of the entering link
+    via_node: str               # canonical node ID at the junction
+    to_link: str                # canonical link ID of the leaving link
+    osm_relation_id: Optional[int] = None  # provenance
 
 
 @dataclass
@@ -88,13 +106,15 @@ class CanonicalLink:
     name: Optional[str] = None
 
 
-#  {"service", 25}, {"residential", 25}, {"primary", 35},
-#         {"secondary", 35}, {"tertiary", 25}, {"motorway_link", 45},
-#         {"motorway", 65}, {"trunk", 55}, {"primary_link", 45},
-#         {"trunk_link", 45}, {"secondary_link", 25}, {"tertiary_link", 25},
-#         {"unclassified", 10}};
-
-# Default speed limits by OSM highway type (m/s)
+# Default speed limits by OSM highway type (m/s).
+#
+# Used only when an OSM way has no explicit `maxspeed` tag. Most major US
+# roads carry maxspeed in OSM and override these defaults; this table is
+# for the long tail of unmarked residential / service roads. Values are
+# typical urban speed limits in km/h converted to m/s. (Note: cityscape's
+# `model_gen/ModelGenerator.cpp::SpeedLimits` is a separate US-mph table
+# used by cityscape's own travel-time estimation; SimForge does not
+# consume it — we read OSM `maxspeed` directly via osmnx.)
 DEFAULT_SPEEDS_MPS = {
     "motorway": 33.3,       # 120 km/h
     "motorway_link": 22.2,  # 80 km/h
@@ -269,19 +289,41 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
 
 def extract_canonical_network(
     G: "networkx.MultiDiGraph",
-    crs: str = "EPSG:4326"
-) -> tuple[list[CanonicalNode], list[CanonicalLink]]:
+    crs: str = "EPSG:4326",
+    osm_signal_ids: Optional[set] = None,
+    osm_turn_restrictions: Optional[list] = None,
+) -> tuple[list[CanonicalNode], list[CanonicalLink], list[CanonicalTurnRestriction]]:
     """
-    Extract canonical nodes and links from OSM graph.
-    
+    Extract canonical nodes, links, and turn restrictions from OSM graph.
+
     Args:
         G: OSM network graph from osmnx
         crs: Coordinate reference system
-    
+        osm_signal_ids: Optional set of OSM node IDs that carry the
+            ``highway=traffic_signals`` tag, sourced from the unified PBF
+            scan inside ``load_network_from_pbf.load_osm_from_pbf`` (or
+            empty for the Overpass fallback path, where node tags are
+            preserved on the graph and read directly below). Used to set
+            ``has_signal=True`` on the matching canonical node. When
+            empty AND the graph nodes have no ``highway`` attribute,
+            all nodes default to ``has_signal=False`` and the signal
+            generator falls back to its degree heuristic with a warning.
+        osm_turn_restrictions: Optional list of dicts (each with keys
+            ``restriction``, ``from_way``, ``via_node``, ``to_way``,
+            ``osm_relation_id``) sourced from
+            ``load_network_from_pbf._slice_pbf_to_xml``. Each entry is
+            resolved here against canonical link/node IDs and emitted
+            as a ``CanonicalTurnRestriction``. Restrictions whose
+            ``via_node``, ``from_way``, or ``to_way`` didn't survive
+            bbox / SCC truncation are silently dropped — those movements
+            don't exist in the canonical network anyway.
+
     Returns:
-        Tuple of (nodes, links)
+        Tuple of (nodes, links, turn_restrictions)
     """
     _ = crs  # reserved for future CRS projection support
+    osm_signal_ids = osm_signal_ids or set()
+    osm_turn_restrictions = osm_turn_restrictions or []
     
     nodes = []
     links = []
@@ -293,24 +335,47 @@ def extract_canonical_network(
     for i, (osm_id, data) in enumerate(sorted(G.nodes(data=True))):
         canonical_id = f"n{i}"
         osm_to_canonical[osm_id] = canonical_id
-        
+
         # Determine node type based on degree
         in_deg = G.in_degree(osm_id)
         out_deg = G.out_degree(osm_id)
-        
+
         if in_deg + out_deg <= 2:
             node_type = "dead_end"
         elif in_deg + out_deg >= 6:
             node_type = "major_intersection"
         else:
             node_type = "intersection"
-        
+
+        # Real-world signal placement comes from OSM's `highway=traffic_signals`
+        # node tag (community-curated; ~5-15% of nodes in major US cities).
+        # Two routes get the tag in here, depending on which OSM source path
+        # produced the graph:
+        #   - PBF (default): pyosmium's BackReferenceWriter emits referenced
+        #     nodes as bare `<node id lat lon />` *without* their tags, so the
+        #     way-slice scan in `load_network_from_pbf._slice_pbf_to_xml`
+        #     piggybacks signal-node detection on the same PBF stream and
+        #     returns the OSM-ID set, which arrives here as `osm_signal_ids`.
+        #   - Overpass fallback: `osmnx.graph_from_bbox` preserves node tags
+        #     directly on the graph (per `osmnx.settings.useful_tags_node`),
+        #     so we read `data.get("highway")` and accept the match.
+        # OR'ing both sources keeps the code robust if either path improves
+        # in the future.
+        node_highway = data.get("highway")
+        if isinstance(node_highway, list):
+            node_highway = node_highway[0] if node_highway else None
+        has_signal = (
+            osm_id in osm_signal_ids
+            or node_highway == "traffic_signals"
+        )
+
         nodes.append(CanonicalNode(
             id=canonical_id,
             x=data.get("x", 0.0),
             y=data.get("y", 0.0),
             osm_id=osm_id,
-            node_type=node_type
+            node_type=node_type,
+            has_signal=has_signal,
         ))
     
     # Extract links (edges)
@@ -416,7 +481,67 @@ def extract_canonical_network(
         )
     else:
         logger.info("Extracted %d nodes, %d links", len(nodes), len(links))
-    return nodes, links
+
+    # ---------- Resolve OSM turn restrictions to canonical IDs ----------
+    # Each OSM `type=restriction` relation has (from_way, via_node, to_way)
+    # at the OSM level. We need to resolve those to the specific canonical
+    # links that approach + leave the via_node, since one OSM way may
+    # decompose into many canonical links across the network.
+    #
+    # Strategy:
+    #   - Index canonical links by (osm_way_id, to_node) for the "from" lookup
+    #     (the link approaching the junction).
+    #   - Index canonical links by (osm_way_id, from_node) for the "to" lookup
+    #     (the link leaving the junction).
+    #   - Drop restrictions whose via_node didn't survive into canonical IDs,
+    #     or whose ways were filtered out (e.g. by SCC clipping).
+    osm_to_canonical_node = {n.osm_id: n.id for n in nodes if n.osm_id is not None}
+    from_link_index: dict[tuple[int, str], CanonicalLink] = {}
+    to_link_index: dict[tuple[int, str], CanonicalLink] = {}
+    for link in links:
+        if link.osm_way_id is None:
+            continue
+        # When an OSM way is split mid-segment, the same osm_way_id appears
+        # on multiple canonical links. Indexing by (way_id, endpoint) picks
+        # the unique link incident on each junction.
+        try:
+            way_id = int(str(link.osm_way_id).split(",")[0])
+        except (TypeError, ValueError):
+            continue
+        from_link_index.setdefault((way_id, link.to_node), link)
+        to_link_index.setdefault((way_id, link.from_node), link)
+
+    turn_restrictions: list[CanonicalTurnRestriction] = []
+    skipped_via_filtered = 0
+    skipped_link_unresolved = 0
+    for r in osm_turn_restrictions:
+        canonical_via = osm_to_canonical_node.get(r["via_node"])
+        if canonical_via is None:
+            skipped_via_filtered += 1
+            continue
+        from_link = from_link_index.get((r["from_way"], canonical_via))
+        to_link = to_link_index.get((r["to_way"], canonical_via))
+        if from_link is None or to_link is None:
+            skipped_link_unresolved += 1
+            continue
+        turn_restrictions.append(CanonicalTurnRestriction(
+            restriction=r["restriction"],
+            from_link=from_link.id,
+            via_node=canonical_via,
+            to_link=to_link.id,
+            osm_relation_id=r.get("osm_relation_id"),
+        ))
+
+    if osm_turn_restrictions:
+        kept = len(turn_restrictions)
+        total = len(osm_turn_restrictions)
+        logger.info(
+            "Turn restrictions: %d kept, %d dropped "
+            "(%d via-node filtered out, %d unresolved link)  of %d total",
+            kept, total - kept, skipped_via_filtered, skipped_link_unresolved, total,
+        )
+
+    return nodes, links, turn_restrictions
 
 
 def build_network_xml(
@@ -424,18 +549,23 @@ def build_network_xml(
     links: list[CanonicalLink],
     crs: str = "EPSG:4326",
     units_length: str = "meters",
-    units_speed: str = "m/s"
+    units_speed: str = "m/s",
+    turn_restrictions: Optional[list[CanonicalTurnRestriction]] = None,
 ) -> etree.Element:
     """
-    Build canonical network.xml from extracted nodes and links.
-    
+    Build canonical network.xml from extracted nodes, links, and (optional)
+    turn restrictions.
+
     Args:
         nodes: List of canonical nodes
         links: List of canonical links
         crs: Coordinate reference system string
         units_length: Length unit string
         units_speed: Speed unit string
-    
+        turn_restrictions: Optional list of CanonicalTurnRestriction. When
+            present and non-empty, a ``<turn_restrictions>`` block is emitted
+            after ``<links>`` with one ``<turn_restriction>`` per entry.
+
     Returns:
         lxml Element tree root
     """
@@ -458,6 +588,8 @@ def build_network_xml(
         node_elem.set("type", node.node_type)
         if node.osm_id:
             node_elem.set("osm_id", str(node.osm_id))
+        if node.has_signal:
+            node_elem.set("has_signal", "true")
     
     # Add links
     links_elem = etree.SubElement(root, "links")
@@ -474,7 +606,23 @@ def build_network_xml(
             link_elem.set("osm_way_id", str(link.osm_way_id))
         if link.name:
             link_elem.set("name", link.name)
-    
+
+    # Optional turn-restrictions block (V5+). Emitted only when
+    # extraction returned at least one resolved restriction so that
+    # absent-restrictions networks (synthetic, Overpass-without-relations)
+    # still produce a clean schema.
+    if turn_restrictions:
+        tr_elem = etree.SubElement(root, "turn_restrictions")
+        for r in sorted(turn_restrictions,
+                        key=lambda x: (x.via_node, x.from_link, x.to_link)):
+            r_elem = etree.SubElement(tr_elem, "turn_restriction")
+            r_elem.set("type", r.restriction)
+            r_elem.set("from_link", r.from_link)
+            r_elem.set("via_node", r.via_node)
+            r_elem.set("to_link", r.to_link)
+            if r.osm_relation_id is not None:
+                r_elem.set("osm_relation_id", str(r.osm_relation_id))
+
     return root
 
 
@@ -505,18 +653,43 @@ def build_network_from_osm(
         Summary dict with node_count, link_count, osm_source, etc.
     """
     if pbf_path is not None:
+        # PBF path is the default for all bundled cities (chicago/nyc/la have
+        # PBFs in osm_data/, see osm_data/manifest.json). Hash-pinned, offline,
+        # reproducible.
         from pipeline.network.load_network_from_pbf import load_osm_from_pbf
-        G = load_osm_from_pbf(pbf_path, bbox, network_type)
+        # `load_osm_from_pbf` returns (graph, signal_node_ids,
+        # turn_restrictions). All three come from the SAME PBF stream that
+        # produces the way slice — no second whole-file scan, so adding
+        # extraction is essentially free even on the 1.3 GB CA PBF.
+        G, osm_signal_ids, osm_turn_restrictions = load_osm_from_pbf(
+            pbf_path, bbox, network_type,
+        )
         osm_source = {"type": "pbf", "path": str(pbf_path), "name": Path(pbf_path).name}
     else:
+        # Overpass fallback — only fires when no local PBF covers the bbox
+        # (rare; preserved for one-off experiments). osmnx.graph_from_bbox
+        # preserves node tags directly per `osmnx.settings.useful_tags_node`,
+        # so signal placement is surfaced via the graph attribute inside
+        # extract_canonical_network(). Turn-restriction relations are NOT
+        # exposed by graph_from_bbox in a structured form (they would need a
+        # separate Overpass query) — so we pass an empty list here. Networks
+        # generated via Overpass thus skip turn restrictions; the PBF path
+        # is the only one that produces them, which is fine since PBF is
+        # the default for thesis bundles.
         G = download_osm_network(bbox, network_type)
+        osm_signal_ids = set()
+        osm_turn_restrictions = []
         osm_source = {"type": "overpass", "endpoint": "https://overpass-api.de/api/"}
 
     # Extract
-    nodes, links = extract_canonical_network(G, crs)
+    nodes, links, turn_restrictions = extract_canonical_network(
+        G, crs,
+        osm_signal_ids=osm_signal_ids,
+        osm_turn_restrictions=osm_turn_restrictions,
+    )
 
     # Build XML
-    root = build_network_xml(nodes, links, crs)
+    root = build_network_xml(nodes, links, crs, turn_restrictions=turn_restrictions)
 
     # Write
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -525,9 +698,12 @@ def build_network_from_osm(
 
     logger.info("Wrote network to %s", output_path)
 
+    osm_signal_node_count = sum(1 for n in nodes if n.has_signal)
     return {
         "node_count": len(nodes),
         "link_count": len(links),
+        "osm_signal_node_count": osm_signal_node_count,
+        "turn_restriction_count": len(turn_restrictions),
         "output_path": str(output_path),
         "crs": crs,
         "bbox": {

@@ -140,7 +140,7 @@ QUICK START:
   1. Generate data:   python generate.py --city chicago --trips 1000
   2. Validate:        python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   3. Run simulation:  python run.py --scenario chicago_1k_car --engine sumo --mode meso
-  4. Run benchmark:   python -m execution.run_benchmark runspecs/stress_test.yaml
+  4. Run benchmark:   python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 HELP TOPICS:
   python help.py setup              Install and bootstrap
@@ -175,7 +175,7 @@ PROJECT STRUCTURE (alphabetical, repo root):
   runspecs/             Benchmark configuration files (YAML)
   scenarios/            Generated canonical data bundles
   scripts/              5 ready-to-use generation scripts (01–05)
-  tests/                Test suite (pytest, ~495 tests across 19 files)
+  tests/                Test suite (pytest, ~524 tests across 20 files)
   tools/                Operator utilities (clean.sh, download_osm.py,
                         env_report.py, inspect_network.py)
 
@@ -259,8 +259,8 @@ EXAMPLES:
   python generate.py --city chicago --trips 5000 --synthetic
   python generate.py --city chicago --trips 5000 --force-overpass    # today's OSM
   python generate.py --city chicago --trips 5000 --verbose           # firehose
-  python generate.py --preset quick_test
-  python generate.py --preset small_commute --trips 100000 --city la
+  python generate.py --preset chicago_1k_car
+  python generate.py --preset nyc_10k_car --trips 100000 --city la
 
 OUTPUT:
   scenarios/<scenario_id>/
@@ -300,7 +300,7 @@ OUTPUT FORMAT:
   Per-cell rows show: [N/total] engine mode seed=N ✓/✗ runtime
   Scenario dividers (▶ scenario_name) group cells visually.
   Sticky progress bar at the bottom (TTY only) shows overall %, ETA,
-  ✓N ✗N counters, and a Braille spinner heartbeat (5 Hz) so long-running
+  ✓N ✗N counters, and a Braille spinner heartbeat (~8 fps) so long-running
   cells don't look stuck.
   Final summary includes per-cell timing breakdown (mean ± 95% CI across
   reps, computed via evaluation/metrics/confidence.py — same Student's-t
@@ -320,9 +320,9 @@ POST-BENCHMARK PIPELINE (canonical 3-step):
   python -m evaluation.generate_plots    <run-dir>/benchmark_results.json
 
 BENCHMARK HARNESS (runspec-driven, for full matrices):
-  python -m execution.run_benchmark runspecs/stress_test.yaml       # canonical matrix
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml       # canonical matrix
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
-  python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
 
 run.py vs run_benchmark.py:
   Both call the same adapters; the wrapping differs. run.py writes a flat
@@ -340,36 +340,38 @@ HELP_SCRIPTS = """
   BUILT-IN SCRIPTS (scripts/)
 ====================================================================
 
-5 ready-to-use generation scripts, from small to big. All accept --verbose / -v:
+5 ready-to-use generation scripts, from small to big. All accept --verbose / -v.
+All five generate car-only demand to match what the engine adapters simulate
+today (see python help.py modes for the engine mode-coverage explanation).
 
-  python scripts/01_quick_test.py [--verbose]          Tiny quick test
-  python scripts/02_small_commute.py [--verbose]       Small morning commute
-  python scripts/03_medium_multimodal.py [--verbose]   Medium multi-modal city
-  python scripts/04_large_full_day.py [--verbose]      Large full-day simulation
-  python scripts/05_stress_test.py [--verbose]         Stress test at scale
+  python scripts/01_chicago_1k_car.py    [--verbose]   Tiny test fixture
+  python scripts/02_nyc_10k_car.py       [--verbose]   Small morning commute
+  python scripts/03_la_50k_car.py        [--verbose]   Medium tier
+  python scripts/04_chicago_200k_car.py  [--verbose]   Large full-day
+  python scripts/05_nyc_500k_car.py      [--verbose]   Stress test at scale
 
-  +----+------------------------+----------+---------+------------------+----------+
-  | #  | Script                 | City     | Trips   | Modes            | Time     |
-  +----+------------------------+----------+---------+------------------+----------+
-  | 01 | quick_test             | Chicago  |   1,000 | car              | 07-08 AM |
-  | 02 | small_commute          | NYC      |  10,000 | car              | 07-09 AM |
-  | 03 | medium_multimodal      | LA       |  50,000 | car+transit+bike | 06-10 AM |
-  | 04 | large_full_day         | Chicago  | 200,000 | car+transit      | 00-24:00 |
-  | 05 | stress_test            | NYC      | 500,000 | car              | 06-10 AM |
-  +----+------------------------+----------+---------+------------------+----------+
+  +----+----------------------+----------+---------+------+----------+
+  | #  | Script               | City     |  Trips  | Mode | Time     |
+  +----+----------------------+----------+---------+------+----------+
+  | 01 | chicago_1k_car       | Chicago  |   1,000 | car  | 07-08 AM |
+  | 02 | nyc_10k_car          | NYC      |  10,000 | car  | 07-09 AM |
+  | 03 | la_50k_car           | LA       |  50,000 | car  | 06-10 AM |
+  | 04 | chicago_200k_car     | Chicago  | 200,000 | car  | 00-24:00 |
+  | 05 | nyc_500k_car         | NYC      | 500,000 | car  | 06-10 AM |
+  +----+----------------------+----------+---------+------+----------+
 
 EQUIVALENT -- via generate.py presets (same code path, prefer this form):
-  python generate.py --preset quick_test
-  python generate.py --preset small_commute
-  python generate.py --preset medium_multimodal
-  python generate.py --preset large_full_day
-  python generate.py --preset stress_test
+  python generate.py --preset chicago_1k_car
+  python generate.py --preset nyc_10k_car
+  python generate.py --preset la_50k_car
+  python generate.py --preset chicago_200k_car
+  python generate.py --preset nyc_500k_car
 
   scripts/0X are thin wrappers that import generate_scenario() and call it
   with hardcoded kwargs. They accept --verbose / -v only. The preset form
   is preferred when you need other overrides (--output, --seed, --city,
   --modes, --synthetic, OSM source mode):
-    python generate.py --preset small_commute --city la --verbose
+    python generate.py --preset nyc_10k_car --city la --verbose
 """
 
 HELP_MODES = """
@@ -377,22 +379,46 @@ HELP_MODES = """
   TRAVEL MODES REFERENCE
 ====================================================================
 
-SUPPORTED MODES:
-  car      Private automobile (drove alone, carpool, taxi, other)
-  transit  Public transportation (bus, subway, rail, ferry)
+SUPPORTED MODES (4 simulator buckets generated from 12 cityscape codes):
+  car      Road vehicle    (Car/truck/van, Taxi, Motorcycle)
+  transit  Public transport (Bus, Subway, Commuter rail, Light rail, Ferry)
   bike     Bicycle
-  walk     Walking
+  walk     Walked
 
-CENSUS MODE MAPPING (JWTRNS codes):
-  1=drove alone > car     2=carpooled > car       3=bus > transit
-  4=streetcar > transit   5=subway > transit       6=railroad > transit
-  7=ferry > transit       8=bicycle > bike         9=walked > walk
-  10=WFH > excluded       11=taxi > car            12=other > car
+  A 5th implicit bucket "home" excludes WFH workers and "Other method"
+  from the demand pool entirely (no commute trip generated).
 
-SIMULATOR SUPPORT:
-  SUMO:    car (micro/meso), transit (with PT module)
-  MATSim:  car, transit, bike, walk (full multi-modal)
-  DTALite: car only (CPU mesoscopic Dynamic Traffic Assignment, single-mode demand)
+CENSUS MODE MAPPING (cityscape Schedule-generator branch / ACS PUMS 2021):
+   1 Car, truck, or van                    > car
+   2 Bus                                   > transit
+   3 Subway or elevated rail               > transit
+   4 Long-distance / commuter rail         > transit
+   5 Light rail, streetcar, trolley        > transit
+   6 Ferryboat                             > transit
+   7 Taxicab                               > car
+   8 Motorcycle                            > car
+   9 Bicycle                               > bike
+  10 Walked                                > walk
+  11 Worked from home                      > home (excluded — no trip)
+  12 Other method                          > home (excluded — no trip)
+  -1 N/A — not a worker (cityscape's "bb" sentinel)
+
+  Single source of truth: pipeline/demand/parse_model_file.py:166
+  See doc/MODELGEN_AND_MODES.md §2 + §4 for cityscape provenance and the
+  per-city per-code histograms.
+
+SIMULATOR SUPPORT — what SimForge currently wires up (vs engine capability):
+  SUMO:    car only                    (engine supports PT/bike/walk via
+                                        busStop/ptlines/vClass; not wired up)
+  MATSim:  car only                    (engine supports full multi-modal;
+                                        only `mode=car` modeParams configured)
+  DTALite: car only                    (engine is car-only by design)
+
+  When simulating a multi-mode bundle, every adapter mode-filters demand to
+  its supported set. The shared feasibility filter is mode-aware too, so
+  audit_fairness Q3 compares engines on the same mode-restricted target.
+  See doc/MODELGEN_AND_MODES.md §5 for adapter mode handling and §8 for
+  the future-work pathway to true multi-modal simulation.
 """
 
 HELP_ADAPTERS = """
@@ -404,6 +430,12 @@ SUPPORTED SIMULATORS:
   SUMO     1.26+     Microscopic/mesoscopic vehicle simulation (eclipse-sumo wheel)
   MATSim   15.0      Activity-based mesoscopic multi-agent sim
   DTALite  0.10.0+   CPU mesoscopic Dynamic Traffic Assignment (path4gmns)
+
+  All three adapters currently configure car-only simulation. When given
+  a multi-mode bundle they mode-filter demand to mode==car before routing,
+  via the shared mode-aware feasibility filter (adapters/common/feasibility.py).
+  See doc/MODELGEN_AND_MODES.md §5 + §6 for adapter mode handling and the
+  PT-module wiring required for true multi-modal simulation.
 
   LPSim, POLARIS, and QarSUMO are documented as evaluated-and-rejected
   in doc/engines/{LPSIM,QARSUMO}_RETROSPECTIVE.md and
@@ -461,13 +493,22 @@ HELP_SCHEMA = """
   CANONICAL SCHEMA REFERENCE
 ====================================================================
 
-5 files per scenario bundle:
+6 files per scenario bundle:
 
-1. network.xml  -- Directed road graph (nodes + links from OSM)
-2. demand.csv   -- Trip-level OD: trip_id,origin,dest,departure_s,mode
-3. signals.xml  -- Fixed-time traffic signal phases
-4. config.xml   -- Scenario metadata (time, seed, units)
-5. manifest.xml -- File inventory
+1. network.xml              -- Directed road graph (nodes + links from OSM)
+2. demand.csv               -- Trip-level OD: trip_id,origin,dest,departure_s,mode
+3. signals.xml              -- Fixed-time traffic signal phases at every
+                               OSM-tagged `highway=traffic_signals` node
+                               in the bbox (1-3% of nodes in a typical
+                               US urban bbox; placeholder 90s 2-phase
+                               cycle template — placement is real, timing
+                               is synthetic). See doc/SCENARIO_GENERATION.md
+                               §"Step 2: Traffic Signals" for full provenance.
+4. config.xml               -- Scenario metadata (time, seed, units)
+5. manifest.xml             -- File inventory
+6. generation_metadata.json -- Per-step source / parameter / hash trail
+                               (generator version, seed, OSM source, demand
+                               source, modelgen city stats, SCC drop counts)
 
 VALIDATION:
   python -m pipeline.validation.validate_bundle scenarios/<id>
@@ -537,12 +578,12 @@ GENERATE THESIS PLOTS:
 
 EXAMPLES (using the canonical stress-test runspec):
   python -m evaluation.analyze_benchmark \\
-         runs/stress_test/benchmark_results_stress_test.json --latex --markdown
-  python -m evaluation.audit_fairness runs/stress_test
+         runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
+  python -m evaluation.audit_fairness runs/benchmark_small
   python -m evaluation.compare_modes --from-benchmark \\
-         runs/stress_test/benchmark_results_stress_test.json
+         runs/benchmark_small/benchmark_results_benchmark_small.json
   python -m evaluation.generate_plots \\
-         runs/stress_test/benchmark_results_stress_test.json \\
+         runs/benchmark_small/benchmark_results_benchmark_small.json \\
          --output doc/figures --clean
 """
 
@@ -567,11 +608,13 @@ FLAGS:
   --verbose             Show adapter INFO logs above the sticky bar
 
 BUILT-IN RUNSPECS:
-  stress_test.yaml       Canonical 4-cell matrix: chicago_1k_car x
-                         {SUMO meso, SUMO micro, MATSim meso, DTALite meso},
-                         5 repeats per cell = 20 runs total. All thesis
-                         Chapter 5 numbers come from this runspec.
-  benchmark_small.yaml   1K-50K trips, 600 s per-run timeout (laptop tier).
+  benchmark_small.yaml   Canonical 11-cell matrix used for thesis Chapter 5:
+                         chicago_1k_car + nyc_10k_car each x {SUMO meso,
+                         SUMO micro, MATSim meso, DTALite meso} (4 cells)
+                         plus la_50k_car x {SUMO meso, MATSim meso,
+                         DTALite meso} (3 cells, no SUMO micro at 50K),
+                         N=5 repeats per cell = 55 runs total. Runs end-to-end
+                         on a Mac laptop (DTALite is CPU-only).
   benchmark_large.yaml   200K-500K trips, 3600 s per-run timeout (HPC tier).
 
 OUTPUT FORMAT:
@@ -586,12 +629,12 @@ OUTPUT FORMAT:
   and adapter INFO logs are routed cleanly above it.
 
 REPRODUCE THE THESIS NUMBERS END-TO-END (about one minute):
-  python -m execution.run_benchmark runspecs/stress_test.yaml
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml
   python -m evaluation.analyze_benchmark \\
-         runs/stress_test/benchmark_results_stress_test.json --latex --markdown
-  python -m evaluation.audit_fairness runs/stress_test
+         runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
+  python -m evaluation.audit_fairness runs/benchmark_small
   python -m evaluation.generate_plots \\
-         runs/stress_test/benchmark_results_stress_test.json --output doc/figures
+         runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
 OUTPUT SHAPE:
   runs/<runspec_name>/
@@ -618,9 +661,13 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships ~524 tests across 20 files. The full suite runs in
-~3-4 min on arm64 (~22 s on a Linux box where SUMO doesn't crash, since
-the SUMO sweeps actually skip on arm64).
+SimForge ships ~499 tests across 20 files (319 base + 36 parametrized
+per bundled scenario × the 5 standard scripts/01..05 scenarios). The
+count drops linearly if you have fewer bundles in scenarios/ — each
+missing scenario removes 36 parametrized tests from
+test_scenario_data_integrity.py. The full suite runs in ~3-4 min on
+arm64 (~22 s on a Linux box where SUMO doesn't crash, since the SUMO
+sweeps actually skip on arm64).
 
 Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 --strict-markers + --tb=short. Shared fixtures and platform-skip
@@ -652,7 +699,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m integration
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (20 files / ~524 tests, alphabetical):
+TEST FILES (20 files / ~499 tests with 5 bundled scenarios, alphabetical):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
@@ -663,19 +710,21 @@ TEST FILES (20 files / ~524 tests, alphabetical):
   test_dtalite_adapter.py         (46)  DTALite adapter writers, settings,
                                         demand-driven zoning, end-to-end smoke
   test_engine_smoke.py            (4)   Real-binary SUMO/MATSim/DTALite [skip-on-miss]
-  test_feasibility.py             (16)  Shared cross-engine trip filter
+  test_feasibility.py             (19)  Shared cross-engine trip filter
+                                        + mode-aware feasibility (V5)
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
   test_matsim_adapter.py          (24)  MATSim helpers + end-to-end + sweep
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
-  test_parse_model_file.py        (12)  ModelGen file parser tests
+  test_parse_model_file.py        (20)  ModelGen file parser + JWTRNS
+                                        mapping pinning + single-source-of-truth
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_reproducibility_metrics.py (15)  R-score core + edge cases
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
   test_scc.py                     (14)  Iterative Kosaraju + parser
-  test_scenario_data_integrity.py (216) 7 classes x every bundled scenario
-                                        (parametrized — count scales with
-                                        scenarios/ contents)
+  test_scenario_data_integrity.py (180) 7 classes × 36 tests/scenario, scales
+                                        with scenarios/ contents (180 = 5
+                                        scenarios × 36; 0 if scenarios/ empty)
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep
   test_validator.py               (2)   Bundle pass + corruption fail
 
@@ -876,8 +925,8 @@ VERIFY THE INSTALL (full sanity check):
   source .venv/bin/activate
   python -m pytest                              # Full test suite
   python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
-  python -m execution.run_benchmark runspecs/stress_test.yaml --dry-run
-  python -m execution.run_benchmark runspecs/stress_test.yaml      # ~27 s
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml      # ~27 s
 
 MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
   python3.10+ -m venv .venv

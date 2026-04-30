@@ -290,7 +290,7 @@ srun --account=PMIU0110 --partition=cpu \
      --nodes=1 --ntasks=1 --cpus-per-task=8 \
      --time=00:20:00 --pty bash
 # ... inside the node ...
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
 ---
@@ -330,7 +330,7 @@ measured 3 h 52 m runtime (see budgets below).
 
 The `stress_test` row is **measured** on JobID 47063986 (Pitzer `cpu`,
 8 cores, 64 GB, NYC @ 20 km radius, `new-york-2026-04-22.osm.pbf`,
-`scripts/05_stress_test.py`); the annotated stderr with per-step
+`scripts/05_nyc_500k_car.py`); the annotated stderr with per-step
 breakdowns is at [`cluster/example_runs/nyc_500k_47063986.md`](../cluster/example_runs/nyc_500k_47063986.md).
 The smaller tier rows are pre-measurement estimates that assume a mid-size
 US city (~50k SCC nodes); demand-gen scales as O(trips × SCC destination
@@ -376,9 +376,9 @@ cd $HOME/SimForge
 source .venv/bin/activate
 module load python/3.12 openjdk/21.0.3_9
 
-python -m execution.run_benchmark runspecs/stress_test.yaml
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --markdown
-python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --markdown
+python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
 ### DTALite on Pitzer (CPU)
@@ -476,12 +476,12 @@ scancel --user=$USER                # all your jobs (be careful!)
 
 ## 9. Benchmark matrix on Pitzer
 
-The thesis numbers come from running `runspecs/stress_test.yaml` on Pitzer
+The thesis numbers come from running `runspecs/benchmark_small.yaml` on Pitzer
 with all three engines. After a successful benchmark job you should have:
 
 ```
-runs/stress_test/
-├── benchmark_results_stress_test.json
+runs/benchmark_small/
+├── benchmark_results_benchmark_small.json
 ├── chicago_1k_car/
 │   ├── sumo/     {seed_42,seed_43,seed_44,seed_45,seed_46}/tripinfo.xml
 │   ├── matsim/   {seed_42..seed_46}/output_trips.csv.gz
@@ -495,7 +495,7 @@ inclusion in the thesis:
 
 ```bash
 # From your local machine
-rsync -avh pitzer:SimForge/runs/stress_test/ ./runs/stress_test_pitzer/
+rsync -avh pitzer:SimForge/runs/benchmark_small/ ./runs/stress_test_pitzer/
 ```
 
 ---

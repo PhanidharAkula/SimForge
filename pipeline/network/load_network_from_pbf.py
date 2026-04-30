@@ -40,13 +40,31 @@ import time
 logger = logging.getLogger(__name__)
 
 
-def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int]:
-    """Slice ``pbf_path`` to ``out_xml`` keeping highway ways touching ``bbox``.
+def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int, set, list]:
+    """Slice ``pbf_path`` to ``out_xml`` keeping highway ways touching ``bbox``,
+    and *in the same scan* collect:
+
+      - OSM IDs of nodes tagged ``highway=traffic_signals`` inside the bbox.
+      - OSM ``type=restriction`` relations whose ``via`` node is inside the
+        bbox (turn restrictions: ``no_left_turn``, ``only_straight_on``, etc.).
 
     Uses pyosmium's ``BackReferenceWriter`` so the resulting XML is
     reference-complete: every node any written way refers to is included,
     even when the node itself sits outside the bbox (needed so osmnx can
     build the geometry).
+
+    The PBF stream visits every entity once anyway (FileProcessor walks
+    nodes → ways → relations in PBF order). We piggyback signal-node
+    detection AND turn-restriction detection on the same stream so we
+    don't pay for a second whole-file pass — important on the CA PBF
+    (1.3 GB ≈ 140 s for a separate scan).
+
+    Returns ``(ways_written, nodes_referenced_count, signal_node_ids,
+    turn_restrictions)`` where ``turn_restrictions`` is a list of dicts:
+    ``{"restriction": "no_left_turn", "from_way": <osm_id>, "via_node":
+    <osm_id>, "to_way": <osm_id>, "osm_relation_id": <osm_id>}``.
+    Only ``via=node`` restrictions are captured (``via=way`` is rare
+    and structurally different — left as future work).
     """
     try:
         import osmium
@@ -61,10 +79,70 @@ def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int]:
     fp = osmium.FileProcessor(str(pbf_path)).with_locations()
     ways_written = 0
     nodes_referenced: set[int] = set()
+    signal_node_ids: set[int] = set()
+    turn_restrictions: list = []
+    # Cache via-node bbox membership: turn-restriction relations come AFTER
+    # nodes in the PBF, so we accumulate node-in-bbox membership during the
+    # node phase and check it when relations come through. This avoids
+    # needing a coordinate index lookup inside the relation loop.
+    node_in_bbox: set[int] = set()
 
     with osmium.BackReferenceWriter(str(out_xml), ref_src=str(pbf_path),
                                     overwrite=True) as writer:
         for obj in fp:
+            if obj.is_node():
+                # Track every node's in-bbox status for later turn-restriction
+                # filtering, plus detect highway=traffic_signals for the
+                # canonical network's `has_signal` attribute.
+                try:
+                    lon, lat = obj.location.lon, obj.location.lat
+                except Exception:
+                    continue
+                in_box = W <= lon <= E and S <= lat <= N
+                if in_box:
+                    node_in_bbox.add(obj.id)
+                    if obj.tags.get("highway") == "traffic_signals":
+                        signal_node_ids.add(obj.id)
+                continue
+            if obj.is_relation():
+                # Capture OSM `type=restriction` relations with `via=node`
+                # (turn restrictions like no_left_turn, only_straight_on).
+                # via=way restrictions exist but are rare and structurally
+                # different (the via is a sequence of ways) — left as
+                # future work; they affect <1% of restrictions in major US
+                # cities per OSM coverage stats.
+                if obj.tags.get("type") != "restriction":
+                    continue
+                rtype = obj.tags.get("restriction")
+                if not rtype:
+                    continue
+                from_way = via_node = to_way = None
+                via_is_node = False
+                for member in obj.members:
+                    role = member.role
+                    mtype = member.type
+                    if mtype == "w" and role == "from":
+                        from_way = member.ref
+                    elif mtype == "n" and role == "via":
+                        via_node = member.ref
+                        via_is_node = True
+                    elif mtype == "w" and role == "via":
+                        # via=way — skip this restriction
+                        via_is_node = False
+                        break
+                    elif mtype == "w" and role == "to":
+                        to_way = member.ref
+                if (via_is_node and from_way is not None
+                        and via_node is not None and to_way is not None
+                        and via_node in node_in_bbox):
+                    turn_restrictions.append({
+                        "restriction": rtype,
+                        "from_way": from_way,
+                        "via_node": via_node,
+                        "to_way": to_way,
+                        "osm_relation_id": obj.id,
+                    })
+                continue
             if not obj.is_way():
                 continue
             tags = obj.tags
@@ -85,7 +163,7 @@ def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int]:
                 for nr in obj.nodes:
                     nodes_referenced.add(nr.ref)
 
-    return ways_written, len(nodes_referenced)
+    return ways_written, len(nodes_referenced), signal_node_ids, turn_restrictions
 
 
 def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
@@ -98,9 +176,15 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
             filters to car-accessible roads.
 
     Returns:
+        ``(G, signal_node_ids, turn_restrictions)`` where ``G`` is a
         ``networkx.MultiDiGraph`` with ``x``/``y`` on nodes and
         ``highway``/``length``/``maxspeed``/``lanes``/``name``/``osmid``
-        on edges — schema-compatible with ``extract_canonical_network``.
+        on edges (schema-compatible with ``extract_canonical_network``),
+        ``signal_node_ids`` is the set of OSM node IDs tagged
+        ``highway=traffic_signals`` inside ``bbox``, and
+        ``turn_restrictions`` is the list of OSM ``type=restriction``
+        relations with ``via=node`` inside ``bbox``. All three are
+        collected on the same PBF stream as the way slice — no extra I/O.
     """
     try:
         import osmnx as ox
@@ -139,11 +223,15 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
     tmp_xml = Path(tmp_path)
 
     try:
-        ways_written, nodes_referenced = _slice_pbf_to_xml(pbf_path, bbox, tmp_xml)
+        ways_written, nodes_referenced, signal_node_ids, turn_restrictions = (
+            _slice_pbf_to_xml(pbf_path, bbox, tmp_xml)
+        )
         slice_elapsed = time.time() - t0
         logger.info(
-            "  Sliced PBF: %d highway ways, %d referenced nodes  (%.1fs)",
-            ways_written, nodes_referenced, slice_elapsed,
+            "  Sliced PBF: %d highway ways, %d referenced nodes, "
+            "%d traffic-signals nodes, %d turn restrictions  (%.1fs)",
+            ways_written, nodes_referenced, len(signal_node_ids),
+            len(turn_restrictions), slice_elapsed,
         )
 
         if ways_written == 0:
@@ -189,4 +277,4 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
         "Loaded network: %d nodes, %d edges  (%.1fs, local PBF)",
         G.number_of_nodes(), G.number_of_edges(), elapsed,
     )
-    return G
+    return G, signal_node_ids, turn_restrictions

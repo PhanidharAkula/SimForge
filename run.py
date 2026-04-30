@@ -400,8 +400,8 @@ Examples:
     scenarios_available = get_scenarios()
     if not scenarios_available:
         print("❌ No scenarios found. Generate scenarios first:")
-        print("   python scripts/01_quick_test.py")
-        print("   python generate.py --preset quick_test")
+        print("   python scripts/01_chicago_1k_car.py")
+        print("   python generate.py --preset chicago_1k_car")
         return 1
     
     # Determine scenarios to run

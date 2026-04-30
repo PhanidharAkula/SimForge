@@ -325,7 +325,9 @@ def test_download_osm_network_reports_missing_osmnx(monkeypatch):
 
 def test_extract_canonical_network_basic():
     G = _sample_graph()
-    nodes, links = extract_canonical_network(G)
+    nodes, links, turn_restrictions = extract_canonical_network(G)
+    # No OSM relations passed — turn_restrictions should be empty.
+    assert turn_restrictions == []
 
     assert len(nodes) == 4
     assert {n.id for n in nodes} == {"n0", "n1", "n2", "n3"}

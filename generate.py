@@ -21,7 +21,7 @@ Usage:
          --start-time 0 --end-time 86400 --radius 5.0 --seed 123
 
   # Use a preset configuration
-  python generate.py --preset morning_rush
+  python generate.py --preset chicago_1k_car
 
   # Use synthetic demand (fallback if no model file)
   python generate.py --city chicago --trips 5000 --synthetic
@@ -183,8 +183,8 @@ VALID_MODES = {"car", "transit", "bike", "walk"}
 # =============================================================================
 
 PRESETS = {
-    "quick_test": {
-        "description": "Quick test — 1K car trips, Chicago, 1-hour window",
+    "chicago_1k_car": {
+        "description": "Chicago — 1K car trips, 7–8 AM (smallest tier; test fixture)",
         "city": "chicago",
         "trips": 1_000,
         "modes": ["car"],
@@ -193,8 +193,8 @@ PRESETS = {
         "radius_km": 2.0,
         "seed": 42,
     },
-    "small_commute": {
-        "description": "Small commute — 10K car trips, NYC, 7–9 AM",
+    "nyc_10k_car": {
+        "description": "NYC — 10K car trips, 7–9 AM",
         "city": "nyc",
         "trips": 10_000,
         "modes": ["car"],
@@ -203,28 +203,28 @@ PRESETS = {
         "radius_km": 4.0,
         "seed": 42,
     },
-    "medium_multimodal": {
-        "description": "Medium multi-modal — 50K trips (car+transit+bike), LA, 6–10 AM",
+    "la_50k_car": {
+        "description": "LA — 50K car trips, 6–10 AM",
         "city": "la",
         "trips": 50_000,
-        "modes": ["car", "transit", "bike"],
+        "modes": ["car"],
         "start_time": 21600,   # 6:00 AM
         "end_time": 36000,     # 10:00 AM
         "radius_km": 10.0,
         "seed": 42,
     },
-    "large_full_day": {
-        "description": "Large full-day — 200K car+transit trips, Chicago, 24-hour",
+    "chicago_200k_car": {
+        "description": "Chicago — 200K car trips, 24-hour",
         "city": "chicago",
         "trips": 200_000,
-        "modes": ["car", "transit"],
+        "modes": ["car"],
         "start_time": 0,
         "end_time": 86400,     # 24 hours
         "radius_km": 15.0,
         "seed": 42,
     },
-    "stress_test": {
-        "description": "Stress test — 500K car trips, NYC, 6–10 AM",
+    "nyc_500k_car": {
+        "description": "NYC — 500K car trips, 6–10 AM (largest tier; HPC scale)",
         "city": "nyc",
         "trips": 500_000,
         "modes": ["car"],
@@ -593,12 +593,15 @@ def generate_scenario(
     progress.set_label(f"Demand — {demand_label}")
     t_step = time.time()
     if use_census:
-        multi_mode = len(modes) > 1
+        # Always use the dict-based filter (`modes=`). Previously the dispatch
+        # split between a single-mode-car shortcut and a multi-mode path,
+        # which left single non-car modes (e.g. `--modes transit`) hitting
+        # *neither* branch and silently passing the unfiltered population.
+        # With one filter path, every mode list is honored.
         model_data = parse_model_file(
             model_path,
             bbox=(bbox.south, bbox.north, bbox.west, bbox.east),
-            car_only=False if multi_mode else ("car" in modes and len(modes) == 1),
-            modes=modes if multi_mode else None,
+            modes=modes,
         )
         dem = generate_census_demand(
             model_data=model_data,
@@ -609,7 +612,7 @@ def generate_scenario(
             horizon_start=start_time,
             horizon_end=end_time,
             mode=modes[0] if len(modes) == 1 else "car",
-            modes=modes if multi_mode else None,
+            modes=modes,
             allow_oversample=allow_oversample,
         )
     else:
@@ -731,7 +734,7 @@ Examples:
   python generate.py --city nyc --trips 170000 --start-time 0 --end-time 86400
 
   # Use a preset configuration
-  python generate.py --preset morning_rush
+  python generate.py --preset chicago_1k_car
 
   # Force synthetic demand
   python generate.py --city chicago --trips 5000 --synthetic

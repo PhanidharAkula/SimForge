@@ -22,27 +22,37 @@ Record format (fields are space-separated):
 
 The trailing `schedule` is an empty string `""` for persons without a
 schedule (non-workers, transit/walk/WFH/taxi/other commuters), or a
-sequence of `(activity_type subtype time_s bld_id)` tuples for persons
-the schedule generator covered. In the current cityscape output every
-populated schedule is exactly two tuples — `(1 5 28800 <work_bld_id>)`
-followed by `(1 5 61200 <home_bld_id>)` — i.e. workplace at 8 AM,
-return home at 5 PM. The 8 AM / 5 PM times are constants set by
-cityscape; only the destination bld_id varies per person.
+sequence of `(dow_start dow_end time_s bld_id)` tuples for persons the
+schedule generator covered. The first two ints are day-of-week bounds
+(0=Sunday, 1=Monday, ..., 5=Friday, 6=Saturday, -1=unspecified); see
+`model_gen/ScheduleEntry.h` in the cityscape repo. In the current
+cityscape output every populated schedule is exactly two tuples —
+`(1 5 28800 <work_bld_id>)` followed by `(1 5 61200 <home_bld_id>)` —
+i.e. Monday-through-Friday, workplace at 8 AM and return home at 5 PM.
+The day range and clock times are constants set by cityscape; only the
+destination bld_id varies per person.
 
-JWTRNS codes (ACS/PUMS):
-  1  = Car, truck, or van — drove alone
-  2  = Car, truck, or van — carpooled
-  3  = Bus
-  4  = Streetcar / trolley
-  5  = Subway / elevated rail
-  6  = Railroad
-  7  = Ferryboat
-  8  = Bicycle
-  9  = Walked
-  10 = Worked from home
-  11 = Taxicab / rideshare
-  12 = Other
-  -1 = Not a worker / not applicable
+JWTRNS codes (cityscape Schedule-generator branch — verbatim from ACS PUMS
+2021 Data Dictionary, see model_gen/ScheduleGenerator.h:211-233):
+   1 = Car, truck, or van             (drove alone + carpool combined,
+                                        merged in ACS 2019+)
+   2 = Bus
+   3 = Subway or elevated rail
+   4 = Long-distance train or commuter rail
+   5 = Light rail, streetcar, or trolley
+   6 = Ferryboat
+   7 = Taxicab
+   8 = Motorcycle
+   9 = Bicycle
+  10 = Walked
+  11 = Worked from home
+  12 = Other method
+  -1 = N/A — not a worker  (cityscape's "bb" sentinel converted to -1
+                            on emit; see PUMS.cpp / PUMSPerson::write)
+
+JWTRNS_TO_MODE below collapses these 12 codes into SimForge's 4
+simulator buckets (car/transit/bike/walk) plus a "home" sentinel that
+excludes the trip from any demand. See doc/MODELGEN_AND_MODES.md §4.
 """
 
 import logging
@@ -105,13 +115,20 @@ class Household:
 class ScheduleActivity:
     """A single activity in a person's daily schedule.
 
+    Field semantics come from cityscape's ``model_gen/ScheduleEntry.h``:
+    the first two ints encode the day-of-week range this activity
+    applies to (0=Sunday, 1=Monday, ..., 5=Friday, 6=Saturday,
+    -1=unspecified); the third is seconds from midnight; the fourth is
+    the destination ``bld_id``.
+
     In current cityscape output: a populated schedule is always two
-    activities — workplace arrival at 8 AM and home return at 5 PM.
-    Only ``bld_id`` varies per person; the other fields are constants
-    (`activity_type=1`, `subtype=5`, `time_s` ∈ {28800, 61200}).
+    activities — workplace arrival at 8 AM and home return at 5 PM,
+    Monday through Friday. Only ``bld_id`` varies per person; the day
+    bounds and clock times are constants (`dow_start=1`, `dow_end=5`,
+    `time_s` ∈ {28800, 61200}).
     """
-    activity_type: int
-    subtype: int
+    dow_start: int  # day of week start (0=Sun, 1=Mon, ..., 6=Sat, -1=unspecified)
+    dow_end: int    # day of week end (same encoding)
     time_s: int     # seconds from midnight
     bld_id: int     # destination building
 
@@ -137,6 +154,15 @@ class ModelData:
     buildings: list[Building]
     households: list[Household]
     persons: list[Person]
+    # `age_by_per_id` is populated by the parser BEFORE mode-filtering so
+    # that household-composition queries (e.g. "does this commuter live
+    # with a school-age dependent?") can see ages of *every* household
+    # member, including non-commuters (kids, retirees) whose JWTRNS=-1
+    # would otherwise be excluded from `persons` by the mode filter.
+    # Empty when filled at construction time without a prior all-persons
+    # pass — callers should treat absence as "data unavailable" rather
+    # than "no kids."
+    age_by_per_id: dict[int, int] = field(default_factory=dict)
     # Indexes for fast lookup
     bld_by_id: dict[int, Building] = field(default_factory=dict)
     hld_by_bld: dict[int, list[Household]] = field(default_factory=dict)
@@ -157,6 +183,14 @@ class ModelData:
             for pid in h.person_ids:
                 self.home_bld_by_per_id[pid] = h.bld_id
         self.per_by_id = {p.per_id: p for p in self.persons}
+        # If `age_by_per_id` wasn't supplied by the parser, fall back to
+        # building it from `persons` — this gives correct ages for the
+        # commuters in the dataset but won't include non-commuter
+        # household members (kids, etc.). Most call sites use the
+        # parser-supplied version; this fallback keeps direct
+        # `ModelData(...)` construction in tests working.
+        if not self.age_by_per_id:
+            self.age_by_per_id = {p.per_id: p.age for p in self.persons}
 
 
 # ---------------------------------------------------------------------------
@@ -164,18 +198,30 @@ class ModelData:
 # ---------------------------------------------------------------------------
 
 JWTRNS_TO_MODE = {
-    1: "car",       # Drove alone
-    2: "car",       # Carpooled (still a car trip on the road)
-    3: "transit",   # Bus
-    4: "transit",   # Streetcar/trolley
-    5: "transit",   # Subway/elevated rail
-    6: "transit",   # Railroad
-    7: "transit",   # Ferryboat
-    8: "bike",
-    9: "walk",
-    10: "home",     # Worked from home (no trip)
-    11: "car",      # Taxicab/rideshare
-    12: "car",      # Other — default to car
+    1:  "car",      # Car, truck, or van  (drove alone + carpool combined)
+    2:  "transit",  # Bus
+    3:  "transit",  # Subway or elevated rail
+    4:  "transit",  # Long-distance train or commuter rail
+    5:  "transit",  # Light rail, streetcar, or trolley
+    6:  "transit",  # Ferryboat
+    7:  "car",      # Taxicab          (road vehicle)
+    8:  "car",      # Motorcycle       (road vehicle)
+    9:  "bike",     # Bicycle
+    10: "walk",     # Walked
+    11: "home",     # Worked from home — excluded (no commute trip)
+    12: "home",     # Other method     — excluded (unclassified)
+}
+
+# The four canonical simulator buckets, derived from JWTRNS_TO_MODE.
+# `home` is intentionally absent — it's the "no trip" sentinel.
+SUPPORTED_MODES = ("car", "transit", "bike", "walk")
+
+# JWTRNS codes that map to each canonical mode. Computed from the dict
+# so there is exactly one source of truth; downstream filters should
+# look up here rather than hardcoding code sets.
+MODE_TO_JWTRNS = {
+    mode: frozenset(c for c, m in JWTRNS_TO_MODE.items() if m == mode)
+    for mode in SUPPORTED_MODES
 }
 
 
@@ -265,8 +311,8 @@ def _parse_schedule(raw: str) -> list[ScheduleActivity]:
         return []
     return [
         ScheduleActivity(
-            activity_type=int(m.group(1)),
-            subtype=int(m.group(2)),
+            dow_start=int(m.group(1)),
+            dow_end=int(m.group(2)),
             time_s=int(m.group(3)),
             bld_id=int(m.group(4)),
         )
@@ -411,7 +457,10 @@ def parse_model_file(
             if p.transport_mode in allowed_jwtrns and p.commute_min > 0
         ]
     elif car_only:
-        car_modes = {1, 2, 11, 12}  # drove alone, carpool, taxi/rideshare, other
+        # Single source of truth — derive from JWTRNS_TO_MODE so this filter
+        # cannot drift from the dict (the bug that hid bus/WFH inflation in
+        # the car pool for months in v0–v4).
+        car_modes = MODE_TO_JWTRNS["car"]
         filtered_persons = [
             p for p in filtered_persons
             if p.transport_mode in car_modes and p.commute_min > 0
@@ -422,11 +471,18 @@ def parse_model_file(
         len(all_buildings), len(filtered_hlds), len(filtered_persons),
     )
 
+    # Capture ages for *every* parsed person (including non-commuters
+    # filtered out above by mode/car_only — kids whose JWTRNS=-1 in
+    # particular). Used for household-composition queries downstream
+    # (e.g. HBSchool detection).
+    age_by_per_id = {p.per_id: p.age for p in all_persons}
+
     # --- Build result ---
     result = ModelData(
         buildings=all_buildings,
         households=filtered_hlds,
         persons=filtered_persons,
+        age_by_per_id=age_by_per_id,
     )
     return result
 

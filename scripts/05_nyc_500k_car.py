@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Small commute — 10K car trips, NYC, 7–9 AM.
+"""nyc_500k_car — 500K car trips, NYC, 6–10 AM (largest tier; HPC scale).
 
-Equivalent to: python generate.py --preset small_commute
+Equivalent to: python generate.py --preset nyc_500k_car
 Same generate_scenario() call; the preset form additionally accepts
 --seed / --output / --city / OSM source overrides.
 """
@@ -20,11 +20,11 @@ args = parser.parse_args()
 
 generate_scenario(
     city="nyc",
-    trips=10_000,
+    trips=500_000,
     modes=["car"],
-    start_time=25200,   # 7:00 AM
-    end_time=32400,     # 9:00 AM
-    radius_km=4.0,
+    start_time=21600,   # 6:00 AM
+    end_time=36000,     # 10:00 AM
+    radius_km=20.0,
     seed=42,
     verbose=args.verbose,
 )

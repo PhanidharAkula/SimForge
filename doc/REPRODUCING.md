@@ -79,7 +79,7 @@ python tools/env_report.py
 
 The pre-built `scenarios/*_1k_car/` bundles already contain `network.xml`; reproducing the published simulation results does **not** require any OSM data. You only need the PBFs when:
 
-- Regenerating any scenario (e.g. `scripts/02_small_commute.py` onwards), **or**
+- Regenerating any scenario (e.g. `scripts/02_nyc_10k_car.py` onwards), **or**
 - Running `python -m pipeline.network.warmup` against a scenario whose network was removed.
 
 ### Optional: pre-warm a scenario that was regenerated
@@ -155,28 +155,58 @@ The pinned version also lives in `requirements.lock` so a fresh `uv pip sync req
 
 > Versions 1–4 reserved this slot for LPSim (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was abandoned in Version_5 — the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
 
+### V5 realism phases (affect bundle hashes)
+
+Beyond the engine swap, Version_5 ships a sequence of demand- and
+network-generation realism upgrades. Each phase modifies the *generated*
+bundle and is reflected in `manifest.xml`'s SHA-256:
+
+| Phase | What changed | File(s) |
+|---|---|---|
+| 5  | JWTRNS code mapping fixed using cityscape Schedule-generator branch (6 of 12 codes were wrong pre-V5: e.g., bus → transit, walk → walk, WFH → excluded). Corrects ~30-40 % drift in eligible commuter pool size on Chicago. | `pipeline/demand/parse_model_file.py` |
+| 6  | OSM-grounded signal placement: `network.xml` `<node has_signal="true">` set populated from real `highway=traffic_signals` OSM tags. signals.xml signalizes only those (was: every `degree ≥ 4` node, ~85 %). Empirical drop: chicago 85 → 2.8 %; LA 85 → 1.4 %. | `pipeline/network/load_network_from_pbf.py`, `pipeline/signals/build_signals_default.py` |
+| 7  | OSM turn restrictions: new `<turn_restrictions>` block in `network.xml`. SUMO + MATSim adapters enforce via state-aware BFS pre-routing; DTALite emits sibling `movement.csv` (path4gmns 0.10.0 doesn't ingest — documented asymmetry). | `pipeline/network/turn_restrictions.py`, all three adapters |
+| 8  | PUMS-grounded per-person departure times: `departure = arrival_s − commute_min × 60`. Replaces V4 Gaussian peak. | `pipeline/demand/generate_census_demand.py` |
+| 9a | PM HBW return trips read cityscape `schedule[1]` (work → home @ 17:00). | same |
+| 9b | HBSchool_AM chains: parents with AGEP<18 dependents emit 2-row `home → school + school → work`. | same |
+| 9c | HBSchool_PM chains: symmetric `work → school + school → home`. | same |
+| 10 | Audit-tooling wiring: `evaluation/demand_composition.py` (new), Q5 section in `audit_fairness`, demand-composition table in `analyze_benchmark`. | `evaluation/` |
+
+The committed `chicago_1k_car/manifest.xml` is a V5 bundle (regenerated
+2026-04-30) — its hashes will not match a V4 `generate.py` run. The
+larger tiers (`nyc_10k_car`, `la_50k_car`, `chicago_200k_car_transit`,
+`nyc_500k_car`) are not in the repo and must be regenerated locally
+or on Pitzer with the V5 code path before benchmarking.
+
 ---
 
-## Running the Canonical Stress Test
+## Running the Canonical Benchmark
 
-The thesis figures are produced by `runspecs/stress_test.yaml` — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` with **N=5 repeats per cell**.
+The thesis figures are produced by `runspecs/benchmark_small.yaml` — an
+11-cell matrix across the three reference scenarios:
+
+- `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` (4 cells)
+- `nyc_10k_car   × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` (4 cells)
+- `la_50k_car    × {SUMO meso,             MATSim meso, DTALite meso}` (3 cells; SUMO micro skipped at 50K — wall-times past 4 h on arm64)
+
+with **N=5 repeats per cell** = 55 runs total.
 
 ```bash
 # 1. Sanity check (one run, ~30 s)
 python run.py --scenario chicago_1k_car --engine sumo --mode meso --repeats 1
 
 # 2. Full benchmark (~1 minute on a laptop, ~2 minutes on cluster CPU)
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 # 3. Generate analysis tables
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
 
 # 4. Audit cross-engine fairness (Q1: same trip set, Q2: same network,
 #    Q3: same trip count, Q4: paradigm-spread travel-time ratios)
-python -m evaluation.audit_fairness runs/stress_test
+python -m evaluation.audit_fairness runs/benchmark_small
 
 # 5. Render the 9 thesis figures
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
 ---
@@ -186,10 +216,10 @@ python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_te
 The repo only commits the `chicago_1k_car` bundle. To recreate the 10K/50K/200K/500K tiers used for scalability discussion:
 
 ```bash
-python scripts/02_small_commute.py     # 10K NYC car, 7–9 AM
-python scripts/03_medium_multimodal.py # 50K LA car+transit+bike, 6–10 AM
-python scripts/04_large_full_day.py    # 200K Chicago car+transit, 24 h
-python scripts/05_stress_test.py       # 500K NYC car, 6–10 AM
+python scripts/02_nyc_10k_car.py     # 10K NYC car, 7–9 AM
+python scripts/03_la_50k_car.py # 50K LA car+transit+bike, 6–10 AM
+python scripts/04_chicago_200k_car.py    # 200K Chicago car+transit, 24 h
+python scripts/05_nyc_500k_car.py       # 500K NYC car, 6–10 AM
 ```
 
 Each writes a fresh bundle into `scenarios/<id>/` and is then runnable through `run.py` or by adding it to a runspec.
@@ -215,7 +245,7 @@ sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 
 ### Cross-Platform Reproducibility (Verified)
 
-The schedule-first census demand generator is **byte-reproducible across architectures** for the simulator-input artefacts. Verified empirically on the `la_50k_bike_car_transit` bundle (50K LA car + transit + bike trips, 06:00–10:00, 10 km radius, seed 42, modelgen file with cityscape schedules):
+The schedule-first census demand generator is **byte-reproducible across architectures** for the simulator-input artefacts. Verified empirically on the `la_50k_car` bundle (50K LA car + transit + bike trips, 06:00–10:00, 10 km radius, seed 42, modelgen file with cityscape schedules):
 
 | File          | Mac (ARM64, Python 3.13, osmnx 2.0.7) | Pitzer (x86_64, Python 3.12, osmnx 2.1.0) | Status |
 | ------------- | ------------------------------------- | ----------------------------------------- | ------ |
@@ -230,12 +260,12 @@ What this means in practice: feeding either the Mac-generated or the Pitzer-gene
 **Reproduce locally** to verify your install matches the reference:
 
 ```bash
-python scripts/03_medium_multimodal.py
-md5sum scenarios/la_50k_bike_car_transit/demand.csv \
-       scenarios/la_50k_bike_car_transit/signals.xml
+python scripts/03_la_50k_car.py
+md5sum scenarios/la_50k_car/demand.csv \
+       scenarios/la_50k_car/signals.xml
 # Expected:
-#   0af9ea231b2d6efc872be0d5bb4330a5  scenarios/la_50k_bike_car_transit/demand.csv
-#   4388b4eca436be69349ea1fede8e07e5  scenarios/la_50k_bike_car_transit/signals.xml
+#   0af9ea231b2d6efc872be0d5bb4330a5  scenarios/la_50k_car/demand.csv
+#   4388b4eca436be69349ea1fede8e07e5  scenarios/la_50k_car/signals.xml
 ```
 
 If those two MD5s match, your local install reproduces the reference bundle exactly. Each bundle's `generation_metadata.json::toolchain` block additionally records the exact Python and dependency versions that produced it, so any future divergence is diagnosable without guesswork.
@@ -294,8 +324,8 @@ The Mac↔Pitzer empirical verification we ran on 2026-04-26: every dep version 
 ### Output Layout
 
 ```
-runs/stress_test/
-├── benchmark_results_stress_test.json
+runs/benchmark_small/
+├── benchmark_results_benchmark_small.json
 └── chicago_1k_car/
     ├── sumo/
     │   ├── seed_42/
@@ -313,8 +343,8 @@ runs/stress_test/
 ### Extracting Metrics
 
 ```bash
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --markdown --latex
-python -m evaluation.audit_fairness    runs/stress_test
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --markdown --latex
+python -m evaluation.audit_fairness    runs/benchmark_small
 ```
 
 Produces:
@@ -327,10 +357,10 @@ Produces:
 ### Generating Plots
 
 ```bash
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
-Renders Fig 5.1 – Fig 5.9 (PNG + PDF) into `runs/stress_test/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
+Renders Fig 5.1 – Fig 5.9 (PNG + PDF) into `runs/benchmark_small/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
 
 ---
 
@@ -371,7 +401,7 @@ The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO re
 All nine thesis figures are emitted by a single command:
 
 ```bash
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
 | Figure   | What it shows                                              |
@@ -396,13 +426,14 @@ This thesis was produced with:
 
 | Component | Version |
 | --------- | ------- |
-| SimForge  | Version_2 (commit `d66747d` or later) |
+| SimForge  | Version_5 (DTALite + Phases 5-10 realism work — see `CHANGELOG.md`) |
 | Python    | 3.13.2  |
 | SUMO      | 1.26.0 (`eclipse-sumo` wheel via `requirements.lock`) |
 | MATSim    | 15.0    |
 | Java      | 17.0.13 |
 | osmnx     | 2.x (`requirements.txt` pins `>=2.0,<3`) |
 | osmium (pyosmium) | 4.x |
+| path4gmns | 0.10.0 (DTALite bundled binary) |
 | OSM PBF snapshots | Geofabrik extracts — exact SHA-256 hashes in `osm_data/manifest.json` |
 
 To reproduce exactly, use these versions.

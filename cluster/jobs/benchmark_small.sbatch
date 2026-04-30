@@ -70,7 +70,7 @@ echo
 # 1. Preflight — every scenario referenced in the runspec must validate.
 # ---------------------------------------------------------------------------
 echo "=== Preflight: validating bundles ==="
-SCENARIOS=(chicago_1k_car nyc_10k_car la_50k_bike_car_transit)
+SCENARIOS=(chicago_1k_car nyc_10k_car la_50k_car)
 for s in "${SCENARIOS[@]}"; do
     if [ ! -f "scenarios/$s/manifest.xml" ]; then
         echo "MISSING bundle: scenarios/$s/ — git pull (it should be tracked)."

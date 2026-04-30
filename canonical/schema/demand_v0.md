@@ -28,7 +28,8 @@ Each row represents **one trip**.
 
 ### Optional but allowed columns:
 
-- `purpose`
+- `purpose` (V5+ generator emits a fixed enum — see below)
+- `dest_source` (V5+ provenance tag — see below)
 - `passengers`
 - `value_of_time`
 - `vehicle_type`
@@ -53,10 +54,40 @@ These are allowed for future flexibility. v0 tools may ignore them, but parsers 
 
 | Column              | Type     | Requirement | Description                                                        |
 | :------------------ | :------- | :---------- | :----------------------------------------------------------------- |
-| **`purpose`**       | `string` | optional    | Trip purpose, e.g., `work`, `school`, `shopping`, `other`.         |
+| **`purpose`**       | `string` | optional    | Trip purpose. V5+ census generator emits the 4-step taxonomy `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained` (see below). Other producers may use any string. |
+| **`dest_source`**   | `string` | optional    | Provenance of the destination. V5+ census generator emits `schedule` (cityscape PUMS-derived workplace) or `gravity` (commute-calibrated gravity-model fallback). Logged for downstream split analysis. |
 | **`passengers`**    | `int`    | optional    | Number of occupants in the vehicle (default is 1 if omitted).      |
 | **`value_of_time`** | `float`  | optional    | Value of time (e.g., in USD/hour), for cost-based analyses.        |
 | **`vehicle_type`**  | `string` | optional    | Vehicle type label, e.g., `sedan`, `bus`, `truck`, `bike`, `walk`. |
+
+#### V5+ `purpose` taxonomy
+
+The census-calibrated generator (`pipeline/demand/generate_census_demand.py`)
+emits one of six purpose labels per row, drawn from the standard
+4-step transportation-planning taxonomy plus SimForge-specific chain
+provenance suffixes:
+
+| Label                 | Meaning                                                              | Origin                                  |
+| :-------------------- | :------------------------------------------------------------------- | :-------------------------------------- |
+| `HBW_AM`              | Home-Based Work, AM peak (home → work, ~8 AM arrival)                | cityscape `schedule[0]`                 |
+| `HBW_PM`              | Home-Based Work, PM peak (work → home, ~17:00 arrival)               | cityscape `schedule[1]`                 |
+| `HBSchool_AM`         | Home-Based School, AM peak (home → school, kid drop-off leg)         | parent + school-age dependent + OSM kind=school |
+| `HBSchool_PM`         | Home-Based School, PM peak (school → home, kid pickup leg)           | symmetric mirror                        |
+| `HBW_AM_chained`      | Continuation leg of an HBSchool AM chain (school → work)             | parent's continued commute              |
+| `HBW_PM_chained`      | Continuation leg of an HBSchool PM chain (work → school)             | parent leaving work for pickup          |
+
+Adapters consume the canonical 5-column subset (`trip_id`,
+`origin_node_id`, `destination_node_id`, `departure_time_s`, `mode`)
+by name and ignore both `purpose` and `dest_source`. The columns are
+informational — used by `evaluation/audit_fairness.py` (Q5 section)
+and `evaluation/analyze_benchmark.py`
+(`print_demand_composition_table`) to surface per-scenario demand
+mix without coordinate re-derivation.
+
+Engines treat each row as an independent vehicle/agent — chain
+semantics are not preserved at simulation time (would require SUMO
+`<person>` activity sequences or MATSim `<plan>` chains, neither
+wired today).
 
 ---
 
@@ -71,13 +102,23 @@ t2,n2,n3,60,car
 t3,n3,n1,120,car
 ```
 
-### Example with optional fields:
+### Example with V5+ optional fields:
+
+```csv
+trip_id,origin_node_id,destination_node_id,departure_time_s,mode,dest_source,purpose
+t0,n158,n352,25200,car,schedule,HBW_AM
+t1,n125,n1179,25200,car,gravity,HBW_AM
+t2,n399,n603,25201,car,schedule,HBSchool_AM
+t3,n603,n352,25201,car,schedule,HBW_AM_chained
+```
+
+### Example with full optional fields:
 
 ```csv
 trip_id,origin_node_id,destination_node_id,departure_time_s,mode,purpose,passengers,value_of_time,vehicle_type
-t1,n1,n4,0,car,work,1,15.0,sedan
-t2,n2,n3,60,car,school,2,10.0,sedan
-t3,n3,n1,120,car,other,1,8.0,sedan
+t1,n1,n4,0,car,HBW_AM,1,15.0,sedan
+t2,n2,n3,60,car,HBSchool_AM,2,10.0,sedan
+t3,n3,n1,120,car,HBW_PM,1,8.0,sedan
 ```
 
 ---

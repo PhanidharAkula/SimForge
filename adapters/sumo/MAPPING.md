@@ -102,16 +102,30 @@ This generates:
 | `origin_node_id`      | (route computation)    | Used as BFS start         |
 | `destination_node_id` | (route computation)    | Used as BFS end           |
 | `departure_time_s`    | `vehicle/@depart`      | Direct copy (seconds)     |
-| `mode`                | `vehicle/@type`        | `car` → `DEFAULT_VEHTYPE` |
+| `mode`                | `vehicle/@type`        | `car` → `simforge_car` (V11+ canonical vType — see below) |
 
 ### Route Computation
 
-The adapter computes routes using **BFS shortest path** on the network graph:
+The adapter computes routes using **state-aware BFS shortest path**
+(V5+ Phase 7) — a BFS over `(node, last_link)` states that respects
+the V5+ `<turn_restrictions>` block in `network.xml`:
 
 1. Build adjacency list from canonical links
-2. For each trip, run BFS from origin to destination
-3. Convert node path to edge IDs
-4. Embed route directly in vehicle element
+2. Build forbidden-move set from `<turn_restrictions>` via
+   `pipeline/network/turn_restrictions.build_forbidden_moves`
+3. For each trip, run state-aware BFS from origin to destination via
+   `pipeline/network/turn_restrictions.shortest_path_with_restrictions`
+   — never traversing a `(from_link, via_node, to_link)` triple
+   present in the forbidden set.
+4. **Fallback:** if no restriction-respecting path exists, retry with
+   plain BFS (the bundle-validation contract guarantees the trip is
+   feasible at the SCC level, so plain BFS always succeeds).
+5. Convert node path to edge IDs
+6. Embed route directly in vehicle element
+
+Pre-V5 behaviour was plain BFS (turn restrictions were not extracted).
+The `purpose` and `dest_source` columns on `demand.csv` (V5+ Phase 9)
+are read-by-name and ignored — they don't affect route computation.
 
 **Example:**
 
@@ -132,10 +146,47 @@ Edge path = [l1, l7]  (n1→n2, n2→n4)
 SUMO (`routes.rou.xml`):
 
 ```xml
-<vehicle id="veh_t1" depart="0">
-  <route edges="l1 l7"/>
-</vehicle>
+<routes>
+  <vType id="simforge_car" vClass="passenger" guiShape="passenger"
+         length="5.0" minGap="2.5" width="1.8"
+         maxSpeed="40.0" accel="2.6" decel="4.5" sigma="0.5"/>
+
+  <vehicle id="veh_t1" type="simforge_car" depart="0">
+    <route edges="l1 l7"/>
+  </vehicle>
+</routes>
 ```
+
+### Vehicle type (V11+)
+
+Pre-V11 the adapter emitted ``<vehicle>`` elements without a ``type=``
+attribute, which fell back to SUMO's built-in ``DEFAULT_VEHTYPE``. That
+was implicit (any SUMO version change could silently shift the
+parameters) and inconsistent with the MATSim adapter's hardcoded values.
+
+V11+ emits an explicit ``<vType id="simforge_car" .../>`` block at the
+top of ``routes.rou.xml`` and references it on every ``<vehicle>``. The
+parameters are pulled from ``adapters/common/vehicle_types.py`` — a
+single source of truth shared across SUMO, MATSim, and DTALite. See
+that module's docstring for the cross-engine alignment rationale and
+``CHANGELOG.md`` Phase 11 for the full history.
+
+Canonical values (SUMO idiom — physical length + safety gap separate):
+
+| Attribute   | Value | Meaning |
+|---|---|---|
+| `vClass`    | `passenger` | Standard private car class |
+| `length`    | 5.0 m | Physical body length |
+| `minGap`    | 2.5 m | Comfort gap to next vehicle |
+| `width`     | 1.8 m | Cosmetic in mobsim, used for animations |
+| `maxSpeed`  | 40 m/s | Free-flow ceiling, edge `speed` clamps |
+| `accel`     | 2.6 m/s² | Comfortable acceleration |
+| `decel`     | 4.5 m/s² | Comfortable deceleration |
+| `sigma`     | 0.5 | Krauss model driver imperfection |
+
+SUMO's effective queue spacing per vehicle = ``length + minGap = 7.5 m``,
+which equals MATSim's ``length`` attribute (MATSim folds the gap into a
+single value). Both adapters thus pack vehicles identically into queues.
 
 ---
 
@@ -241,11 +292,12 @@ diff out/run1/routes.rou.xml out/run2/routes.rou.xml
 
 ## Limitations (v0)
 
-1. **Signals:** Not fully integrated into SUMO network generation
-2. **Vehicle types:** All vehicles use `DEFAULT_VEHTYPE`
-3. **Turn restrictions:** Not supported
-4. **Multi-modal:** Only `car` mode supported
-5. **Large networks:** BFS routing may be slow for city-scale networks
+1. **Signals:** Placement is OSM-grounded (V5+ Phase 6), but timing is a fixed-time 2-phase 90 s placeholder, not real coordinated timing.
+2. **Vehicle types:** All vehicles use the canonical `simforge_car` vType (V11+; pre-V11 used SUMO's implicit `DEFAULT_VEHTYPE`). Within-bucket heterogeneity (taxis, motorcycles, trucks, carpools — all collapsed into the `car` JWTRNS bucket) is not modeled — every car-bucket trip simulates as the same sedan. See `doc/SCENARIO_GENERATION.md` §"Vehicle-type realism" for the V12 improvement path.
+3. **Turn restrictions:** Enforced via state-aware BFS pre-routing (V5+ Phase 7) — see "Route Computation" above. Restrictions that fully wall off an SCC-feasible trip cause a fall-back to plain BFS (rare).
+4. **Trip chains:** V5+ Phase 9b/9c emits HBSchool chains as two separate `<vehicle>` rows; SUMO models them as independent vehicles, so chain agency is not preserved at simulation time.
+5. **Multi-modal:** Only `car` mode supported (transit/bike/walk rows are filtered out by `feasibility.py` before reaching the SUMO writer).
+6. **Large networks:** BFS routing may be slow for city-scale networks.
 
 ---
 

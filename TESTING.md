@@ -1,6 +1,6 @@
 # SimForge Test Suite
 
-**~524 tests** across **20 test files** covering adapters, metrics, validation,
+**~513 tests** across **23 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, the cross-engine
 fairness audit, OSM network fetching (mocked), demand generators, and
@@ -307,7 +307,7 @@ scenarios are well below the threshold and never skip.
 | Confidence (95 % CI)   | 18      | Student's-t helper used by all per-cell summaries           |
 | Engine smoke           | 4       | Real-binary SUMO/MATSim/DTALite smoke + availability report |
 | Audit fairness         | 29      | HMS parser, per-engine TT extractors, 4-layout cell detector, orchestrator integration |
-| **Total**              | **~524** | **~3-4 min** on arm64 (SUMO sweeps skip individually via the netconvert detector); **~22 s** on Linux where SUMO actually runs. Count scales with the number of bundled scenarios — every additional `scenarios/` entry adds 36 parametrized data-integrity tests. |
+| **Total**              | **~513** | **~3-4 min** on arm64 (SUMO sweeps skip individually via the netconvert detector); **~22 s** on Linux where SUMO actually runs. Count scales with the number of bundled scenarios — every additional `scenarios/` entry adds 36 parametrized data-integrity tests. V5+ added `tests/test_turn_restrictions.py` (Phase 7), `tests/test_demand_composition.py` (Phase 10), `tests/test_vehicle_types.py` (Phase 11), and the `TestHBSchoolHelpers` class on `tests/test_parse_model_file.py` (Phase 9). |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
 **~76 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**

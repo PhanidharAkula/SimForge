@@ -95,6 +95,55 @@ trip_1,n1,n4,28800,car
 - `destination_node_id` → find nearest link → `work` activity location
 - `departure_time_s` → `end_time` of first activity (seconds → HH:MM:SS)
 - `mode` → `leg.mode`
+- V5+ `purpose` and `dest_source` columns: read by name and ignored.
+  Chain semantics from `HBSchool_AM` + `HBW_AM_chained` rows are not
+  preserved — each row produces an independent `<person>` with its
+  own 2-activity plan, even though both legs were emitted by the same
+  parent's chain.
+
+### Turn restrictions (V5+)
+
+V5+ Phase 7 wires turn-restriction enforcement into the MATSim adapter.
+For each trip the adapter pre-routes via state-aware BFS using
+`pipeline/network/turn_restrictions.shortest_path_with_restrictions`,
+then writes a `<route type="links" start_link="..." end_link="...">interior</route>`
+per the MATSim 15 plans v4 DTD. The engine drives the prescribed route
+verbatim and never crosses a forbidden movement. Falls back to plain
+BFS when no restriction-respecting path exists (rare; SCC-feasible by
+construction).
+
+### Vehicle type (V11+)
+
+`build_matsim_vehicles_xml` emits a single `<vehicleType id="car">`
+sourced from `adapters/common/vehicle_types.py` — the same module SUMO
+and DTALite read for their canonical values. MATSim's `<length>`
+attribute is the *effective* spacing (physical + safety gap, per
+MATSim convention), so it equals SUMO's `length + minGap` and the two
+engines pack vehicles identically into queues:
+
+```xml
+<vehicleType id="car">
+    <capacity seats="5" standingRoomInPersons="0"/>
+    <length meter="7.5"/>     <!-- = SUMO length 5.0 + minGap 2.5 -->
+    <width meter="1.8"/>      <!-- V11+ fix from 1.0 (motorcycle width) -->
+    <maximumVelocity meterPerSecond="40.0"/>
+    <passengerCarEquivalents pce="1.0"/>
+    <networkMode networkMode="car"/>
+    <flowEfficiencyFactor factor="1.0"/>
+</vehicleType>
+```
+
+Pre-V11 the values were hardcoded inline in `matsim_adapter.py` with no
+documentation of their cross-engine relationship; the `width=1.0`
+value was implausible (cars are 1.7-2.0 m wide) but cosmetic in
+MATSim's queue mobsim. V11+ centralises and corrects both. See
+`CHANGELOG.md` Phase 11 for the full history.
+
+**Within-bucket heterogeneity** (taxis JWTRNS=7, motorcycles JWTRNS=8,
+trucks/vans within JWTRNS=1, carpool occupancy) is *not* modeled — every
+car-bucket trip uses the same `<vehicleType id="car">`. See
+`doc/SCENARIO_GENERATION.md` §"Vehicle-type realism" for the V12
+improvement path.
 
 ### 3. Signals Mapping
 
@@ -102,6 +151,11 @@ MATSim has a separate signals extension. For v0, we can:
 
 1. **Skip signals** - MATSim's queue model handles capacity constraints
 2. **Future**: Map to MATSim's `signalSystems.xml`, `signalGroups.xml`, `signalControl.xml`
+
+V5+ note: signal *placement* in the canonical `signals.xml` is now
+OSM-grounded (`has_signal="true"` only — Phase 6), so when the future
+mapping lands it will signalize the same set of intersections that
+SUMO's TLS does.
 
 ### 4. Config Mapping
 

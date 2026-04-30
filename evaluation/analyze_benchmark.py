@@ -13,6 +13,10 @@ from dataclasses import dataclass
 import statistics
 
 from evaluation.metrics.confidence import confidence_interval_95
+from evaluation.demand_composition import (
+    find_canonical_demand,
+    read_demand_composition,
+)
 
 
 @dataclass
@@ -308,6 +312,53 @@ def print_coverage_report(stats_list: list[ScenarioStats]) -> str:
     return "\n".join(lines)
 
 
+def print_demand_composition_table(stats_list: list[ScenarioStats]) -> str:
+    """One row per unique scenario showing the V5+ purpose breakdown of
+    its canonical demand.csv. Pre-V5 bundles (no `purpose` column) are
+    skipped silently; if all bundles are pre-V5 the whole section is
+    omitted from the output.
+    """
+    seen: dict[str, dict | None] = {}
+    for s in stats_list:
+        if s.scenario in seen:
+            continue
+        seen[s.scenario] = read_demand_composition(find_canonical_demand(s.scenario))
+
+    tagged = [(name, comp) for name, comp in seen.items() if comp is not None]
+    if not tagged:
+        return ""  # no V5+ bundles — silently omit the section
+
+    lines = []
+    lines.append("\n" + "=" * 80)
+    lines.append("DEMAND COMPOSITION (V5+ trip-purpose breakdown from canonical demand.csv)")
+    lines.append("=" * 80)
+    lines.append(
+        f"\n{'Scenario':<30} {'Total':>8}  {'AM peak':>14} {'PM peak':>14} {'School-rel.':>14}"
+    )
+    lines.append("-" * 84)
+    for name, comp in sorted(tagged):
+        total = comp["total"]
+        am = comp["am_peak"]
+        pm = comp["pm_peak"]
+        chains = comp["chain_legs"]
+        am_pct = 100.0 * am / max(total, 1)
+        pm_pct = 100.0 * pm / max(total, 1)
+        ch_pct = 100.0 * chains / max(total, 1)
+        lines.append(
+            f"{name:<30} {total:>8,}  "
+            f"{am:>6,} ({am_pct:5.1f}%) "
+            f"{pm:>6,} ({pm_pct:5.1f}%) "
+            f"{chains:>6,} ({ch_pct:5.1f}%)"
+        )
+    skipped = [n for n, c in seen.items() if c is None]
+    if skipped:
+        lines.append(
+            f"\n  (no purpose column found for: {', '.join(sorted(skipped))})"
+        )
+    lines.append("=" * 80)
+    return "\n".join(lines)
+
+
 def print_summary_table(stats_list: list[ScenarioStats]) -> str:
     """Generate summary table for thesis."""
     lines = []
@@ -425,6 +476,7 @@ def main():
     
     output_parts.append(print_summary_table(stats_list))
     output_parts.append(print_coverage_report(stats_list))
+    output_parts.append(print_demand_composition_table(stats_list))
     output_parts.append(print_runtime_table(stats_list))
     output_parts.append(print_reproducibility_table(stats_list))
     

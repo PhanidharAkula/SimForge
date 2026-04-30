@@ -88,19 +88,18 @@ runs/
 
 # Generated scenario bundles. Three reference bundles are tracked so a fresh
 # clone can run tests and the bundled adapters without first generating data:
-#   - chicago_1k_car          (~1 MB)        — smallest, used as the test fixture
-#   - nyc_10k_car             (~36 MB)       — small commute tier
-#   - la_50k_bike_car_transit (~164 MB)      — multi-modal medium tier; cross-
-#                                              platform reproducibility reference
-# These two larger tiers are NOT tracked — their network.xml / signals.xml
-# files individually exceed GitHub's 100 MB hard limit and would bloat clones.
+#   - chicago_1k_car  (~1 MB)   — smallest, used as the test fixture
+#   - nyc_10k_car     (~36 MB)  — small commute tier
+#   - la_50k_car      (~140 MB) — medium tier; cross-platform reproducibility ref
+# Two larger tiers are NOT tracked — their network.xml / signals.xml files
+# individually exceed GitHub's 100 MB hard limit and would bloat clones.
 # Regenerate them with the corresponding scripts/ entry point:
-#   - chicago_200k_car_transit  → scripts/04_large_full_day.py
-#   - nyc_500k_car              → scripts/05_stress_test.py
+#   - chicago_200k_car  → scripts/04_chicago_200k_car.py
+#   - nyc_500k_car      → scripts/05_nyc_500k_car.py
 scenarios/*/
 !scenarios/chicago_1k_car/
 !scenarios/nyc_10k_car/
-!scenarios/la_50k_bike_car_transit/
+!scenarios/la_50k_car/
 
 # Per-user cluster scratch at the repo root (anchored with leading slash so
 # the patterns don't shadow the tracked cluster/jobs/ and cluster/example_runs/).

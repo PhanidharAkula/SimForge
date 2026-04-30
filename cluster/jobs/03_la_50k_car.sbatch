@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge — 03_medium_multimodal: 50K trips (car+transit+bike), LA,
+# SimForge — 03_la_50k_car: 50K trips (car+transit+bike), LA,
 # 6–10 AM, 10 km radius.
 #
 # Medium multi-modal tier. Reference cross-platform-reproducibility bundle
@@ -12,11 +12,11 @@
 #   --account=...     your project allocation (replaces PMIU0110)
 #   --mail-user=...   uncomment + fill if you want completion notifications
 #
-# Submit from the repo root:   sbatch cluster/jobs/03_medium_multimodal.sbatch
+# Submit from the repo root:   sbatch cluster/jobs/03_la_50k_car.sbatch
 # ============================================================================
 
 #SBATCH --account=PMIU0110
-#SBATCH --job-name=simforge_medium_multimodal
+#SBATCH --job-name=simforge_la_50k_car
 #SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
@@ -39,7 +39,7 @@ echo "Python: $(which python)"
 echo "Free memory: $(free -h | awk 'NR==2{print $4}')"
 echo
 
-python -u scripts/03_medium_multimodal.py
+python -u scripts/03_la_50k_car.py
 
 echo
 echo "=== Job complete at $(date) ==="

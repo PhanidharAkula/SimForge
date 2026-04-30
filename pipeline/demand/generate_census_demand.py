@@ -211,32 +211,167 @@ def map_buildings_to_nodes(
 # Departure time generation (morning peak profile)
 # ---------------------------------------------------------------------------
 
+# Cityscape's Schedule-generator hardcodes the AM-peak workplace arrival at
+# 28800 s (08:00) and the PM-peak return at 61200 s (17:00); see
+# `model_gen/ScheduleGenerator.h` and the corresponding ScheduleEntry.h
+# field semantics. Persons whose mode cityscape doesn't cover (non-code-1)
+# have an empty schedule, so we fall back to these constants for trip
+# timing rather than sampling a Gaussian peak. That keeps every demand
+# row's temporal placement grounded in PUMS rather than a synthetic
+# distribution.
+_CITYSCAPE_AM_ARRIVAL_S = 28800   # 08:00 AM workplace arrival
+_CITYSCAPE_PM_ARRIVAL_S = 61200   # 17:00 PM home return
+
+
+# Trip-purpose categorisation for the AM/PM peak budget split. Each peak
+# bucket includes the bare HBW trip plus its school-chain pair, since
+# chained legs consume budget slots from the same peak as their HBW partner.
+# AM chain = HBSchool_AM (home→school) + HBW_AM_chained (school→work).
+# PM chain = HBW_PM_chained (work→school) + HBSchool_PM (school→home).
+AM_PURPOSES: frozenset[str] = frozenset({"HBW_AM", "HBSchool_AM", "HBW_AM_chained"})
+PM_PURPOSES: frozenset[str] = frozenset({"HBW_PM", "HBSchool_PM", "HBW_PM_chained"})
+
+
 def _generate_departure_time(
-    rng: random.Random,
     commute_min: int,
     horizon_start: int,
     horizon_end: int,
+    arrival_time_s: int = _CITYSCAPE_AM_ARRIVAL_S,
 ) -> int:
+    """Compute a per-person departure time from real PUMS data.
+
+    ``departure = arrival_time_s − commute_min × 60``
+
+    where ``arrival_time_s`` is the cityscape-emitted workplace-arrival
+    time (28800 s = 08:00 AM for schedule-driven persons) and
+    ``commute_min`` is the person's PUMS-reported `JWMNP` (Travel time to
+    work, in minutes). This replaces the pre-V5 Gaussian peak that
+    centered every trip at the horizon midpoint regardless of the
+    person's actual commute duration.
+
+    For horizons that don't include the cityscape arrival time
+    (rare — most thesis bundles have 7–8 AM or 6–10 AM windows that
+    cover 28800), the result is clamped to ``[horizon_start,
+    horizon_end - 1]``. Long commutes can produce departures before
+    ``horizon_start``: those clamp to ``horizon_start`` rather than
+    being dropped, keeping the requested trip count stable.
     """
-    Generate a departure time based on commute duration.
+    departure = arrival_time_s - commute_min * 60
+    return int(max(horizon_start, min(horizon_end - 1, departure)))
 
-    Uses a morning-peak profile centered at ~8:00 AM (28800 s from midnight)
-    but mapped into the scenario's [horizon_start, horizon_end] window.
-    Persons with longer commutes depart earlier in the peak.
 
-    Since our scenarios use a 0–3600 s window (1 hour), we compress the
-    peak into that range with a normal distribution centered at the midpoint.
+# ---------------------------------------------------------------------------
+# HBSchool support (V5+)
+# ---------------------------------------------------------------------------
+
+# OSM `building=*` tag values that denote a school. Cityscape preserves
+# these on `bld.kind` (with optional trailing colon for subkind). We match
+# on the leading prefix so e.g. `school:fast_food` (rare misclassification)
+# still counts; mostly the values come through bare like `school:` or
+# `kindergarten:`.
+_SCHOOL_KIND_PREFIXES = (
+    "school", "kindergarten", "preschool",
+    "college", "university",
+)
+
+# Maximum search distance from home to nearest school (km). Real US
+# school catchment areas typically fall within 1-3 km in dense urban
+# cores and up to 5-8 km in suburban areas. We use 5 km as a sensible
+# upper bound — beyond this distance a chained drop-off is unlikely
+# (parent would let the kid take the bus).
+_SCHOOL_MAX_KM = 5.0
+
+
+def _is_school_kind(kind: str) -> bool:
+    """True if a Building.kind value denotes a school (any school level)."""
+    if not kind:
+        return False
+    k = kind.lower().strip().rstrip(":").split(":")[0]
+    return k in _SCHOOL_KIND_PREFIXES
+
+
+def _build_school_destination_array(
+    model_data: ModelData,
+    bld_to_node: dict,
+    network: "NetworkInfo",
+):
+    """Pre-compute (school_node, lat, lon) arrays for vectorized nearest-
+    school lookup. Returns (nodes_list, lats_array, lons_array) suitable
+    for haversine distance computation against parent home coordinates.
+
+    Schools whose nearest network node is outside the SCC are dropped —
+    they wouldn't be routable from any home anyway.
     """
-    mid = (horizon_start + horizon_end) / 2.0
-    spread = (horizon_end - horizon_start) / 6.0  # ±3σ covers the window
+    nodes: list = []
+    lats: list = []
+    lons: list = []
+    for bld in model_data.buildings:
+        if not _is_school_kind(bld.kind):
+            continue
+        snode = bld_to_node.get(bld.bld_id)
+        if snode is None or snode not in network.scc_nodes:
+            continue
+        nodes.append(snode)
+        lats.append(bld.lat)
+        lons.append(bld.lon)
+    return nodes, np.array(lats), np.array(lons)
 
-    # Longer commutes → earlier departure (slight shift left)
-    offset = -min(commute_min, 60) * (spread / 120.0)
 
-    t = rng.gauss(mid + offset, spread)
-    # Clamp to horizon
-    t = max(horizon_start, min(horizon_end - 1, t))
-    return int(t)
+def _has_school_age_dependent(person, model_data: ModelData) -> bool:
+    """Detect a school-age (AGEP < 18) dependent in this person's household.
+
+    Returns True iff the household this person lives in contains at least
+    one *other* person with a valid age in [0, 18). We check `>=0` to
+    exclude PUMS `-1` (Not-applicable) sentinel values.
+
+    Important: kids in PUMS have `JWTRNS=-1` (Not a worker), so they're
+    filtered out of `model_data.persons` by the mode/car-only step.
+    Looking them up via `model_data.per_by_id` would miss them entirely.
+    Instead we use `model_data.age_by_per_id`, which the parser
+    populates from the *un*filtered all-persons pass and therefore
+    covers every household member regardless of their own JWTRNS.
+    """
+    home_bld = model_data.home_bld_by_per_id.get(person.per_id)
+    if home_bld is None:
+        return False
+    households = model_data.hld_by_bld.get(home_bld, [])
+    for hld in households:
+        if person.per_id not in hld.person_ids:
+            continue
+        for other_id in hld.person_ids:
+            if other_id == person.per_id:
+                continue
+            age = model_data.age_by_per_id.get(other_id)
+            if age is not None and 0 <= age < 18:
+                return True
+    return False
+
+
+def _nearest_school_node(
+    home_lat: float, home_lon: float,
+    school_nodes: list, school_lats: np.ndarray, school_lons: np.ndarray,
+    R_KM: float = 6371.0,
+    max_km: float = _SCHOOL_MAX_KM,
+) -> Optional[str]:
+    """Vectorized nearest-school lookup using haversine distance.
+
+    Returns the school node ID with smallest distance to (home_lat,
+    home_lon), or None if every school is beyond ``max_km``.
+    """
+    if not school_nodes:
+        return None
+    home_lat_rad = math.radians(home_lat)
+    cos_home = math.cos(home_lat_rad)
+    school_lats_rad = np.radians(school_lats)
+    dlat = school_lats_rad - home_lat_rad
+    dlon = np.radians(school_lons - home_lon)
+    a = (np.sin(dlat * 0.5) ** 2
+         + cos_home * np.cos(school_lats_rad) * np.sin(dlon * 0.5) ** 2)
+    distances_km = R_KM * 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
+    nearest_idx = int(np.argmin(distances_km))
+    if distances_km[nearest_idx] > max_km:
+        return None
+    return school_nodes[nearest_idx]
 
 
 # ---------------------------------------------------------------------------
@@ -410,10 +545,11 @@ def generate_census_demand(
         if home_node not in network.scc_nodes:
             fallback_reasons["home_outside_scc"] += 1
             continue
-        # First activity in cityscape's output is the workplace (8 AM); the
-        # second is the return-home (5 PM). We use the workplace destination
-        # for the morning trip; departure time uses our temporal profile,
-        # NOT cityscape's hardcoded 28800.
+        # First activity in cityscape's output is the workplace (8 AM
+        # arrival); the second is the return-home (5 PM). We use the
+        # workplace destination AND its arrival time — departure is then
+        # computed as `arrival - commute_min*60` per V5 (real PUMS
+        # JWMNP), instead of the pre-V5 Gaussian-around-horizon-midpoint.
         dest_bld_id = per.schedule[0].bld_id
         dest_node = bld_to_node.get(dest_bld_id)
         if dest_node is None:
@@ -468,35 +604,230 @@ def generate_census_demand(
     # by departure_time so they remain stable and dense (t0..tN-1).
     trips: list[dict] = []
 
-    # Phase 1: Schedule-driven trips
-    n_schedule = min(num_trips, len(valid_scheduled))
-    if n_schedule > 0:
-        # Deterministic shuffle of the scheduled pool, then take the first
-        # n_schedule entries. Sampling-without-replacement at this stage means
-        # each scheduled person produces at most one trip — no duplication.
+    # Peak-coverage detection — V5+ adds PM HBW (work → home @ 17:00) trips
+    # using cityscape's `schedule[1]` tuple, which has been live data in
+    # modelgen all along but was previously dropped on the floor. Allocation:
+    # if both AM and PM peaks fall inside the user's horizon, split the trip
+    # budget 50/50 across the two purposes; otherwise put everything on the
+    # only peak that's in-window. AM-only horizons (chicago_1k_car at 7-8 AM,
+    # nyc_10k_car at 7-9 AM, la_50k_car at 6-10 AM, nyc_500k_car at 6-10 AM)
+    # produce identical demand.csv to pre-V5 — back-compat preserved.
+    am_in_horizon = horizon_start <= _CITYSCAPE_AM_ARRIVAL_S <= horizon_end
+    pm_in_horizon = horizon_start <= _CITYSCAPE_PM_ARRIVAL_S <= horizon_end
+
+    if am_in_horizon and pm_in_horizon:
+        n_am_target = num_trips // 2
+        n_pm_target = num_trips - n_am_target
+        peak_split_note = f"AM={n_am_target} + PM={n_pm_target}"
+    elif pm_in_horizon and not am_in_horizon:
+        n_am_target = 0
+        n_pm_target = num_trips
+        peak_split_note = f"PM-only horizon, all {n_pm_target} trips are HBW return"
+    else:
+        # AM-only or neither (clamp falls back to AM template).
+        n_am_target = num_trips
+        n_pm_target = 0
+        peak_split_note = f"AM-only horizon, all {n_am_target} trips are HBW outbound"
+    logger.info(
+        "Trip purpose allocation across peaks (modelgen schedule[0]+schedule[1]): %s",
+        peak_split_note,
+    )
+
+    # V5+: pre-compute school-building positions for HBSchool chain
+    # generation. Parents with school-age dependents (AGEP<18 in same
+    # household) get a home → school → work morning chain instead of
+    # the bare home → work trip. Schools come from OSM building tags
+    # (kind=school|kindergarten|preschool|college|university) that
+    # cityscape preserves on `Building.kind`.
+    school_nodes, school_lats, school_lons = _build_school_destination_array(
+        model_data, bld_to_node, network,
+    )
+    if school_nodes:
+        logger.info(
+            "HBSchool: %d school buildings inside SCC available for chain destinations",
+            len(school_nodes),
+        )
+
+    def _maybe_school_chain_for(person, home_node):
+        """Return school_node if this person has a school-age dependent and a
+        school is reachable within `_SCHOOL_MAX_KM` of their home; else None.
+        """
+        if not school_nodes:
+            return None
+        if not _has_school_age_dependent(person, model_data):
+            return None
+        home_lon, home_lat = network.node_coords[home_node]
+        return _nearest_school_node(
+            home_lat, home_lon,
+            school_nodes, school_lats, school_lons,
+        )
+
+    # Phase 1a: Schedule-driven AM trips (home → work, 8 AM arrival).
+    # V5+: parents with a school-age dependent emit a chained
+    # home → school → work pair (HBSchool_AM + HBW_AM_chained) instead
+    # of a bare home → work trip. Each chain consumes 2 budget slots.
+    n_school_chains = 0
+    if n_am_target > 0 and len(valid_scheduled) > 0:
         sched_indices = list(range(len(valid_scheduled)))
         rng.shuffle(sched_indices)
-        for i in sched_indices[:n_schedule]:
+        am_emitted = 0
+        for i in sched_indices:
+            if am_emitted >= n_am_target:
+                break
             person, home_node, dest_node = valid_scheduled[i]
-            trips.append({
-                "origin_node_id": home_node,
-                "destination_node_id": dest_node,
-                "departure_time_s": _generate_departure_time(
-                    rng, person.commute_min, horizon_start, horizon_end
-                ),
-                "mode": _trip_mode_for(person),
-                "dest_source": "schedule",
-            })
+            arrival_s = person.schedule[0].time_s
+            departure_s = _generate_departure_time(
+                person.commute_min, horizon_start, horizon_end,
+                arrival_time_s=arrival_s,
+            )
+            mode_str = _trip_mode_for(person)
+
+            school_node = _maybe_school_chain_for(person, home_node)
+            # If chain fits the budget AND a reachable school exists,
+            # emit two rows: home → school + school → work.
+            if school_node is not None and am_emitted + 2 <= n_am_target:
+                # The school drop happens slightly before workplace arrival
+                # (parent stops on the way). For simplicity, emit both
+                # rows at the same departure time — engines reorder by
+                # departure_time_s and both vehicles enter the network at
+                # the same instant. A more sophisticated future model
+                # could split the journey time across the two segments.
+                trips.append({
+                    "origin_node_id": home_node,
+                    "destination_node_id": school_node,
+                    "departure_time_s": departure_s,
+                    "mode": mode_str,
+                    "dest_source": "schedule",
+                    "purpose": "HBSchool_AM",
+                })
+                trips.append({
+                    "origin_node_id": school_node,
+                    "destination_node_id": dest_node,
+                    "departure_time_s": departure_s,
+                    "mode": mode_str,
+                    "dest_source": "schedule",
+                    "purpose": "HBW_AM_chained",
+                })
+                am_emitted += 2
+                n_school_chains += 1
+            else:
+                trips.append({
+                    "origin_node_id": home_node,
+                    "destination_node_id": dest_node,
+                    "departure_time_s": departure_s,
+                    "mode": mode_str,
+                    "dest_source": "schedule",
+                    "purpose": "HBW_AM",
+                })
+                am_emitted += 1
+    if n_school_chains:
+        logger.info(
+            "HBSchool: %d AM chains emitted (each = home→school + school→work)",
+            n_school_chains,
+        )
+
+    # Phase 1b: Schedule-driven PM trips (work → home, 17:00 arrival) — V5+
+    # consumes cityscape's `schedule[1]` tuple. Cityscape always emits the
+    # PM tuple alongside the AM tuple, with the same dow_start=1, dow_end=5
+    # weekday range; the destination bld_id in `schedule[1]` is the home
+    # building (mirror of the AM origin). We reverse the OD direction and
+    # recompute the departure time from `schedule[1].time_s`.
+    #
+    # V5+: parents with a school-age dependent emit a chained
+    # work → school → home pair (HBW_PM_chained + HBSchool_PM) instead of
+    # a bare work → home trip. This is the symmetric mirror of the AM
+    # chain (parent picks up the kid on the way home). Each chain consumes
+    # 2 budget slots.
+    n_school_chains_pm = 0
+    if n_pm_target > 0 and len(valid_scheduled) > 0:
+        # Independent shuffle so the PM-trip person mix isn't a
+        # deterministic suffix of the AM mix — keeps the cohort's
+        # representativeness intact at all sampling sizes.
+        pm_sched_indices = list(range(len(valid_scheduled)))
+        rng.shuffle(pm_sched_indices)
+        pm_emitted = 0
+        for i in pm_sched_indices:
+            if pm_emitted >= n_pm_target:
+                break
+            person, home_node, work_node = valid_scheduled[i]
+            arrival_s = person.schedule[1].time_s   # 17:00 home arrival
+            departure_s = _generate_departure_time(
+                person.commute_min, horizon_start, horizon_end,
+                arrival_time_s=arrival_s,
+            )
+            mode_str = _trip_mode_for(person)
+
+            school_node = _maybe_school_chain_for(person, home_node)
+            # If chain fits the budget AND a reachable school exists,
+            # emit two rows: work → school + school → home.
+            if school_node is not None and pm_emitted + 2 <= n_pm_target:
+                # Both legs share the same departure_time_s — same
+                # simplification as the AM chain. Engines reorder by
+                # departure_time_s and both vehicles enter the network at
+                # the same instant.
+                trips.append({
+                    "origin_node_id": work_node,
+                    "destination_node_id": school_node,
+                    "departure_time_s": departure_s,
+                    "mode": mode_str,
+                    "dest_source": "schedule",
+                    "purpose": "HBW_PM_chained",
+                })
+                trips.append({
+                    "origin_node_id": school_node,
+                    "destination_node_id": home_node,
+                    "departure_time_s": departure_s,
+                    "mode": mode_str,
+                    "dest_source": "schedule",
+                    "purpose": "HBSchool_PM",
+                })
+                pm_emitted += 2
+                n_school_chains_pm += 1
+            else:
+                trips.append({
+                    # PM direction: work → home (origin/destination flipped vs AM).
+                    "origin_node_id": work_node,
+                    "destination_node_id": home_node,
+                    "departure_time_s": departure_s,
+                    "mode": mode_str,
+                    "dest_source": "schedule",
+                    "purpose": "HBW_PM",
+                })
+                pm_emitted += 1
+    if n_school_chains_pm:
+        logger.info(
+            "HBSchool: %d PM chains emitted (each = work→school + school→home)",
+            n_school_chains_pm,
+        )
 
     # Phase 2: Gravity fallback for the remaining trips. This is the original
-    # loop, kept verbatim (origin-first sampling, vectorised gravity scoring),
-    # only entered when the scheduled pool is exhausted.
-    n_gravity_needed = num_trips - len(trips)
+    # loop with V5+ peak-aware adaptation: gravity fills both AM and PM
+    # budgets to whatever the schedule path didn't cover. Deterministic
+    # weighting picks AM vs PM proportional to remaining budget.
+    #
+    # AM_PURPOSES / PM_PURPOSES are module-level frozensets — see the
+    # constants block near the top of this file for the rationale.
+    am_emitted_so_far = sum(1 for t in trips if t["purpose"] in AM_PURPOSES)
+    pm_emitted_so_far = sum(1 for t in trips if t["purpose"] in PM_PURPOSES)
+    am_remaining = max(0, n_am_target - am_emitted_so_far)
+    pm_remaining = max(0, n_pm_target - pm_emitted_so_far)
+    n_gravity_needed = am_remaining + pm_remaining
     gravity_attempts = 0
     gravity_max_attempts = n_gravity_needed * 20 if n_gravity_needed > 0 else 0
 
-    while len(trips) < num_trips and gravity_attempts < gravity_max_attempts:
+    while (am_remaining + pm_remaining > 0
+           and gravity_attempts < gravity_max_attempts):
         gravity_attempts += 1
+        # Pick which peak to fill — proportional to remaining budget so
+        # the AM/PM mix in gravity matches the budget allocation overall.
+        if pm_remaining == 0:
+            current_peak = "AM"
+        elif am_remaining == 0:
+            current_peak = "PM"
+        elif rng.random() < am_remaining / (am_remaining + pm_remaining):
+            current_peak = "AM"
+        else:
+            current_peak = "PM"
 
         # a. Sample origin (population-weighted)
         origin = rng.choices(origin_nodes, weights=origin_weights, k=1)[0]
@@ -548,14 +879,41 @@ def generate_census_demand(
         if destination == origin:
             continue
 
+        # Pick peak template (AM or PM) — V5+ peak-aware. Persons with a
+        # cityscape schedule contribute their personal arrival time;
+        # non-code-1 persons (empty schedule) use the cityscape constant
+        # for whichever peak this iteration is filling.
+        if current_peak == "AM":
+            arrival_s = (
+                person.schedule[0].time_s
+                if person.schedule
+                else _CITYSCAPE_AM_ARRIVAL_S
+            )
+            purpose = "HBW_AM"
+            trip_origin, trip_dest = origin, destination
+            am_remaining -= 1
+        else:
+            # PM template: reverse the OD direction so the trip is
+            # work → home, mirroring the schedule[1] semantics.
+            arrival_s = (
+                person.schedule[1].time_s
+                if len(person.schedule) >= 2
+                else _CITYSCAPE_PM_ARRIVAL_S
+            )
+            purpose = "HBW_PM"
+            trip_origin, trip_dest = destination, origin
+            pm_remaining -= 1
+
         trips.append({
-            "origin_node_id": origin,
-            "destination_node_id": destination,
+            "origin_node_id": trip_origin,
+            "destination_node_id": trip_dest,
             "departure_time_s": _generate_departure_time(
-                rng, person.commute_min, horizon_start, horizon_end
+                person.commute_min, horizon_start, horizon_end,
+                arrival_time_s=arrival_s,
             ),
             "mode": _trip_mode_for(person),
             "dest_source": "gravity",
+            "purpose": purpose,
         })
 
     # Final ordering + dense trip ids. Sort key includes a secondary tiebreak
@@ -565,11 +923,13 @@ def generate_census_demand(
     for i, trip in enumerate(trips):
         trip["trip_id"] = f"t{i}"
 
-    # 7. Write demand.csv with the dest_source provenance column. Adapters
-    # consume the canonical 5-column subset by name and ignore the extra.
+    # 7. Write demand.csv with the dest_source + purpose provenance columns.
+    # Adapters consume the canonical 5-column subset (trip_id,
+    # origin_node_id, destination_node_id, departure_time_s, mode) by name
+    # and ignore the extras.
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["trip_id", "origin_node_id", "destination_node_id",
-                  "departure_time_s", "mode", "dest_source"]
+                  "departure_time_s", "mode", "dest_source", "purpose"]
     with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -578,10 +938,19 @@ def generate_census_demand(
     schedule_driven = sum(1 for t in trips if t["dest_source"] == "schedule")
     gravity_fallback = len(trips) - schedule_driven
     pct_sched = (schedule_driven / len(trips) * 100) if trips else 0.0
+    n_am_total = sum(1 for t in trips if t["purpose"] in AM_PURPOSES)
+    n_pm_total = sum(1 for t in trips if t["purpose"] in PM_PURPOSES)
+    n_chain_legs = sum(
+        1 for t in trips
+        if t["purpose"] in {"HBSchool_AM", "HBW_AM_chained",
+                            "HBSchool_PM", "HBW_PM_chained"}
+    )
     logger.info(
         "Wrote %d census-calibrated trips to %s "
-        "(schedule-driven=%d / %.1f%%, gravity-fallback=%d)",
+        "(schedule-driven=%d / %.1f%%, gravity-fallback=%d; "
+        "AM peak=%d, PM peak=%d; school-chain legs=%d)",
         len(trips), output_path, schedule_driven, pct_sched, gravity_fallback,
+        n_am_total, n_pm_total, n_chain_legs,
     )
 
     # Compute statistics

@@ -2,12 +2,17 @@
 # SimForge Benchmark — Small Tier (canonical "is everything green?" matrix)
 # =============================================================================
 #
-# Scenarios:  chicago_1k_car, nyc_10k_car, la_50k_bike_car_transit
+# Scenarios:  chicago_1k_car, nyc_10k_car, la_50k_car
 # Engines:    SUMO, MATSim, DTALite (CPU mesoscopic DTA)
-# Modes:      mesoscopic for all three engines, plus microscopic for SUMO on
-#             every scenario. MATSim and DTALite are mesoscopic-only by design.
+# Modes:      mesoscopic for all three engines on every scenario, plus
+#             microscopic for SUMO on the two smaller tiers (chicago_1k,
+#             nyc_10k). la_50k drops SUMO microscopic — at 50K trips a
+#             single arm64 SUMO micro run wall-clocks past 4 h, which is
+#             impractical for a "small tier" matrix and provides little
+#             additional paradigm signal beyond chicago_1k + nyc_10k micro.
+#             MATSim and DTALite are mesoscopic-only by design.
 # Repeats:    5 across the board (advisor sign-off, Version_5).
-# Total:      12 entries → ~60 simulator invocations.
+# Total:      11 entries → ~55 simulator invocations.
 #
 # This is the matrix you can actually finish in a single SLURM wall — and
 # now also runs end-to-end on a Mac laptop because DTALite is CPU-only.
@@ -22,8 +27,9 @@
 name: benchmark_small
 description: >
   SimForge small-tier benchmark across the three reference scenarios
-  (chicago_1k_car, nyc_10k_car, la_50k_bike_car_transit) with SUMO + MATSim
-  + DTALite in mesoscopic, plus microscopic for SUMO. N=5 repeats per cell.
+  (chicago_1k_car, nyc_10k_car, la_50k_car) with SUMO + MATSim + DTALite
+  in mesoscopic, plus microscopic for SUMO on chicago_1k_car and
+  nyc_10k_car. N=5 repeats per cell.
 output_dir: runs/benchmark_small
 
 runs:
@@ -47,12 +53,10 @@ runs:
   - {scenario_id: nyc_10k_car, scenario_path: scenarios/nyc_10k_car,
      engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
 
-  # ---------------------------------------------------- la_50k_bike_car_transit
-  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+  # ---------------------------------------------------- la_50k_car (meso only)
+  - {scenario_id: la_50k_car, scenario_path: scenarios/la_50k_car,
      engine: sumo,    mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
-  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
-     engine: sumo,    mode: microscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 14400}
-  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+  - {scenario_id: la_50k_car, scenario_path: scenarios/la_50k_car,
      engine: matsim,  mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
-  - {scenario_id: la_50k_bike_car_transit, scenario_path: scenarios/la_50k_bike_car_transit,
+  - {scenario_id: la_50k_car, scenario_path: scenarios/la_50k_car,
      engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}

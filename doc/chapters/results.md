@@ -2,19 +2,19 @@
 
 ## 5.0 Overview
 
-This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/stress_test.yaml`) — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` with **N=5 repeats per cell**, for **20 simulation runs** in total. All three engines are CPU-only and run on Mac and Linux; the full stress test reproduces from a developer laptop without HPC access.
+This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/benchmark_small.yaml`) — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` with **N=5 repeats per cell**, for **20 simulation runs** in total. All three engines are CPU-only and run on Mac and Linux; the full stress test reproduces from a developer laptop without HPC access.
 
-All numbers in this chapter are reproduced verbatim from `runs/stress_test/benchmark_results_stress_test.json` and were measured on an Apple M4 Pro (2024) running macOS 25.4.0, Python 3.13.2, SUMO 1.20.0, MATSim 15.0, and Java 17.0.13. The tables and figures below are emitted by:
+All numbers in this chapter are reproduced verbatim from `runs/benchmark_small/benchmark_results_benchmark_small.json` and were measured on an Apple M4 Pro (2024) running macOS 25.4.0, Python 3.13.2, SUMO 1.20.0, MATSim 15.0, and Java 17.0.13. The tables and figures below are emitted by:
 
 ```bash
-python -m execution.run_benchmark runspecs/stress_test.yaml
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown
-python -m evaluation.generate_plots    runs/stress_test/benchmark_results_stress_test.json --output doc/figures
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
+python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 ```
 
 The four research questions from §4.1.1 are addressed in turn: runtime performance (§5.1, RQ2), reproducibility (§5.2, RQ3), output fidelity (§5.3, RQ1), the micro/meso trade-off (§5.4), throughput (§5.5), and finally the coverage diagnostic that audits the run matrix itself (§5.6).
 
-> **Note on larger tiers.** The 10K, 50K, 200K, and 500K tiers used for scaling discussion in §5.7 are generated on demand from `scripts/02_small_commute.py` through `scripts/05_stress_test.py` and benchmarked separately (typically on HPC; see [`doc/PITZER.md`](../PITZER.md)). Only the 1K tier is exercised by the canonical stress-test runspec committed to this repository.
+> **Note on larger tiers.** The 10K, 50K, 200K, and 500K tiers used for scaling discussion in §5.7 are generated on demand from `scripts/02_nyc_10k_car.py` through `scripts/05_nyc_500k_car.py` and benchmarked separately (typically on HPC; see [`doc/PITZER.md`](../PITZER.md)). Only the 1K tier is exercised by the canonical stress-test runspec committed to this repository.
 
 ---
 
@@ -170,6 +170,40 @@ The diagnostic remains relevant when the matrix is expanded to additional scenar
 
 ---
 
+## 5.6.1 Demand Composition (V5+)
+
+Phases 9 and 10 add a six-purpose taxonomy to every row of `demand.csv`:
+`HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`,
+`HBW_PM_chained`. `evaluation/audit_fairness.py` Q5 and
+`evaluation/analyze_benchmark.py::print_demand_composition_table` read
+the column from the canonical bundle's `demand.csv` and report
+per-scenario breakdowns so the defender can answer compositional
+questions (e.g., "what fraction of AM peak is school-related?")
+directly from a single line of audit output rather than
+re-deriving from coordinates.
+
+For the canonical chicago_1k_car bundle (7-8 AM horizon, 1,000 trips):
+
+```
+total trips:    1000
+AM peak:          1000 (100.0%)
+PM peak:             0 (  0.0%)
+school-related:     16 (  1.6%) — 8 AM chains + 0 PM chains
+by purpose:
+  HBW_AM                  984
+  HBW_AM_chained            8
+  HBSchool_AM               8
+```
+
+The 1.6 % school-related share is consistent with the Chicago SCC's
+~9 % parent-with-kid eligibility pool reduced by the random sampling
+draw at N=1000. AM-only horizon means zero PM rows by design (Phase 9a
+peak split). Pre-V5 bundles missing the column emit a
+`(no V5+ purpose column at <path> — skipping)` and the section is
+omitted from the audit; the test suite covers both cases.
+
+---
+
 ## 5.7 Discussion
 
 ### Headline claims and the evidence
@@ -184,7 +218,7 @@ The diagnostic remains relevant when the matrix is expanded to additional scenar
 ### What this chapter does *not* claim
 
 1. **No claim about absolute scaling.** The 1K tier is a developer-machine reproducibility benchmark, not a scaling study. Scaling exponents from the 10K – 500K HPC tiers are reported separately once those tiers are regenerated via `scripts/02_…05_` on an HPC-class host.
-2. **No claim about ground-truth fidelity.** SimForge measures inter-simulator agreement, not agreement with sensor data. The PUMS-calibrated demand has a documented realism ceiling of ~60 – 65 % (see §3.3).
+2. **No claim about ground-truth fidelity.** SimForge measures inter-simulator agreement, not agreement with sensor data. The PUMS-calibrated demand reaches a documented realism ceiling of ~70 – 72 % after V5 Phases 5-10 (up from ~60–65 % in V4) — gains came from JWTRNS mapping fix (Phase 5), OSM-grounded signal placement (Phase 6), turn restrictions (Phase 7), per-person empirical departures (Phase 8), and modelgen-grounded HBW + HBSchool purposes (Phase 9). The ceiling remains below 85 % until destinations move from gravity to LODES/NHTS observed OD. See §3.3.
 3. **No GPU speedup claim.** The third primary engine in Version_5 is DTALite, a CPU-only mesoscopic Dynamic Traffic Assignment engine. The original GPU comparator (LPSim) was integrated in Version_4 Phase B and abandoned in Version_5 after exhaustive Pitzer debugging — see [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md). The thesis claim shifts from "GPU vs CPU speedup" to "paradigm spread across three CPU engines covering microscopic (SUMO micro), queue-based agent (SUMO meso + MATSim), and DTA equilibrium (DTALite)" — see [`doc/engines/ENGINE_COMPARISON.md`](../engines/ENGINE_COMPARISON.md).
 
 ### Threats to validity revisited
@@ -210,19 +244,19 @@ python setup_simforge.py
 source .venv/bin/activate
 
 # 2. Regenerate the chicago_1k_car bundle (PBF pipeline — ~30 s)
-python scripts/01_quick_test.py
+python scripts/01_chicago_1k_car.py
 
 # 3. Run the canonical 11-run stress test (~27 s wall-clock on Apple M4 Pro)
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 # 4. Generate Tables 5.1 and 5.2 in LaTeX + Markdown
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
 
 # 5. Render Figures 5.1 – 5.9 (PNG + PDF) into doc/figures/
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json --output doc/figures
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
 # 6. Verify the framework: full pytest suite
 python -m pytest tests/ -q
 ```
 
-Every number in §5.1 – §5.6 is a direct read from `runs/stress_test/benchmark_results_stress_test.json`. No hand-edited values appear in this chapter.
+Every number in §5.1 – §5.6 is a direct read from `runs/benchmark_small/benchmark_results_benchmark_small.json`. No hand-edited values appear in this chapter.

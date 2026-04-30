@@ -2,7 +2,7 @@
 # SimForge Benchmark — Large Tier (supercomputer)
 # =============================================================================
 #
-# Scenarios:  chicago_200k_car_transit, nyc_500k_car
+# Scenarios:  chicago_200k_car, nyc_500k_car
 # Engines:    SUMO, MATSim, DTALite (CPU mesoscopic DTA)
 # Modes:      mesoscopic only — microscopic at 200K+ trips would not finish
 #             in any reasonable wall.
@@ -31,12 +31,12 @@ description: >
 output_dir: runs/benchmark_large
 
 runs:
-  # ---------------------------------------------------- chicago_200k_car_transit
-  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
+  # ---------------------------------------------------- chicago_200k_car
+  - {scenario_id: chicago_200k_car, scenario_path: scenarios/chicago_200k_car,
      engine: sumo,    mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
-  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
+  - {scenario_id: chicago_200k_car, scenario_path: scenarios/chicago_200k_car,
      engine: matsim,  mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
-  - {scenario_id: chicago_200k_car_transit, scenario_path: scenarios/chicago_200k_car_transit,
+  - {scenario_id: chicago_200k_car, scenario_path: scenarios/chicago_200k_car,
      engine: dtalite, mode: mesoscopic, repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
 
   # ----------------------------------------------------------------- nyc_500k

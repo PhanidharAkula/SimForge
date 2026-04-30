@@ -23,7 +23,7 @@ A complete adapter scaffold reached Version_3:
 - `adapters/qarsumo/` package with the same input/output contract shape as the SUMO adapter (since QarSUMO consumes SUMO's `.sumocfg` directly).
 - `tests/test_qarsumo_adapter.py` — 10 unit tests, all passing on the adapter scaffold.
 - `cluster/jobs/build_qarsumo.sbatch` — Pitzer GPU build job.
-- 9 runspec entries across `runspecs/stress_test.yaml`, `runspecs/benchmark_small.yaml`, `runspecs/benchmark_large.yaml`.
+- 9 runspec entries across `runspecs/benchmark_small.yaml`, `runspecs/benchmark_small.yaml`, `runspecs/benchmark_large.yaml`.
 - Engine registry membership in `execution/runspec.py`, `execution/run_benchmark.py`, `run.py`, and the evaluation pipeline.
 - Plot/analyze tuples in `evaluation/generate_plots.py`, `evaluation/analyze_benchmark.py`, `evaluation/compare_modes.py`.
 

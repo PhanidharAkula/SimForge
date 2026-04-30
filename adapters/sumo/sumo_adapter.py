@@ -425,15 +425,53 @@ def build_sumo_routes_xml(
     Build a SUMO routes file based on canonical demand.csv and the network graph.
 
     Only trips in ``feasible`` (the shared cross-engine feasibility set) are
-    routed. For each feasible trip we BFS on the node graph for a path.
+    routed. For each feasible trip we run a state-aware BFS that respects
+    OSM turn restrictions (V5+); when no restricted-aware path exists we
+    fall back to the plain BFS so the trip is still rendered (consistent
+    with pre-V5 behavior — turn restrictions don't disconnect ODs in
+    practice on real OSM networks).
     """
+    from pipeline.network.turn_restrictions import (
+        parse_turn_restrictions, build_forbidden_moves,
+        shortest_path_with_restrictions,
+    )
+
+    from adapters.common.vehicle_types import (
+        SIMFORGE_CAR_VTYPE_ID, sumo_vtype_xml,
+    )
+
     lines: List[str] = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
     lines.append("<!-- SUMO routes generated from canonical demand.csv -->")
     lines.append(f"<!-- Scenario: {summary.scenario_id}, trips: {summary.trip_count} -->")
     lines.append("<routes>")
+    # V11+ canonical SimForge vehicle type — see adapters/common/vehicle_types.py
+    # for the cross-engine alignment rationale (SUMO physical length+minGap
+    # ≡ MATSim effective length ≡ DTALite PCE).
+    lines.append(sumo_vtype_xml())
+
+    # Load OSM turn restrictions (V5+). Pre-V5 networks return empty list,
+    # in which case state-aware BFS reduces to plain BFS — back-compat.
+    network_path = demand_path.parent / "network.xml"
+    restrictions = parse_turn_restrictions(network_path)
+    forbidden_moves: dict = {}
+    if restrictions:
+        # Build outgoing-links-by-node for `only_*_turn` expansion.
+        outgoing_links_by_node: dict = {}
+        for u, neighbors in graph.adjacency.items():
+            outgoing_links_by_node[u] = [
+                graph.edge_lookup[(u, v)].id
+                for v in neighbors
+                if (u, v) in graph.edge_lookup
+            ]
+        forbidden_moves = build_forbidden_moves(restrictions, outgoing_links_by_node)
+        logger.info(
+            "[sumo] state-aware BFS: %d turn restrictions, %d forbidden (via,from)→to entries",
+            len(restrictions), len(forbidden_moves),
+        )
 
     route_failures: List[str] = []
+    restriction_fallbacks = 0
 
     from pipeline.progress import ProgressBar
     pb = ProgressBar(total=len(feasible), desc="Routing trips (BFS)")
@@ -449,7 +487,24 @@ def build_sumo_routes_xml(
             dest = (row.get("destination_node_id") or "").strip()
             depart = (row.get("departure_time_s") or "").strip()
 
-            path_nodes = shortest_path_nodes(graph.adjacency, origin, dest)
+            # State-aware BFS first (V5+); fall back to plain BFS if no
+            # restriction-respecting path exists. The fallback rate is
+            # near-zero on real OSM (turn restrictions typically force
+            # detours, not disconnections) but log the count so any spike
+            # is visible in --verbose mode.
+            if forbidden_moves:
+                path_nodes = shortest_path_with_restrictions(
+                    origin=origin, dest=dest,
+                    adjacency=graph.adjacency,
+                    edge_lookup=graph.edge_lookup,
+                    forbidden_moves=forbidden_moves,
+                )
+                if path_nodes is None:
+                    restriction_fallbacks += 1
+                    path_nodes = shortest_path_nodes(graph.adjacency, origin, dest)
+            else:
+                path_nodes = shortest_path_nodes(graph.adjacency, origin, dest)
+
             if not path_nodes or len(path_nodes) < 2:
                 route_failures.append(trip_id)
                 continue
@@ -470,11 +525,18 @@ def build_sumo_routes_xml(
             veh_id = f"veh_{trip_id}"
             route_id = f"r_{trip_id}"
 
-            lines.append(f'  <vehicle id="{veh_id}" depart="{depart}">')
+            lines.append(f'  <vehicle id="{veh_id}" type="{SIMFORGE_CAR_VTYPE_ID}" depart="{depart}">')
             lines.append(f'    <route id="{route_id}" edges="{edges_str}"/>')
             lines.append("  </vehicle>")
 
     pb.finish()
+
+    if forbidden_moves:
+        logger.info(
+            "[sumo] %d trips had no restriction-respecting path "
+            "(fell back to plain BFS); %d total trips routed.",
+            restriction_fallbacks, len(feasible) - len(route_failures),
+        )
 
     # Any failure here means the shared SCC filter disagrees with SUMO's BFS —
     # that should never happen, so loudly surface it instead of silently dropping.
@@ -624,7 +686,12 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
         ) from exc
 
     # Compute the shared feasibility set — every engine must simulate exactly this subset.
-    feasible, feas_report = _feasibility.feasible_trip_ids(network_path, demand_path)
+    # SUMO adapter currently only handles car traffic — non-car trips
+    # (transit / bike / walk) are dropped from the feasibility set so
+    # cross-engine Q3 audit compares all engines on the same target.
+    feasible, feas_report = _feasibility.feasible_trip_ids(
+        network_path, demand_path, supported_modes={"car"},
+    )
     _feasibility.log_report(feas_report, engine="sumo")
     _feasibility.write_feasibility_report(feas_report, output_dir / "feasibility_report.json")
 

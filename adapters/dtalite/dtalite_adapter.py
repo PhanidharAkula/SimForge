@@ -58,6 +58,7 @@ from pathlib import Path
 from typing import Optional
 
 from adapters.common import feasibility as _feasibility
+from adapters.common.vehicle_types import CAR_PCE as _CAR_PCE
 from adapters.sumo.sumo_adapter import (
     NetworkGraph,
     ScenarioSummary,
@@ -381,6 +382,80 @@ def write_dtalite_link_csv(graph: NetworkGraph, out_path: Path) -> int:
     return rows
 
 
+def write_dtalite_movement_csv(
+    network_path: Path,
+    out_path: Path,
+) -> int:
+    """Write GMNS ``movement.csv`` with OSM turn restrictions, if present.
+
+    Schema (per zephyr-data-specs/GMNS):
+        ``mvmt_id, node_id, ib_link_id, ob_link_id, type, penalty,
+        capacity, ctrl_type, geometry``
+
+    SimForge emits one row per ``<turn_restriction>`` entry in
+    ``network.xml``. ``capacity=0`` and ``penalty=99999`` flag the
+    movement as forbidden — most GMNS loaders treat either as a hard
+    block.
+
+    Note (V5): ``path4gmns 0.10.0`` (the DTA backend SimForge uses for
+    DTALite) does not yet ingest ``movement.csv`` natively, so this
+    file is currently *documentary* — it preserves the OSM ground truth
+    in the engine bundle for cross-tool conformance and downstream audit
+    use, but DTALite's UE assignment will not actively avoid the
+    restricted movements. SUMO and MATSim both pre-route via SimForge's
+    state-aware BFS and therefore do enforce restrictions; this is the
+    one cross-engine asymmetry that V5 leaves open. See doc/MODELGEN_AND_MODES.md
+    §future-work for the path-4gmns enhancement that would close it.
+
+    Returns the number of movement rows written. Returns 0 silently
+    when the canonical network has no ``<turn_restrictions>`` block.
+    """
+    from pipeline.network.turn_restrictions import parse_turn_restrictions
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    restrictions = parse_turn_restrictions(network_path)
+    if not restrictions:
+        # Don't emit an empty file — DTA tools sometimes choke on
+        # header-only CSVs and the absence of the file is unambiguous
+        # (no restrictions in this network).
+        return 0
+
+    # Map OSM restriction values to GMNS movement types when possible.
+    # Anything not in the table emits with type=other (still valid GMNS).
+    OSM_TO_GMNS_TYPE = {
+        "no_left_turn": "left",
+        "no_right_turn": "right",
+        "no_u_turn": "u_turn",
+        "no_straight_on": "thru",
+        "only_left_turn": "left",
+        "only_right_turn": "right",
+        "only_straight_on": "thru",
+    }
+
+    with out_path.open("w", encoding="utf-8", newline="") as f:
+        w = csv.writer(f, lineterminator="\n")
+        w.writerow([
+            "mvmt_id", "node_id", "ib_link_id", "ob_link_id",
+            "type", "penalty", "capacity", "ctrl_type", "geometry",
+            "osm_restriction",  # provenance — non-standard but useful
+        ])
+        # Sort by (via_node, from_link, to_link) for deterministic output.
+        for i, r in enumerate(sorted(
+            restrictions, key=lambda x: (x.via_node, x.from_link, x.to_link),
+        )):
+            mvmt_id = f"m{i}"
+            mvmt_type = OSM_TO_GMNS_TYPE.get(r.restriction, "other")
+            w.writerow([
+                mvmt_id, r.via_node, r.from_link, r.to_link,
+                mvmt_type, "99999", "0", "no_control", "",
+                r.restriction,
+            ])
+
+    return len(restrictions)
+
+
 def write_dtalite_demand_csv(
     demand_path: Path,
     out_path: Path,
@@ -504,10 +579,13 @@ def write_dtalite_settings_csv(
         ["", "", "ue", config.iterations, config.column_updating_iterations,
          -1, 0, "assignment_mode can be ue, dta or odme"],
         ["", "", "", "", "", "", "", ""],
-        # [agent_type]
+        # [agent_type] — V11+ PCE pulled from adapters/common/vehicle_types.py
+        # (CAR_PCE = 1.0). DTALite has no length/width — link capacity
+        # expresses the storage/spacing equivalent of SUMO's length+minGap
+        # and MATSim's effective length. PCE = 1.0 matches both.
         ["[agent_type]", "agent_type", "name", "", "VOT", "flow_type",
          "PCE", ""],
-        ["", "p", "passenger", "", 10, 0, 1, ""],
+        ["", "p", "passenger", "", 10, 0, _CAR_PCE, ""],
         ["", "", "", "", "", "", "", ""],
         # [link_type]
         ["[link_type]", "link_type", "link_type_name", "",
@@ -569,8 +647,12 @@ def prepare_dtalite_inputs(
     graph = parse_canonical_network(network_path)
 
     # Cross-engine feasibility filter — same one SUMO and MATSim use,
-    # ensures every engine simulates the same trip subset.
-    feasible, feas_report = _feasibility.feasible_trip_ids(network_path, demand_path)
+    # ensures every engine simulates the same trip subset. DTALite is
+    # car-only by design (CPU mesoscopic DTA, single-mode demand), so
+    # transit/bike/walk trips are dropped here too.
+    feasible, feas_report = _feasibility.feasible_trip_ids(
+        network_path, demand_path, supported_modes={"car"},
+    )
     _feasibility.log_report(feas_report, engine="dtalite")
     _feasibility.write_feasibility_report(
         feas_report, output_dir / "feasibility_report.json"
@@ -608,12 +690,20 @@ def prepare_dtalite_inputs(
     od_pairs_written = write_dtalite_demand_csv(
         demand_path, output_dir / "demand.csv", feasible
     )
+    # V5+: emit GMNS movement.csv for OSM turn-restriction provenance.
+    # See `write_dtalite_movement_csv` docstring for the path4gmns 0.10.0
+    # caveat — file is currently documentary, not actively enforced.
+    movement_rows = write_dtalite_movement_csv(
+        network_path, output_dir / "movement.csv",
+    )
     write_dtalite_settings_yml(output_dir / "settings.yml", config)
     write_dtalite_settings_csv(output_dir / "settings.csv", config)
 
     logger.info(
-        "DTALite inputs ready at %s — %d nodes, %d links, %d unique OD pairs from %d feasible trips",
-        output_dir, nodes_written, links_written, od_pairs_written, len(feasible),
+        "DTALite inputs ready at %s — %d nodes, %d links, %d unique OD pairs "
+        "from %d feasible trips, %d turn restrictions in movement.csv",
+        output_dir, nodes_written, links_written, od_pairs_written,
+        len(feasible), movement_rows,
     )
 
     return ScenarioSummary(

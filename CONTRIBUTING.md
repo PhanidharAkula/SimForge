@@ -13,7 +13,7 @@ git clone <repo-url>
 cd SimForge
 python setup_simforge.py        # creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
-python -m pytest tests/ -q      # 406 tests should pass
+python -m pytest tests/ -q      # ~513 tests should pass
 ```
 
 If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install path.
@@ -22,13 +22,13 @@ If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install pa
 
 ## Development workflow
 
-### 1. Branch from `Version_3`
+### 1. Branch from `Version_5`
 
-`main` tracks the released thesis snapshot. `Version_3` is the active development branch (succeeded `Version_2` in 2026-04 with the schedule-first demand pipeline + `uv` toolchain migration) — base your work on it:
+`main` tracks the released thesis snapshot. `Version_5` is the active development branch (succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases — JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
 
 ```bash
-git checkout Version_3
-git pull origin Version_3
+git checkout Version_5
+git pull origin Version_5
 git checkout -b your-feature-branch
 ```
 
@@ -63,8 +63,8 @@ If you change adapter behaviour, run the determinism tests *and* the relevant ad
 If your change could affect benchmark numbers, regenerate the headline matrix and confirm it still produces the values published in `CHANGELOG.md` (most recent addendum):
 
 ```bash
-python -m execution.run_benchmark runspecs/stress_test.yaml
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
 If the numbers move, file the new numbers as a new `CHANGELOG.md` entry — do not silently shift the published table.
@@ -75,7 +75,7 @@ PR description should include:
 
 - One-sentence summary of the user-visible change.
 - Test counts before/after if you added/modified tests.
-- A `runs/stress_test/benchmark_results_stress_test.json` diff (or "no benchmark impact") if you touched the adapter, scenario pipeline, or evaluation code.
+- A `runs/benchmark_small/benchmark_results_benchmark_small.json` diff (or "no benchmark impact") if you touched the adapter, scenario pipeline, or evaluation code.
 
 ---
 
@@ -119,7 +119,7 @@ The minimum surface area for a new adapter `adapters/<engine>/`:
 4. **A unit test file** `tests/test_<engine>_adapter.py` mirroring the SUMO/MATSim style.
 5. **`feasibility_report.json` parity** — your adapter MUST drop trips outside the SCC and record the drop in the report. This is what makes cross-engine comparison fair.
 
-Update `runspecs/stress_test.yaml` and `evaluation/analyze_benchmark.py`'s engine list once the adapter is green.
+Update `runspecs/benchmark_small.yaml` and `evaluation/analyze_benchmark.py`'s engine list once the adapter is green.
 
 ---
 

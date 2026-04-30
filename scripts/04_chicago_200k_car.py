@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Medium multi-modal — 50K trips (car+transit+bike), LA, 6–10 AM.
+"""chicago_200k_car — 200K car trips, Chicago, 24-hour.
 
-Equivalent to: python generate.py --preset medium_multimodal
+Equivalent to: python generate.py --preset chicago_200k_car
 Same generate_scenario() call; the preset form additionally accepts
 --seed / --output / --city / OSM source overrides.
 """
@@ -19,12 +19,12 @@ parser.add_argument("--verbose", "-v", action="store_true",
 args = parser.parse_args()
 
 generate_scenario(
-    city="la",
-    trips=50_000,
-    modes=["car", "transit", "bike"],
-    start_time=21600,   # 6:00 AM
-    end_time=36000,     # 10:00 AM
-    radius_km=10.0,
+    city="chicago",
+    trips=200_000,
+    modes=["car"],
+    start_time=0,
+    end_time=86400,     # 24 hours
+    radius_km=15.0,
     seed=42,
     verbose=args.verbose,
 )

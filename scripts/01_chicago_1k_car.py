@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Quick test — 1K car trips, Chicago, 7–8 AM.
+"""chicago_1k_car — 1K car trips, Chicago, 7–8 AM (smallest tier; test fixture).
 
-Equivalent to: python generate.py --preset quick_test
+Equivalent to: python generate.py --preset chicago_1k_car
 Same generate_scenario() call; the preset form additionally accepts
 --seed / --output / --city / OSM source overrides.
 """

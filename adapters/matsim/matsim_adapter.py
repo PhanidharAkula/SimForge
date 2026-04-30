@@ -303,21 +303,17 @@ def find_link_for_destination(node_id: str, links: List[dict], link_adjacency: d
 
 
 def build_matsim_vehicles_xml() -> str:
-    """Build MATSim vehicles.xml with standard vehicle types."""
-    return '''<?xml version="1.0" encoding="UTF-8"?>
-<vehicleDefinitions xmlns="http://www.matsim.org/files/dtd"
-                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-                    xsi:schemaLocation="http://www.matsim.org/files/dtd http://www.matsim.org/files/dtd/vehicleDefinitions_v2.0.xsd">
-    <vehicleType id="car">
-        <capacity seats="5" standingRoomInPersons="0"/>
-        <length meter="7.5"/>
-        <width meter="1.0"/>
-        <maximumVelocity meterPerSecond="40.0"/>
-        <passengerCarEquivalents pce="1.0"/>
-        <networkMode networkMode="car"/>
-        <flowEfficiencyFactor factor="1.0"/>
-    </vehicleType>
-</vehicleDefinitions>'''
+    """Build MATSim vehicles.xml with the canonical SimForge car type.
+
+    V11+ uses ``adapters/common/vehicle_types.py`` so SUMO, MATSim, and
+    DTALite share a single source of truth for vehicle parameters.
+    MATSim's ``length`` here is the *effective* spacing (physical length
+    + comfort gap) per its convention — equivalent to SUMO's
+    ``length + minGap``. See the module docstring for the cross-engine
+    alignment rationale.
+    """
+    from adapters.common.vehicle_types import matsim_vehicle_type_xml
+    return matsim_vehicle_type_xml()
 
 
 def build_matsim_network_xml(nodes: Dict, links: List) -> str:
@@ -359,16 +355,48 @@ def build_matsim_network_xml(nodes: Dict, links: List) -> str:
     return "\n".join(lines)
 
 
+class _LinkRef:
+    """Tiny adapter so MATSim's dict-style links plug into the generic
+    `pipeline.network.turn_restrictions.shortest_path_with_restrictions`
+    BFS, which expects each edge_lookup value to expose `.id`."""
+    __slots__ = ("id",)
+
+    def __init__(self, link_id: str):
+        self.id = link_id
+
+
 def build_matsim_plans_xml(
     demand_path: Path,
     links: List,
     feasible: Set[str],
+    network_path: Optional[Path] = None,
 ) -> str:
     """Build MATSim plans.xml from canonical demand.csv.
 
     Only trips in ``feasible`` (the shared cross-engine feasibility set) are
     emitted. This keeps MATSim's trip set identical to every other engine.
+
+    V5+ behavior:
+      - When ``network_path`` is provided and the canonical network.xml
+        carries an OSM `<turn_restrictions>` block, every plan is
+        pre-routed via the same state-aware BFS the SUMO adapter uses
+        (`pipeline.network.turn_restrictions.shortest_path_with_restrictions`)
+        and the resulting link sequence is written into MATSim's
+        `<route type="links">` element. MATSim then drives the prescribed
+        path verbatim instead of routing internally, so SUMO and MATSim
+        consume identical paths and the cross-engine TT comparison stays
+        apples-to-apples while both engines respect real-world turn
+        restrictions.
+      - When ``network_path`` is None or the network has no
+        ``<turn_restrictions>`` block (legacy bundles, synthetic
+        networks), MATSim is left to do its own routing on its
+        MATSim-format network — pre-V5 behavior preserved as fallback.
     """
+    from pipeline.network.turn_restrictions import (
+        parse_turn_restrictions, build_forbidden_moves,
+        shortest_path_with_restrictions,
+    )
+
     lines = []
     lines.append('<?xml version="1.0" ?>')
     lines.append('<!DOCTYPE plans SYSTEM "http://www.matsim.org/files/dtd/plans_v4.dtd">')
@@ -380,7 +408,32 @@ def build_matsim_plans_xml(
     for link in valid_links:
         link_adjacency.setdefault(link["from"], []).append(link["to"])
 
+    # edge_lookup for state-aware BFS: (from_node, to_node) → object-with-id.
+    edge_lookup: Dict[Tuple[str, str], _LinkRef] = {
+        (link["from"], link["to"]): _LinkRef(link["id"])
+        for link in valid_links
+    }
+
+    # Load OSM turn restrictions (V5+) when network_path is provided.
+    restrictions = parse_turn_restrictions(network_path) if network_path else []
+    forbidden_moves: dict = {}
+    if restrictions:
+        outgoing_links_by_node: dict = {}
+        for u, neighbors in link_adjacency.items():
+            outgoing_links_by_node[u] = [
+                edge_lookup[(u, v)].id for v in neighbors
+                if (u, v) in edge_lookup
+            ]
+        forbidden_moves = build_forbidden_moves(restrictions, outgoing_links_by_node)
+        logger.info(
+            "[matsim] state-aware BFS: %d turn restrictions, "
+            "%d forbidden (via,from)→to entries",
+            len(restrictions), len(forbidden_moves),
+        )
+
     missing_link = 0
+    restriction_fallbacks = 0
+    pre_routed = 0
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -407,16 +460,59 @@ def build_matsim_plans_xml(
                 missing_link += 1
                 continue
 
+            # Pre-route when restrictions are present so MATSim respects them.
+            route_link_ids: Optional[List[str]] = None
+            if forbidden_moves:
+                path_nodes = shortest_path_with_restrictions(
+                    origin=origin, dest=dest,
+                    adjacency=link_adjacency,
+                    edge_lookup=edge_lookup,
+                    forbidden_moves=forbidden_moves,
+                )
+                if path_nodes is None:
+                    restriction_fallbacks += 1
+                else:
+                    route_link_ids = [
+                        edge_lookup[(u, v)].id
+                        for u, v in zip(path_nodes[:-1], path_nodes[1:])
+                        if (u, v) in edge_lookup
+                    ]
+                    if route_link_ids:
+                        pre_routed += 1
+
             end_time = seconds_to_time_string(depart_seconds)
             person_id = f"person_{trip_id}"
 
             lines.append(f'<person id="{person_id}">')
             lines.append('  <plan>')
             lines.append(f'    <act type="h" link="{origin_link}" end_time="{end_time}"/>')
-            lines.append(f'    <leg mode="{mode}"/>')
+            if route_link_ids and len(route_link_ids) >= 2:
+                # MATSim 15 plans_v4 DTD: <route type="links" start_link=
+                # ".." end_link="..">interior_links</route>. Start and end
+                # are attributes; the text content lists intermediate links.
+                start = route_link_ids[0]
+                end = route_link_ids[-1]
+                interior = " ".join(route_link_ids[1:-1])
+                lines.append(f'    <leg mode="{mode}">')
+                lines.append(
+                    f'      <route type="links" start_link="{start}" '
+                    f'end_link="{end}">{interior}</route>'
+                )
+                lines.append(f'    </leg>')
+            else:
+                # Fallback: let MATSim route itself (legacy/back-compat).
+                lines.append(f'    <leg mode="{mode}"/>')
             lines.append(f'    <act type="w" link="{dest_link}"/>')
             lines.append('  </plan>')
             lines.append('</person>')
+
+    if forbidden_moves:
+        logger.info(
+            "[matsim] %d trips pre-routed via state-aware BFS, "
+            "%d had no restriction-respecting path "
+            "(MATSim will route those itself).",
+            pre_routed, restriction_fallbacks,
+        )
 
     if missing_link:
         logger.error(
@@ -584,8 +680,12 @@ def prepare_matsim_inputs(
     if not demand_path or not demand_path.exists():
         raise FileNotFoundError(f"Demand file not found: {demand_path}")
     
-    # Compute the shared feasibility set — same trip subset every engine simulates.
-    feasible, feas_report = _feasibility.feasible_trip_ids(network_path, demand_path)
+    # Compute the shared feasibility set — same trip subset every engine
+    # simulates. MATSim adapter currently only handles car traffic, so
+    # transit/bike/walk trips are dropped here too.
+    feasible, feas_report = _feasibility.feasible_trip_ids(
+        network_path, demand_path, supported_modes={"car"},
+    )
     _feasibility.log_report(feas_report, engine="matsim")
     _feasibility.write_feasibility_report(feas_report, output_dir / "feasibility_report.json")
 
@@ -604,9 +704,14 @@ def prepare_matsim_inputs(
     network_out.write_text(network_xml, encoding="utf-8")
     logger.info("  Created: %s", network_out)
 
-    # Convert demand to plans (only feasible trips; subset matches every engine)
+    # Convert demand to plans (only feasible trips; subset matches every engine).
+    # Pass `network_path` so V5+ turn-restriction enforcement can pre-route
+    # via the same state-aware BFS the SUMO adapter uses (cross-engine
+    # paths align when restrictions are present).
     logger.info("Converting demand to MATSim plans...")
-    plans_xml = build_matsim_plans_xml(demand_path, links, feasible)
+    plans_xml = build_matsim_plans_xml(
+        demand_path, links, feasible, network_path=network_path,
+    )
     plans_out = output_dir / "plans.xml"
     plans_out.write_text(plans_xml, encoding="utf-8")
     logger.info("  Created: %s", plans_out)

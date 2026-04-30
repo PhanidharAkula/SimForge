@@ -252,4 +252,77 @@ class TestRealBundledFeasibility:
             f"{report.feasible_trips}/{report.total_trips} trips feasible"
         )
         assert isinstance(feasible, set)
+
+
+# ---------------------------------------------------------------------------
+# Mode-aware feasibility (V5 — adapters narrow demand to supported_modes)
+# ---------------------------------------------------------------------------
+
+
+class TestModeAwareFeasibility:
+    """Verify the mode filter that adapters use to narrow demand to their
+    supported modes. SUMO/MATSim/DTALite all pass `supported_modes={"car"}`
+    today; this verifies the filter actually drops non-car rows and reports
+    the count under skipped_unsupported_mode.
+    """
+
+    def _write_mixed_demand(self, tmp_path):
+        d = tmp_path / "demand.csv"
+        d.write_text(
+            "trip_id,origin_node_id,destination_node_id,departure_time_s,mode\n"
+            "t1,n1,n2,0,car\n"
+            "t2,n1,n2,0,car\n"
+            "t3,n1,n2,0,transit\n"
+            "t4,n1,n2,0,bike\n"
+            "t5,n1,n2,0,walk\n"
+        )
+        return d
+
+    def _write_two_node_network(self, tmp_path):
+        n = tmp_path / "network.xml"
+        n.write_text(
+            "<?xml version='1.0'?>\n"
+            "<network>\n"
+            "  <nodes>\n"
+            "    <node id='n1' x='0' y='0'/>\n"
+            "    <node id='n2' x='1' y='0'/>\n"
+            "  </nodes>\n"
+            "  <links>\n"
+            "    <link id='l1' from='n1' to='n2'/>\n"
+            "    <link id='l2' from='n2' to='n1'/>\n"
+            "  </links>\n"
+            "</network>\n"
+        )
+        return n
+
+    def test_filter_keeps_only_supported_modes(self, tmp_path):
+        net = self._write_two_node_network(tmp_path)
+        dem = self._write_mixed_demand(tmp_path)
+        feasible, report = feasible_trip_ids(
+            net, dem, supported_modes={"car"}
+        )
+        assert feasible == {"t1", "t2"}
+        assert report.total_trips == 5
+        assert report.feasible_trips == 2
+        assert report.skipped_unsupported_mode == 3
+        assert report.supported_modes == ["car"]
+
+    def test_mode_filter_disabled_keeps_everything(self, tmp_path):
+        # supported_modes=None → mode column ignored (back-compat path).
+        net = self._write_two_node_network(tmp_path)
+        dem = self._write_mixed_demand(tmp_path)
+        feasible, report = feasible_trip_ids(net, dem, supported_modes=None)
+        assert len(feasible) == 5
+        assert report.skipped_unsupported_mode == 0
+        assert report.supported_modes == []
+
+    def test_multi_mode_set_keeps_union(self, tmp_path):
+        net = self._write_two_node_network(tmp_path)
+        dem = self._write_mixed_demand(tmp_path)
+        feasible, report = feasible_trip_ids(
+            net, dem, supported_modes={"car", "transit"}
+        )
+        assert feasible == {"t1", "t2", "t3"}
+        assert report.skipped_unsupported_mode == 2
+        assert sorted(report.supported_modes) == ["car", "transit"]
         assert len(feasible) == report.feasible_trips

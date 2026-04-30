@@ -26,11 +26,25 @@ Why SCC (and not just BFS-reachable origin→dest)?
   - Empirically the SCC on realistic urban OSM networks keeps ≥99% of nodes,
     so the loss is small and equal across engines.
 
+Mode-aware filtering
+--------------------
+SimForge's three engines today only handle car traffic; multi-mode bundles
+(e.g. la_50k_car contains only car trips, but a bundle requested with
+``--modes car,transit`` would carry transit + bike rows in demand.csv).
+Each adapter declares which travel modes it supports; the feasibility
+filter optionally restricts the feasible set to trips whose ``mode``
+column is in that set. Engines then simulate exactly the same
+mode-filtered subset, and ``audit_fairness`` Q3 compares each engine's
+simulated count against this same per-engine target.
+
 Usage
 -----
     from adapters.common import feasible_trip_ids
 
-    feasible, report = feasible_trip_ids(network_path, demand_path)
+    feasible, report = feasible_trip_ids(
+        network_path, demand_path,
+        supported_modes={"car"},     # engine-declared filter
+    )
     for row in demand_rows:
         if row["trip_id"] in feasible:
             ...  # render for this engine
@@ -72,7 +86,11 @@ class FeasibilityReport:
     skipped_missing_fields: int = 0
     skipped_unknown_nodes: int = 0
     skipped_outside_scc: int = 0
+    skipped_unsupported_mode: int = 0
     skipped_trip_ids: List[str] = field(default_factory=list)
+    # Modes this engine accepts. Empty set means "all modes" (legacy /
+    # mode-agnostic behavior, kept for back-compat with external callers).
+    supported_modes: List[str] = field(default_factory=list)
 
     @property
     def feasible_fraction(self) -> float:
@@ -80,8 +98,12 @@ class FeasibilityReport:
 
     def summary_line(self) -> str:
         pct = self.feasible_fraction * 100.0
+        mode_clause = (
+            f" mode∈{{{','.join(sorted(self.supported_modes))}}};"
+            if self.supported_modes else ""
+        )
         return (
-            f"feasibility: {self.feasible_trips}/{self.total_trips} trips "
+            f"feasibility:{mode_clause} {self.feasible_trips}/{self.total_trips} trips "
             f"({pct:.1f}%) — SCC covers {self.scc_nodes}/{self.total_nodes} nodes, "
             f"{self.scc_links}/{self.total_links} links"
         )
@@ -95,14 +117,25 @@ class FeasibilityReport:
 def feasible_trip_ids(
     network_path: Path,
     demand_path: Path,
+    supported_modes: Set[str] | None = None,
 ) -> Tuple[Set[str], FeasibilityReport]:
     """
     Compute the shared set of feasible trip IDs for a scenario.
 
     A trip is feasible when *both* its origin and destination nodes lie in the
-    largest strongly-connected component of the canonical network. Every engine
-    adapter must simulate exactly this set so cross-engine results compare
-    trips 1-to-1.
+    largest strongly-connected component of the canonical network, and (when
+    ``supported_modes`` is provided) its ``mode`` column is in that set.
+    Every engine adapter must simulate exactly this set so cross-engine
+    results compare trips 1-to-1.
+
+    Args:
+        network_path:    canonical network.xml.
+        demand_path:     canonical demand.csv (with ``mode`` column).
+        supported_modes: which travel modes this engine handles; trips with
+                         a ``mode`` column outside this set are dropped from
+                         the feasible set. ``None`` (default) disables the
+                         filter — kept for back-compat with mode-agnostic
+                         callers; new code should always pass an explicit set.
 
     Returns (feasible_trip_ids, report). The report contains counts and a list
     of skipped trip IDs for auditability.
@@ -124,6 +157,7 @@ def feasible_trip_ids(
         scc_links=scc_link_count,
         total_trips=0,
         feasible_trips=0,
+        supported_modes=sorted(supported_modes) if supported_modes else [],
     )
 
     with demand_path.open(newline="", encoding="utf-8") as f:
@@ -136,6 +170,11 @@ def feasible_trip_ids(
             raise ValueError(
                 f"demand.csv at {demand_path} missing columns: {', '.join(sorted(missing))}"
             )
+        # Mode column is optional in single-mode bundles authored before the
+        # multi-mode pipeline shipped, so don't require it — but if it exists
+        # *and* the caller asked for a mode filter, apply it.
+        has_mode_column = "mode" in (reader.fieldnames or [])
+
         for row in reader:
             report.total_trips += 1
             trip_id = (row.get("trip_id") or "").strip()
@@ -155,6 +194,12 @@ def feasible_trip_ids(
                 report.skipped_outside_scc += 1
                 report.skipped_trip_ids.append(trip_id)
                 continue
+            if supported_modes is not None and has_mode_column:
+                trip_mode = (row.get("mode") or "").strip()
+                if trip_mode and trip_mode not in supported_modes:
+                    report.skipped_unsupported_mode += 1
+                    report.skipped_trip_ids.append(trip_id)
+                    continue
             feasible.add(trip_id)
 
     report.feasible_trips = len(feasible)
@@ -178,12 +223,14 @@ def log_report(report: FeasibilityReport, engine: str) -> None:
         logger.info("[%s] %s", engine, report.summary_line())
         return
     logger.warning(
-        "[%s] %s — dropped: %d missing fields, %d unknown nodes, %d outside SCC",
+        "[%s] %s — dropped: %d missing fields, %d unknown nodes, "
+        "%d outside SCC, %d unsupported mode",
         engine,
         report.summary_line(),
         report.skipped_missing_fields,
         report.skipped_unknown_nodes,
         report.skipped_outside_scc,
+        report.skipped_unsupported_mode,
     )
 
 

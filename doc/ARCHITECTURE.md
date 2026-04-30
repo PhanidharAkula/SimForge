@@ -43,13 +43,13 @@ SimForge is a cross-simulator benchmarking framework for urban traffic simulatio
 
 The canonical schema is the lingua franca of SimForge. Every scenario is expressed as a five-file bundle:
 
-| File           | Schema        | Role                                    | Key Design Decision                                        |
-| -------------- | ------------- | --------------------------------------- | ---------------------------------------------------------- |
-| `network.xml`  | `network_v0`  | Directed graph (nodes + links)          | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability |
-| `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode) | CSV for ease of analysis; departure in seconds             |
-| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers          | Simplified to common denominator across all simulators     |
-| `config.xml`   | `config_v0`   | Scenario metadata + parameters          | Engine-agnostic parameters only                            |
-| `manifest.xml` | `manifest_v0` | SHA-256 hashes + sizes for all files    | Hash-based integrity verification                          |
+| File           | Schema        | Role                                                            | Key Design Decision                                        |
+| -------------- | ------------- | --------------------------------------------------------------- | ---------------------------------------------------------- |
+| `network.xml`  | `network_v0`  | Directed graph (nodes + links + V5+ `<turn_restrictions>`)      | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability. V5+ adds `has_signal` per node and a `<turn_restrictions>` block. |
+| `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode + V5+ `purpose`/`dest_source`) | CSV for ease of analysis; departure in seconds. V5+ provenance columns are informational (adapters ignore). |
+| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers at OSM-tagged nodes (V5+)        | Simplified to common denominator across all simulators. V5+ Phase 6: placement is OSM-grounded (`has_signal="true"` only). |
+| `config.xml`   | `config_v0`   | Scenario metadata + parameters                                  | Engine-agnostic parameters only                            |
+| `manifest.xml` | `manifest_v0` | SHA-256 hashes + sizes for all files                            | Hash-based integrity verification                          |
 
 **Why this design:**
 
@@ -64,15 +64,27 @@ Five-stage pipeline from raw data to validated bundle:
 ```
 Stage 1: Network        pipeline/network/build_network_from_osm.py
                         pipeline/network/load_network_from_pbf.py
-         OSM PBF (hash-pinned) → pyosmium bbox slice → osmnx parse
-         → canonical network.xml
+                        pipeline/network/turn_restrictions.py (V5+)
+         OSM PBF (hash-pinned) → single-pass pyosmium scan extracts
+         (a) ways for the road graph,
+         (b) `highway=traffic_signals` node tags for V5+ signal placement,
+         (c) `type=restriction via=node` relations for V5+ turn restrictions.
+         → canonical network.xml (with `has_signal` + `<turn_restrictions>`)
          (Overpass API retained as fallback for cities without a committed PBF)
 
 Stage 2: Signals        pipeline/signals/build_signals_default.py
-         Network nodes → signal detection → 2-phase timing → signals.xml
+         (V5+ Phase 6) Reads canonical `<node has_signal="true">` set →
+         emits a fixed-time 2-phase 90 s controller per OSM-tagged node →
+         signals.xml. Pre-V5 bundles fall back to the legacy `degree ≥ 4`
+         heuristic with a runtime WARNING.
 
 Stage 3: Demand         pipeline/demand/generate_census_demand.py
-         ModelGen data → census calibration → gravity model → demand.csv
+         ModelGen data → cityscape JWTRNS mapping (V5+ Phase 5 fix) →
+         peak-aware AM/PM split (V5+ Phase 9a) → schedule path
+         (real PUMS workplace + parent-with-kid HBSchool chains, V5+
+         Phase 9b/9c) + gravity fallback → per-person empirical
+         departures (V5+ Phase 8) → demand.csv with V5+ `purpose` and
+         `dest_source` provenance columns
          (fallback)     pipeline/demand/generate_synthetic_demand.py
          No ModelGen → uniform random sampling → demand.csv
 
@@ -100,13 +112,21 @@ parse_model_file.py ──▶ ModelData(buildings, households, persons)
     │                  Census worker pool (PUMS: JWMNP, JWTRNS)
     │                         │
     │                         ▼
-    │                  Gravity model: P(dest) ∝ jobs / dist²
+    │                  Schedule path (V5+): real PUMS workplace from
+    │                  cityscape `schedule[0]` + HBSchool chains for
+    │                  parent-with-kid pairs (Phase 9b/c); fallback
+    │                  to gravity for the remaining budget.
     │                         │
     │                         ▼
-    │                  Gaussian departure: N(μ_commute, σ=15min)
+    │                  Gravity fallback: P(dest) ∝ degree × Gaussian(distance|target_km)
+    │                         │
+    │                         ▼
+    │                  Per-person departure (V5+ Phase 8):
+    │                    arrival_s − commute_min × 60
+    │                  AM/PM peak split when horizon spans both (V5+ Phase 9a)
     │                         │
     ▼                         ▼
-network.xml ◀──────── demand.csv
+network.xml ◀──────── demand.csv (with `purpose` + `dest_source`)
 ```
 
 ### 2.3 Adapter Layer
@@ -172,12 +192,12 @@ BenchmarkResult (JSON)
     └── hardware info (CPU, cores, memory, GPU)
 ```
 
-**RunSpec example** (`runspecs/stress_test.yaml`):
+**RunSpec example** (`runspecs/benchmark_small.yaml`):
 
 ```yaml
 name: stress_test
 description: End-to-end stress test across all engines and modes.
-output_dir: runs/stress_test
+output_dir: runs/benchmark_small
 
 runs:
   - scenario_id: chicago_1k_car
@@ -287,8 +307,10 @@ User: python generate.py --city chicago --trips 1000 --seed 42
 [5] Parse ModelGen (chicago_model.txt → buildings/households/persons)
         │ → buildings restricted to SCC; non-SCC residential dropped
         ▼
-[6] Generate demand (census-calibrated gravity model on SCC subgraph)
-        │ → demand.csv (1,000 trips, Gaussian departures)
+[6] Generate demand (V5+: schedule path + gravity fallback on SCC subgraph;
+    cityscape JWTRNS mapping; per-person empirical departures from JWMNP;
+    AM/PM peak split + HBSchool chains where horizon and demographics fit)
+        │ → demand.csv (1,000 trips, V5+ `purpose` + `dest_source`)
         ▼
 [7] Write config + manifest (SHA-256 hashes)
         │ → config.xml, manifest.xml
@@ -309,7 +331,10 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
 [2] adapters/common/feasibility.py: compute SCC, write feasibility_report.json
         │ → on a correctly-generated bundle the filter is a no-op (defence in depth)
         ▼
-[3] SUMO adapter: parse network.xml → BFS route each trip → write SUMO files
+[3] SUMO adapter: parse network.xml → state-aware BFS route each trip
+    (V5+ Phase 7: avoids forbidden movements per `<turn_restrictions>`,
+    falls back to plain BFS when no restriction-respecting path exists)
+    → write SUMO files
         │ → runs/<name>/chicago_1k_car/sumo/seed_42/{.net.xml, .rou.xml, .sumocfg}
         ▼
 [4] Launch: sumo -c scenario.sumocfg --seed 42 --mesosim

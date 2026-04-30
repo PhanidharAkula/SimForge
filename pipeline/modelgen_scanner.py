@@ -16,20 +16,10 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-JWTRNS_TO_MODE = {
-    1: "car",
-    2: "car",
-    3: "transit",
-    4: "transit",
-    5: "transit",
-    6: "transit",
-    7: "transit",
-    8: "bike",
-    9: "walk",
-    10: "home",
-    11: "car",
-    12: "car",
-}
+# Single source of truth — see pipeline/demand/parse_model_file.py for the
+# 12-code → 4-bucket mapping. Re-exported here so the scanner doesn't need
+# to depend on the heavier parse_model_file module's data classes.
+from pipeline.demand.parse_model_file import JWTRNS_TO_MODE  # noqa: E402,F401
 
 # Expected city names derived from filename pattern: <city>_model.txt
 # Can auto-discover any file matching *_model.txt in modelgen/

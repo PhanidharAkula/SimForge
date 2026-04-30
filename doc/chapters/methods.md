@@ -226,9 +226,51 @@ The signals schema defines traffic signal controllers at intersections.
 
 **Design decisions:**
 
-- **2-phase default**: Current signal inference uses a simplified 2-direction split. Real intersections may have 4-8 phases.
+- **OSM-grounded placement** (V5+): signals are emitted only at network
+  nodes that OSM tags as `highway=traffic_signals`. This is community-
+  curated ground truth for actual signalized intersections in major US
+  cities. Empirical share in the three reference bundles: chicago_1k_car
+  2.8 % of network nodes (560 / 20,058), la_50k_car 1.4 % (2,153 /
+  159,042). These percentages re-stated against *real* intersections only
+  (~25-30 % of OSM nodes are real intersections; the rest are driveways,
+  cul-de-sacs, alley junctions) come out to 5-10 %, matching real-world
+  signalization rates. Absolute counts also match: LADOT public records
+  show ~5,000-6,000 signals across LA County's 10,500 km², which scales
+  proportionally to the ~2,000-2,500 expected in the la_50k_car 314 km²
+  bbox — landing right where 2,153 sits.
+- **2-phase placeholder cycle**: each signalized node receives a 2-phase
+  90-second fixed-cycle template (NS green / EW red, then EW green / NS
+  red). Real intersections may have 4-8 phases with actuation, lead/lag
+  protected lefts, pedestrian phases, and coordinated arterial timing —
+  none of which SimForge models. Cross-engine fairness is unaffected
+  (every adapter consumes the same `signals.xml`); absolute travel-time
+  realism is bounded by the placeholder timing, not the placement.
+- **Legacy fallback**: when consuming a network without `has_signal=true`
+  attributes (pre-V5 bundles or non-OSM-derived networks), the signal
+  generator falls back to a degree heuristic (`degree >= 4`, signalizes
+  ~85-90 % of nodes — every junction). The fallback emits a WARNING; for
+  realistic signal placement, regenerate the network with the V5+ pipeline.
 - **State string encoding**: Compact representation where each character maps to one approach link. SUMO uses the same encoding natively.
 - **Node reference**: Every signal controller references a network node, enabling cross-file validation.
+- **OSM turn-restriction enforcement (V5+)**: SimForge extracts OSM
+  `type=restriction` relations during PBF ingestion and emits them in
+  `network.xml` as `<turn_restriction>` entries. The SUMO and MATSim
+  adapters pre-route trips via a shared state-aware BFS
+  (`pipeline/network/turn_restrictions.py`) that respects these
+  restrictions; both engines drive the prescribed restriction-respecting
+  path verbatim, so SUMO ↔ MATSim travel-time differences in Q4 reflect
+  *only physics* (queue dynamics, signal phasing) rather than routing
+  disagreement. The DTALite adapter emits a GMNS-conformant
+  `movement.csv` with `capacity=0` per restriction, but path4gmns 0.10.0
+  (the DTA backend SimForge runs through) does not yet ingest
+  `movement.csv` natively; DTALite's UE assignment may therefore route
+  through individually-restricted movements. This is a documented
+  V5 cross-engine asymmetry — Q1–Q3 audits remain unaffected (same
+  trip set, same network, same target count); Q4's interpretation
+  shifts as detailed in `doc/MODELGEN_AND_MODES.md` §9. Closing this
+  loop awaits either an upstream path4gmns release that adds
+  `movement.csv` ingestion, or in-tree DTALite-network restructuring
+  to encode restrictions via via-node splitting (~1 week, deferred).
 
 ### 3.2.6 Config Schema (`config.xml`)
 
@@ -487,36 +529,60 @@ ModelGen file → parse_model_file.py → generate_census_demand.py → demand.c
 2. **Map buildings to network nodes** using haversine nearest-neighbor with a spatial grid index (O(B log N) via grid bucketing vs O(BN) brute force).
 3. **Build population-weighted origin pool**: `weight(node) = Σ building.population` for residential buildings at that node, restricted to the largest strongly-connected component (SCC) of the network.
 4. **Validate the schedule-driven pool.** For each person whose cityscape schedule is non-empty, resolve their home building (`ModelData.home_bld_by_per_id[per_id]`) and their workplace building (`schedule[0].bld_id`). Drop the person if any of these fail: home unmapped to a node, home outside SCC, workplace unmapped (orphan or outside bbox), workplace outside SCC, workplace == home. Surviving entries form `valid_scheduled = list[(person, home_node, dest_node)]`.
-5. **Phase 1 — schedule-driven trips.** Deterministically shuffle `valid_scheduled` and take the first `min(num_trips, len(valid_scheduled))` entries. For each, emit a trip with `origin = home_node`, `destination = dest_node`, `dest_source = "schedule"`. Departure time uses the temporal profile in step 7 below — the cityscape schedule's hardcoded 8 AM is *not* used (it would create a 100 %-at-08:00 thundering herd).
-6. **Phase 2 — gravity fallback for the remainder.** When the scheduled pool is exhausted (`num_trips > len(valid_scheduled)`), the remaining trips fall back to the original origin-first gravity sampler. Sample an origin node by population weight, sample a census person from a building at that origin, then sample a destination over all SCC destination nodes:
+5. **Peak split (V5+ Phase 9a).** Detect whether the user's horizon spans the AM peak (cityscape arrival 28800 s = 08:00), the PM peak (61200 s = 17:00), or both. Allocate the `--trips N` budget across `n_am_target` and `n_pm_target` accordingly: 50/50 when both peaks are in window, all-AM or all-PM when only one is, default to AM template when neither (rare).
+
+6. **Phase 1a — schedule-driven AM trips.** Deterministically shuffle `valid_scheduled`. For each entry, decide whether the parent emits a chained school drop-off (V5+ Phase 9b) by checking household composition and OSM building kinds:
+   - If the household contains at least one member with `0 ≤ AGEP < 18` AND a building with `kind ∈ {school, kindergarten, preschool, college, university}` exists within `_SCHOOL_MAX_KM = 5.0` km of the home, emit a 2-row chain: `home → school` with `purpose = HBSchool_AM` plus `school → work` with `purpose = HBW_AM_chained`. Both rows carry `dest_source = "schedule"` and share the same departure time. Each chain consumes 2 budget slots.
+   - Otherwise emit a single `home → work` row with `purpose = HBW_AM`.
+
+   Continue until `n_am_target` is reached or the pool is exhausted.
+
+7. **Phase 1b — schedule-driven PM trips (V5+ Phase 9a/9c).** Symmetric mirror of Phase 1a, but reading `schedule[1]` (17:00 home arrival) and reversing the OD direction:
+   - Parent-with-kid + reachable-school case: 2-row chain `work → school` (`HBW_PM_chained`) plus `school → home` (`HBSchool_PM`).
+   - Otherwise single `work → home` row with `purpose = HBW_PM`.
+
+8. **Phase 2 — gravity fallback for the remainder.** When the scheduled pool is exhausted (`num_trips > len(valid_scheduled)`) or the chain-fitting check rejects some entries, the remaining trips fall back to the gravity sampler. Sample an origin node by population weight, sample a census person from a building at that origin, then sample a destination over all SCC destination nodes:
    $$P(\text{dest} = j) \propto \text{degree}(j) \cdot \exp\left(-\frac{1}{2}\left(\frac{d_{ij} - d_\text{target}}{\sigma}\right)^2\right)$$
-   where $d_\text{target} = \text{JWMNP} \times 0.5$ km and $\sigma = d_\text{target} \times 0.7 + 0.5$. Each fallback trip carries `dest_source = "gravity"`.
-7. **Generate departure time** for both phases with a JWMNP-calibrated Gaussian peak: $t_\text{depart} \sim \mathcal{N}(\mu + \delta, \sigma)$, where $\mu = (t_\text{start} + t_\text{end})/2$, $\sigma = (t_\text{end} - t_\text{start})/6$, and $\delta = -\min(\text{JWMNP}, 60) \cdot \sigma / 120$.
-8. **Assign mode**: from PUMS JWTRNS if multi-mode, or fixed if single-mode.
-9. **Sort by departure time** (with origin/destination secondary keys for stable ordering) and renumber trip IDs sequentially.
-10. **Write demand.csv** with columns `trip_id, origin_node_id, destination_node_id, departure_time_s, mode, dest_source`. Adapters consume the canonical 5-column subset by name; the `dest_source` column is provenance metadata only.
+   where $d_\text{target} = \text{JWMNP} \times 0.5$ km and $\sigma = d_\text{target} \times 0.7 + 0.5$. Gravity fallback fills both AM and PM budgets in proportion to remaining slots; each emitted trip carries `dest_source = "gravity"` and `purpose ∈ \{HBW_AM, HBW_PM\}` keyed by the peak being filled.
+
+9. **Departure time per row (V5+ Phase 8).** Pure per-person empirical formula — **no synthetic distribution**:
+
+   $$t_\text{depart} = t_\text{arrival} - \text{JWMNP} \cdot 60$$
+
+   where $t_\text{arrival}$ is the cityscape-emitted arrival for the row's peak (28800 s for AM rows, 61200 s for PM rows; same constants for gravity-fallback rows whose `schedule` is empty). Departures that would fall outside `[t_\text{horizon\_start}, t_\text{horizon\_end} - 1]` clamp to the boundary rather than being dropped (keeps trip counts stable). This replaces the V4 Gaussian peak $t_\text{depart} \sim \mathcal{N}(\mu + \delta, \sigma)$ with $\mu = (t_\text{start} + t_\text{end})/2$, $\sigma = (t_\text{end} - t_\text{start})/6$ — the V4 formula used commute time as a soft offset on a synthetic peak shape; the V5 formula uses commute time as the actual per-person input and the aggregate temporal shape emerges from the JWMNP distribution itself.
+
+10. **Assign mode**: from PUMS JWTRNS using the V5+ corrected mapping (Phase 5 — see table below) if multi-mode, or fixed if single-mode.
+11. **Sort by departure time** (with origin/destination secondary keys for stable ordering) and renumber trip IDs sequentially.
+12. **Write demand.csv** with columns `trip_id, origin_node_id, destination_node_id, departure_time_s, mode, dest_source, purpose`. Adapters consume the canonical 5-column subset by name; the `dest_source` and `purpose` columns are provenance metadata read only by `evaluation/audit_fairness.py` (Q5) and `evaluation/analyze_benchmark.py` (demand composition table).
 
 **Bundle-level provenance.** `generation_metadata.json` carries a `demand_provenance` block listing `schedule_driven_count`, `gravity_fallback_count`, `schedule_driven_pct`, `scheduled_pool_size`, and `fallback_reasons` (a counter over the validation rejections in step 4). For NYC-500K with the 20 km radius bbox, the scheduled pool covers all 500K trips (100 % schedule-driven). For the small 2 km Chicago bbox most workplaces fall outside the bbox and the scheduled fraction drops accordingly — this is captured per-bundle so the methods chapter never has to hand-wave the realism mix.
 
 **Why the cityscape schedules are more realistic than gravity alone.** Cityscape's `RadiusFilterWorkBuildingAssigner` selects each person's workplace from real non-residential OSM buildings whose predicted travel time matches the person's PUMS-reported commute time (JWMNP) within ±1 minute, subject to per-building office-capacity bounds (`offSqFtPer`). Gravity uses commute time only as a soft weight on a topology-only network node and has no capacity constraint, so it can over-concentrate trips at the gravity peak and routinely puts workplaces in residential cul-de-sacs. The schedule path's destinations are PUMS-derived OD pairs anchored to physical buildings; gravity's destinations are samples from a fitted distribution. Both methods produce demand calibrated to the same JWMNP commute-time distribution; the schedule path additionally preserves *individual* OD identity, not just the aggregate distribution.
 
-**JWTRNS → canonical mode mapping:**
+**JWTRNS → canonical mode mapping** (cityscape Schedule-generator branch /
+ACS PUMS 2021; canonical reference cited at cityscape
+`model_gen/ScheduleGenerator.h:211-233`):
 
-| PUMS Code | Census Mode          | SimForge Mode |
-| --------- | -------------------- | ------------- |
-| 1         | Car — drove alone    | `car`         |
-| 2         | Car — carpooled      | `car`         |
-| 3         | Bus                  | `transit`     |
-| 4         | Streetcar/trolley    | `transit`     |
-| 5         | Subway/elevated rail | `transit`     |
-| 6         | Railroad             | `transit`     |
-| 7         | Ferryboat            | `transit`     |
-| 8         | Bicycle              | `bike`        |
-| 9         | Walked               | `walk`        |
-| 10        | Worked from home     | excluded      |
-| 11        | Taxicab/rideshare    | `car`         |
-| 12        | Other                | `car`         |
-| -1        | Not a worker         | excluded      |
+| PUMS Code | Cityscape label                | SimForge Mode |
+| --------- | ------------------------------ | ------------- |
+| 1         | Car, truck, or van             | `car`         |
+| 2         | Bus                            | `transit`     |
+| 3         | Subway or elevated rail        | `transit`     |
+| 4         | Long-distance / commuter rail  | `transit`     |
+| 5         | Light rail, streetcar, trolley | `transit`     |
+| 6         | Ferryboat                      | `transit`     |
+| 7         | Taxicab                        | `car`         |
+| 8         | Motorcycle                     | `car`         |
+| 9         | Bicycle                        | `bike`        |
+| 10        | Walked                         | `walk`        |
+| 11        | Worked from home               | excluded      |
+| 12        | Other method                   | excluded      |
+| -1        | N/A — not a worker             | excluded      |
+
+ACS 2019+ merged the previous "drove alone" + "carpooled" codes into a
+single "Car, truck, or van" code 1 (passenger-occupancy detail moved to a
+separate variable `JWAP`). See `doc/MODELGEN_AND_MODES.md` §2 for full
+provenance and §4 for the bucketing rationale.
 
 #### Synthetic Demand (Fallback)
 
@@ -539,10 +605,11 @@ Used when no ModelGen file is available. Generates demand from network topology 
 | Origin               | Person's actual PUMS home building → nearest network node          | Node degree           |
 | Destination (primary)| Cityscape PUMS-derived workplace `bld_id` (real non-home building) | Topology-only gravity |
 | Destination (fallback)| Commute-calibrated gravity (when person has no usable schedule)   | (n/a)                 |
-| Departure times      | Gaussian peak calibrated by PUMS JWMNP                             | Uniform random        |
+| Departure times      | **Per-person empirical**: $t_\text{depart} = t_\text{arrival} - \text{JWMNP} \cdot 60$ (V5+ Phase 8) | Uniform random        |
 | Mode assignment      | PUMS JWTRNS                                                         | Fixed (car only)      |
 | External data needed | ModelGen + cityscape ScheduleGenerator output (~300 MB per city)   | None                  |
-| Per-trip provenance  | `dest_source` column + `demand_provenance` metadata block          | None                  |
+| Per-trip provenance  | `dest_source` + `purpose` columns (V5+) + `demand_provenance` metadata block | None        |
+| Trip purposes (V5+)  | `HBW_AM` / `HBW_PM` (commutes) + `HBSchool_AM/PM` (parent-with-kid chains) + `HBW_AM/PM_chained` (chain continuation legs) | Untagged |
 
 ---
 
@@ -569,6 +636,7 @@ class SimulatorAdapter(Protocol):
 - **Deterministic**: Given the same canonical input and adapter version, the output is byte-identical
 - **Lossless (within schema)**: All canonical attributes are mapped; no information is dropped
 - **Documented**: Every mapping decision is recorded in `adapters/<engine>/MAPPING.md`
+- **Cross-engine vehicle alignment** (V11+): All three adapters source vehicle parameters from a single shared module `adapters/common/vehicle_types.py`. Pre-V11 each adapter declared its own values inline (SUMO inherited the implicit `DEFAULT_VEHTYPE`, MATSim hardcoded `length=7.5` and `width=1.0`), with the cross-engine equivalence undocumented and untested. The canonical SimForge car is now a 5.0 m sedan with a 2.5 m gap, 1.8 m wide, 40 m/s max speed, PCE 1.0. SUMO emits `length="5.0" minGap="2.5"` (physical convention); MATSim emits `<length meter="7.5"/>` (effective-spacing convention = SUMO's length + minGap); DTALite consumes `PCE = 1.0` (link-capacity convention). The equivalence is pinned by `tests/test_vehicle_types.py::TestCrossEngineEquivalence`. Within-bucket heterogeneity (motorcycles, taxis, freight) is post-V11 work and remains a documented limitation.
 
 ### 3.4.2 SUMO Adapter
 
@@ -596,16 +664,18 @@ config.xml   ──► scenario.sumocfg
 | `link (from, to, length)` | `edge + lanes`      | One edge per link; numLanes, speed from canonical |
 | `link.speed_limit`        | `edge.speed`        | Direct copy (both in m/s)                         |
 | `link.lanes`              | `edge.numLanes`     | Direct copy                                       |
-| Trip (origin, dest)       | Vehicle with route  | BFS shortest path on node graph → edge sequence   |
+| Trip (origin, dest)       | Vehicle with route  | State-aware BFS shortest path on node graph (V5+ Phase 7) → edge sequence |
 | `config.random_seed`      | `--seed` CLI arg    | Passed to sumo/sumo-gui                           |
 
-**BFS Routing**: The SUMO adapter computes shortest paths at conversion time (not at simulation time). For each trip in demand.csv:
+**State-aware BFS routing (V5+ Phase 7)**: The SUMO adapter computes shortest paths at conversion time (not at simulation time). For each trip in demand.csv:
 
-1. Run BFS from `origin_node_id` to `destination_node_id` on the directed adjacency graph
-2. Convert the node path to an edge sequence via the `edge_lookup` dictionary
-3. Write as `<vehicle id="veh_t0" depart="25200"><route edges="l0 l1 l2"/></vehicle>`
+1. Build the forbidden-move set from the `<turn_restrictions>` block in `network.xml` via `pipeline/network/turn_restrictions.build_forbidden_moves`.
+2. Run state-aware BFS from `origin_node_id` to `destination_node_id` over `(node, last_link)` states — never traversing a `(from_link, via_node, to_link)` triple in the forbidden set. Implemented at `pipeline/network/turn_restrictions.shortest_path_with_restrictions`.
+3. Fall back to plain BFS if no restriction-respecting path exists (rare; SCC-feasible by construction).
+4. Convert the node path to an edge sequence via the `edge_lookup` dictionary.
+5. Write as `<vehicle id="veh_t0" depart="25200"><route edges="l0 l1 l2"/></vehicle>`.
 
-Trips with no valid path (disconnected OD pairs) are skipped and logged.
+The MATSim adapter uses the same state-aware BFS to pre-route every plan and writes a `<route type="links" start_link="..." end_link="...">interior</route>` per the MATSim 15 plans v4 DTD. The DTALite adapter emits a sibling `movement.csv` with forbidden movements (capacity = 0, penalty = 99999) but path4gmns 0.10.0 does not natively ingest it — a documented cross-engine asymmetry. Trips with no valid path (disconnected OD pairs) are skipped and logged.
 
 **Mesoscopic mode**: Activated via `--mesosim` flag in SUMO configuration. Uses queue-based link traversal instead of car-following. Dramatically faster for large scenarios (100-1000× speedup at 500K+ trips) with lower fidelity.
 
@@ -715,7 +785,7 @@ Benchmark runs are defined via YAML runspec files that specify the experimental 
 ```yaml
 name: stress_test
 description: End-to-end stress test across all engines and modes.
-output_dir: runs/stress_test
+output_dir: runs/benchmark_small
 
 runs:
   - scenario_id: chicago_1k_car
@@ -998,7 +1068,7 @@ the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.
 | Deterministic BFS               | Adapter routing uses sorted adjacency lists for tie-breaking                                     |
 | Schedule-first hybrid (demand)  | PUMS-derived workplace destinations are deterministic per (modelgen, network, seed) triple       |
 
-**Cross-platform reproducibility (verified).** Generation produces byte-identical `demand.csv` and `signals.xml` across (Apple Silicon ARM64, macOS, Python 3.13.2, osmnx 2.0.7) and (x86_64, RHEL Pitzer, Python 3.12.4, osmnx 2.1.0), verified empirically on the `la_50k_bike_car_transit` bundle (50K LA car + transit + bike trips, 06:00–10:00, 10 km radius, seed 42). The `network.xml` file itself differs in MD5 across the two architectures because the lxml serialization is version-dependent (attribute ordering, float-precision rendering); the semantic content (node IDs, edge `from`/`to` pairs, attributes, SCC membership) is identical, as proven by both downstream artefacts being byte-equal — they reference network node IDs by string, so any drift would have propagated. The verification recipe and reference MD5 hashes are documented in [doc/REPRODUCING.md §Cross-Platform Reproducibility](../REPRODUCING.md#cross-platform-reproducibility-verified). At the level the simulators care about (the canonical `demand.csv` and `signals.xml` consumed by every adapter), generation is fully cross-platform reproducible.
+**Cross-platform reproducibility (verified).** Generation produces byte-identical `demand.csv` and `signals.xml` across (Apple Silicon ARM64, macOS, Python 3.13.2, osmnx 2.0.7) and (x86_64, RHEL Pitzer, Python 3.12.4, osmnx 2.1.0), verified empirically on the `la_50k_car` bundle (50K LA car + transit + bike trips, 06:00–10:00, 10 km radius, seed 42). The `network.xml` file itself differs in MD5 across the two architectures because the lxml serialization is version-dependent (attribute ordering, float-precision rendering); the semantic content (node IDs, edge `from`/`to` pairs, attributes, SCC membership) is identical, as proven by both downstream artefacts being byte-equal — they reference network node IDs by string, so any drift would have propagated. The verification recipe and reference MD5 hashes are documented in [doc/REPRODUCING.md §Cross-Platform Reproducibility](../REPRODUCING.md#cross-platform-reproducibility-verified). At the level the simulators care about (the canonical `demand.csv` and `signals.xml` consumed by every adapter), generation is fully cross-platform reproducible.
 
 ### 3.7.3 Error Handling
 

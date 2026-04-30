@@ -1,14 +1,39 @@
 """
 Build default traffic signals for a canonical network.
 
-Identifies intersection nodes with high connectivity and generates
-simple 2-phase signal controllers.
+Source-of-truth (V5+):
+  Real signal placement comes from OSM's `highway=traffic_signals` node tag,
+  which is community-curated ground truth for actual signalized intersections
+  in major US cities. The network builder
+  (`pipeline/network/build_network_from_osm.py`) reads the tag during PBF
+  ingestion and persists it as `has_signal="true"` on the canonical
+  `<node>` element. This module only signalizes those tagged nodes —
+  typical share is 1-5% of network nodes (Manhattan ~3%, downtown LA ~1.4%,
+  downtown Chicago ~3%), matching the absolute count of real signals in
+  each city's bbox.
+
+Legacy fallback:
+  When no nodes carry `has_signal="true"` — either because the network
+  was generated before V5's OSM-signal plumbing landed, or because a
+  synthetic / non-OSM network is being processed — this module falls back
+  to a degree-based heuristic: signalize every node with `degree >= 4`.
+  That heuristic catches every junction where two bidirectional ways meet
+  (~85-90% of nodes), which is structurally fine as simulator input but
+  NOT a real-world signalization model. The fallback emits a loud
+  WARNING so the operator knows to regenerate the network when realistic
+  signal placement matters.
+
+Each signalized node receives a 2-phase 90-second cycle (NS green / EW
+red, then EW green / NS red) — a placeholder, not a real-world signal
+plan with optimized timing. Cross-engine fairness comparisons are
+unaffected by this choice (every adapter consumes the same signals.xml).
 
 Usage:
-    python -m pipeline.signals.build_signals_default \
-        --network scenarios/city1/network.xml \
-        --output scenarios/city1/signals.xml \
-        --min-degree 4
+    python -m pipeline.signals.build_signals_default \\
+        --network scenarios/city1/network.xml \\
+        --output scenarios/city1/signals.xml
+
+  --min-degree only matters when the legacy fallback fires (default 4).
 """
 
 from collections import defaultdict
@@ -41,15 +66,18 @@ class SignalController:
     phases: list[SignalPhase]
 
 
-def load_network_topology(network_path: Path) -> tuple[dict, dict, dict]:
+def load_network_topology(network_path: Path) -> tuple[dict, dict, dict, set]:
     """
     Load network and compute node degrees and connected links.
-    
+
     Returns:
         Tuple of:
         - node_coords: {node_id: (x, y)}
         - in_links: {node_id: [link_ids entering]}
         - out_links: {node_id: [link_ids leaving]}
+        - osm_signal_nodes: {node_id, ...} — nodes tagged `has_signal="true"` in
+          network.xml (sourced from OSM `highway=traffic_signals`).
+          Empty set if the network was built before V5's OSM-signal plumbing.
     """
     if not network_path.is_file():
         raise FileNotFoundError(
@@ -65,65 +93,108 @@ def load_network_topology(network_path: Path) -> tuple[dict, dict, dict]:
             f"  The file may be corrupted or truncated. Re-generate it."
         ) from e
     root = tree.getroot()
-    
+
     node_coords = {}
     in_links = defaultdict(list)
     out_links = defaultdict(list)
-    
+    osm_signal_nodes: set = set()
+
     # Parse nodes
     for node in root.findall(".//node"):
         nid = node.get("id")
         x = float(node.get("x", 0))
         y = float(node.get("y", 0))
         node_coords[nid] = (x, y)
-    
+        if node.get("has_signal", "").lower() == "true":
+            osm_signal_nodes.add(nid)
+
     # Parse links
     for link in root.findall(".//link"):
         lid = link.get("id")
         from_node = link.get("from")
         to_node = link.get("to")
-        
+
         if from_node and to_node:
             out_links[from_node].append(lid)
             in_links[to_node].append(lid)
-    
-    return node_coords, dict(in_links), dict(out_links)
+
+    return node_coords, dict(in_links), dict(out_links), osm_signal_nodes
 
 
 def identify_signalized_intersections(
     node_coords: dict,
     in_links: dict,
     out_links: dict,
+    osm_signal_nodes: Optional[set] = None,
     min_degree: int = 4,
-    max_signals: Optional[int] = None
+    max_signals: Optional[int] = None,
 ) -> list[str]:
     """
     Identify nodes that should have traffic signals.
-    
-    Criteria:
-    - Node has at least min_degree incoming + outgoing links
-    - Optionally limit to top N by degree
-    
+
+    Source-of-truth selection:
+    - **Preferred — OSM ground truth.** When ``osm_signal_nodes`` is non-empty
+      (V5+ networks where ``build_network_from_osm.extract_canonical_network``
+      reads OSM's ``highway=traffic_signals`` node tag and persists it as
+      ``has_signal="true"`` in network.xml), only those nodes are signalized.
+      Real-world signal counts in major US cities run ~5-15 % of intersections,
+      which is what this path produces. ``min_degree`` is ignored in this mode.
+    - **Fallback — degree heuristic.** When no node carries the OSM tag
+      (legacy network.xml from before the OSM-signal plumbing, or a synthetic
+      network without OSM provenance), fall back to the old ``degree >=
+      min_degree`` rule. This signalizes ~85-90 % of nodes — accurate as
+      simulator-input geometry but NOT as a real-world signalization model.
+      A WARNING is logged when this fallback fires.
+
     Args:
         node_coords: Node coordinate mapping
         in_links: Incoming links per node
         out_links: Outgoing links per node
-        min_degree: Minimum total degree for signalization
-        max_signals: Optional maximum number of signals
-    
+        osm_signal_nodes: Set of node IDs OSM tagged as traffic_signals
+            (from network.xml's ``has_signal="true"`` attribute). When
+            empty/None, the degree-heuristic fallback runs.
+        min_degree: Minimum total degree for signalization (degree-fallback only)
+        max_signals: Optional maximum number of signals (applies to both paths)
+
     Returns:
         List of node IDs to signalize
     """
+    # --- Preferred path: trust OSM's `highway=traffic_signals` ground truth.
+    if osm_signal_nodes:
+        # Constrain to nodes that actually exist in the SCC-clipped network
+        # (OSM tag may sit on a node that didn't survive bbox truncation /
+        # SCC filtering — drop those quietly).
+        signalized = sorted(n for n in osm_signal_nodes if n in node_coords)
+        logger.info(
+            "Signal source: OSM `highway=traffic_signals` — %d/%d nodes tagged "
+            "(%.1f%% of network nodes).",
+            len(signalized), len(node_coords),
+            100.0 * len(signalized) / max(len(node_coords), 1),
+        )
+        if max_signals and len(signalized) > max_signals:
+            signalized = signalized[:max_signals]
+        return signalized
+
+    # --- Fallback: legacy degree-based heuristic. Loud warning so a regen
+    # of the network is the obvious next step.
+    logger.warning(
+        "Signal source: degree heuristic (legacy fallback). "
+        "network.xml has no nodes tagged `has_signal=\"true\"` — regenerate "
+        "the network with the V5+ pipeline to get OSM-grounded signal "
+        "placement. Falling back to min_degree=%d, which signalizes ~85-90%% "
+        "of nodes (every junction).", min_degree,
+    )
+
     # Compute degrees
     node_degrees = {}
     for nid in node_coords:
         in_deg = len(in_links.get(nid, []))
         out_deg = len(out_links.get(nid, []))
         node_degrees[nid] = in_deg + out_deg
-    
+
     # Filter by minimum degree
     candidates = [(nid, deg) for nid, deg in node_degrees.items() if deg >= min_degree]
-    
+
     # Sort by degree (descending)
     candidates.sort(key=lambda x: (-x[1], x[0]))
     
@@ -322,15 +393,17 @@ def build_signals_default(
     Returns:
         Summary dict
     """
-    # Load network
-    node_coords, in_links, out_links = load_network_topology(network_path)
+    # Load network (now also returns OSM-tagged signal nodes; empty set on
+    # legacy networks that pre-date the V5 OSM-signal plumbing).
+    node_coords, in_links, out_links, osm_signal_nodes = load_network_topology(network_path)
     logger.info("Loaded %d nodes", len(node_coords))
-    
-    # Identify intersections
+
+    # Identify intersections (prefers OSM ground truth, falls back to degree).
     signalized_nodes = identify_signalized_intersections(
         node_coords, in_links, out_links,
+        osm_signal_nodes=osm_signal_nodes,
         min_degree=min_degree,
-        max_signals=max_signals
+        max_signals=max_signals,
     )
     
     # Build controllers

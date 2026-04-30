@@ -78,7 +78,7 @@ def bundled_scenario() -> Path:
     """
     s = _discover_default_scenario()
     if s is None:
-        pytest.skip("No bundled scenario available — run scripts/01_quick_test.py first")
+        pytest.skip("No bundled scenario available — run scripts/01_chicago_1k_car.py first")
     return s
 
 

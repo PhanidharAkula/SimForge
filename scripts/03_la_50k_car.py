@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Stress test — 500K car trips, NYC, 6–10 AM.
+"""la_50k_car — 50K car trips, LA, 6–10 AM.
 
-Equivalent to: python generate.py --preset stress_test
+Equivalent to: python generate.py --preset la_50k_car
 Same generate_scenario() call; the preset form additionally accepts
 --seed / --output / --city / OSM source overrides.
 """
@@ -19,12 +19,12 @@ parser.add_argument("--verbose", "-v", action="store_true",
 args = parser.parse_args()
 
 generate_scenario(
-    city="nyc",
-    trips=500_000,
+    city="la",
+    trips=50_000,
     modes=["car"],
     start_time=21600,   # 6:00 AM
     end_time=36000,     # 10:00 AM
-    radius_km=20.0,
+    radius_km=10.0,
     seed=42,
     verbose=args.verbose,
 )

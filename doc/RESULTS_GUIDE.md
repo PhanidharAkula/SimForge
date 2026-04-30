@@ -15,7 +15,8 @@ RunSpec ──► run_benchmark ──► runs/<name>/benchmark_results_<name>.j
             │                         │                         │
             ▼                         ▼                         ▼
    Tables 5.1, 5.2 + Coverage     Q1–Q4 PASS/WARN/FAIL    Figures 5.1 – 5.9
-   (LaTeX + Markdown)             across all engines       (PNG + PDF in plots/)
+   + Demand Composition (V5+)     + Q5 Demand composition  (PNG + PDF in plots/)
+   (LaTeX + Markdown)             across all engines
             │                         │                         │
             └─────────────────────────┼─────────────────────────┘
                                       ▼
@@ -23,13 +24,14 @@ RunSpec ──► run_benchmark ──► runs/<name>/benchmark_results_<name>.j
 ```
 
 The middle step — `audit_fairness` — is the methodology check the
-thesis defense relies on. It verifies four things across all three
-engines on each scenario:
+thesis defense relies on. It verifies four fairness questions and
+reports a fifth informational breakdown on each scenario:
 
   - **Q1: same trip set** (cross-engine feasibility verdict byte-identical)
   - **Q2: same network** (SCC-filtered nodes/links match across adapters)
   - **Q3: same trip count simulated** (per-engine simulated count = feasibility target)
   - **Q4: cross-engine travel-time spread** (mean / P95 + pairwise ratios — this is the paradigm-spread signal)
+  - **Q5: demand composition** (V5+ trip-purpose breakdown) — informational, not a fairness gate. Shows total / AM peak / PM peak / school-related percentages and the per-purpose row count, sourced from the canonical bundle's `demand.csv`. Pre-V5 bundles missing the `purpose` column emit a one-line `(no V5+ purpose column at <path> — skipping)` and the section is omitted.
 
 See `evaluation/audit_fairness.py` docstring for invocation and `doc/EXPERIMENT_LOG.md` §3 for measured Q1–Q4 results from the canonical Pitzer runs.
 
@@ -46,10 +48,10 @@ compare_modes.py  ──►  micro vs meso  ──►  speedup + fidelity
 ### Canonical stress test (matches all thesis figures)
 
 ```bash
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
-Writes to `runs/stress_test/benchmark_results_stress_test.json` (4 cells × 5 repeats = 20 runs).
+Writes to `runs/benchmark_small/benchmark_results_benchmark_small.json` (4 cells × 5 repeats = 20 runs).
 
 ### Ad-hoc one-off via `run.py`
 
@@ -79,7 +81,7 @@ Both call the same adapters and produce the same per-cell engine artefacts (`tri
 | Per-cell record fields       | `status`, `scenario`, `scenario_id`, `engine`, `mode`, `seed`, `repeat`, `runtime_s`, `metrics` (+ adapter extras) | same plus `repeat_index`, `wall_time_s`, `output_dir`, `tripinfo_path`, `error_message` (always present) |
 | `--verbose` flag             | yes (sticky bar + log capture)                          | no                                                                        |
 | Other flags                  | `--list --validate-only --timeout --seed --repeats`     | `--dry-run --mesoscopic`                                                  |
-| Cluster sbatch wrappers      | none                                                    | `cluster/jobs/benchmark_*.sbatch`, `cluster/jobs/05_stress_test.sbatch`   |
+| Cluster sbatch wrappers      | none                                                    | `cluster/jobs/benchmark_*.sbatch`, `cluster/jobs/05_nyc_500k_car.sbatch`   |
 | Used for                     | Quick exploration, one-offs, ad-hoc matrices            | Reproducible thesis numbers; locked, version-controllable                 |
 
 `evaluation/audit_fairness.py` autodetects both layouts (plus the two sbatch-nested variants), so the same `audit_fairness <run-dir>` invocation works regardless of which entry point produced the run. `analyze_benchmark` and `generate_plots` consume either summary JSON unchanged — they key off `results[].{scenario,engine,mode,seed,runtime_s,metrics}`, all of which exist in both schemas.
@@ -149,8 +151,8 @@ Two shapes — one per entry point. The `results[]` array fields mostly overlap;
       "status": "success",
       "runtime_s": 0.27,
       "wall_time_s": 0.27,
-      "output_dir": "runs/stress_test/chicago_1k_car/sumo/seed_42",
-      "tripinfo_path": "runs/stress_test/chicago_1k_car/sumo/seed_42/tripinfo.xml",
+      "output_dir": "runs/benchmark_small/chicago_1k_car/sumo/seed_42",
+      "tripinfo_path": "runs/benchmark_small/chicago_1k_car/sumo/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {
@@ -187,20 +189,21 @@ A sibling `feasibility_report.json` is written next to every adapter's output, r
 ### 4.1 Benchmark Analysis
 
 ```bash
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
 ```
 
 #### Output sections
 
-| Section                 | Contents                                                                           | Thesis Use                |
-| ----------------------- | ---------------------------------------------------------------------------------- | ------------------------- |
-| **Summary**             | Engine-level aggregates (success rate, avg runtime, avg R-score)                   | §5.0 Discussion           |
-| **Table 5.1**           | Runtime per `(scenario, engine, mode)` (mean, std, min, max)                       | §5.1 Runtime Performance  |
-| **Table 5.2**           | Reproducibility per `(scenario, engine, mode)` (avg TT, std TT, R-score, rating)   | §5.2 Reproducibility      |
-| **Coverage diagnostic** | Flags low-sample (`n < 3`) cells, asymmetric coverage across scenarios, fully-failed cells | §5.3 Methodology notes    |
-| **LaTeX**               | Copy-pasteable `\begin{table}` blocks                                              | Appendix / Chapter 5      |
-| **Markdown**            | GitHub-friendly tables                                                             | README / documentation    |
+| Section                  | Contents                                                                           | Thesis Use                |
+| ------------------------ | ---------------------------------------------------------------------------------- | ------------------------- |
+| **Summary**              | Engine-level aggregates (success rate, avg runtime, avg R-score)                   | §5.0 Discussion           |
+| **Coverage diagnostic**  | Flags low-sample (`n < 3`) cells, asymmetric coverage across scenarios, fully-failed cells | §5.3 Methodology notes    |
+| **Demand Composition** (V5+) | One row per scenario showing total / AM peak / PM peak / school-related counts (V5+ purpose taxonomy). Read from `scenarios/<name>/demand.csv`'s `purpose` column. Pre-V5 bundles silently omit the section. | §5.6 Demand realism appendix |
+| **Table 5.1**            | Runtime per `(scenario, engine, mode)` (mean, std, min, max)                       | §5.1 Runtime Performance  |
+| **Table 5.2**            | Reproducibility per `(scenario, engine, mode)` (avg TT, std TT, R-score, rating)   | §5.2 Reproducibility      |
+| **LaTeX**                | Copy-pasteable `\begin{table}` blocks                                              | Appendix / Chapter 5      |
+| **Markdown**             | GitHub-friendly tables                                                             | README / documentation    |
 
 > **Mode is part of the grouping key** — SUMO meso and SUMO micro never collapse into one row. (See CHANGELOG.md → Addendum 3 for why this matters.)
 
@@ -222,14 +225,14 @@ where σ is the standard deviation and μ is the mean of travel times across rep
 Catches three classes of silent gaps in any RunSpec:
 
 - **Low-sample cells** — `n < 3`: R-score is statistically weak; the diagnostic prints a warning so the table reader knows not to over-interpret.
-- **Asymmetric coverage** — engine/mode present in some scenarios but missing in others (the gap that motivated `runspecs/stress_test.yaml`'s NYC-cell fill-in).
+- **Asymmetric coverage** — engine/mode present in some scenarios but missing in others (the gap that motivated `runspecs/benchmark_small.yaml`'s NYC-cell fill-in).
 - **Silently-failed cells** — declared `runs[]` entries that produced 0 successes.
 
 ### 4.2 Plot Generation
 
 ```bash
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json --output doc/figures
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 ```
 
 Renders **9 figures** (PNG + PDF) into `<results-dir>/plots/` (or `--output` if specified).
@@ -325,13 +328,13 @@ Located in `evaluation/metrics/`:
 
 ```bash
 # 1. Run the canonical benchmark
-python -m execution.run_benchmark runspecs/stress_test.yaml
+python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 # 2. Analyze results
-python -m evaluation.analyze_benchmark runs/stress_test/benchmark_results_stress_test.json --latex --markdown
+python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
 
 # 3. Generate the 9 thesis figures
-python -m evaluation.generate_plots runs/stress_test/benchmark_results_stress_test.json --output doc/figures
+python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
 # 4. Compare micro vs meso explicitly
 python -m evaluation.compare_modes scenarios/chicago_1k_car

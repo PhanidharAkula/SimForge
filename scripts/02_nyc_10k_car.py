@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Large full-day — 200K car+transit trips, Chicago, 24-hour.
+"""nyc_10k_car — 10K car trips, NYC, 7–9 AM.
 
-Equivalent to: python generate.py --preset large_full_day
+Equivalent to: python generate.py --preset nyc_10k_car
 Same generate_scenario() call; the preset form additionally accepts
 --seed / --output / --city / OSM source overrides.
 """
@@ -19,12 +19,12 @@ parser.add_argument("--verbose", "-v", action="store_true",
 args = parser.parse_args()
 
 generate_scenario(
-    city="chicago",
-    trips=200_000,
-    modes=["car", "transit"],
-    start_time=0,
-    end_time=86400,     # 24 hours
-    radius_km=15.0,
+    city="nyc",
+    trips=10_000,
+    modes=["car"],
+    start_time=25200,   # 7:00 AM
+    end_time=32400,     # 9:00 AM
+    radius_km=4.0,
     seed=42,
     verbose=args.verbose,
 )
