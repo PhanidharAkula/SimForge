@@ -15,7 +15,7 @@
   "node_count": 159042,
   "link_count": 466938,
   "signal_count": 2153,
-  "generation_time_s": 487.7,
+  "generation_time_s": 470.5,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/california-2026-04-22.osm.pbf",
