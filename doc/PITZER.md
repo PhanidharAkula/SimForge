@@ -487,7 +487,7 @@ runs/benchmark_small/
 │   ├── matsim/   {seed_42..seed_46}/output_trips.csv.gz
 │   └── dtalite/  {seed_42..seed_46}/agent.csv + link_performance.csv  (UE assignment)
 └── plots/
-    └── fig_5_{1..9}.{png,pdf}
+    └── fig_5_{1..10}.{png,pdf}
 ```
 
 Copy the plots and `benchmark_results_*.json` back to your local machine for

@@ -28,6 +28,8 @@ from typing import Dict
 # Suppress unused import warning - subprocess is used in multiple functions
 _ = subprocess  # noqa: F401
 
+from execution.cli_format import format_error_oneline as _format_error_oneline
+
 # =============================================================================
 # AUTO-DETECTION
 # =============================================================================
@@ -585,7 +587,13 @@ Examples:
                 timeout=args.timeout,
             )
             elapsed = time.perf_counter() - cell_started_at
-            wall = result.get("wall_time_s") or round(elapsed, 2)
+            cell_wall_s = round(elapsed, 2)                       # full prep + engine + parse
+            engine_wall_s = round(result.get("wall_time_s") or 0.0, 2)  # engine subprocess only
+            # `runtime_s` is the legacy field thesis tools key off (Table 5.1,
+            # Fig 5.1, R-score). Keep it pointing at engine-only time on success
+            # so analyze_benchmark / generate_plots are unchanged; fall back to
+            # full cell wall on failure (engine_wall_s is 0 there).
+            runtime_s = engine_wall_s if engine_wall_s > 0 else cell_wall_s
 
             result.update({
                 "scenario": scenario,
@@ -594,7 +602,9 @@ Examples:
                 "mode": mode,
                 "seed": seed,
                 "repeat": rep + 1,
-                "runtime_s": wall,
+                "runtime_s": runtime_s,
+                "cell_wall_s": cell_wall_s,        # full per-cell wall (matches Wall time sum)
+                "engine_wall_s": engine_wall_s,    # engine subprocess only (thesis number)
             })
             results.append(result)
 
@@ -602,13 +612,14 @@ Examples:
             if ok:
                 completed += 1
                 mark = "✓"
-                tail = f"{wall:>7.1f}s"
+                if engine_wall_s > 0:
+                    tail = f"{cell_wall_s:>6.1f}s wall  ({engine_wall_s:>5.1f}s engine)"
+                else:
+                    tail = f"{cell_wall_s:>6.1f}s wall"
             else:
                 failed += 1
                 mark = "✗"
-                err = (result.get("error") or "unknown error")
-                err = " ".join(err.split())[:60]
-                tail = f"FAIL  {err}"
+                tail = f"FAIL  {_format_error_oneline(result.get('error'), max_len=72)}"
 
             # Print the cell row above the bar, then advance the bar.
             progress.print_above(
@@ -657,22 +668,37 @@ Examples:
     # confidence.py). With N>=2 reps the ± half-width is t_{0.025,N-1}
     # × σ_sample / √N; with N=1 it's 0 (no spread to report).
     from evaluation.metrics.confidence import confidence_interval_95
-    by_cell: dict[tuple, list[float]] = {}
+    import statistics
+    by_cell_wall: dict[tuple, list[float]] = {}
+    by_cell_engine: dict[tuple, list[float]] = {}
     for r in results:
         if r.get("status") != "success":
             continue
         key = (r["scenario"], r["engine"], r["mode"])
-        by_cell.setdefault(key, []).append(r["runtime_s"])
-    if by_cell:
-        print("\n  Per-cell timing (mean ± 95% CI across reps, successful runs only):")
-        for (sc, eng, md), times in by_cell.items():
-            ci = confidence_interval_95(times)
+        by_cell_wall.setdefault(key, []).append(r.get("cell_wall_s", r.get("runtime_s", 0.0)))
+        by_cell_engine.setdefault(key, []).append(r.get("engine_wall_s", 0.0))
+
+    failed_results = [r for r in results if r.get("status") != "success"]
+    if failed_results:
+        print("\n  ✗ Failed cells (full error in benchmark_results.json `error` field):")
+        for r in failed_results:
+            msg = _format_error_oneline(r.get("error"), max_len=72)
+            print(f"    {r['scenario']:<{sc_w}}  {r['engine']:<{eng_w}}  "
+                  f"{r['mode']:<{mode_w}}  seed={r['seed']}  {msg}")
+
+    if by_cell_wall:
+        print("\n  Per-cell wall time (full prep + engine + parse, mean ± 95 % CI across reps;")
+        print("  engine-only mean in parens — that's the number Chapter 5 tables cite):")
+        for (sc, eng, md), wall_times in by_cell_wall.items():
+            eng_times = by_cell_engine.get((sc, eng, md), [])
+            ci = confidence_interval_95(wall_times)
+            eng_mean = statistics.mean(eng_times) if eng_times else 0.0
             note = "" if ci.n >= 2 else "  (N=1, no CI)"
             print(f"    {sc:<{sc_w}}  {eng:<{eng_w}}  {md:<{mode_w}}  "
-                  f"{ci.mean:>7.1f}s ± {ci.half_width:>5.1f}s  "
-                  f"({ci.n} runs){note}")
+                  f"{ci.mean:>7.1f}s ± {ci.half_width:>5.1f}s wall  "
+                  f"(engine {eng_mean:>5.1f}s)  ({ci.n} runs){note}")
 
-    print(f"\n  \U0001f4c1 Results:    {results_file}")
+    print(f"\n  \U0001f4c1 Results:    {results_file}\n")
     print("=" * 60 + "\n")
 
     return 0 if failed == 0 else 1

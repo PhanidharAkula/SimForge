@@ -677,7 +677,7 @@ def generate_scenario(
     print(f"    {'signals.xml':<{art_w}}  {sig['signal_count']:,} controllers")
     print(f"    {'demand.csv':<{art_w}}  {dem['trip_count']:,} trips ({strategy})")
     print(f"    {'config.xml':<{art_w}}  {time_desc} simulation window, seed={seed}")
-    print(f"    {'manifest.xml':<{art_w}}  SHA-256 checksummed")
+    print(f"    {'manifest.xml':<{art_w}}  SHA-256 checksummed\n")
     print("=" * 60 + "\n")
 
     # Save generation metadata (includes OSM provenance so any scenario can be

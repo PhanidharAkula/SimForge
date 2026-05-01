@@ -36,9 +36,9 @@ Total wall-clock for the 8-run matrix: **≈ 22 s**.
 
 Grouped bar chart of mean runtime by `engine`, faceted by mode, with error bars at ±1σ across repeats. The dominant visual feature is MATSim's ~10 s baseline (driven by JVM startup) versus the sub-300 ms SUMO meso bars and the ~1.1 s SUMO micro bar.
 
-### Fig 5.5 — Speedup analysis
+### Fig 5.4 — Speedup analysis
 
-![Fig 5.5 — Speedup analysis](../figures/fig_5_5_speedup_analysis.png)
+![Fig 5.4 — Speedup analysis](../figures/fig_5_4_speedup_analysis.png)
 
 Within-mode speedup of each engine relative to the MATSim mesoscopic baseline:
 
@@ -81,12 +81,12 @@ Heatmap of R-score per `(engine, mode)` cell. Cells that were not run in the mat
 
 Mean travel time by engine, faceted by mode, with ±1σ error bars across repeats. Three observations:
 
-1. **SUMO meso vs MATSim meso** disagree by 7.9 s on Chicago (203.5 s vs 195.6 s, +4.0 %). The gap is driven by MATSim's earlier mobsim release and SUMO's stricter edge-insertion policy under congestion (the same dynamic that produces the `trip_count` differences in Fig 5.9).
+1. **SUMO meso vs MATSim meso** disagree by 7.9 s on Chicago (203.5 s vs 195.6 s, +4.0 %). The gap is driven by MATSim's earlier mobsim release and SUMO's stricter edge-insertion policy under congestion (the same dynamic that produces the `trip_count` differences in Fig 5.8).
 2. **SUMO meso vs SUMO micro** disagree by 83.5 s on Chicago (287.0 s vs 203.5 s, +41 %). Micro captures intersection delays and queue spillback that the meso queue model averages out — the gap is the headline mesoscopic-mode trade-off.
 
-### Fig 5.9 — Trip-count parity
+### Fig 5.8 — Trip-count parity
 
-![Fig 5.9 — Trip-count parity](../figures/fig_5_9_trip_count_parity.png)
+![Fig 5.8 — Trip-count parity](../figures/fig_5_8_trip_count_parity.png)
 
 Per-cell completed-trip counts. Every cell received the same input set of 1,000 trips (recorded in each adapter's `feasibility_report.json` as `feasible_trips: 1000`):
 
@@ -102,21 +102,21 @@ The 5 – 61 trip gap between MATSim and SUMO is the **simulation outcome we wan
 
 ## 5.4 Micro vs Meso Trade-off
 
-### Fig 5.6 — Micro vs Meso comparison
+### Fig 5.5 — Micro vs Meso comparison
 
-![Fig 5.6 — Micro vs meso](../figures/fig_5_6_micro_vs_meso.png)
+![Fig 5.5 — Micro vs meso](../figures/fig_5_5_micro_vs_meso.png)
 
 Within-engine micro-vs-meso runtime ratio for SUMO. At the 1K tier the speedup is **≈ 3.9 ×** on Chicago (1.12 s → 0.29 s). The accompanying fidelity cost is +41 % mean travel time (§5.3, point 2).
 
-### Fig 5.7 — Runtime variability
+### Fig 5.6 — Runtime variability
 
-![Fig 5.7 — Runtime variability](../figures/fig_5_7_runtime_variability.png)
+![Fig 5.6 — Runtime variability](../figures/fig_5_6_runtime_variability.png)
 
 Boxplot of per-repeat runtime per `(engine, mode)`. SUMO meso shows tight spread (σ up to 0.066 s) — most of that is OS scheduling jitter on the sub-300 ms timescale. The MATSim box is wider in absolute terms (σ up to 0.57 s) but JVM startup variance is the dominant component, not simulation work.
 
-### Fig 5.8 — P95 tail latency
+### Fig 5.7 — P95 tail latency
 
-![Fig 5.8 — P95 tail latency](../figures/fig_5_8_p95_tail_latency.png)
+![Fig 5.7 — P95 tail latency](../figures/fig_5_7_p95_tail_latency.png)
 
 P95 trip duration plotted against mean trip duration, faceted by mode. The micro/meso gap widens at the tail: micro-mode P95 reaches values that meso-mode aggregation hides, giving a clearer picture of worst-case behaviour and matching the qualitative claim in §5.3.
 
@@ -138,13 +138,7 @@ At the 1K tier the absolute runtimes (≤ 1.13 s for micro, ≤ 0.37 s for meso)
 
 ## 5.5 Throughput
 
-### Fig 5.4 — Engine summary panel
-
-![Fig 5.4 — Engine summary](../figures/fig_5_4_engine_summary.png)
-
-Three-panel summary: per-mode runtime, R-score, and throughput side-by-side, intended as the executive-summary figure for the chapter.
-
-Throughput, defined as `trip_count / runtime`, on the canonical 1K matrix:
+Throughput, defined as `trip_count / runtime` (engine subprocess only), on the canonical 1K matrix:
 
 | Engine / mode    | Chicago throughput (trips/s) |
 | ---------------- | ---------------------------- |
@@ -152,7 +146,7 @@ Throughput, defined as `trip_count / runtime`, on the canonical 1K matrix:
 | SUMO micro       | ≈ 838                        |
 | MATSim meso      | ≈ 102                        |
 
-Per-core throughput (Fig 5.4 right panel) divides by the wall-clock cores actually consumed: SUMO is single-process single-threaded, MATSim is single-process multi-threaded but bottlenecked by JVM startup at this scale.
+The headline runtime numbers driving these ratios are in Table 5.1 and Fig 5.1; the per-engine `trip_count` column comes from `analyze_benchmark`. SUMO is single-process single-threaded; MATSim is single-process multi-threaded but bottlenecked by JVM startup at this scale, which is why per-core normalisation doesn't change the ranking.
 
 ---
 
@@ -210,8 +204,8 @@ omitted from the audit; the test suite covers both cases.
 
 | Claim                                          | Evidence                                                        |
 | ---------------------------------------------- | --------------------------------------------------------------- |
-| Canonical schema enables fair comparison       | `feasibility_report.json` shows `feasible_trips: 1000` for every adapter (Fig 5.9) |
-| Mesoscopic mode is much faster than micro      | Within-engine 3.9 × speedup (Fig 5.6)                           |
+| Canonical schema enables fair comparison       | `feasibility_report.json` shows `feasible_trips: 1000` for every adapter (Fig 5.8) |
+| Mesoscopic mode is much faster than micro      | Within-engine 3.9 × speedup (Fig 5.5)                           |
 | Results are reproducible                       | All R ≥ 0.998, MATSim R = 1.0000 (Table 5.2, Fig 5.2)           |
 | Mode-aware grouping is necessary               | SUMO meso/micro disagree by 41 % on mean TT (§5.3, point 2)      |
 
@@ -227,7 +221,7 @@ The threats catalogued in §4.6 manifested as follows:
 
 - **Random seed effect on results** — bounded by σ/μ ≤ 0.002 across all stochastic cells (Table 5.2).
 - **JVM warm-up affecting MATSim** — visible as the ~10 s plateau in Fig 5.1; included in *all* MATSim runtimes for fair comparison.
-- **Trip-count asymmetry across engines** — observed as the 5 – 61 trip gap in Fig 5.9, with `feasibility_report.json` proving it is engine-internal.
+- **Trip-count asymmetry across engines** — observed as the 5 – 61 trip gap in Fig 5.8, with `feasibility_report.json` proving it is engine-internal.
 - **OS scheduling noise** — visible as the 0.066 s std on the Chicago SUMO meso cell; an order of magnitude below the cross-engine differences of interest.
 
 ### Pointer to next chapter

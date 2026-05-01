@@ -26,7 +26,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | DTALite Adapter (3rd primary) | ✅ Complete (CPU mesoscopic DTA, runs on Mac/Linux) |
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
-| Metrics & Plots              | ✅ Complete (9 thesis figures)      |
+| Metrics & Plots              | ✅ Complete (10 thesis figures)     |
 | Test Suite                   | ✅ ~477 tests passing               |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 

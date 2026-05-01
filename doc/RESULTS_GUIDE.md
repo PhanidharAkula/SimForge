@@ -78,7 +78,7 @@ Both call the same adapters and produce the same per-cell engine artefacts (`tri
 | Per-cell directory           | flat: `<scenario>_<engine>_<mode>_seed<seed>/`          | nested: `<scenario_id>/<engine>/seed_<seed>/`                             |
 | Summary JSON file            | `benchmark_results.json`                                | `benchmark_results_<runspec_name>.json`                                   |
 | Summary JSON top-level keys  | `timestamp`, `matrix`, `summary`, `results`             | `runspec_name`, `started_at`, `completed_at`, `total_runs`, `successful_runs`, `failed_runs`, `summary`, `results` |
-| Per-cell record fields       | `status`, `scenario`, `scenario_id`, `engine`, `mode`, `seed`, `repeat`, `runtime_s`, `metrics` (+ adapter extras) | same plus `repeat_index`, `wall_time_s`, `output_dir`, `tripinfo_path`, `error_message` (always present) |
+| Per-cell record fields       | `status`, `scenario`, `scenario_id`, `engine`, `mode`, `seed`, `repeat`, `runtime_s`, `cell_wall_s`, `engine_wall_s`, `metrics` (+ adapter extras) | same plus `repeat_index`, `wall_time_s`, `output_dir`, `tripinfo_path`, `error_message` (always present) |
 | `--verbose` flag             | yes (sticky bar + log capture)                          | no                                                                        |
 | Other flags                  | `--list --validate-only --timeout --seed --repeats`     | `--dry-run --mesoscopic`                                                  |
 | Cluster sbatch wrappers      | none                                                    | `cluster/jobs/benchmark_*.sbatch`, `cluster/jobs/05_nyc_500k_car.sbatch`   |
@@ -116,6 +116,8 @@ Two shapes — one per entry point. The `results[]` array fields mostly overlap;
       "seed": 42,
       "repeat": 1,
       "runtime_s": 0.27,
+      "engine_wall_s": 0.27,
+      "cell_wall_s": 1.83,
       "metrics": {
         "travel_time": {
           "trip_count": 995,
@@ -151,6 +153,8 @@ Two shapes — one per entry point. The `results[]` array fields mostly overlap;
       "status": "success",
       "runtime_s": 0.27,
       "wall_time_s": 0.27,
+      "engine_wall_s": 0.27,
+      "cell_wall_s": 1.83,
       "output_dir": "runs/benchmark_small/chicago_1k_car/sumo/seed_42",
       "tripinfo_path": "runs/benchmark_small/chicago_1k_car/sumo/seed_42/tripinfo.xml",
       "error_message": null,
@@ -172,13 +176,18 @@ The harness shape is defined by `BenchmarkResult.to_dict()` / `RunResult.to_dict
 
 | Field                            | Meaning                                              |
 | -------------------------------- | ---------------------------------------------------- |
-| `runtime_s`                      | Simulator wall-clock time for the run                |
+| `runtime_s`                      | Engine subprocess wall (back-compat alias of `engine_wall_s` on success). What `analyze_benchmark` / `generate_plots` / Chapter 5 tables key off. |
+| `wall_time_s`                    | Same as `runtime_s` on success (engine subprocess only). Preserved verbatim from earlier SimForge versions. |
+| `engine_wall_s`                  | Engine subprocess only (mobsim / DTA iterations / queue net). Explicit alias of `wall_time_s`; what the thesis runtime numbers cite. |
+| `cell_wall_s`                    | Full per-cell wall: adapter prep (canonical → engine format, including per-trip BFS pre-routing) + engine subprocess + output parsing. Per-cell `cell_wall_s` values sum to the harness `Wall time` total. |
 | `metrics.travel_time.trip_count` | Vehicles that completed their trip                   |
 | `metrics.travel_time.mean`       | Mean trip duration (seconds)                         |
 | `metrics.travel_time.p95`        | 95th percentile trip duration                        |
 | `seed`                           | RNG seed (deterministic across re-runs)              |
 | `mode`                           | `meso` or `micro` (kept separate by analysis layer)  |
 | `status`                         | `success` or `failed`                                |
+
+> **Wall vs engine.** SimForge separates these because Chapter 5 is benchmarking the *engine paradigm* (mobsim vs UE vs queue), not the Python adapter prep. A faster Python adapter would lower `cell_wall_s` but leave `engine_wall_s` (and therefore the thesis runtime numbers) untouched. The CLI shows both — `wall (engine)` per cell — so users can see where time actually goes; downstream tools key off the engine number for citing.
 
 A sibling `feasibility_report.json` is written next to every adapter's output, recording the SCC-derived feasible-trip set and any drops — proves engines were fed the same input set.
 
@@ -235,21 +244,22 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 ```
 
-Renders **9 figures** (PNG + PDF) into `<results-dir>/plots/` (or `--output` if specified).
+Renders **10 figures** (PNG + PDF) into `<results-dir>/plots/` (or `--output` if specified). Two of them — Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine) — are auto-skipped when their data isn't available, so the figure count drops to 8 on pre-V5 bundles or pre-Phase-11.6 result files.
 
 #### Generated figures
 
 | Figure      | Plot Type            | Content                                                          | Thesis Use                          |
 | ----------- | -------------------- | ---------------------------------------------------------------- | ----------------------------------- |
-| **Fig 5.1** | Grouped bar (errbar) | Runtime by `(city, engine)`, faceted by mode                     | Headline runtime comparison         |
-| **Fig 5.2** | Heatmap              | Reproducibility R-score per `(engine, mode)` × scenario; NaN cells render hatched grey ("not run") rather than red | Determinism evidence              |
-| **Fig 5.3** | Grouped bar (errbar) | Mean travel time by engine, faceted by mode                      | Cross-engine output fidelity        |
-| **Fig 5.4** | 3-panel summary      | Per-mode runtime, R-score, throughput side-by-side               | Executive summary                   |
-| **Fig 5.5** | Speedup bars         | Engine speedup vs MATSim baseline, **within-mode**               | Cross-simulator comparison          |
-| **Fig 5.6** | Mode comparison      | Micro vs meso runtime per engine                                 | Mesoscopic-mode value proposition   |
-| **Fig 5.7** | Boxplot              | Runtime variability per `(engine, mode)`                         | Tail-behaviour discussion           |
-| **Fig 5.8** | Scatter / dual-bar   | P95 tail latency vs mean travel time, faceted by mode            | Worst-case behaviour                |
-| **Fig 5.9** | Trip-count parity    | Completed trips per `(engine, mode)`                             | Validates SCC/feasibility filter — every engine is shown to receive the same N |
+| **Fig 5.1**  | Grouped bar (errbar) | **Engine** runtime by `(city, engine)`, faceted by mode (engine subprocess only — see §3) | Headline runtime comparison         |
+| **Fig 5.2**  | Heatmap              | Reproducibility R-score per `(engine, mode)` × scenario; NaN cells render hatched grey ("not run") rather than red | Determinism evidence              |
+| **Fig 5.3**  | Grouped bar (errbar) | Mean travel time by engine, faceted by mode                      | Cross-engine output fidelity        |
+| **Fig 5.4**  | Speedup bars         | Engine speedup vs MATSim baseline, **within-mode**               | Cross-simulator comparison          |
+| **Fig 5.5**  | Mode comparison      | Micro vs meso **engine** runtime per engine                      | Mesoscopic-mode value proposition   |
+| **Fig 5.6**  | Boxplot              | **Engine** runtime variability per `(engine, mode)`              | Tail-behaviour discussion           |
+| **Fig 5.7**  | Scatter / dual-bar   | P95 tail latency vs mean travel time, faceted by mode            | Worst-case behaviour                |
+| **Fig 5.8**  | Trip-count parity    | Completed trips per `(engine, mode)`                             | Validates SCC/feasibility filter — every engine is shown to receive the same N |
+| **Fig 5.9**  | Stacked bar          | Per-scenario V5+ trip-purpose composition (HBW_AM/PM, HBSchool_AM/PM, chains) read from canonical `demand.csv` | Demand-realism evidence (Phases 5–10) |
+| **Fig 5.10** | Stacked bar          | Per-cell wall time breakdown — engine subprocess vs adapter prep + parse (`cell_wall_s − engine_wall_s`); skipped on pre-Phase-11.6 result files | Methodological footnote: where time actually goes |
 
 ### 4.3 Mode Comparison
 
@@ -322,7 +332,7 @@ Located in `evaluation/metrics/`:
 
 ### What to report in Chapter 5
 
-1. **Runtime comparison** (Table 5.1, Fig 5.1, Fig 5.5)
+1. **Runtime comparison** (Table 5.1, Fig 5.1, Fig 5.4)
    - SUMO meso vs MATSim vs DTALite wall-clock, **per mode**
    - DTALite's UE assignment gives a third-paradigm reference point; comparable to MATSim at scenario sizes the bundled stress test exercises.
 
@@ -330,24 +340,30 @@ Located in `evaluation/metrics/`:
    - R-scores ≥ 0.997 across all engines confirm deterministic behaviour
    - MATSim hits R = 1.0 (perfectly deterministic with `lastIteration=0`)
 
-3. **Fidelity** (Fig 5.3, Fig 5.9)
+3. **Fidelity** (Fig 5.3, Fig 5.8)
    - Mean travel times are consistent across engines for the same scenario
-   - Fig 5.9 shows engines all received the same trip set — any per-engine `trip_count` gap is engine-internal mobsim behaviour, not feed asymmetry
+   - Fig 5.8 shows engines all received the same trip set — any per-engine `trip_count` gap is engine-internal mobsim behaviour, not feed asymmetry
 
-4. **Throughput** (Fig 5.4 right panel)
-   - Trips per second = `trip_count / runtime`
-   - Higher throughput → more scalable for larger scenarios
-
-5. **Mode trade-off** (Fig 5.6, Fig 5.7, Fig 5.8)
+4. **Mode trade-off** (Fig 5.5, Fig 5.6, Fig 5.7)
    - Micro is more accurate at the edges (P95) but pays an order-of-magnitude runtime cost vs meso
+
+5. **Demand realism** (Fig 5.9, audit_fairness Q5)
+   - Per-scenario stacked bar makes the V5+ trip-purpose composition visible at a glance — HBW dominates, HBSchool + chain legs are the parent-with-school-age-dependent share.
+   - Pairs with the MODELGEN_AND_MODES.md text and Phase 9 in CHANGELOG to back the "we use real demand, not a uniform OD matrix" claim.
+
+6. **Methodological footnote** (Fig 5.10)
+   - Per-cell wall = adapter prep + engine subprocess + parse. Chapter 5 runtime tables and Fig 5.1 cite the engine subprocess only; this figure documents that prep is non-trivial for large MATSim/SUMO scenarios (per-trip BFS routing on the canonical graph).
+   - Useful in the defense if a committee member asks "is the engine number really the right thing to compare?" — the answer is yes, because adapter prep is a SimForge implementation cost, not an engine cost.
 
 ### Key thesis claims these results support
 
 | Claim                                          | Evidence                                                         |
 | ---------------------------------------------- | ---------------------------------------------------------------- |
-| Canonical schema enables fair comparison       | Same scenario runs on all engines with identical demand (Fig 5.9) |
-| Mesoscopic mode is much faster than micro      | Fig 5.6 (within-engine), `compare_modes.py` speedup ratio         |
+| Canonical schema enables fair comparison       | Same scenario runs on all engines with identical demand (Fig 5.8) |
+| Mesoscopic mode is much faster than micro      | Fig 5.5 (within-engine), `compare_modes.py` speedup ratio         |
 | Results are reproducible                       | R-scores ≥ 0.997 across seeds (Table 5.2, Fig 5.2)                |
+| Demand is realistic, not a uniform OD matrix   | Fig 5.9 V5+ trip-purpose composition (HBW + HBSchool + chains)    |
+| Engine times are comparable across simulators  | Fig 5.10 isolates engine subprocess from adapter prep             |
 | Framework scales to large scenarios            | Scalability metrics from HPC runs (200K, 500K tiers)              |
 | Three-paradigm cross-engine validation         | DTALite (DTA equilibrium) vs MATSim (queue-based agent) vs SUMO (microscopic / meso queue) on chicago_200k and nyc_500k tiers |
 
@@ -373,7 +389,7 @@ python -m execution.run_benchmark runspecs/benchmark_small.yaml
 # 2. Analyze results
 python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
 
-# 3. Generate the 9 thesis figures
+# 3. Generate the 10 thesis figures
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
 # 4. Compare micro vs meso explicitly

@@ -254,7 +254,7 @@ Fidelity ▲
 
 ### 4.5.2 Visualisation Plan
 
-`evaluation/generate_plots.py` emits 9 figures (5.1 – 5.9). See [doc/RESULTS_GUIDE.md](../RESULTS_GUIDE.md) for the per-figure description.
+`evaluation/generate_plots.py` emits 10 figures (5.1 – 5.10). See [doc/RESULTS_GUIDE.md](../RESULTS_GUIDE.md) for the per-figure description.
 
 ### 4.5.3 Output Formats
 

@@ -8,6 +8,117 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 11.8: Drop redundant Fig 5.4 (Engine summary panel) + renumber (2026-05-01)
+
+The 3-panel "Engine summary" figure (per-mode runtime + R-score + throughput
+side-by-side) was redundant with Fig 5.1 (runtime) and Fig 5.2 (R-score) —
+two of its three panels duplicated information the reader had just seen.
+Only the throughput panel was unique, and it was a derivative quantity
+(`trip_count / runtime`) easily computed from the existing runtime tables.
+
+Removed:
+
+- `plot_engine_summary()` and its driver entry in `evaluation/generate_plots.py`.
+- Fig 5.4 section in `doc/chapters/results.md` §5.5 — the section now opens
+  directly with the throughput table (the data the section actually needed)
+  and references Table 5.1 / Fig 5.1 for the underlying runtime numbers.
+
+Renumbered 5.5 → 5.4, 5.6 → 5.5, … , 5.11 → 5.10 throughout. Total figures:
+**11 → 10**. Affected files:
+
+- `evaluation/generate_plots.py` (driver list, suptitles, save names, docstring)
+- `help.py` (HELP_EVALUATION figure list)
+- `doc/RESULTS_GUIDE.md` (§4.2 figure table, §6 interpretation guide, key claims)
+- `doc/REPRODUCING.md` (figure summary table)
+- `doc/GLOSSARY.md` (P95 + Throughput entry cross-refs)
+- `doc/chapters/results.md` (figure section headers, image paths, body refs)
+
+Verified: `python -m evaluation.generate_plots <results.json>` renders the
+10 figures cleanly with the new numbering. Existing audit / analyze tests
+still pass — no result-JSON shape change.
+
+### Phase 11.7: Two new thesis figures (Fig 5.10, Fig 5.11) (2026-05-01)
+
+`evaluation/generate_plots.py` now produces 11 figures instead of 9:
+
+- **Fig 5.10 — Demand composition.** Per-scenario stacked bar of the
+  V5+ trip-purpose taxonomy (HBW_AM/PM, HBSchool_AM/PM, HBW_*_chained).
+  Reads each bundle's canonical `demand.csv` `purpose` column via
+  `evaluation/demand_composition.py`. Pre-V5 bundles without that
+  column are silently skipped; if no scenario has V5+ data the whole
+  figure is omitted.
+- **Fig 5.11 — Wall vs engine breakdown.** Per-cell stacked bar:
+  engine subprocess at the bottom, adapter prep + output parsing
+  (`cell_wall_s − engine_wall_s`) on top, hatched. Documents where
+  per-cell wall time actually goes after the Phase 11.6 timing split.
+  Skipped when result files don't carry the new fields (pre-Phase
+  11.6 results).
+
+Existing runtime figures got minor relabels for honesty: "Runtime"
+→ "Engine runtime" in Fig 5.1, 5.6, 5.7 titles + the y-axis labels,
+since after the Phase 11.6 split the CLI exposes both wall and engine
+numbers and a thesis reader could legitimately ask which one a runtime
+figure shows. The values themselves didn't change — every figure has
+always been engine subprocess only — only the labels are now explicit.
+
+### Phase 11.6: Wall-vs-engine timing split + cleaner failure display (2026-05-01)
+
+Per-cell timing in `run.py` and `execution/run_benchmark.py` now reports
+two numbers, since the previous single number conflated two different
+costs:
+
+- **`engine_wall_s`** — engine subprocess only (mobsim / DTA iterations
+  / queue net). What Chapter 5 runtime tables cite, since the thesis is
+  benchmarking the engine paradigm, not the Python adapter.
+- **`cell_wall_s`** — full per-cell wall: adapter prep (canonical →
+  engine format, **including the per-trip BFS pre-routing the
+  SUMO/MATSim adapters do**) + engine subprocess + output parsing.
+  Per-cell `cell_wall_s` values now sum to the harness "Wall time"
+  total — the previous single number didn't, which was confusing for
+  large scenarios (nyc_10k_car MATSim: ~9.5 min per-cell wall vs the
+  ~15 s the cell row used to display).
+
+Per-cell row format (both runners):
+
+```
+[1/3]  matsim   meso  seed=42  ✓   25.3s wall  (10.6s engine)
+```
+
+Failed cells listed first in the summary block, then per-cell wall +
+engine 95 % CIs:
+
+```
+✗ Failed cells (full error in benchmark_results.json `error` field):
+  chicago_1k_car  sumo  meso   seed=42  Ambiguity in turnarounds at junction 'n10033'. (+4 more)
+
+Per-cell wall time (full prep + engine + parse, mean ± 95 % CI across reps;
+engine-only mean in parens — that's the number Chapter 5 tables cite):
+  chicago_1k_car  matsim   meso     25.3s ±   0.8s wall  (engine  10.6s)  (3 runs)
+```
+
+Failure-line cleanup (`execution/cli_format.py:format_error_oneline`):
+strips noise prefixes ("Conversion failed: ", "netconvert failed: ",
+"Warning: "), collapses repeated warning lines into "(+N more)", and
+truncates at a word boundary with "…" instead of mid-character. Used by
+both runners so the display stays consistent.
+
+**Back-compat preserved**: `runtime_s` and `wall_time_s` still mean
+engine-subprocess time on success, so `analyze_benchmark`,
+`generate_plots`, and the `audit_fairness` Q4 travel-time spread keep
+reading the same field they always did. New fields (`cell_wall_s`,
+`engine_wall_s`) are additive. Verified: `tests/test_audit_fairness.py`
++ `tests/test_analyze_benchmark.py` (53 tests) all green after the
+change.
+
+JSON shape additions per `results[]` entry:
+
+| Field           | Meaning                                                |
+|-----------------|--------------------------------------------------------|
+| `runtime_s`     | Back-compat alias for `engine_wall_s` on success.      |
+| `wall_time_s`   | Same as `runtime_s`. Kept verbatim from prior version. |
+| `engine_wall_s` | NEW. Engine subprocess only.                           |
+| `cell_wall_s`   | NEW. Full prep + engine + parse per cell.              |
+
 ### Phase 11.5: Interactive help TUI (2026-04-30)
 
 `python help.py` (no args, TTY) now opens a full-screen curses TUI

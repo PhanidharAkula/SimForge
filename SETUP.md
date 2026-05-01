@@ -367,7 +367,7 @@ sbatch cluster/jobs/05_nyc_500k_car.sbatch       # or any of cluster/jobs/01..05
 | `python -m pipeline.validation.validate_bundle <path>` | Validate a single bundle                   |
 | `python generate.py --preset <name>`                   | Generate a scenario from a preset         |
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
-| `python -m evaluation.generate_plots    <results.json>` | Render the 9 thesis figures               |
+| `python -m evaluation.generate_plots    <results.json>` | Render the 10 thesis figures              |
 | `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
 | `python -m pytest tests/ -v`                           | Run the test suite (~477 tests)            |
 

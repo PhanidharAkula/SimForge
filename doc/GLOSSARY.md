@@ -166,7 +166,7 @@ The OSM query API (`https://overpass-api.de`). SimForge uses it **only as a fall
 A multiplicative factor that expresses how much road space a vehicle occupies relative to a passenger car. PCE = 1.0 for a typical sedan, 1.5-2.0 for a heavy truck, 0.4-0.5 for a motorcycle. Used by mesoscopic and DTA simulators (DTALite especially) to compute link capacity from vehicle counts. SimForge V11+ pins all car-bucket trips at PCE 1.0 across SUMO, MATSim, and DTALite via `adapters/common/vehicle_types.CAR_PCE`.
 
 ### P95 travel time
-The 95th percentile of trip durations within a single run. Used as a tail-latency indicator in Fig 5.8 and complements the mean travel time reported in Table 5.2.
+The 95th percentile of trip durations within a single run. Used as a tail-latency indicator in Fig 5.7 and complements the mean travel time reported in Table 5.2.
 
 ### PBF (Protocolbuffer Binary Format)
 The OSM project's binary serialization of map data (file extension `.osm.pbf`). Roughly an order of magnitude smaller than the equivalent XML and much faster to parse. SimForge stores *Geofabrik* state-level PBFs in `osm_data/` and slices them to a scenario bounding box with *pyosmium* before handing the slice to osmnx.
@@ -235,7 +235,7 @@ The Eclipse open-source traffic simulator. SimForge bundles `eclipse-sumo==1.26.
 ## T
 
 ### Throughput
-`trip_count / runtime`, expressed in trips/sec. The headline scaling metric reported in Fig 5.4 and Fig 5.9.
+`trip_count / runtime`, expressed in trips/sec. A scaling metric derived from Table 5.1 runtime numbers and the per-engine `trip_count` column from `analyze_benchmark`'s output (no longer a dedicated figure since the executive-summary plot was retired in Phase 11.8 — see CHANGELOG).
 
 ### Trip chain
 A sequence of related trips by the same person (e.g. home → school → work). SimForge V5+ Phase 9b/9c emits two-leg HBSchool chains (home → school → work in the morning; work → school → home in the evening). Engines simulate each leg as a separate vehicle — chain *demand* is preserved but chain *agency* (one person, multiple stops) is not. To preserve agency at simulation time would require SUMO `<person>` activity sequences or MATSim `<plan>` chains, neither wired today.

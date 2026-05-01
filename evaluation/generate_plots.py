@@ -9,17 +9,21 @@ looking like a failure.
 
 Figures
 -------
-5.1  Runtime comparison           — facets by mode, bars by (city, engine)
-5.2  Reproducibility heatmap      — rows are (engine, mode); NaN = grey
-5.3  Travel time comparison       — facets by mode
-5.4  Engine performance summary   — per-mode runtime, R-score, throughput
-5.5  Speedup vs MATSim            — within-mode (avoids meso/micro mixing)
-5.6  Micro vs Meso runtime        — explicit mode comparison per engine
-5.7  Runtime variability          — boxplot per (engine, mode)
-5.8  P95 tail latency vs mean     — facets by mode
-5.9  Trip-count parity            — completed trips per (engine, mode);
-                                    validates the SCC/feasibility filter
-                                    by showing every engine ran the same N
+5.1   Engine runtime comparison    — facets by mode, bars by (city, engine);
+                                     engine subprocess only (matches Chapter 5)
+5.2   Reproducibility heatmap      — rows are (engine, mode); NaN = grey
+5.3   Travel time comparison       — facets by mode
+5.4   Speedup vs MATSim            — within-mode (avoids meso/micro mixing)
+5.5   Micro vs Meso engine runtime — explicit mode comparison per engine
+5.6   Engine runtime variability   — boxplot per (engine, mode)
+5.7   P95 tail latency vs mean     — facets by mode
+5.8   Trip-count parity            — completed trips per (engine, mode);
+                                     validates the SCC/feasibility filter
+                                     by showing every engine ran the same N
+5.9   Demand composition           — per-scenario stacked bar of the V5+ trip
+                                     purpose taxonomy (HBW + HBSchool + chains)
+5.10  Wall vs engine breakdown     — per-cell stacked bar showing where time
+                                     goes: adapter prep + engine + parse
 
 Usage
 -----
@@ -289,8 +293,9 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
         ax.grid(axis='y', alpha=0.3)
         ax.legend(title='Engine', loc='upper right')
 
-    axes[0].set_ylabel('Runtime (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.1: Runtime Comparison by City, Engine, and Mode (error bars: 95 % CI)',
+    axes[0].set_ylabel('Engine runtime (seconds)', fontweight='bold')
+    fig.suptitle('Figure 5.1: Engine Runtime by City, Engine, and Mode '
+                 '(engine subprocess only; error bars: 95 % CI)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
     return _save("fig_5_1_runtime_comparison", output_dir)
@@ -429,66 +434,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.4 — Engine performance summary (per-mode)
-# ---------------------------------------------------------------------------
-
-def plot_engine_summary(metrics: list[ScenarioMetrics],
-                        output_dir: Path) -> Path:
-    _require_matplotlib()
-    setup_style()
-
-    pairs = sorted({(m.engine, m.mode) for m in metrics})
-    labels = [f"{e.upper()}\n({m})" for (e, m) in pairs]
-
-    runtimes, repros, throughputs = [], [], []
-    for engine, mode in pairs:
-        cell = [m for m in metrics if m.engine == engine and m.mode == mode]
-        avg_rt = statistics.mean([m.avg_runtime for m in cell])
-        avg_r = statistics.mean([m.reproducibility for m in cell])
-        # Throughput per run (trips per second), averaged across cells
-        per_run = [m.avg_trips / m.avg_runtime
-                   for m in cell if m.avg_runtime > 0]
-        runtimes.append(avg_rt)
-        repros.append(avg_r)
-        throughputs.append(statistics.mean(per_run) if per_run else 0)
-
-    bar_colors = [ENGINE_COLORS.get(e, 'gray') for (e, _) in pairs]
-
-    fig, axes = plt.subplots(1, 3, figsize=(5 * len(pairs) // 2 + 8, 5))
-
-    def _bar(ax, values, ylabel, title, fmt):
-        bars = ax.bar(range(len(pairs)), values,
-                      color=bar_colors, edgecolor='black', linewidth=0.5)
-        ax.set_xticks(range(len(pairs)))
-        ax.set_xticklabels(labels, fontsize=9)
-        ax.set_ylabel(ylabel, fontweight='bold')
-        ax.set_title(title, fontweight='bold')
-        ax.grid(axis='y', alpha=0.3)
-        for bar, val in zip(bars, values):
-            ax.text(bar.get_x() + bar.get_width() / 2,
-                    bar.get_height(),
-                    fmt.format(val),
-                    ha='center', va='bottom', fontsize=9)
-        return bars
-
-    _bar(axes[0], runtimes, 'Average Runtime (seconds)', 'Runtime', '{:.2f}s')
-
-    _bar(axes[1], repros, 'Average R-Score', 'Reproducibility', '{:.4f}')
-    if repros:
-        lo = min(repros + [0.99])
-        axes[1].set_ylim(max(0.0, lo - 0.005), 1.005)
-
-    _bar(axes[2], throughputs,
-         'Throughput (trips/second)', 'Throughput', '{:.0f}')
-
-    fig.suptitle('Figure 5.4: Engine Performance Summary (per mode)',
-                 fontweight='bold', y=1.02)
-    plt.tight_layout()
-    return _save("fig_5_4_engine_summary", output_dir)
-
-
-# ---------------------------------------------------------------------------
-# Figure 5.5 — Speedup vs MATSim baseline (within-mode)
+# Figure 5.4 — Speedup vs MATSim baseline (within-mode)
 # ---------------------------------------------------------------------------
 
 def plot_speedup_analysis(metrics: list[ScenarioMetrics],
@@ -566,14 +512,14 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
         return None
 
     axes[0].set_ylabel('Speedup (× faster than MATSim)', fontweight='bold')
-    fig.suptitle('Figure 5.5: Speedup vs MATSim Baseline (within-mode)',
+    fig.suptitle('Figure 5.4: Speedup vs MATSim Baseline (within-mode)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
-    return _save("fig_5_5_speedup_analysis", output_dir)
+    return _save("fig_5_4_speedup_analysis", output_dir)
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.6 — Micro vs Meso runtime per engine
+# Figure 5.5 — Micro vs Meso runtime per engine
 # ---------------------------------------------------------------------------
 
 def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
@@ -627,15 +573,16 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
         plt.close()
         return None
 
-    axes[0].set_ylabel('Runtime (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.6: Micro vs Meso Runtime by Engine',
+    axes[0].set_ylabel('Engine runtime (seconds)', fontweight='bold')
+    fig.suptitle('Figure 5.5: Micro vs Meso Engine Runtime by Engine '
+                 '(engine subprocess only)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
-    return _save("fig_5_6_micro_vs_meso", output_dir)
+    return _save("fig_5_5_micro_vs_meso", output_dir)
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.7 — Runtime variability (boxplot per engine × mode)
+# Figure 5.6 — Runtime variability (boxplot per engine × mode)
 # ---------------------------------------------------------------------------
 
 def plot_runtime_variability(results_paths: list[Path],
@@ -673,9 +620,9 @@ def plot_runtime_variability(results_paths: list[Path],
         patch.set_facecolor(ENGINE_COLORS.get(engine, 'gray'))
         patch.set_alpha(0.7)
 
-    ax.set_ylabel('Runtime (seconds)', fontweight='bold')
-    ax.set_title('Figure 5.7: Runtime Variability by Engine × Mode\n'
-                 '(box = IQR, diamond = mean, line = median)',
+    ax.set_ylabel('Engine runtime (seconds)', fontweight='bold')
+    ax.set_title('Figure 5.6: Engine Runtime Variability by Engine × Mode\n'
+                 '(engine subprocess only; box = IQR, diamond = mean, line = median)',
                  fontweight='bold', pad=20)
     ax.grid(axis='y', alpha=0.3)
     for i, pair in enumerate(pairs):
@@ -684,11 +631,11 @@ def plot_runtime_variability(results_paths: list[Path],
                 ha='center', fontsize=9, color='gray')
 
     plt.tight_layout()
-    return _save("fig_5_7_runtime_variability", output_dir)
+    return _save("fig_5_6_runtime_variability", output_dir)
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.8 — P95 tail latency vs mean (faceted by mode)
+# Figure 5.7 — P95 tail latency vs mean (faceted by mode)
 # ---------------------------------------------------------------------------
 
 def plot_p95_travel_time(metrics: list[ScenarioMetrics],
@@ -749,15 +696,15 @@ def plot_p95_travel_time(metrics: list[ScenarioMetrics],
                   title='Engine', loc='upper right')
 
     axes[0].set_ylabel('Travel Time (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.8: P95 Tail Latency vs Mean Travel Time\n'
+    fig.suptitle('Figure 5.7: P95 Tail Latency vs Mean Travel Time\n'
                  '(bar = P95, dash = mean)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
-    return _save("fig_5_8_p95_tail_latency", output_dir)
+    return _save("fig_5_7_p95_tail_latency", output_dir)
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.9 — Trip-count parity (validates the SCC/feasibility filter)
+# Figure 5.8 — Trip-count parity (validates the SCC/feasibility filter)
 # ---------------------------------------------------------------------------
 
 def plot_trip_count_parity(metrics: list[ScenarioMetrics],
@@ -812,12 +759,190 @@ def plot_trip_count_parity(metrics: list[ScenarioMetrics],
 
     axes[0].set_ylabel('Completed Trips (avg over repeats)',
                        fontweight='bold')
-    fig.suptitle('Figure 5.9: Trip-Count Parity\n'
+    fig.suptitle('Figure 5.8: Trip-Count Parity\n'
                  '(every engine should complete the same N — '
                  'shows the SCC / feasibility filter is working)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
-    return _save("fig_5_9_trip_count_parity", output_dir)
+    return _save("fig_5_8_trip_count_parity", output_dir)
+
+
+# ---------------------------------------------------------------------------
+# Figure 5.9 — Demand composition (V5+ purpose taxonomy)
+# ---------------------------------------------------------------------------
+
+# Stack order (bottom → top): work-AM family, then school-AM, then PM family,
+# then school-PM. Within a family, the chain leg sits next to its base purpose
+# so they're visually grouped.
+_PURPOSE_STACK = [
+    "HBW_AM",
+    "HBW_AM_chained",
+    "HBSchool_AM",
+    "HBW_PM",
+    "HBW_PM_chained",
+    "HBSchool_PM",
+]
+_PURPOSE_COLORS = {
+    "HBW_AM":          "#1f77b4",   # blue
+    "HBW_AM_chained":  "#7eb6e1",   # light blue
+    "HBSchool_AM":     "#ff7f0e",   # orange
+    "HBW_PM":          "#2ca02c",   # green
+    "HBW_PM_chained":  "#9bd29b",   # light green
+    "HBSchool_PM":     "#d62728",   # red
+}
+
+
+def plot_demand_composition(metrics: list[ScenarioMetrics],
+                            output_dir: Path) -> Optional[Path]:
+    """V5+ trip-purpose breakdown per scenario. Stacked-bar version of the
+    DEMAND COMPOSITION text table that audit_fairness Q5 / analyze_benchmark
+    print. Pre-V5 bundles (no `purpose` column) are silently skipped; if no
+    scenario has V5+ data, the whole figure is omitted.
+    """
+    _require_matplotlib()
+    setup_style()
+
+    from evaluation.demand_composition import (
+        find_canonical_demand, read_demand_composition,
+    )
+
+    scenarios = sorted({m.city for m in metrics})
+    rows: list[tuple[str, dict]] = []
+    for sc in scenarios:
+        comp = read_demand_composition(find_canonical_demand(sc))
+        if comp:
+            rows.append((sc, comp))
+
+    if not rows:
+        print("    (skipped — no V5+ purpose data on any bundle)")
+        return None
+
+    fig, ax = plt.subplots(figsize=(max(8, 1.6 * len(rows) + 4), 6))
+    x_positions = list(range(len(rows)))
+    x_labels = [_city_label(sc) for sc, _ in rows]
+
+    bottoms = [0.0] * len(rows)
+    for purpose in _PURPOSE_STACK:
+        heights = [comp["by_purpose"].get(purpose, 0) for _, comp in rows]
+        if all(h == 0 for h in heights):
+            continue
+        ax.bar(
+            x_positions, heights, 0.55,
+            bottom=bottoms,
+            color=_PURPOSE_COLORS[purpose],
+            edgecolor='black', linewidth=0.5,
+            label=purpose,
+        )
+        bottoms = [b + h for b, h in zip(bottoms, heights)]
+
+    # Total trip count on top of each bar
+    for x, total in zip(x_positions, bottoms):
+        ax.text(x, total, f"{int(total):,}",
+                ha='center', va='bottom', fontsize=9, fontweight='bold')
+
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(x_labels)
+    ax.set_xlim(-0.5, len(rows) - 0.5)
+    ax.set_ylim(bottom=0)
+    ax.margins(y=0.10)
+    ax.set_ylabel('Trip count', fontweight='bold')
+    ax.grid(axis='y', alpha=0.3)
+    ax.legend(title='Purpose (V5+ taxonomy)',
+              loc='upper left', bbox_to_anchor=(1.02, 1.0))
+
+    fig.suptitle('Figure 5.9: Demand Composition by V5+ Trip Purpose\n'
+                 '(HBW = home–work, HBSchool = home–school, '
+                 '_chained = parent dropping kid en route)',
+                 fontweight='bold', y=1.02)
+    plt.tight_layout()
+    return _save("fig_5_9_demand_composition", output_dir)
+
+
+# ---------------------------------------------------------------------------
+# Figure 5.10 — Wall vs engine breakdown (Phase 11.6 timing split)
+# ---------------------------------------------------------------------------
+
+def plot_wall_vs_engine(results_paths: list[Path],
+                        output_dir: Path) -> Optional[Path]:
+    """Per-cell stacked bar: engine subprocess at the bottom, adapter
+    prep + output parsing on top. Documents where time actually goes
+    after the wall/engine split shipped in Phase 11.6 — Chapter 5
+    runtime tables cite the engine portion only, but adapter prep
+    (per-trip BFS routing) dominates for large scenarios.
+
+    Skipped when no run carries the new ``cell_wall_s`` /
+    ``engine_wall_s`` fields (pre-Phase 11.6 result files).
+    """
+    _require_matplotlib()
+    setup_style()
+
+    by_cell: dict[tuple[str, str, str], dict[str, list[float]]] = {}
+    for rp in results_paths:
+        data = load_results(rp)
+        for run in data.get("results", data.get("runs", [])):
+            if run.get("status") != "success":
+                continue
+            cell = run.get("cell_wall_s")
+            eng = run.get("engine_wall_s")
+            if cell is None or eng is None:
+                continue
+            scenario, engine, mode = _identify(run)
+            slot = by_cell.setdefault(
+                (scenario, engine, mode),
+                {"cell": [], "engine": []},
+            )
+            slot["cell"].append(float(cell))
+            slot["engine"].append(float(eng))
+
+    if not by_cell:
+        print("    (skipped — no cell_wall_s / engine_wall_s fields; "
+              "regenerate runs under Phase 11.6+)")
+        return None
+
+    cells = sorted(by_cell.keys())
+    engine_means = [statistics.mean(by_cell[c]["engine"]) for c in cells]
+    cell_means = [statistics.mean(by_cell[c]["cell"]) for c in cells]
+    prep_means = [max(0.0, w - e) for w, e in zip(cell_means, engine_means)]
+
+    x_positions = list(range(len(cells)))
+    labels = [f"{_city_label(sc)}\n{eng.upper()} ({mode})"
+              for (sc, eng, mode) in cells]
+
+    fig, ax = plt.subplots(figsize=(max(9, 1.4 * len(cells) + 3), 6))
+    ax.bar(
+        x_positions, engine_means, 0.6,
+        color=[ENGINE_COLORS.get(c[1], 'gray') for c in cells],
+        edgecolor='black', linewidth=0.5,
+        label='Engine subprocess (cited by Chapter 5)',
+    )
+    ax.bar(
+        x_positions, prep_means, 0.6,
+        bottom=engine_means,
+        color='lightgray', hatch='//',
+        edgecolor='black', linewidth=0.5,
+        label='Adapter prep + output parse',
+    )
+
+    for x, total, eng, prep in zip(
+            x_positions, cell_means, engine_means, prep_means):
+        ax.text(x, total, f"{total:.0f}s\n({eng:.0f}s eng)",
+                ha='center', va='bottom', fontsize=8)
+
+    ax.set_xticks(x_positions)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_xlim(-0.5, len(cells) - 0.5)
+    ax.set_ylim(bottom=0)
+    ax.margins(y=0.20)
+    ax.set_ylabel('Wall time (seconds, mean across reps)', fontweight='bold')
+    ax.grid(axis='y', alpha=0.3)
+    ax.legend(loc='upper left')
+
+    fig.suptitle('Figure 5.10: Per-Cell Wall Time Breakdown — '
+                 'Engine Subprocess vs Adapter Prep\n'
+                 '(adapter prep = per-trip BFS routing + canonical→engine conversion)',
+                 fontweight='bold', y=1.02)
+    plt.tight_layout()
+    return _save("fig_5_10_wall_vs_engine", output_dir)
 
 
 # ---------------------------------------------------------------------------
@@ -868,18 +993,20 @@ def generate_all_plots(results_paths: list[Path],
          lambda: plot_reproducibility_heatmap(metrics, output_dir)),
         ("Travel time comparison (Fig 5.3)", 'travel_time',
          lambda: plot_travel_time_comparison(metrics, output_dir)),
-        ("Engine summary (Fig 5.4)", 'engine_summary',
-         lambda: plot_engine_summary(metrics, output_dir)),
-        ("Speedup analysis (Fig 5.5)", 'speedup',
+        ("Speedup analysis (Fig 5.4)", 'speedup',
          lambda: plot_speedup_analysis(metrics, output_dir)),
-        ("Micro vs Meso (Fig 5.6)", 'micro_vs_meso',
+        ("Micro vs Meso (Fig 5.5)", 'micro_vs_meso',
          lambda: plot_micro_vs_meso(metrics, output_dir)),
-        ("Runtime variability (Fig 5.7)", 'runtime_variability',
+        ("Runtime variability (Fig 5.6)", 'runtime_variability',
          lambda: plot_runtime_variability(results_paths, output_dir)),
-        ("P95 tail latency (Fig 5.8)", 'p95_tail_latency',
+        ("P95 tail latency (Fig 5.7)", 'p95_tail_latency',
          lambda: plot_p95_travel_time(metrics, output_dir)),
-        ("Trip-count parity (Fig 5.9)", 'trip_count_parity',
+        ("Trip-count parity (Fig 5.8)", 'trip_count_parity',
          lambda: plot_trip_count_parity(metrics, output_dir)),
+        ("Demand composition (Fig 5.9)", 'demand_composition',
+         lambda: plot_demand_composition(metrics, output_dir)),
+        ("Wall vs engine breakdown (Fig 5.10)", 'wall_vs_engine',
+         lambda: plot_wall_vs_engine(results_paths, output_dir)),
     ]
     for label, key, fn in plot_specs:
         print(f"  → {label}...")

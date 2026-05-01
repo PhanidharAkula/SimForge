@@ -143,18 +143,12 @@ QUICK START:
   3. Run simulation:  python run.py --scenario chicago_1k_car --engine sumo --mode meso
   4. Run benchmark:   python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
-INTERACTIVE MENU (when run from a terminal):
+INTERACTIVE MENU (default when run from a terminal):
   python help.py                    Full-screen TUI (curses-based).
                                       ↑/↓:    navigate / scroll
                                       Enter:  open the highlighted topic
                                       Esc:    return to the menu
                                       q:      quit (from the menu)
-                                    PgUp/PgDn page-scroll and Home/End
-                                    jump-to-top/bottom also work inside
-                                    a topic (use Fn + arrows on Mac
-                                    compact keyboards).
-  python help.py --interactive      Force interactive mode (e.g. for testing)
-  python help.py --no-interactive   Force this overview text (escape hatch)
 
   Falls back automatically to a numbered-input menu (with /<word>
   search) if curses can't initialise — e.g. on dumb terminals.
@@ -176,33 +170,29 @@ PASTE-SAFE TEXT MODE (any topic name, any environment):
   python help.py troubleshooting    Common issues and fixes
 
 PROJECT STRUCTURE (alphabetical, repo root):
-  adapters/             Simulator-specific converters (sumo, matsim, dtalite)
-  canonical/            Canonical bundle schema spec (canonical/schema/)
-  cluster/              HPC cluster integration (Pitzer SLURM sbatches)
-  doc/                  Architecture, retrospectives, thesis chapters
-                        (doc/engines/ has LPSim/QarSUMO retrospectives +
-                        DTALite selection rationale + thesis quote bank)
-  evaluation/           Metrics, analysis, fairness audit, plot generation
-  execution/            Benchmark harness (runspec-driven, run_benchmark.py)
-  lib/                  Third-party JARs (matsim-15.0/) + version pins
-                        (lib/dtalite/manifest.json)
-  modelgen/             Census microdata files (ModelGen PUMS)
-  osm_data/             Hash-pinned OSM PBF snapshots + manifest.json
-                        (URL + SHA256 provenance for every PBF)
-  pipeline/             Data generation modules (network, demand, signals)
-  runspecs/             Benchmark configuration files (YAML)
-  scenarios/            Generated canonical data bundles
-  scripts/              5 ready-to-use generation scripts (01–05)
-  tests/                Test suite (pytest, ~477 tests across 23 files
-                        with the 3 tracked bundles; +36 per extra bundle)
-  tools/                Operator utilities (analyze_scenarios.py, clean.sh,
-                        download_osm.py, env_report.py, inspect_network.py)
+  adapters/           Simulator-specific converters (sumo, matsim, dtalite)
+  canonical/          Canonical bundle schema spec (canonical/schema/)
+  cluster/            HPC cluster integration (Pitzer SLURM sbatches)
+  doc/                Architecture, retrospectives, thesis chapters
+  evaluation/         Metrics, analysis, fairness audit, plot generation
+  execution/          Benchmark harness (runspec-driven, run_benchmark.py)
+  lib/                Third-party JARs (matsim-15.0/) + version pins
+  modelgen/           Census microdata files (ModelGen PUMS)
+  osm_data/           Hash-pinned OSM PBF snapshots + manifest.json
+  pipeline/           Data generation modules (network, demand, signals)
+  runspecs/           Benchmark configuration files (YAML)
+  scenarios/          Generated canonical data bundles
+  scripts/            5 ready-to-use generation scripts (01–05)
+  tests/              Test suite (pytest, ~477 tests across 23 files;
+                      +36 per extra generated bundle in scenarios/)
+  tools/              Operator utilities (analyze_scenarios.py, clean.sh,
+                      download_osm.py, env_report.py, inspect_network.py)
 
   Top-level files:
-    generate.py         Unified scenario generator (start here)
-    run.py              Simulation runner CLI
-    help.py             This help system
-    setup_simforge.py   Bootstrap installer (creates .venv, installs deps)
+  generate.py         Unified scenario generator (start here)
+  run.py              Simulation runner CLI
+  help.py             This help system
+  setup_simforge.py   Bootstrap installer (creates .venv, installs deps)
 """
 
 HELP_GENERATE = """
@@ -271,13 +261,12 @@ TIME REFERENCES (seconds from midnight):
 
 EXAMPLES:
   python generate.py --city chicago --trips 5000
-  python generate.py --city la --trips 200000 --modes car,transit \\
-         --start-time 21600 --end-time 32400
+  python generate.py --city la --trips 200000 --modes car,transit --start-time 21600 --end-time 32400
   python generate.py --city chicago --trips 10000 --radius 8.0 --seed 7
   python generate.py --city la --trips 2000000 --allow-oversample
   python generate.py --city chicago --trips 5000 --synthetic
-  python generate.py --city chicago --trips 5000 --force-overpass    # today's OSM
-  python generate.py --city chicago --trips 5000 --verbose           # firehose
+  python generate.py --city chicago --trips 5000 --force-overpass     # today's OSM
+  python generate.py --city chicago --trips 5000 --verbose            # firehose
   python generate.py --preset chicago_1k_car
   python generate.py --preset nyc_10k_car --trips 100000 --city la
 
@@ -316,7 +305,8 @@ ENGINE / MODE COMPATIBILITY:
   matsim/micro and dtalite/micro pairs are skipped).
 
 OUTPUT FORMAT:
-  Per-cell rows show: [N/total] engine mode seed=N ✓/✗ runtime
+  Per-cell rows show: [N/total] engine mode seed=N ✓ wall (engine)
+  e.g. `[1/3]  matsim   meso  seed=42  ✓   25.3s wall (10.6s engine)`
   Scenario dividers (▶ scenario_name) group cells visually.
   Sticky progress bar at the bottom (TTY only) shows overall %,
   ✓N ✗N counters, elapsed clock, and a Braille spinner heartbeat
@@ -324,16 +314,33 @@ OUTPUT FORMAT:
   cells are wildly heterogeneous, so a running-mean ETA swings between
   unhelpful extremes; the percentage + counter + elapsed carry the
   same information without misleading you.)
-  Final summary includes per-cell timing breakdown (mean ± 95% CI across
-  reps, computed via evaluation/metrics/confidence.py — same Student's-t
-  table the thesis tables/figures use).
+
+  TWO TIMING NUMBERS — what they mean and why both:
+    wall   = full per-cell wall clock: adapter prep (canonical → engine
+             format, including the per-trip BFS pre-routing the SUMO/MATSim
+             adapters do) + engine subprocess + output parsing.
+             Per-cell wall times sum to the harness "Wall time" total —
+             this is the answer to "how long did this benchmark take?".
+    engine = engine subprocess only (mobsim / DTA iteration / queue net).
+             What Chapter 5 runtime tables cite, since the engine paradigm
+             is what the thesis benchmarks — not the Python adapter cost.
+             Same number as before any wall/engine split.
+
+  Failed cells are listed first in the summary (with cleaned-up errors:
+  noise prefixes stripped, repeated warnings collapsed to "(+N more)",
+  word-boundary truncation), then per-cell wall + engine 95 % CIs.
+
+  JSON fields per result entry:
+    cell_wall_s    — full per-cell wall (NEW)
+    engine_wall_s  — engine subprocess (NEW; alias of wall_time_s on success)
+    runtime_s      — back-compat: engine on success, full wall on failure;
+                     downstream tools (analyze_benchmark, generate_plots)
+                     still key off this so thesis figures don't drift.
 
 EXAMPLES:
   python run.py --engine sumo --mode meso
-  python run.py --scenario chicago_1k_car --engine sumo,matsim,dtalite \\
-         --mode meso --repeats 3
-  python run.py --scenario chicago_1k_car --engine sumo --mode meso,micro \\
-         --repeats 5 --verbose
+  python run.py --scenario chicago_1k_car --engine sumo,matsim,dtalite --mode meso --repeats 3
+  python run.py --scenario chicago_1k_car --engine sumo --mode meso,micro --repeats 5 --verbose
   python run.py --validate-only
 
 POST-BENCHMARK PIPELINE (canonical 3-step):
@@ -342,9 +349,8 @@ POST-BENCHMARK PIPELINE (canonical 3-step):
   python -m evaluation.generate_plots    <run-dir>/benchmark_results.json
 
 BENCHMARK HARNESS (runspec-driven, for full matrices):
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml       # canonical matrix
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml             # canonical matrix
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run   # validate plan, no run
 
 run.py vs run_benchmark.py:
   Both call the same adapters; the wrapping differs. run.py writes a flat
@@ -464,10 +470,10 @@ SUPPORTED SIMULATORS:
   doc/engines/THIRD_ENGINE_OPTIONS.md.
 
 ADAPTER CLI:
-  python -m adapters.sumo.cli    <scenario_path> <output_dir>          # convert only
+  python -m adapters.sumo.cli    <scenario_path> <output_dir>                  # convert only
   python -m adapters.sumo.cli    <scenario_path> <output_dir> --run --mesoscopic
   python -m adapters.matsim.cli  <scenario_path> <output_dir> --run
-  python -m adapters.dtalite.cli <scenario_path> <output_dir> --run    # CPU only
+  python -m adapters.dtalite.cli <scenario_path> <output_dir> --run            # CPU only
 
 SUMO NOTES:
   * `--run` invokes `sumo` with `--ignore-route-errors`. That flag is required:
@@ -614,28 +620,32 @@ GENERATE THESIS PLOTS:
   python -m evaluation.generate_plots <results.json> [--output DIR] [--clean]
 
   Generates (PNG + PDF):
-    Fig 5.1 — Runtime comparison (grouped bar: city x engine)
-    Fig 5.2 — Reproducibility heatmap (engine x city R-scores)
-    Fig 5.3 — Travel time comparison (mean +/- std by engine)
-    Fig 5.4 — Engine performance summary (runtime, R-score, throughput)
-    Fig 5.5 — Speedup vs MATSim baseline
-    Fig 5.6 — Micro vs Meso runtime comparison
-    Fig 5.7 — Runtime variability box plot
-    Fig 5.8 — P95 tail latency comparison
-    Fig 5.9 — Trip-count parity (engine-internal drop reasons)
+    Fig 5.1  — Engine runtime comparison (grouped bar: city x engine)
+    Fig 5.2  — Reproducibility heatmap (engine x city R-scores)
+    Fig 5.3  — Travel time comparison (mean +/- std by engine)
+    Fig 5.4  — Speedup vs MATSim baseline
+    Fig 5.5  — Micro vs Meso engine runtime comparison
+    Fig 5.6  — Engine runtime variability (boxplot)
+    Fig 5.7  — P95 tail latency comparison
+    Fig 5.8  — Trip-count parity (engine-internal drop reasons)
+    Fig 5.9  — Demand composition (V5+ trip-purpose taxonomy: HBW + HBSchool
+               + chains; reads canonical demand.csv `purpose` column)
+    Fig 5.10 — Per-cell wall time breakdown (Phase 11.6+: engine subprocess
+               vs adapter prep; needs cell_wall_s / engine_wall_s in JSON)
 
   Default output: plots/ next to the results JSON file.
   Use --clean to delete old plots before regenerating.
 
-EXAMPLES (using the canonical stress-test runspec):
-  python -m evaluation.analyze_benchmark \\
-         runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
+  Fig 5.9 / 5.10 are auto-skipped when their data isn't available:
+  Fig 5.9 needs at least one bundle with a V5+ `purpose` column on
+  demand.csv; Fig 5.10 needs results saved by run.py / run_benchmark.py
+  Phase 11.6+ (which write `cell_wall_s` and `engine_wall_s`).
+
+EXAMPLES (using the canonical small-tier runspec):
+  python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
   python -m evaluation.audit_fairness runs/benchmark_small
-  python -m evaluation.compare_modes --from-benchmark \\
-         runs/benchmark_small/benchmark_results_benchmark_small.json
-  python -m evaluation.generate_plots \\
-         runs/benchmark_small/benchmark_results_benchmark_small.json \\
-         --output doc/figures --clean
+  python -m evaluation.compare_modes --from-benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
+  python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures --clean
 """
 
 HELP_BENCHMARK = """
@@ -676,23 +686,26 @@ OUTPUT FORMAT:
   Banner with the matrix dimensions (Runspec, Scenarios, Engines, Modes,
   Repeats, Total). Pre-validation block (each unique bundle once).
   Scenario dividers (▶ scenario_id) group cells visually. Per-cell rows:
-  [N/total] engine mode seed=N ✓/✗ runtime. Sticky progress bar at the
-  bottom (TTY only) shows %, ✓N ✗N counters, elapsed clock, Braille
-  spinner heartbeat. (No ETA — see python help.py run for rationale.)
-  Final summary mirrors run.py: Wall time + ✓ Completed + ✗ Failed + per-cell
-  timing breakdown (mean ± 95% CI across reps, Student's-t via
-  evaluation/metrics/confidence.py). Default mode shows WARNING+ records
-  routed above the bar via print_above(); --verbose drops the threshold to
-  INFO+ for full adapter chatter.
+  [N/total] engine mode seed=N ✓ wall (engine) — same dual-time format
+  as run.py (full per-cell wall + engine subprocess in parens; see
+  python help.py run for the wall-vs-engine rationale and JSON field
+  names). Sticky progress bar at the bottom (TTY only) shows %, ✓N ✗N
+  counters, elapsed clock, Braille spinner heartbeat. (No ETA — see
+  python help.py run for rationale.)
+  Final summary mirrors run.py: Wall time + ✓ Completed + ✗ Failed +
+  Failed cells (with cleaned-up errors) + Per-cell wall time breakdown
+  (mean ± 95 % CI across reps, Student's-t via evaluation/metrics/
+  confidence.py; engine-only mean appears in parens for thesis citing).
+  Default mode shows WARNING+ records routed above the bar via
+  print_above(); --verbose drops the threshold to INFO+ for full
+  adapter chatter.
 
 REPRODUCE THE THESIS NUMBERS END-TO-END (~40-100 min on M-series Mac;
 ~25 min on Linux/HPC where SUMO micro on nyc_10k_car runs faster):
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
-  python -m evaluation.analyze_benchmark \\
-         runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
+  python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
   python -m evaluation.audit_fairness runs/benchmark_small
-  python -m evaluation.generate_plots \\
-         runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
+  python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
 OUTPUT SHAPE:
   runs/<runspec_name>/
@@ -704,8 +717,10 @@ OUTPUT SHAPE:
   Top-level JSON keys: runspec_name, started_at, completed_at, total_runs,
   successful_runs, failed_runs, summary, results[]. Each results[] entry
   carries scenario, scenario_id, engine, mode, seed, repeat, repeat_index,
-  status, runtime_s, wall_time_s, output_dir, tripinfo_path, error_message,
-  metrics. Schema is BenchmarkResult.to_dict() in execution/run_benchmark.py.
+  status, runtime_s, wall_time_s, engine_wall_s, cell_wall_s, output_dir,
+  tripinfo_path, error_message, metrics. (See python help.py run for the
+  wall-vs-engine field semantics.) Schema is BenchmarkResult.to_dict() in
+  execution/run_benchmark.py.
 
   This layout differs from run.py's flat output (runs/benchmark_<timestamp>/
   <scenario>_<engine>_<mode>_seed<N>/ + benchmark_results.json with a
@@ -733,17 +748,17 @@ Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 helpers live in tests/conftest.py.
 
 RUN COMMANDS:
-  python -m pytest                              # Full suite — per-FILE rollup rows
-  python -m pytest -v                           # Verbose — per-TEST ✓/✗/⊘ rows
-  python -m pytest -v -x                        # Verbose, stop on first failure
-  python -m pytest tests/test_feasibility.py    # One file
-  python -m pytest tests/test_feasibility.py -v # One file, verbose
-  python -m pytest tests/test_scc.py -k "kosaraju"      # Substring filter
-  python -m pytest --cov --cov-report=term-missing      # With coverage
-  python -m pytest --cov --cov-fail-under=70            # Enforce 70 % floor
-  python -m pytest -n auto                      # Parallel (needs pytest-xdist)
-  python -m pytest --collect-only               # List tests without running
-  python -m pytest -p no:sticky_progress        # Plain pytest output (no plugin)
+  python -m pytest                                    # Full suite — per-FILE rollup rows
+  python -m pytest -v                                 # Verbose — per-TEST ✓/✗/⊘ rows
+  python -m pytest -v -x                              # Verbose, stop on first failure
+  python -m pytest tests/test_feasibility.py          # One file
+  python -m pytest tests/test_feasibility.py -v       # One file, verbose
+  python -m pytest tests/test_scc.py -k "kosaraju"    # Substring filter
+  python -m pytest --cov --cov-report=term-missing    # With coverage
+  python -m pytest --cov --cov-fail-under=70          # Enforce 70 % floor
+  python -m pytest -n auto                            # Parallel (needs pytest-xdist)
+  python -m pytest --collect-only                     # List tests without running
+  python -m pytest -p no:sticky_progress              # Plain pytest output (no plugin)
 
 MARKERS (registered in pyproject.toml; --strict-markers enforced):
   integration     Exercises multiple subsystems end-to-end
@@ -764,7 +779,7 @@ TEST FILES (23 files / ~477 tests with the 3 tracked bundles in scenarios/;
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
                                         (incl. Phase 10 demand composition table)
-  test_audit_fairness.py          (29)  Q1-Q4 audit helpers + 4-layout detector
+  test_audit_fairness.py          (29)  Q1-Q5 audit helpers + 4-layout detector
                                         + synthetic-run-dir orchestrator test
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
   test_demand_composition.py      (7)   V5+ Phase 10 — `purpose` column tally,
@@ -833,19 +848,20 @@ WHAT THE OUTPUT LOOKS LIKE:
   diagnosing the plugin itself.
 
 COVERAGE:
-  python -m pytest --cov                        # Terminal summary
-  python -m pytest --cov --cov-report=html      # HTML report in htmlcov/
-  python -m pytest --cov --cov-fail-under=70    # Enforce 70 % floor
+  python -m pytest --cov                              # Terminal summary
+  python -m pytest --cov --cov-report=html            # HTML report in htmlcov/
+  python -m pytest --cov --cov-fail-under=70          # Enforce 70 % floor
 
   Current line coverage: ~76 % (branch coverage enabled). Source set and
   omit list configured in pyproject.toml [tool.coverage]. Dev tools install
   via: pip install -r requirements-dev.txt
 
 MUTATION TESTING:
-  mutmut run                                    # Run against the cross-engine
-  mutmut results                                # fairness modules only.
-  Scope defined in pyproject.toml [tool.mutmut]; documented in
-  doc/MUTATION_BASELINE.md.
+  mutmut run                                          # Run mutation tests
+  mutmut results                                      # Show survivor summary
+
+  Scoped to the cross-engine fairness modules only (see pyproject.toml
+  [tool.mutmut]; documented in doc/MUTATION_BASELINE.md).
 
 SHARED FIXTURES (tests/conftest.py):
   bundled_scenario           Canonical chicago_1k_car scenario path
@@ -1050,10 +1066,10 @@ DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
 
 VERIFY THE INSTALL (full sanity check):
   source .venv/bin/activate
-  python -m pytest                              # Full test suite (~3-4 min on arm64)
+  python -m pytest                                                           # Full test suite (~3-4 min on arm64)
   python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml      # ~40-100 min on M-series Mac
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml            # ~40-100 min on M-series Mac
 
 MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
   python3.10+ -m venv .venv
@@ -1076,26 +1092,12 @@ OSM PBF SNAPSHOTS (required only if you regenerate scenarios):
   scenarios/chicago_1k_car/ bundle works without running this.
 
 OPERATOR UTILITIES (tools/):
-  tools/download_osm.py      Hash-pinned Geofabrik PBF fetcher
-  tools/clean.sh             Wipe __pycache__ / *.pyc / .pytest_cache
-  tools/clean.sh --all       Also drops cache/ (Overpass HTTP cache)
-  tools/inspect_network.py <scenario_dir>    Length distribution + degenerate-edge report
-  tools/env_report.py                        Toolchain + dep + binary versions, for cross-machine parity check
-  tools/analyze_scenarios.py [name…]         Tabular end-to-end analysis of one or
-                                             more scenario bundles. Seven sections,
-                                             scenarios as columns:
-                                               configuration / network / road_classes /
-                                               signals / demand (with subsections for
-                                               trip-purpose breakdown + peak split) /
-                                               artefacts (file sizes) / toolchain
-                                             Default: every bundle in scenarios/.
-                                             Auto-paginates when too many scenarios
-                                             for the terminal width — each section
-                                             splits into pages of N scenarios.
-                                             Flags:
-                                               --section <name>     pick subset
-                                                                    (repeatable)
-                                               --no-color           plain ASCII
+  tools/download_osm.py                Hash-pinned Geofabrik PBF fetcher
+  tools/clean.sh                       Wipe __pycache__ / *.pyc / .pytest_cache
+  tools/clean.sh --all                 Also drops cache/ (Overpass HTTP cache)
+  tools/inspect_network.py <dir>       Link length distribution + degenerate-edge report
+  tools/env_report.py                  Toolchain + dep + binary versions (parity check)
+  tools/analyze_scenarios.py [name…]   Tabular bundle analyzer — see python help.py analyzer
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle
@@ -1763,31 +1765,16 @@ def _interactive_loop() -> int:
 def main() -> int:
     """Help system entry point.
 
-    Behavior matrix (preserves paste-safe text mode):
-      no args  + TTY      → interactive menu
-      no args  + non-TTY  → print HELP_OVERVIEW (paste-safe)
+    Behavior matrix:
+      no args  + TTY      → interactive menu (curses TUI; auto-falls back
+                            to the legacy numbered menu if curses can't init)
+      no args  + non-TTY  → print HELP_OVERVIEW (paste-safe for pipes / CI)
       <topic>             → print topic to stdout (paste-safe)
-      -i / --interactive  → force interactive (even if non-TTY, for testing)
-      --no-interactive    → force text overview (escape hatch)
-
-    The `<topic>` path is back-compat: anything that worked on a previous
-    SimForge release still produces the same paste-able plain text.
     """
     args = sys.argv[1:]
 
-    # Explicit flag overrides.
-    if "--no-interactive" in args:
-        print(HELP_OVERVIEW)
-        return 0
-    force_interactive = ("-i" in args) or ("--interactive" in args)
-
-    # Strip flags so positional arg handling sees only topic names.
-    args = [a for a in args
-            if a not in ("--no-interactive", "-i", "--interactive")]
-
-    # No positional arg → interactive (when TTY) or overview (otherwise).
     if not args:
-        if force_interactive or _is_tty():
+        if _is_tty():
             try:
                 return _interactive_loop()
             except KeyboardInterrupt:
@@ -1796,7 +1783,6 @@ def main() -> int:
         print(HELP_OVERVIEW)
         return 0
 
-    # Positional topic — paste-safe text mode.
     topic = args[0].lower().strip("-")
     if topic in ("h", "help"):
         print(HELP_OVERVIEW)
@@ -1805,7 +1791,6 @@ def main() -> int:
         print(_resolve_content(topic))
         return 0
 
-    # Unknown topic.
     print(f"\nUnknown help topic: '{topic}'")
     print(f"\nAvailable topics: {', '.join(sorted(set(TOPICS.keys())))}")
     print("\nUsage: python help.py [topic]")

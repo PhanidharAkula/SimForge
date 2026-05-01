@@ -205,7 +205,7 @@ python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_be
 #    Q3: same trip count, Q4: paradigm-spread travel-time ratios)
 python -m evaluation.audit_fairness runs/benchmark_small
 
-# 5. Render the 9 thesis figures
+# 5. Render the 10 thesis figures
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
@@ -360,7 +360,7 @@ Produces:
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
-Renders Fig 5.1 – Fig 5.9 (PNG + PDF) into `runs/benchmark_small/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
+Renders Fig 5.1 – Fig 5.10 (PNG + PDF) into `runs/benchmark_small/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
 
 ---
 
@@ -406,15 +406,16 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 
 | Figure   | What it shows                                              |
 | -------- | ---------------------------------------------------------- |
-| Fig 5.1  | Cross-engine runtime bar chart (mean + error bars)         |
+| Fig 5.1  | Cross-engine **engine** runtime bar chart (mean + error bars; engine subprocess only) |
 | Fig 5.2  | Reproducibility heatmap (R-Score per cell)                 |
 | Fig 5.3  | Travel-time comparison (mean + error bars)                 |
-| Fig 5.4  | Engine summary panel                                       |
-| Fig 5.5  | Speedup analysis (relative to mesoscopic baseline)         |
-| Fig 5.6  | Micro vs meso comparison                                   |
-| Fig 5.7  | Runtime variability (boxplot per cell)                     |
-| Fig 5.8  | P95 tail-latency analysis                                  |
-| Fig 5.9  | Throughput (vehicles per second per core)                  |
+| Fig 5.4  | Speedup analysis (relative to MATSim baseline, within-mode) |
+| Fig 5.5  | Micro vs meso engine runtime comparison                    |
+| Fig 5.6  | Engine runtime variability (boxplot per cell)              |
+| Fig 5.7  | P95 tail-latency analysis                                  |
+| Fig 5.8  | Trip-count parity (validates SCC/feasibility filter)       |
+| Fig 5.9  | Demand composition — V5+ trip-purpose stacked bar           |
+| Fig 5.10 | Wall vs engine breakdown (Phase 11.6+ result files only)   |
 
 See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for each figure's full interpretation.
 

@@ -24,6 +24,8 @@ from pathlib import Path
 from typing import Optional
 import logging
 
+from execution.cli_format import format_error_oneline as _format_error_oneline
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -35,18 +37,30 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class RunResult:
-    """Result of a single simulation run."""
+    """Result of a single simulation run.
+
+    Three timing fields, all in seconds:
+      • runtime_s     — back-compat alias for engine_wall_s. Thesis tools
+                        (analyze_benchmark, generate_plots) key off this.
+      • engine_wall_s — engine subprocess only (mobsim / UE / netsim).
+                        What Chapter 5 runtime tables cite.
+      • cell_wall_s   — full per-cell wall: adapter prep (incl. per-trip BFS
+                        routing) + engine subprocess + output parse.
+                        Sums to the harness "Wall time" total.
+    """
     scenario: str                       # Base scenario name (e.g. "chicago_1k_car")
     engine: str                         # "sumo", "matsim", "dtalite"
     mode: str                           # "micro" or "meso"
     seed: int
     repeat_index: int                   # 0-based
     status: str                         # "success", "failed", "timeout"
-    runtime_s: float
+    runtime_s: float                    # engine subprocess only (back-compat)
     output_dir: Path
     tripinfo_path: Optional[Path] = None
     error_message: Optional[str] = None
     metrics: dict = field(default_factory=dict)
+    engine_wall_s: float = 0.0          # engine subprocess only (== runtime_s on success)
+    cell_wall_s: float = 0.0            # full per-cell wall (prep + engine + parse)
 
     @property
     def scenario_id(self) -> str:
@@ -70,6 +84,8 @@ class RunResult:
             "status": self.status,
             "runtime_s": self.runtime_s,
             "wall_time_s": self.runtime_s,
+            "engine_wall_s": self.engine_wall_s,
+            "cell_wall_s": self.cell_wall_s,
             "output_dir": str(self.output_dir),
             "tripinfo_path": str(self.tripinfo_path) if self.tripinfo_path else None,
             "error_message": self.error_message,
@@ -620,18 +636,24 @@ class BenchmarkHarness:
                     engine_options=run_config.engine_options,
                     mesoscopic=mesoscopic,
                 )
-                results.append(result)
                 elapsed = time.perf_counter() - cell_started_at
-                wall = result.runtime_s or round(elapsed, 2)
+                cell_wall_s = round(elapsed, 2)
+                engine_wall_s = round(result.runtime_s or 0.0, 2)
+                # Backfill wall fields the harness now exposes.
+                result.cell_wall_s = cell_wall_s
+                result.engine_wall_s = engine_wall_s
+                results.append(result)
 
                 ok = result.status == "success"
                 if ok:
                     mark = "✓"
-                    tail = f"{wall:>7.1f}s"
+                    if engine_wall_s > 0:
+                        tail = f"{cell_wall_s:>6.1f}s wall  ({engine_wall_s:>5.1f}s engine)"
+                    else:
+                        tail = f"{cell_wall_s:>6.1f}s wall"
                 else:
                     mark = "✗"
-                    err = " ".join((result.error_message or "unknown error").split())[:60]
-                    tail = f"FAIL  {err}"
+                    tail = f"FAIL  {_format_error_oneline(result.error_message, max_len=72)}"
 
                 progress.print_above(
                     f"  [{cell_idx:>{cell_idx_w}}/{total_runs}]  "
@@ -673,22 +695,37 @@ class BenchmarkHarness:
         print(f"  ✗ Failed:     {failed}/{total_runs}")
 
         from evaluation.metrics.confidence import confidence_interval_95
-        by_cell: dict[tuple, list[float]] = {}
+        import statistics
+        by_cell_wall: dict[tuple, list[float]] = {}
+        by_cell_engine: dict[tuple, list[float]] = {}
         for r in results:
             if r.status != "success":
                 continue
             key = (r.scenario, r.engine, r.mode)
-            by_cell.setdefault(key, []).append(r.runtime_s)
-        if by_cell:
-            print("\n  Per-cell timing (mean ± 95% CI across reps, successful runs only):")
-            for (sc, eng, md), times in by_cell.items():
-                ci = confidence_interval_95(times)
+            by_cell_wall.setdefault(key, []).append(r.cell_wall_s or r.runtime_s)
+            by_cell_engine.setdefault(key, []).append(r.engine_wall_s or r.runtime_s)
+
+        failed_results = [r for r in results if r.status != "success"]
+        if failed_results:
+            print(f"\n  ✗ Failed cells (full error in {results_path.name} `error_message` field):")
+            for r in failed_results:
+                msg = _format_error_oneline(r.error_message, max_len=72)
+                print(f"    {r.scenario:<{sc_w}}  {r.engine:<{eng_w}}  "
+                      f"{r.mode:<{mode_w}}  seed={r.seed}  {msg}")
+
+        if by_cell_wall:
+            print("\n  Per-cell wall time (full prep + engine + parse, mean ± 95 % CI across reps;")
+            print("  engine-only mean in parens — that's the number Chapter 5 tables cite):")
+            for (sc, eng, md), wall_times in by_cell_wall.items():
+                eng_times = by_cell_engine.get((sc, eng, md), [])
+                ci = confidence_interval_95(wall_times)
+                eng_mean = statistics.mean(eng_times) if eng_times else 0.0
                 note = "" if ci.n >= 2 else "  (N=1, no CI)"
                 print(f"    {sc:<{sc_w}}  {eng:<{eng_w}}  {md:<{mode_w}}  "
-                      f"{ci.mean:>7.1f}s ± {ci.half_width:>5.1f}s  "
-                      f"({ci.n} runs){note}")
+                      f"{ci.mean:>7.1f}s ± {ci.half_width:>5.1f}s wall  "
+                      f"(engine {eng_mean:>5.1f}s)  ({ci.n} runs){note}")
 
-        print(f"\n  📁 Results:    {results_path}")
+        print(f"\n  📁 Results:    {results_path}\n")
         print("=" * 60 + "\n")
 
         return benchmark_result
