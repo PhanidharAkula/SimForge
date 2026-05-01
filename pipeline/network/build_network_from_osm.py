@@ -411,9 +411,12 @@ def extract_canonical_network(
         # OSM way connects two nodes that share identical coordinates (parking
         # connectors, barrier-crossing artifacts, etc.). SUMO would warn and
         # MATSim would emit teleport routes; safer to filter at extract time.
+        # Logged at INFO so the noise stays out of default-mode output and only
+        # surfaces under --verbose; the per-step summary line below still
+        # reports the aggregate `dropped N zero-length` count regardless.
         length_m = data.get("length", 100.0)
         if length_m <= 0:
-            logger.warning(
+            logger.info(
                 "Dropping degenerate edge u=%s v=%s key=%s length=%s "
                 "(osmid=%s, highway=%s) — endpoints share the same coordinates",
                 u, v, key, length_m, data.get("osmid"), highway,
