@@ -15,7 +15,7 @@
   "node_count": 20058,
   "link_count": 58778,
   "signal_count": 560,
-  "generation_time_s": 111.6,
+  "generation_time_s": 111.8,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/illinois-2026-04-22.osm.pbf",

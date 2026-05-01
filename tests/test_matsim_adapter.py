@@ -4,6 +4,12 @@ Tests for the MATSim adapter.
 `prepare_matsim_inputs` produces the four MATSim XML files (network, plans,
 vehicles, config) from a canonical scenario. These tests exercise file
 generation only — no Java or MATSim JAR is required.
+
+The expensive code paths (state-aware BFS pre-routing in
+`build_matsim_plans_xml`, full `prepare_matsim_inputs` runs) are shared via
+session-scoped fixtures so identical work is not repeated across N
+read-only assertions. Determinism of those paths is enforced separately
+in `tests/test_adapter_determinism.py` — this file checks structure only.
 """
 
 from __future__ import annotations
@@ -24,6 +30,76 @@ from adapters.matsim.matsim_adapter import (
     prepare_matsim_inputs,
     seconds_to_time_string,
 )
+
+
+# ---------------------------------------------------------------------------
+# Session-scoped fixtures (cache expensive prepare/build work across tests)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def canonical_network_data(bundled_scenario):
+    """`(nodes, links)` from the bundled scenario's network.xml — loaded once."""
+    return load_canonical_network(bundled_scenario / "network.xml")
+
+
+@pytest.fixture(scope="session")
+def built_network_xml(canonical_network_data):
+    """MATSim network XML string — built once per session."""
+    nodes, links = canonical_network_data
+    return build_matsim_network_xml(nodes, links)
+
+
+@pytest.fixture(scope="session")
+def built_plans_xml(bundled_scenario, canonical_network_data):
+    """MATSim plans XML string — built once per session.
+
+    This is the expensive call: state-aware BFS pre-routing runs once per
+    trip × N turn restrictions in network.xml. Caching it here drops the
+    `TestBuildMATSimPlans` class from ~30 s to ~10 s on chicago_1k_car.
+    """
+    _, links = canonical_network_data
+    feasible, _ = feasible_trip_ids(
+        bundled_scenario / "network.xml",
+        bundled_scenario / "demand.csv",
+    )
+    return build_matsim_plans_xml(
+        bundled_scenario / "demand.csv", links, feasible,
+        network_path=bundled_scenario / "network.xml",
+    )
+
+
+@pytest.fixture(scope="session")
+def prepared_chicago(bundled_scenario, tmp_path_factory):
+    """Full `prepare_matsim_inputs(chicago_1k_car)` run once per session.
+
+    The 4 read-only tests in `TestPrepareMATSimInputs` consume this
+    fixture instead of re-preparing per test. Drops their combined wall
+    time from ~40 s to ~10 s on chicago_1k_car.
+    """
+    out = tmp_path_factory.mktemp("matsim_prepared")
+    config_path = prepare_matsim_inputs(bundled_scenario, out)
+    return out, config_path
+
+
+@pytest.fixture(scope="session")
+def prepared_sweep(small_bundled_scenarios, tmp_path_factory):
+    """Map of every small bundled scenario → its prepared MATSim output.
+
+    The state-aware BFS pre-routing in `build_matsim_plans_xml` is O(trips)
+    and dominates wall time on the bigger bundles (nyc_10k_car: ~5-7 min
+    of BFS for 10K trips). Caching the prepared bundle once per session
+    is the single biggest speedup in this file.
+    """
+    if not small_bundled_scenarios:
+        return {}
+    base = tmp_path_factory.mktemp("matsim_sweep")
+    prepared: dict[Path, tuple[Path, Path]] = {}
+    for scenario_path in small_bundled_scenarios:
+        out = base / scenario_path.name
+        config_path = prepare_matsim_inputs(scenario_path, out)
+        prepared[scenario_path] = (out, config_path)
+    return prepared
 
 
 
@@ -80,19 +156,19 @@ class TestBuildVehiclesXml:
 
 
 class TestLoadCanonicalNetwork:
-    def test_loads_nodes_and_links(self, bundled_scenario):
-        nodes, links = load_canonical_network(bundled_scenario / "network.xml")
+    def test_loads_nodes_and_links(self, canonical_network_data):
+        nodes, links = canonical_network_data
         assert nodes
         assert links
 
-    def test_node_has_coordinates(self, bundled_scenario):
-        nodes, _ = load_canonical_network(bundled_scenario / "network.xml")
+    def test_node_has_coordinates(self, canonical_network_data):
+        nodes, _ = canonical_network_data
         for _node_id, node in list(nodes.items())[:5]:
             assert "x" in node and "y" in node
             assert isinstance(node["x"], float)
 
-    def test_link_has_required_fields(self, bundled_scenario):
-        _, links = load_canonical_network(bundled_scenario / "network.xml")
+    def test_link_has_required_fields(self, canonical_network_data):
+        _, links = canonical_network_data
         for link in links[:5]:
             for key in ("id", "from", "to", "length", "speed"):
                 assert key in link
@@ -100,46 +176,43 @@ class TestLoadCanonicalNetwork:
 
 
 class TestBuildMATSimNetwork:
-    def test_valid_xml_output(self, bundled_scenario):
-        nodes, links = load_canonical_network(bundled_scenario / "network.xml")
-        root = ET.fromstring(build_matsim_network_xml(nodes, links))
+    def test_valid_xml_output(self, built_network_xml):
+        root = ET.fromstring(built_network_xml)
         assert root.tag == "network"
 
-    def test_contains_nodes_and_links(self, bundled_scenario):
-        nodes, links = load_canonical_network(bundled_scenario / "network.xml")
-        root = ET.fromstring(build_matsim_network_xml(nodes, links))
+    def test_contains_nodes_and_links(self, built_network_xml, canonical_network_data):
+        nodes, links = canonical_network_data
+        root = ET.fromstring(built_network_xml)
         xml_nodes = root.findall(".//node")
         xml_links = root.findall(".//link")
         assert len(xml_nodes) == len(nodes)
         # Self-loop removal can shrink links; never grow.
         assert 0 < len(xml_links) <= len(links)
 
-    def test_link_has_car_mode(self, bundled_scenario):
-        nodes, links = load_canonical_network(bundled_scenario / "network.xml")
-        assert 'modes="car"' in build_matsim_network_xml(nodes, links)
+    def test_link_has_car_mode(self, built_network_xml):
+        assert 'modes="car"' in built_network_xml
 
 
 class TestBuildMATSimPlans:
-    def _build(self, scenario: Path) -> str:
-        _, links = load_canonical_network(scenario / "network.xml")
-        feasible, _ = feasible_trip_ids(scenario / "network.xml", scenario / "demand.csv")
-        return build_matsim_plans_xml(scenario / "demand.csv", links, feasible)
+    def test_valid_xml_output(self, built_plans_xml):
+        # V11.2 migrated from plans_v4 (<plans>/<act>) to population_v6
+        # (<population>/<activity>) — see CHANGELOG Phase 11.2 for the
+        # rationale (plans_v4 rejected V5 Phase 7's `<route type="links">`).
+        root = ET.fromstring(built_plans_xml)
+        assert root.tag == "population"
 
-    def test_valid_xml_output(self, bundled_scenario):
-        root = ET.fromstring(self._build(bundled_scenario))
-        assert root.tag == "plans"
+    def test_contains_persons(self, built_plans_xml):
+        root = ET.fromstring(built_plans_xml)
+        assert root.findall("person"), "Population should contain at least one person"
 
-    def test_contains_persons(self, bundled_scenario):
-        root = ET.fromstring(self._build(bundled_scenario))
-        assert root.findall("person"), "Plans should contain at least one person"
-
-    def test_person_has_plan_with_activities(self, bundled_scenario):
-        root = ET.fromstring(self._build(bundled_scenario))
+    def test_person_has_plan_with_activities(self, built_plans_xml):
+        root = ET.fromstring(built_plans_xml)
         person = root.find("person")
         assert person is not None
         plan = person.find("plan")
         assert plan is not None
-        assert len(plan.findall("act")) == 2
+        # population_v6 element name is `<activity>`, not plans_v4's `<act>`.
+        assert len(plan.findall("activity")) == 2
         assert len(plan.findall("leg")) == 1
 
 
@@ -163,36 +236,30 @@ class TestBuildMATSimConfig:
 
 
 class TestPrepareMATSimInputs:
-    def test_generates_all_files(self, bundled_scenario, tmp_path):
-        out = tmp_path / "matsim_out"
-        config_path = prepare_matsim_inputs(bundled_scenario, out)
-
+    def test_generates_all_files(self, prepared_chicago):
+        out, config_path = prepared_chicago
         assert config_path.is_file()
         for name in ("network.xml", "plans.xml", "vehicles.xml"):
             assert (out / name).is_file(), f"Missing MATSim {name}"
 
-    def test_network_xml_is_valid(self, bundled_scenario, tmp_path):
-        out = tmp_path / "matsim_net"
-        prepare_matsim_inputs(bundled_scenario, out)
+    def test_network_xml_is_valid(self, prepared_chicago):
+        out, _ = prepared_chicago
         root = ET.parse(out / "network.xml").getroot()
         assert root.tag == "network"
         assert root.findall(".//node")
         assert root.findall(".//link")
 
-    def test_plans_xml_has_persons(self, bundled_scenario, tmp_path):
-        out = tmp_path / "matsim_plans"
-        prepare_matsim_inputs(bundled_scenario, out)
+    def test_plans_xml_has_persons(self, prepared_chicago):
+        out, _ = prepared_chicago
         root = ET.parse(out / "plans.xml").getroot()
         assert root.findall("person")
 
-    def test_all_scenarios(self, small_bundled_scenarios, tmp_path):
-        """Run the MATSim adapter on every small bundled scenario."""
-        if not small_bundled_scenarios:
+    def test_all_scenarios(self, prepared_sweep):
+        """Verify the MATSim adapter prepared every small bundled scenario."""
+        if not prepared_sweep:
             pytest.skip("No bundled scenarios to sweep")
 
-        for scenario_path in small_bundled_scenarios:
-            out = tmp_path / scenario_path.name
-            config_path = prepare_matsim_inputs(scenario_path, out)
+        for scenario_path, (out, config_path) in prepared_sweep.items():
             assert config_path.is_file(), f"{scenario_path.name}: no config"
             assert (out / "network.xml").is_file()
             assert (out / "plans.xml").is_file()

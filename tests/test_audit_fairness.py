@@ -183,12 +183,16 @@ class TestCountHelpers:
         assert vol == 3
 
     def test_count_matsim_persons(self, tmp_path: Path):
+        # V11.2+ MATSim adapter emits population_v6 (root <population>);
+        # _count_matsim_persons just findall("person") on the root, so
+        # it's root-tag-agnostic — but the fixture uses the production
+        # root to stay aligned with what the adapter actually writes.
         path = tmp_path / "plans.xml"
         path.write_text(
             """<?xml version="1.0"?>
-<plans>
+<population>
   <person id="1"/><person id="2"/><person id="3"/>
-</plans>"""
+</population>"""
         )
         assert _count_matsim_persons(path) == 3
 
@@ -343,7 +347,7 @@ def _build_synthetic_run_dir(base: Path, scenario: str = "chicago_1k_car", seed:
         '<links><link id="L1" from="a" to="b"/></links></network>'
     )
     (matsim / "plans.xml").write_text(
-        '<plans><person id="1"/><person id="2"/></plans>'
+        '<population><person id="1"/><person id="2"/></population>'
     )
     output = matsim / "output"
     output.mkdir()

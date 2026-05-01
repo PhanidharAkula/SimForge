@@ -8,6 +8,248 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 11.5: Interactive help TUI (2026-04-30)
+
+`python help.py` (no args, TTY) now opens a full-screen curses TUI
+instead of dumping the overview text. Topics are grouped under five
+headings — Getting Started, Core Workflows, Reference, Analysis &
+Tools, Troubleshooting — and the user navigates with arrow keys.
+
+Key bindings:
+
+| Key             | Effect                                    |
+|-----------------|-------------------------------------------|
+| ↑ / ↓           | Move selection (or scroll inside a topic) |
+| Enter           | Open the highlighted topic                |
+| Esc             | Return from a topic to the menu           |
+| PgUp / PgDn     | Page through long topics                  |
+| Home / End      | Jump to top / bottom of a topic           |
+| q  (or Esc)     | Quit (from the menu)                      |
+
+Returning from a topic via Esc redraws the menu cleanly — no leftover
+content from the topic appears on screen, because curses owns the
+whole viewport and `stdscr.erase()` runs on every redraw.
+
+**Topic view polish**:
+- 2-column left margin so content isn't flush against the screen edge
+- Leading/trailing blank lines stripped before display (tighter top gap)
+- Best-effort syntax highlighting for the patterns SimForge help text
+  already uses:
+    - `===` / `---` rules     → dim cyan
+    - `UPPERCASE TITLE` lines → bold cyan
+    - `SECTION HEADER:` lines → bold yellow
+    - `python ...` / `$ ...` etc. command examples → green
+    - everything else         → default text
+- Visual gap between menu category groups so the 5 sections don't
+  blur together
+- Footer keys with `:` separators and ASCII-friendly arrow glyphs
+  (`↑/↓: navigate    Enter: open topic    Esc / q: quit`)
+- PgUp/PgDn / Home/End still work inside topics for power users
+  (Mac compact keyboards: Fn + ↑/↓ / Fn + ←/→) but kept off the
+  footer to reduce visual clutter
+
+Auto-fallback: when `import curses` fails or the terminal can't host
+a curses session (rare — dumb terminals, restricted CI), the help
+system silently falls back to the numbered-input menu (with `/<word>`
+search) introduced in V11.5's first iteration. So Windows shells
+without `windows-curses` installed still work.
+
+Other paths preserved:
+
+- `python help.py <topic>` still prints the topic to stdout as before
+  (paste-safe; matches all prior SimForge releases).
+- `python help.py` with non-TTY stdout still prints the overview text
+  (CI logs, file pipes).
+- `python help.py --interactive` forces the TUI even in non-TTY
+  contexts (mainly for testing).
+- `python help.py --no-interactive` forces the overview-text path.
+
+New help topic: `python help.py analyzer` covers the V11.4
+`tools/analyze_scenarios.py` bundle analyzer in detail.
+
+The help system continues to use only the standard library
+(`curses` ships with CPython on Unix; the legacy fallback covers
+Windows without `windows-curses`). No new dependencies introduced.
+
+### Phase 11.4: Scenario analyzer tool (2026-04-30)
+
+New `tools/analyze_scenarios.py` — comprehensive tabular analysis of
+canonical scenario bundles. Each section is one side-by-side table
+with metrics as rows and scenarios as columns. Auto-paginates per
+section when the terminal isn't wide enough (each section splits
+based on its own column widths).
+
+Sections (selectable via `--section`):
+
+- `configuration`  — city, trips, time window, radius, seed, strategy,
+  generation time, OSM source
+- `network`        — nodes, links, has_signal nodes (% of nodes), turn
+  restrictions, speed/lane range + means
+- `road_classes`   — per-OSM-highway-type link counts, sorted by total
+- `signals`        — junction count, cycle, phase pattern, density
+- `demand`         — totals + trip-purpose breakdown subsection +
+  peak split & chain summary subsection
+- `artefacts`      — per-file sizes + total
+- `toolchain`      — env recorded at generation time (Python, osmnx,
+  numpy, networkx, lxml, etc.)
+
+Default: every complete bundle in `scenarios/`. Pass scenario names
+or full paths to subset. `--no-color` disables ANSI for piping.
+Pagination is automatic via `shutil.get_terminal_size()` — sections
+split into pages of N scenarios when the terminal isn't wide enough,
+each page suffixed `(scenarios X–Y of N)`.
+
+Pre-V5 bundles missing the `purpose` column gracefully render only
+the totals subsection of DEMAND. Reuses
+`evaluation.demand_composition.read_demand_composition` for purpose
+tallying so the analyzer's numbers match what
+`audit_fairness` Q5 and `analyze_benchmark`'s composition table
+report — single source of truth across all three tools.
+
+Standard library only — no new dependencies.
+
+### Phase 11.3: Test-suite session-scoped fixture optimisation (2026-04-30)
+
+`tests/test_matsim_adapter.py` previously ran in ~12 min because every
+test that consumed the `bundled_scenario` fixture re-ran the full
+prepare/build pipeline (function-scoped pytest default). With V5 Phase
+7 state-aware BFS pre-routing landing in `build_matsim_plans_xml`, the
+redundancy got more expensive: every pure structural assertion was
+implicitly running BFS on every trip in the bundle.
+
+Refactored to share the heavy lifts across tests via session-scoped
+fixtures. The new fixtures live at the top of the file:
+
+- `canonical_network_data` — `(nodes, links)` from chicago_1k_car
+  (consumes `bundled_scenario`, calls `load_canonical_network` once)
+- `built_network_xml` — MATSim network XML string built once
+- `built_plans_xml` — MATSim plans XML string built once (the
+  expensive BFS pre-routing call)
+- `prepared_chicago` — full `prepare_matsim_inputs(chicago_1k_car)`
+  output dir + config path, prepared once per session
+- `prepared_sweep` — `{scenario_path: (out_dir, config_path)}` map
+  for every small bundled scenario, prepared once per session
+
+`TestLoadCanonicalNetwork`, `TestBuildMATSimNetwork`,
+`TestBuildMATSimPlans`, `TestPrepareMATSimInputs` updated to consume
+these fixtures instead of re-running the work. All 24 tests still
+pass; assertions unchanged.
+
+**Measured impact**: 12m 17s → 10m 42s wall time on M-series Mac
+(~75 s of cross-test redundancy eliminated). Less than initially
+projected because the test_all_scenarios sweep was already only
+calling `prepare_matsim_inputs(nyc_10k_car)` once — that single 5-7
+min BFS pass is V5 Phase 7's intentional pre-routing cost on 10K
+trips × 379 turn restrictions, not redundancy.
+
+**Coverage delta: zero.** Every assertion runs against a real
+prepared/built artefact. Determinism of the underlying code paths is
+covered by `tests/test_adapter_determinism.py` (which explicitly
+runs prepare twice and hash-compares — that pattern is unchanged
+and is the proper place for "runs N times consistently" guarantees).
+
+To skip the slow sweep during routine dev:
+
+```bash
+python -m pytest tests/test_matsim_adapter.py -k "not test_all_scenarios"
+# ~3-4 min wall time; keeps 23 of 24 assertions live
+```
+
+### Phase 11.2: Post-V11 correctness pass (2026-04-30)
+
+A round of bugfixes surfaced after re-running the test suite with all
+five generated bundles in `scenarios/`:
+
+**HBSchool chain self-trip guard** (`pipeline/demand/generate_census_demand.py`)
+
+The Phase 9b/9c chain emission could produce `origin == destination`
+rows when the building-to-network-node snap collapsed home, school, or
+work onto the same graph node. Most common in dense urban grids; nyc_500k_car
+emitted 1,122 self-trips, la_50k_car 91, chicago_200k_car 170, nyc_10k_car 1.
+The bundle validator's `TestDemandIntegrity.test_origin_differs_from_destination`
+correctly rejected these, surfacing the bug.
+
+`_maybe_school_chain_for(person, home_node)` is now
+`_maybe_school_chain_for(person, home_node, work_node)` and returns
+`None` if `school_node ∈ {home_node, work_node}`. The caller falls
+back to a bare HBW row, preserving demand realism without breaking
+referential integrity. Both AM (Phase 1a) and PM (Phase 1b) call
+sites updated.
+
+**MATSim plans format: plans_v4 → population_v6**
+(`adapters/matsim/matsim_adapter.py`)
+
+The V5 Phase 7 turn-restriction enforcement code emitted
+`<route type="links" start_link="..." end_link="...">` inside
+`<plans>` with the plans_v4 DTD. plans_v4 rejects this for two reasons:
+(a) its `<route>` ATTLIST only accepts cost-optimisation `type`
+values (`dist|trav-time|num-nodes|num-intersects`), and (b) the route
+PCDATA content is parsed as a *node* sequence, not links. The
+test_engine_smoke `test_matsim_real_jar_produces_output_trips` test
+caught the bug the first time it ran with a V5+ bundle (real
+MATSim JAR rejected the XML at the SAX layer).
+
+Migrated to `population_v6` DTD (also shipped in MATSim 15 JAR):
+- DOCTYPE: `plans_v4.dtd` → `population_v6.dtd`
+- Root: `<plans>` → `<population>`
+- Activity element: `<act>` → `<activity>`
+- `<route>` keeps its V5 idiom — population_v6 explicitly supports
+  `type="links" start_link="..." end_link="...">interior</route>`
+- `PopulationReaderMatsimV6` honors pre-emitted routes (same
+  contract V5 Phase 7 always intended)
+
+**Sticky progress bar — log routing always on**
+(`generate.py`, `run.py`, `execution/run_benchmark.py`)
+
+Pre-V11.2 the bar's log-capture handler was gated on `--verbose`,
+so default-mode WARNING records (e.g. osmnx's "Dropping degenerate
+edge ..." during nyc_500k_car generation) collided with the bar's
+no-newline `\r` redraws and produced mangled lines like
+`░░░░  ⠦  0%  step 1/4  elapsed 3m 07sWARNING ...`. Capture is now
+always installed; the level threshold differs by mode (WARNING+ in
+default, INFO+ with `--verbose`).
+
+**ETA removed from progress bars** (`pipeline/progress.py`)
+
+Both `ProgressBar` and `StickyProgress` no longer compute or display
+an ETA. SimForge runs are wildly heterogeneous (10ms unit tests next
+to 30s SUMO integration tests; 1K-trip bundles next to 500K-trip
+ones), so the running-mean ETA swung between unhelpful extremes
+(e.g., "5 hours" then "2 hours" within a single suite). Percentage,
+counter, and elapsed clock together carry the same information
+without misleading the operator.
+
+**Pytest `=== FAILURES ===` traceback block suppressed**
+(`tests/_sticky_plugin.py`)
+
+Pytest's default end-of-session output prints the full traceback
+for every failed test before the SimForge plugin's unified summary.
+The summary already lists each failed nodeid with its first-error
+line — the extra traceback was redundant noise. Added
+`tr.summary_failures = lambda: None` and `summary_errors = lambda:
+None` to the existing monkey-patch block so the failure block is
+suppressed alongside warnings/short-test-summary/stats.
+
+**generate.py source-line de-duplication**
+
+The Step 1/4 OSM-network output mentioned the PBF filename twice:
+once in the pre-step `source: osm_data/<file>.pbf (...)` line and
+once in the post-step `✓ network.xml: ... from <file>.pbf` suffix.
+The suffix is dropped for PBF (already announced); kept for the
+Overpass fallback path (worth flagging because it diverges from
+what the operator expected).
+
+**Test count documented as 477 (3-bundle) / 549 (5-bundle)**
+
+Test-count references in `README.md`, `CONTRIBUTING.md`, `TESTING.md`,
+`SETUP.md`, `help.py`, `doc/chapters/methods.md`, and
+`doc/chapters/experiments.md` updated. Headline is **~477 tests** —
+the count a fresh `git clone && pytest` shows with the 3 tracked
+bundles (`chicago_1k_car`, `nyc_10k_car`, `la_50k_car`). Generating
+the two larger benchmark tiers (`scripts/04`, `scripts/05`) adds
+72 more parametrised integrity tests for a 549-test full local
+sweep with proportionally longer wall time (~14 min vs ~3-4 min).
+
 ### Phase 11: Cross-engine vehicle-parameter alignment (2026-04-30)
 
 Pre-V11 each adapter declared its own vehicle parameters using engine-
@@ -447,12 +689,16 @@ Each plan now ships with an explicit
 `<route type="links" start_link=… end_link=…>…interior link IDs…</route>`
 inside its `<leg>` element when the canonical network has turn
 restrictions. The route comes from the same state-aware BFS the SUMO
-adapter uses — so SUMO and MATSim consume identical paths. MATSim 15
-plans v4 DTD honors pre-emitted routes and skips its internal router.
-A new `_LinkRef` shim wraps MATSim's dict-based link records to plug
-into the generic BFS. When restrictions are absent (legacy bundles,
-synthetic networks), MATSim falls back to its V4 self-routing
-behavior — back-compat preserved.
+adapter uses — so SUMO and MATSim consume identical paths. The plans
+XML uses **MATSim 15 population_v6 DTD** (originally shipped with
+plans_v4 in V5.7, corrected to population_v6 in V11.2 after the
+plans_v4 DTD was found to reject `type="links"` and treat route text
+as a node sequence — see Phase 11.2 entry above). MATSim 15's
+`PopulationReaderMatsimV6` honors pre-emitted routes and skips its
+internal router. A new `_LinkRef` shim wraps MATSim's dict-based link
+records to plug into the generic BFS. When restrictions are absent
+(legacy bundles, synthetic networks), MATSim falls back to its V4
+self-routing behavior — back-compat preserved.
 
 **DTALite** (`adapters/dtalite/dtalite_adapter.py:write_dtalite_movement_csv`):
 New writer emits a GMNS-conformant `movement.csv` next to the engine's

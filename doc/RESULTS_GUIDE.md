@@ -263,6 +263,46 @@ Runs both micro and meso modes on the same scenario and computes:
 - **Fidelity metrics**: RMSE, GEH, KS-statistic between micro/meso travel-time distributions
 - **Trip completion ratio** for each mode
 
+### 4.4 Pre-Run Bundle Inspection — `tools/analyze_scenarios.py`
+
+Tabular end-to-end analysis of every (or any) scenario bundle in
+`scenarios/`. Useful before running the benchmark to verify the
+generated bundles look right, or when comparing realism across tiers.
+
+```bash
+python tools/analyze_scenarios.py                        # all bundles, all sections
+python tools/analyze_scenarios.py chicago_1k_car         # single bundle
+python tools/analyze_scenarios.py chicago_1k_car nyc_10k_car
+python tools/analyze_scenarios.py --section network --section signals
+python tools/analyze_scenarios.py --no-color             # plain ASCII (for piping)
+```
+
+Seven sections (each one side-by-side table with scenarios as columns):
+
+| Section          | Reports                                                               |
+| ---------------- | --------------------------------------------------------------------- |
+| `configuration`  | City, trips, time window, radius, seed, strategy, generation time, OSM source |
+| `network`        | Nodes, links, has_signal, turn restrictions, speed/lane stats          |
+| `road_classes`   | Per-OSM-highway-type link counts, sorted by total                     |
+| `signals`        | Junction count, cycle, phase pattern, density                         |
+| `demand`         | Totals + trip-purpose breakdown + peak split & chain summary          |
+| `artefacts`      | Per-file sizes + total                                                |
+| `toolchain`      | Python / osmnx / numpy / etc. versions recorded at generation time    |
+
+Auto-paginates when the terminal isn't wide enough — each section
+splits into pages of N scenarios with a `(scenarios X–Y of N)` page
+suffix. Pre-V5 bundles missing the `purpose` column gracefully render
+the demand totals subsection only.
+
+This complements `audit_fairness` Q5 and `analyze_benchmark`'s demand
+composition table — those run *after* simulation; `analyze_scenarios`
+runs *before*, on the canonical bundle alone, with no engine output
+needed.
+
+For the same content from inside the in-CLI help system, run
+`python help.py analyzer` (TUI: arrow-key into the "Analysis & tools"
+group; text mode: pipes/non-TTY also work).
+
 ---
 
 ## 5. Metric Modules

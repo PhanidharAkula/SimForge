@@ -399,8 +399,15 @@ def build_matsim_plans_xml(
 
     lines = []
     lines.append('<?xml version="1.0" ?>')
-    lines.append('<!DOCTYPE plans SYSTEM "http://www.matsim.org/files/dtd/plans_v4.dtd">')
-    lines.append('<plans>')
+    # population_v6 (MATSim 15-shipped DTD). Pre-V11.2 we used plans_v4,
+    # but plans_v4's <route> element only accepts cost-optimisation
+    # `type` values (dist|trav-time|num-nodes|num-intersects) and treats
+    # the text content as a *node* sequence, not a link sequence — both
+    # break V5 Phase 7's pre-routed-link-sequence intent. population_v6
+    # accepts `type="links" start_link="..." end_link=".."` natively
+    # and PopulationReaderMatsimV6 ships in the same MATSim 15 JAR.
+    lines.append('<!DOCTYPE population SYSTEM "http://www.matsim.org/files/dtd/population_v6.dtd">')
+    lines.append('<population>')
 
     valid_links = [link for link in links if link["from"] != link["to"]]
 
@@ -485,11 +492,15 @@ def build_matsim_plans_xml(
 
             lines.append(f'<person id="{person_id}">')
             lines.append('  <plan>')
-            lines.append(f'    <act type="h" link="{origin_link}" end_time="{end_time}"/>')
+            lines.append(f'    <activity type="h" link="{origin_link}" end_time="{end_time}"/>')
             if route_link_ids and len(route_link_ids) >= 2:
-                # MATSim 15 plans_v4 DTD: <route type="links" start_link=
-                # ".." end_link="..">interior_links</route>. Start and end
-                # are attributes; the text content lists intermediate links.
+                # population_v6 ATTLIST for <route> accepts arbitrary
+                # `type` (CDATA), explicit `start_link` / `end_link`
+                # attributes, and treats the PCDATA as the *interior*
+                # link sequence (excluding start and end). This is the
+                # native idiom for pre-routed link sequences in MATSim
+                # 15. PopulationReaderMatsimV6.startRoute parses it
+                # exactly as we emit it.
                 start = route_link_ids[0]
                 end = route_link_ids[-1]
                 interior = " ".join(route_link_ids[1:-1])
@@ -502,7 +513,7 @@ def build_matsim_plans_xml(
             else:
                 # Fallback: let MATSim route itself (legacy/back-compat).
                 lines.append(f'    <leg mode="{mode}"/>')
-            lines.append(f'    <act type="w" link="{dest_link}"/>')
+            lines.append(f'    <activity type="w" link="{dest_link}"/>')
             lines.append('  </plan>')
             lines.append('</person>')
 
@@ -521,7 +532,7 @@ def build_matsim_plans_xml(
             missing_link,
         )
 
-    lines.append('</plans>')
+    lines.append('</population>')
     return "\n".join(lines)
 
 

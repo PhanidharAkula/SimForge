@@ -17,6 +17,7 @@ Usage:
   python help.py troubleshooting    # Common issues & fixes
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -142,7 +143,23 @@ QUICK START:
   3. Run simulation:  python run.py --scenario chicago_1k_car --engine sumo --mode meso
   4. Run benchmark:   python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
-HELP TOPICS:
+INTERACTIVE MENU (when run from a terminal):
+  python help.py                    Full-screen TUI (curses-based).
+                                      ↑/↓:    navigate / scroll
+                                      Enter:  open the highlighted topic
+                                      Esc:    return to the menu
+                                      q:      quit (from the menu)
+                                    PgUp/PgDn page-scroll and Home/End
+                                    jump-to-top/bottom also work inside
+                                    a topic (use Fn + arrows on Mac
+                                    compact keyboards).
+  python help.py --interactive      Force interactive mode (e.g. for testing)
+  python help.py --no-interactive   Force this overview text (escape hatch)
+
+  Falls back automatically to a numbered-input menu (with /<word>
+  search) if curses can't initialise — e.g. on dumb terminals.
+
+PASTE-SAFE TEXT MODE (any topic name, any environment):
   python help.py setup              Install and bootstrap
   python help.py generate           Data generation entry point — generate.py
   python help.py run                Simulation execution entry point — run.py
@@ -155,6 +172,7 @@ HELP TOPICS:
   python help.py schema             Canonical schema format reference
   python help.py benchmark          Benchmark harness and runspecs
   python help.py tests              Test suite reference
+  python help.py analyzer           tools/analyze_scenarios.py — bundle analyzer
   python help.py troubleshooting    Common issues and fixes
 
 PROJECT STRUCTURE (alphabetical, repo root):
@@ -175,9 +193,10 @@ PROJECT STRUCTURE (alphabetical, repo root):
   runspecs/             Benchmark configuration files (YAML)
   scenarios/            Generated canonical data bundles
   scripts/              5 ready-to-use generation scripts (01–05)
-  tests/                Test suite (pytest, ~524 tests across 20 files)
-  tools/                Operator utilities (clean.sh, download_osm.py,
-                        env_report.py, inspect_network.py)
+  tests/                Test suite (pytest, ~477 tests across 23 files
+                        with the 3 tracked bundles; +36 per extra bundle)
+  tools/                Operator utilities (analyze_scenarios.py, clean.sh,
+                        download_osm.py, env_report.py, inspect_network.py)
 
   Top-level files:
     generate.py         Unified scenario generator (start here)
@@ -299,9 +318,12 @@ ENGINE / MODE COMPATIBILITY:
 OUTPUT FORMAT:
   Per-cell rows show: [N/total] engine mode seed=N ✓/✗ runtime
   Scenario dividers (▶ scenario_name) group cells visually.
-  Sticky progress bar at the bottom (TTY only) shows overall %, ETA,
-  ✓N ✗N counters, and a Braille spinner heartbeat (~8 fps) so long-running
-  cells don't look stuck.
+  Sticky progress bar at the bottom (TTY only) shows overall %,
+  ✓N ✗N counters, elapsed clock, and a Braille spinner heartbeat
+  (~8 fps) so long-running cells don't look stuck. (No ETA — SimForge
+  cells are wildly heterogeneous, so a running-mean ETA swings between
+  unhelpful extremes; the percentage + counter + elapsed carry the
+  same information without misleading you.)
   Final summary includes per-cell timing breakdown (mean ± 95% CI across
   reps, computed via evaluation/metrics/confidence.py — same Student's-t
   table the thesis tables/figures use).
@@ -403,7 +425,7 @@ CENSUS MODE MAPPING (cityscape Schedule-generator branch / ACS PUMS 2021):
   12 Other method                          > home (excluded — no trip)
   -1 N/A — not a worker (cityscape's "bb" sentinel)
 
-  Single source of truth: pipeline/demand/parse_model_file.py:166
+  Single source of truth: pipeline/demand/parse_model_file.py:200
   See doc/MODELGEN_AND_MODES.md §2 + §4 for cityscape provenance and the
   per-city per-code histograms.
 
@@ -495,20 +517,38 @@ HELP_SCHEMA = """
 
 6 files per scenario bundle:
 
-1. network.xml              -- Directed road graph (nodes + links from OSM)
-2. demand.csv               -- Trip-level OD: trip_id,origin,dest,departure_s,mode
+1. network.xml              -- Directed road graph from OSM. V5+ also
+                               carries `has_signal="true"` on traffic-signal
+                               nodes (Phase 6) and a top-level
+                               <turn_restrictions> block extracted from
+                               OSM `type=restriction via=node` relations
+                               (Phase 7).
+2. demand.csv               -- Trip-level OD: trip_id, origin_node_id,
+                               destination_node_id, departure_time_s, mode.
+                               V5+ adds two informational columns:
+                               `dest_source` (schedule|gravity provenance)
+                               and `purpose` (HBW_AM/PM, HBSchool_AM/PM,
+                               HBW_*_chained — 4-step taxonomy from
+                               Phase 9). Adapters consume the canonical
+                               5-column subset by name and ignore the
+                               provenance columns.
 3. signals.xml              -- Fixed-time traffic signal phases at every
                                OSM-tagged `highway=traffic_signals` node
-                               in the bbox (1-3% of nodes in a typical
-                               US urban bbox; placeholder 90s 2-phase
-                               cycle template — placement is real, timing
-                               is synthetic). See doc/SCENARIO_GENERATION.md
+                               in the bbox (1.4-4.8% of nodes — chicago
+                               2.79%, nyc 4.80%, la 1.35% empirically;
+                               placeholder 90s 2-phase cycle template —
+                               placement is real, timing is synthetic).
+                               See doc/SCENARIO_GENERATION.md
                                §"Step 2: Traffic Signals" for full provenance.
 4. config.xml               -- Scenario metadata (time, seed, units)
 5. manifest.xml             -- File inventory
 6. generation_metadata.json -- Per-step source / parameter / hash trail
                                (generator version, seed, OSM source, demand
-                               source, modelgen city stats, SCC drop counts)
+                               source, modelgen city stats, SCC drop counts,
+                               V5+ demand_provenance block with schedule-
+                               vs-gravity split + per-reason fallback counts.
+                               Chain-leg counts come from the demand.csv
+                               `purpose` column, not this block.)
 
 VALIDATION:
   python -m pipeline.validation.validate_bundle scenarios/<id>
@@ -524,9 +564,15 @@ ANALYZE BENCHMARK:
   python -m evaluation.analyze_benchmark <results.json> --latex --markdown
 
   Produces:
+    Summary               — engine-level aggregates (success rate, avg runtime, R)
+    Coverage diagnostic   — flags low-sample (n<3), asymmetric, silently-failed cells
+    Demand Composition    — per-scenario V5+ trip-purpose breakdown
+                            (HBW_AM/PM, HBSchool_AM/PM, HBW_*_chained)
+                            from each bundle's canonical demand.csv;
+                            silently omitted for pre-V5 bundles missing
+                            the `purpose` column.
     Table 5.1 — Runtime comparison (engine x city x mode)
     Table 5.2 — Reproducibility analysis (R-scores + Adj TT column*)
-    Coverage diagnostic — flags low-sample (n<3), asymmetric, silently-failed cells
 
   --latex       emit LaTeX tables (ready for thesis inclusion)
   --markdown    emit Markdown tables (for docs / GitHub)
@@ -540,12 +586,17 @@ AUDIT CROSS-ENGINE FAIRNESS:
   python -m evaluation.audit_fairness <run-dir> [seed]
 
   Read-only methodology check that every engine in <run-dir> received the
-  same problem and was measured the same way. Four checks per scenario:
+  same problem and was measured the same way. Four fairness questions
+  per scenario plus one informational composition section:
 
     Q1 — same trip set across engines (feasibility verdict byte-identical)
     Q2 — same network across engines (SCC node + link counts match)
     Q3 — same trip count actually simulated (per-engine output count)
     Q4 — cross-engine travel-time spread (mean / P95 / pairwise ratios)
+    Q5 — demand composition (V5+ trip-purpose breakdown)
+         informational, not a fairness gate. Reads the canonical bundle's
+         demand.csv `purpose` column; pre-V5 bundles emit a one-line
+         skip and the section is omitted from output.
 
   Auto-detects four output layouts (run.py flat, run_benchmark nested,
   parallel-by-scenario sbatch nested, per-scenario worker dir). Use this
@@ -615,20 +666,27 @@ BUILT-IN RUNSPECS:
                          DTALite meso} (3 cells, no SUMO micro at 50K),
                          N=5 repeats per cell = 55 runs total. Runs end-to-end
                          on a Mac laptop (DTALite is CPU-only).
-  benchmark_large.yaml   200K-500K trips, 3600 s per-run timeout (HPC tier).
+  benchmark_large.yaml   chicago_200k_car + nyc_500k_car, mesoscopic only,
+                         3 engines x 2 scenarios x 5 reps = 30 runs.
+                         Per-run timeout 3600 s for 200K, 7200 s for 500K
+                         (HPC tier — submit via cluster/jobs/benchmark_large.sbatch;
+                         bundles are gitignored, rsync from your dev box first).
 
 OUTPUT FORMAT:
   Banner with the matrix dimensions (Runspec, Scenarios, Engines, Modes,
   Repeats, Total). Pre-validation block (each unique bundle once).
   Scenario dividers (▶ scenario_id) group cells visually. Per-cell rows:
   [N/total] engine mode seed=N ✓/✗ runtime. Sticky progress bar at the
-  bottom (TTY only) shows %, ETA, ✓N ✗N counters, Braille spinner heartbeat.
+  bottom (TTY only) shows %, ✓N ✗N counters, elapsed clock, Braille
+  spinner heartbeat. (No ETA — see python help.py run for rationale.)
   Final summary mirrors run.py: Wall time + ✓ Completed + ✗ Failed + per-cell
   timing breakdown (mean ± 95% CI across reps, Student's-t via
-  evaluation/metrics/confidence.py). With --verbose the bar stays visible
-  and adapter INFO logs are routed cleanly above it.
+  evaluation/metrics/confidence.py). Default mode shows WARNING+ records
+  routed above the bar via print_above(); --verbose drops the threshold to
+  INFO+ for full adapter chatter.
 
-REPRODUCE THE THESIS NUMBERS END-TO-END (about one minute):
+REPRODUCE THE THESIS NUMBERS END-TO-END (~40-100 min on M-series Mac;
+~25 min on Linux/HPC where SUMO micro on nyc_10k_car runs faster):
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
   python -m evaluation.analyze_benchmark \\
          runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
@@ -661,13 +719,14 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships ~499 tests across 20 files (319 base + 36 parametrized
-per bundled scenario × the 5 standard scripts/01..05 scenarios). The
-count drops linearly if you have fewer bundles in scenarios/ — each
-missing scenario removes 36 parametrized tests from
-test_scenario_data_integrity.py. The full suite runs in ~3-4 min on
-arm64 (~22 s on a Linux box where SUMO doesn't crash, since the SUMO
-sweeps actually skip on arm64).
+SimForge ships ~477 tests across 23 files with the 3 tracked bundles
+(chicago_1k_car, nyc_10k_car, la_50k_car). The count is
+369 base + 36 parametrized per bundle in `scenarios/`. Generating the
+two larger tiers (`scripts/04_chicago_200k_car.py` + `05_nyc_500k_car.py`)
+adds 72 more tests for a 549-test full local sweep. The shipped 477-test
+suite runs in ~3-4 min on arm64 (~22 s on a Linux box where SUMO doesn't
+crash); the 549-test full sweep takes ~14 min on M-series Mac because
+the integrity tests parse the much larger 200K/500K network.xml files.
 
 Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 --strict-markers + --tb=short. Shared fixtures and platform-skip
@@ -699,13 +758,18 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m integration
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (20 files / ~499 tests with 5 bundled scenarios, alphabetical):
+TEST FILES (23 files / ~477 tests with the 3 tracked bundles in scenarios/;
+~549 with all 5 generated. Alphabetical):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
+                                        (incl. Phase 10 demand composition table)
   test_audit_fairness.py          (29)  Q1-Q4 audit helpers + 4-layout detector
                                         + synthetic-run-dir orchestrator test
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
+  test_demand_composition.py      (7)   V5+ Phase 10 — `purpose` column tally,
+                                        AM/PM peak split, chain-leg counter,
+                                        pre-V5 graceful no-op
   test_demand_generators.py       (21)  Uniform / gravity / peak-hour
   test_dtalite_adapter.py         (46)  DTALite adapter writers, settings,
                                         demand-driven zoning, end-to-end smoke
@@ -714,19 +778,29 @@ TEST FILES (20 files / ~499 tests with 5 bundled scenarios, alphabetical):
                                         + mode-aware feasibility (V5)
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
   test_matsim_adapter.py          (24)  MATSim helpers + end-to-end + sweep
+                                        (~10 min on M-series Mac — see
+                                        TESTING.md §3 for the -k escape)
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
-  test_parse_model_file.py        (20)  ModelGen file parser + JWTRNS
-                                        mapping pinning + single-source-of-truth
+  test_parse_model_file.py        (27)  ModelGen file parser + V5 Phase 5
+                                        JWTRNS mapping + Phase 9 HBSchool helpers
+                                        + AM_PURPOSES/PM_PURPOSES disjointness
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_reproducibility_metrics.py (15)  R-score core + edge cases
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
   test_scc.py                     (14)  Iterative Kosaraju + parser
-  test_scenario_data_integrity.py (180) 7 classes × 36 tests/scenario, scales
-                                        with scenarios/ contents (180 = 5
-                                        scenarios × 36; 0 if scenarios/ empty)
+  test_scenario_data_integrity.py (108) 7 classes × 36 tests/scenario, scales
+                                        with scenarios/ contents (108 = 3
+                                        tracked bundles × 36; 180 if all 5
+                                        bundles generated; 0 if scenarios/ empty)
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep
+  test_turn_restrictions.py       (17)  V5+ Phase 7 — OSM restriction parser,
+                                        forbidden-move builder, state-aware
+                                        BFS, DTALite movement.csv writer
   test_validator.py               (2)   Bundle pass + corruption fail
+  test_vehicle_types.py           (19)  V5+ Phase 11 — canonical car constants,
+                                        SUMO/MATSim XML emission, cross-engine
+                                        equivalence (length+gap == effective)
 
 test_scenario_data_integrity.py classes (7, parametrized over every scenario):
   TestFileExistence       All 5 canonical files exist
@@ -741,7 +815,7 @@ WHAT THE OUTPUT LOOKS LIKE:
   Default — per-file rollup rows + sticky progress bar:
     tests/test_feasibility.py    PASSED
     tests/test_engine_smoke.py   SKIPPED
-    [████████████░░░░░░░░░░░░░░] 50%  ✓ 247  ✗ 0  ⠼  test 247/495
+    [████████████░░░░░░░░░░░░░░] 50%  ✓ 238  ✗ 0  ⠼  test 238/477  elapsed 1m 30s
 
   With -v — per-test ✓/✗/⊘ rows:
     ✓ tests/test_feasibility.py::test_drops_outside_scc
@@ -796,6 +870,59 @@ SEE ALSO:
   TESTING.md                Full per-file reference + markers + coverage
   CONTRIBUTING.md           Test-writing conventions + determinism rules
   doc/MUTATION_BASELINE.md  Mutation testing scope and baseline
+"""
+
+HELP_ANALYZER = """
+====================================================================
+  SCENARIO ANALYZER (tools/analyze_scenarios.py)
+====================================================================
+
+Tabular end-to-end analysis of one or more canonical scenario
+bundles. Each section is one side-by-side table with metrics as rows
+and scenarios as columns. Auto-paginates per section when the
+terminal isn't wide enough.
+
+USAGE:
+  python tools/analyze_scenarios.py                  # all bundles
+  python tools/analyze_scenarios.py chicago_1k_car   # single bundle
+  python tools/analyze_scenarios.py chicago_1k_car nyc_10k_car
+  python tools/analyze_scenarios.py --section network
+  python tools/analyze_scenarios.py --section demand --section road_classes
+  python tools/analyze_scenarios.py --no-color       # plain ASCII
+
+SECTIONS (selectable via --section, repeatable):
+  configuration  city, trips, time window, radius, seed, strategy,
+                 generation time, OSM source
+  network        nodes, links, has_signal, turn restrictions,
+                 speed/lane stats (range + mean)
+  road_classes   per-OSM-highway-type link counts (top 12 + (other))
+  signals        junction count, cycle length, phase pattern, density
+  demand         totals (mode mix, schedule vs gravity, departure
+                 window, schedule pool size) + Trip-purpose
+                 breakdown subsection (HBW_AM/PM, HBSchool_AM/PM,
+                 HBW_*_chained) + Peak split & chain summary subsection
+  artefacts      per-canonical-file size + total bundle size
+  toolchain      Python / osmnx / numpy / lxml / pandas / etc.
+                 versions recorded at generation time
+
+PAGINATION (automatic):
+  shutil.get_terminal_size() drives per-section pagination. Sections
+  with compact integer columns fit more scenarios per page than
+  sections with wide-string rows (e.g. CONFIGURATION with the OSM
+  filename row). Page titles get a `(scenarios X-Y of N)` suffix
+  whenever a section spans more than one page.
+
+WHEN TO USE:
+  Before benchmarking, to verify generated bundles look correct.
+  When comparing realism features (chain rates, signal density,
+  turn restriction count) across tiers. As a pre-run complement to
+  audit_fairness Q5 and analyze_benchmark's demand-composition table
+  (those run *after* simulation; analyze_scenarios runs on the
+  canonical bundle alone, no engine output needed).
+
+SEE ALSO:
+  python help.py evaluation         audit_fairness + analyze_benchmark
+  doc/RESULTS_GUIDE.md sec 4.4      full reference + usage examples
 """
 
 HELP_TROUBLESHOOTING = """
@@ -923,10 +1050,10 @@ DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
 
 VERIFY THE INSTALL (full sanity check):
   source .venv/bin/activate
-  python -m pytest                              # Full test suite
+  python -m pytest                              # Full test suite (~3-4 min on arm64)
   python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml      # ~27 s
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml      # ~40-100 min on M-series Mac
 
 MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
   python3.10+ -m venv .venv
@@ -954,6 +1081,21 @@ OPERATOR UTILITIES (tools/):
   tools/clean.sh --all       Also drops cache/ (Overpass HTTP cache)
   tools/inspect_network.py <scenario_dir>    Length distribution + degenerate-edge report
   tools/env_report.py                        Toolchain + dep + binary versions, for cross-machine parity check
+  tools/analyze_scenarios.py [name…]         Tabular end-to-end analysis of one or
+                                             more scenario bundles. Seven sections,
+                                             scenarios as columns:
+                                               configuration / network / road_classes /
+                                               signals / demand (with subsections for
+                                               trip-purpose breakdown + peak split) /
+                                               artefacts (file sizes) / toolchain
+                                             Default: every bundle in scenarios/.
+                                             Auto-paginates when too many scenarios
+                                             for the terminal width — each section
+                                             splits into pages of N scenarios.
+                                             Flags:
+                                               --section <name>     pick subset
+                                                                    (repeatable)
+                                               --no-color           plain ASCII
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle
@@ -992,30 +1134,684 @@ TOPICS = {
     "benchmark": HELP_BENCHMARK,
     "tests": HELP_TESTS,
     "testing": HELP_TESTS,
+    "analyzer": HELP_ANALYZER,
+    "analyze": HELP_ANALYZER,
     "troubleshooting": HELP_TROUBLESHOOTING,
 }
 
 
-def main():
-    if len(sys.argv) < 2:
-        print(HELP_OVERVIEW)
+# Menu metadata: ordered groups of (key, short_desc).
+# `key` must resolve via TOPICS. Each group becomes a labeled section in
+# the interactive menu; topics are numbered globally so users can jump
+# by number or name.
+TOPIC_GROUPS = [
+    ("Getting started", [
+        ("overview", "Top-level project overview"),
+        ("setup", "Install + bootstrap"),
+        ("cities", "Live census stats per supported city"),
+        ("scripts", "Built-in preset generation scripts"),
+    ]),
+    ("Core workflows", [
+        ("generate", "Bundle generator (generate.py)"),
+        ("run", "Simulator runner (run.py)"),
+        ("benchmark", "Benchmark harness (run_benchmark)"),
+        ("tests", "Test suite reference"),
+    ]),
+    ("Reference", [
+        ("modes", "Travel-mode taxonomy + JWTRNS mapping"),
+        ("adapters", "SUMO / MATSim / DTALite adapter notes"),
+        ("schema", "Canonical bundle schema (5 files)"),
+    ]),
+    ("Analysis & tools", [
+        ("metrics", "Evaluation metric definitions"),
+        ("evaluation", "audit_fairness + analyze_benchmark + plots"),
+        ("analyzer", "tools/analyze_scenarios.py — bundle analyzer"),
+    ]),
+    ("Troubleshooting", [
+        ("troubleshooting", "Common issues + fixes"),
+    ]),
+]
+
+
+# =============================================================================
+# INTERACTIVE MENU
+# =============================================================================
+
+
+def _resolve_content(topic: str) -> str:
+    """Topic key → printable content. Handles the dynamic `cities` topic."""
+    if topic == "cities":
+        return _build_cities_section()
+    return TOPICS.get(topic, "")
+
+
+def _is_tty() -> bool:
+    """True only when both stdin AND stdout are connected to a terminal."""
+    return sys.stdin.isatty() and sys.stdout.isatty()
+
+
+def _colors_enabled() -> bool:
+    """ANSI colours on iff TTY-attached AND NO_COLOR env var unset.
+
+    See https://no-color.org for the convention. Honoring NO_COLOR keeps
+    the menu readable in CI logs, dumb terminals, and `script(1)`-style
+    capture sessions.
+    """
+    if os.environ.get("NO_COLOR"):
+        return False
+    return sys.stdout.isatty()
+
+
+# ANSI escape codes — emitted only when `_colors_enabled()` is True at
+# render time (checked inside `_c()` and `_input_prompt()`).
+_C_RESET = "\033[0m"
+_C_BOLD = "\033[1m"
+_C_DIM = "\033[2m"
+_C_CYAN = "\033[36m"
+_C_GREEN = "\033[32m"
+_C_YELLOW = "\033[33m"
+_C_RED = "\033[31m"
+
+
+def _c(text: str, code: str) -> str:
+    if not _colors_enabled():
+        return text
+    return f"{code}{text}{_C_RESET}"
+
+
+def _input_prompt(text: str, code: str) -> str:
+    """Build an `input()` prompt with ANSI codes wrapped in `\\001…\\002`.
+
+    Without these readline-style non-printing markers, GNU readline
+    miscounts the visible column position (because it sees the raw
+    ANSI bytes as printable characters), which corrupts cursor placement
+    when the user backspaces or scrolls history.
+
+    Returns plain text when colours are disabled (NO_COLOR or no TTY).
+    """
+    if not code or not _colors_enabled():
+        return text
+    return f"\001{code}\002{text}\001{_C_RESET}\002"
+
+
+def _clear_screen() -> None:
+    # ANSI clear + cursor home; works on every modern terminal.
+    sys.stdout.write("\033[2J\033[H")
+    sys.stdout.flush()
+
+
+def _build_index() -> tuple[dict[str, str], list[tuple[str, list[tuple[int, str, str]]]]]:
+    """Build the (resolver, layout) pair the menu loop needs.
+
+    Resolver maps user input (number string or topic name/alias) → topic key.
+    Layout is a list of (group_label, [(num, key, short_desc), ...]) for
+    rendering the menu visually.
+    """
+    resolver: dict[str, str] = {}
+    layout: list[tuple[str, list[tuple[int, str, str]]]] = []
+    n = 1
+    for group, items in TOPIC_GROUPS:
+        rows: list[tuple[int, str, str]] = []
+        for key, desc in items:
+            resolver[str(n)] = key
+            resolver[key.lower()] = key
+            rows.append((n, key, desc))
+            n += 1
+        layout.append((group, rows))
+    # Aliases not in the menu (e.g. "install" → setup) still resolve.
+    for alias, content in TOPICS.items():
+        if alias.lower() not in resolver:
+            # Find which canonical key shares this content so the alias
+            # routes to the same content path.
+            for canonical in resolver.values():
+                if TOPICS.get(canonical) is content:
+                    resolver[alias.lower()] = canonical
+                    break
+    return resolver, layout
+
+
+def _render_menu(layout) -> str:
+    """Pretty-print the categorised menu with numbered topics."""
+    lines: list[str] = []
+    bar = "═" * 68
+    lines.append(_c(bar, _C_CYAN))
+    lines.append(_c("                    SimForge — Interactive Help",
+                    _C_BOLD + _C_CYAN))
+    lines.append(_c(bar, _C_CYAN))
+    lines.append("")
+    # Compute label width for alignment.
+    all_keys = [k for _, items in layout for _, k, _ in items]
+    key_w = max(len(k) for k in all_keys)
+    for group, items in layout:
+        lines.append("  " + _c(group, _C_BOLD + _C_YELLOW))
+        for n, key, desc in items:
+            num_str = _c(f"{n:>3}", _C_GREEN)
+            key_str = _c(key.ljust(key_w), _C_BOLD)
+            lines.append(f"  {num_str}  {key_str}  {_c(desc, _C_DIM)}")
+        lines.append("")
+    rule = "─" * 68
+    lines.append(_c(rule, _C_DIM))
+    lines.append(_c("  Enter:", _C_BOLD)
+                 + _c("  number / topic name", _C_DIM) + " → show topic")
+    lines.append(_c("        ", _C_BOLD)
+                 + _c("  /<word>", _C_DIM) + "             → search topics for keyword")
+    lines.append(_c("        ", _C_BOLD)
+                 + _c("  q   (or empty)", _C_DIM) + "      → quit")
+    lines.append(_c(rule, _C_DIM))
+    return "\n".join(lines)
+
+
+def _search(query: str, resolver: dict[str, str]) -> None:
+    """Full-text search across all topic content, ranked by hit count."""
+    query_lower = query.lower()
+    if not query_lower:
+        print(_c("  (empty search query)", _C_RED))
+        input("  Press Enter to continue...")
         return
+    seen: set[str] = set()
+    matches: list[tuple[str, int]] = []
+    for key in resolver.values():
+        if key in seen:
+            continue
+        seen.add(key)
+        content = _resolve_content(key)
+        n = content.lower().count(query_lower)
+        if n:
+            matches.append((key, n))
+    matches.sort(key=lambda x: -x[1])
 
-    topic = sys.argv[1].lower().strip("-")
+    print()
+    if not matches:
+        print(_c(f"  No matches for '/{query}'.", _C_RED))
+    else:
+        n_topics = len(matches)
+        if n_topics == 1:
+            header = f"  1 topic matches '/{query}':"
+        else:
+            header = f"  {n_topics} topics match '/{query}':"
+        print(_c(header, _C_BOLD))
+        # Pad the plain key first, then apply colour — otherwise the f-string
+        # `:<28` width counts the ANSI bytes too and the columns wobble.
+        key_w = max(len(k) for k, _ in matches) + 4
+        for key, n in matches:
+            hit_str = f"{n} hit" if n == 1 else f"{n} hits"
+            print(f"    {_c(key.ljust(key_w), _C_BOLD)}  {_c(hit_str, _C_DIM)}")
+    print()
+    try:
+        input(_input_prompt("  Press Enter to continue...", _C_DIM))
+    except (EOFError, KeyboardInterrupt):
+        print()
 
+
+def _page(content: str) -> None:
+    """Display content via `less -FRX` when available, plain print otherwise.
+
+    `-F` auto-exits when content fits on one screen (no q-press needed for
+    short topics). `-R` renders ANSI escapes (we don't currently embed any
+    in topic content, but harmless if a future topic does). `-X` skips
+    the alt-screen sequence so the topic stays in scrollback for later
+    reference. Falls through to plain print when `less` isn't on PATH
+    (rare; mostly Windows without WSL).
+    """
+    import shutil
+    import subprocess
+    less = shutil.which("less")
+    if less is None:
+        # Last-resort fallback: defer to stdlib pydoc, which itself
+        # falls back to plain print when no pager is available.
+        import pydoc
+        pydoc.pager(content)
+        return
+    try:
+        subprocess.run([less, "-FRX"], input=content, text=True, check=False)
+    except (KeyboardInterrupt, BrokenPipeError):
+        pass
+
+
+def _resolve_choice(choice: str, resolver: dict[str, str]) -> tuple[str | None, list[str]]:
+    """Map a user input to a topic key.
+
+    Returns ``(topic_key, suggestions)``. When the input matches exactly,
+    ``topic_key`` is set and ``suggestions`` is empty. When it doesn't
+    match exactly but uniquely prefixes one topic name, that topic is
+    chosen. When multiple topics share the prefix, ``topic_key`` is None
+    and ``suggestions`` lists the candidates.
+    """
+    key = choice.lower().strip()
+    if not key:
+        return None, []
+    # Exact match wins immediately (numbers + full names + aliases).
+    if key in resolver:
+        return resolver[key], []
+    # Try unique prefix match against canonical names only.
+    canonical_keys = sorted({v for v in resolver.values()})
+    prefix_hits = [k for k in canonical_keys if k.startswith(key)]
+    if len(prefix_hits) == 1:
+        return prefix_hits[0], []
+    return None, prefix_hits  # 0 or 2+ hits → caller suggests
+
+
+def _flat_menu_items() -> list[dict]:
+    """Flatten TOPIC_GROUPS into a list of menu rows for the curses TUI.
+
+    Each row is a dict with `type ∈ {'group', 'topic'}`. Group rows are
+    non-selectable headers; topic rows carry the canonical key + the
+    short description used in the menu display.
+    """
+    items: list[dict] = []
+    for group, topics in TOPIC_GROUPS:
+        items.append({"type": "group", "label": group})
+        for key, desc in topics:
+            items.append({"type": "topic", "key": key,
+                          "label": key, "desc": desc})
+    return items
+
+
+def _next_selectable(items: list[dict], current: int) -> int:
+    n = len(items)
+    for i in range(1, n + 1):
+        idx = (current + i) % n
+        if items[idx]["type"] == "topic":
+            return idx
+    return current
+
+
+def _prev_selectable(items: list[dict], current: int) -> int:
+    n = len(items)
+    for i in range(1, n + 1):
+        idx = (current - i) % n
+        if items[idx]["type"] == "topic":
+            return idx
+    return current
+
+
+def _safe_addstr(stdscr, y: int, x: int, text: str, attr: int = 0) -> None:
+    """Add a string at (y, x) without raising on edge-of-screen writes."""
+    import curses
+    h, w = stdscr.getmaxyx()
+    if y < 0 or y >= h or x < 0 or x >= w:
+        return
+    text = text[:max(0, w - x - 1)]
+    try:
+        stdscr.addstr(y, x, text, attr)
+    except curses.error:
+        # Last-column-on-last-row writes raise on some terminals — harmless.
+        pass
+
+
+def _curses_draw_menu(stdscr, items: list[dict], selected: int,
+                      has_colors: bool) -> None:
+    import curses
+    stdscr.erase()
+    h, w = stdscr.getmaxyx()
+
+    title = "  SimForge — Interactive Help"
+    title_attr = (curses.color_pair(1) | curses.A_BOLD) if has_colors \
+                 else curses.A_REVERSE
+    _safe_addstr(stdscr, 0, 0, title.ljust(w - 1), title_attr)
+
+    row = 2
+    first_group = True
+    for i, item in enumerate(items):
+        if row >= h - 2:
+            break
+        if item["type"] == "group":
+            # Blank line above each group except the first one — gives
+            # the menu visible breathing room between categories.
+            if not first_group:
+                row += 1
+                if row >= h - 2:
+                    break
+            first_group = False
+            attr = (curses.color_pair(2) | curses.A_BOLD) if has_colors \
+                   else curses.A_BOLD
+            _safe_addstr(stdscr, row, 2, item["label"], attr)
+            row += 1
+            continue
+        label_w = 18
+        line = f"  {item['label']:<{label_w}}  {item['desc']}"
+        if i == selected:
+            cursor = "▶ "
+            attr = (curses.color_pair(3) | curses.A_BOLD) if has_colors \
+                   else curses.A_REVERSE
+        else:
+            cursor = "  "
+            attr = curses.color_pair(4) if has_colors else 0
+        _safe_addstr(stdscr, row, 2, cursor, attr)
+        _safe_addstr(stdscr, row, 4, line[:max(0, w - 5)], attr)
+        row += 1
+
+    footer = "  ↑/↓: navigate    Enter: open topic    Esc / q: quit"
+    footer_attr = (curses.color_pair(1) | curses.A_BOLD) if has_colors \
+                  else curses.A_REVERSE
+    _safe_addstr(stdscr, h - 1, 0, footer.ljust(w - 1), footer_attr)
+    stdscr.refresh()
+
+
+def _topic_attr(kind: str, has_colors: bool) -> int:
+    """Curses attribute for a content line classified by `_classify_line`.
+
+    Falls back to plain text when colour support isn't available
+    (NO_COLOR-style environments, dumb terminals).
+    """
+    import curses
+    if not has_colors:
+        if kind in ("title", "header"):
+            return curses.A_BOLD
+        if kind == "rule":
+            return curses.A_DIM
+        return 0
+    if kind == "rule":
+        return curses.color_pair(1) | curses.A_DIM
+    if kind == "title":
+        return curses.color_pair(1) | curses.A_BOLD
+    if kind == "header":
+        return curses.color_pair(2) | curses.A_BOLD
+    if kind == "command":
+        return curses.color_pair(3)
+    return 0
+
+
+def _classify_line(line: str) -> str:
+    """Best-effort syntax-highlight kind for a help-content line.
+
+    Used by the topic viewer to choose a curses attribute. Pattern
+    matching is intentionally conservative — we'd rather under-highlight
+    a line than miscolour real text. Categories:
+
+      ``rule``    — line of ``=`` or ``-`` characters (decorative
+                    horizontal bar)
+      ``title``   — short, mostly uppercase line *between* rules (e.g.
+                    "DATA GENERATION (generate.py)")
+      ``header``  — section heading like ``QUICK START:`` or
+                    ``REQUIRED FLAGS:`` (uppercase + trailing colon)
+      ``command`` — example invocation (starts with ``python``, ``$``,
+                    ``sumo``, ``java``, ``pip``, ``uv``, ``brew``,
+                    or ``git`` after stripping leading whitespace)
+      ``normal``  — everything else
+    """
+    stripped = line.strip()
+    if not stripped:
+        return "blank"
+    # Decorative rules first — they're the easiest to spot.
+    if len(stripped) >= 4 and all(c == "=" for c in stripped):
+        return "rule"
+    if len(stripped) >= 4 and all(c == "-" for c in stripped):
+        return "rule"
+    # Section header like "QUICK START:" — uppercase letters with optional
+    # spaces / numbers, ending in a colon.
+    if stripped.endswith(":") and len(stripped) <= 60:
+        body = stripped[:-1].replace(" ", "").replace("/", "").replace("-", "")
+        if body and body.isupper() and any(c.isalpha() for c in body):
+            return "header"
+    # Command example — common shell prefixes, after lstripping.
+    cmd_prefixes = ("python ", "python3 ", "$ ", "$\t", "sumo ", "java ",
+                    "pip ", "uv ", "brew ", "git ", "pytest ", "make ")
+    if stripped.startswith(cmd_prefixes):
+        return "command"
+    # Title = uppercase-ish line that's centred-ish (i.e. has indent).
+    # We only flag it when there's some lead indent (≥2 spaces) to avoid
+    # false positives on uppercase prose.
+    if line.startswith("  ") and len(stripped) <= 60:
+        letters = [c for c in stripped if c.isalpha()]
+        if letters and sum(1 for c in letters if c.isupper()) / len(letters) >= 0.7:
+            return "title"
+    return "normal"
+
+
+def _curses_show_topic(stdscr, title: str, content: str,
+                       has_colors: bool) -> None:
+    """Scrollable topic view. Esc returns the caller (menu) — and
+    because we erase the screen on every menu redraw, the topic content
+    leaves no residue behind.
+
+    Content gets a subtle 2-column left margin and best-effort syntax
+    highlighting so the page reads as a help document rather than an
+    error log: rule lines dim, ALL-CAPS titles bold cyan, ``HEADER:``
+    bold yellow, command examples green.
+    """
+    import curses
+    lines = content.split("\n")
+    # Drop any leading/trailing blank lines so the page starts at real
+    # content (the help-string convention puts a leading "\n" inside the
+    # triple-quoted block which then renders as wasted screen real-estate).
+    while lines and not lines[0].strip():
+        lines.pop(0)
+    while lines and not lines[-1].strip():
+        lines.pop()
+    n_lines = len(lines)
+    offset = 0
+
+    # Pre-classify every line once; cheap and avoids re-running pattern
+    # checks per scroll-redraw.
+    kinds = [_classify_line(line) for line in lines]
+
+    LEFT_PAD = 2     # visible margin from screen edge
+    TOP_PAD = 1      # blank row between title bar and content
+    BOTTOM_PAD = 1   # matching blank row above the footer (symmetry)
+
+    while True:
+        h, w = stdscr.getmaxyx()
+        # Total non-content rows = title (1) + top pad + bottom pad + footer (1)
+        body_h = max(1, h - 1 - TOP_PAD - BOTTOM_PAD - 1)
+        max_offset = max(0, n_lines - body_h)
+        offset = max(0, min(offset, max_offset))
+
+        stdscr.erase()
+        header = f"  Topic: {title}"
+        title_attr = (curses.color_pair(1) | curses.A_BOLD) if has_colors \
+                     else curses.A_REVERSE
+        _safe_addstr(stdscr, 0, 0, header.ljust(w - 1), title_attr)
+
+        for i in range(body_h):
+            idx = offset + i
+            if idx >= n_lines:
+                break
+            line = lines[idx]
+            kind = kinds[idx]
+            attr = _topic_attr(kind, has_colors)
+            row_y = 1 + TOP_PAD + i
+            _safe_addstr(stdscr, row_y, LEFT_PAD,
+                         line[:max(0, w - LEFT_PAD - 1)], attr)
+
+        if max_offset == 0:
+            pos = "all"
+        else:
+            pct = int(100 * offset / max_offset)
+            pos = (f"{pct:3d}%   line {offset + 1}–"
+                   f"{min(offset + body_h, n_lines)}/{n_lines}")
+        # PgUp/PgDn and Home/End still WORK (helpful on long topics) but
+        # we keep them off the footer because compact Mac keyboards lack
+        # those keys natively (need Fn-modifier) and most users won't
+        # discover them. The two essentials live here.
+        footer = f"  ↑/↓: scroll    Esc: back    [{pos}]"
+        footer_attr = (curses.color_pair(1) | curses.A_BOLD) if has_colors \
+                      else curses.A_REVERSE
+        _safe_addstr(stdscr, h - 1, 0, footer.ljust(w - 1), footer_attr)
+        stdscr.refresh()
+
+        try:
+            ch = stdscr.getch()
+        except KeyboardInterrupt:
+            return
+        if ch == curses.KEY_UP:
+            offset -= 1
+        elif ch == curses.KEY_DOWN:
+            offset += 1
+        elif ch == curses.KEY_PPAGE:
+            offset -= body_h
+        elif ch == curses.KEY_NPAGE:
+            offset += body_h
+        elif ch == curses.KEY_HOME:
+            offset = 0
+        elif ch == curses.KEY_END:
+            offset = max_offset
+        elif ch == 27:  # Esc → back to menu
+            return
+        elif ch == curses.KEY_RESIZE:
+            continue
+
+
+def _curses_main(stdscr) -> int:
+    import curses
+    curses.curs_set(0)
+    stdscr.keypad(True)
+
+    has_colors = False
+    if curses.has_colors():
+        try:
+            curses.start_color()
+            curses.use_default_colors()
+            curses.init_pair(1, curses.COLOR_CYAN, -1)     # title bars
+            curses.init_pair(2, curses.COLOR_YELLOW, -1)   # group headings
+            curses.init_pair(3, curses.COLOR_GREEN, -1)    # current row
+            curses.init_pair(4, curses.COLOR_WHITE, -1)    # default text
+            has_colors = True
+        except curses.error:
+            has_colors = False
+
+    items = _flat_menu_items()
+    selected = _next_selectable(items, -1)  # first topic, skip leading group
+
+    while True:
+        _curses_draw_menu(stdscr, items, selected, has_colors)
+        try:
+            ch = stdscr.getch()
+        except KeyboardInterrupt:
+            return 0
+        if ch == curses.KEY_UP:
+            selected = _prev_selectable(items, selected)
+        elif ch == curses.KEY_DOWN:
+            selected = _next_selectable(items, selected)
+        elif ch in (curses.KEY_ENTER, 10, 13):
+            item = items[selected]
+            content = _resolve_content(item["key"])
+            _curses_show_topic(stdscr, item["label"], content, has_colors)
+            # On return, loop redraws the menu — Esc-to-back leaves no
+            # topic residue because curses owns the entire screen and
+            # the next _curses_draw_menu() call calls stdscr.erase().
+        elif ch in (27, ord("q"), ord("Q")):
+            return 0
+        elif ch == curses.KEY_RESIZE:
+            continue
+
+
+def _interactive_legacy_loop() -> int:
+    """Numbered-input fallback for environments where curses can't init.
+
+    Same as the previous interactive menu (number → topic, /<word>
+    search, q to quit). Used only when `import curses` fails or the
+    terminal can't host a curses session.
+    """
+    try:
+        import readline  # noqa: F401
+    except ImportError:
+        pass
+
+    resolver, layout = _build_index()
+    while True:
+        _clear_screen()
+        print(_render_menu(layout))
+        try:
+            choice = input(_input_prompt("\n> ", _C_BOLD + _C_GREEN)).strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return 0
+        if not choice or choice.lower() in ("q", "quit", "exit"):
+            return 0
+        if choice.startswith("/"):
+            _search(choice[1:].strip(), resolver)
+            continue
+        topic, suggestions = _resolve_choice(choice, resolver)
+        if topic is None:
+            if suggestions:
+                print(_c(f"  '{choice}' matches multiple topics:", _C_YELLOW))
+                print("    " + ", ".join(suggestions))
+            else:
+                print(_c(f"  Unknown topic: '{choice}'", _C_RED))
+                print(_c("  Try a number 1–15, a topic name, /<keyword>, or q.",
+                         _C_DIM))
+            try:
+                input(_input_prompt("  Press Enter to continue...", _C_DIM))
+            except (EOFError, KeyboardInterrupt):
+                print()
+                return 0
+            continue
+        content = _resolve_content(topic)
+        _page(content)
+
+
+def _interactive_loop() -> int:
+    """Main entry: try the curses TUI first, fall back to the legacy
+    numbered menu when curses can't run."""
+    os.environ.setdefault("ESCDELAY", "25")
+    try:
+        import curses
+    except ImportError:
+        return _interactive_legacy_loop()
+    try:
+        return curses.wrapper(_curses_main)
+    except curses.error:
+        return _interactive_legacy_loop()
+
+
+# =============================================================================
+# MAIN ENTRY
+# =============================================================================
+
+
+def main() -> int:
+    """Help system entry point.
+
+    Behavior matrix (preserves paste-safe text mode):
+      no args  + TTY      → interactive menu
+      no args  + non-TTY  → print HELP_OVERVIEW (paste-safe)
+      <topic>             → print topic to stdout (paste-safe)
+      -i / --interactive  → force interactive (even if non-TTY, for testing)
+      --no-interactive    → force text overview (escape hatch)
+
+    The `<topic>` path is back-compat: anything that worked on a previous
+    SimForge release still produces the same paste-able plain text.
+    """
+    args = sys.argv[1:]
+
+    # Explicit flag overrides.
+    if "--no-interactive" in args:
+        print(HELP_OVERVIEW)
+        return 0
+    force_interactive = ("-i" in args) or ("--interactive" in args)
+
+    # Strip flags so positional arg handling sees only topic names.
+    args = [a for a in args
+            if a not in ("--no-interactive", "-i", "--interactive")]
+
+    # No positional arg → interactive (when TTY) or overview (otherwise).
+    if not args:
+        if force_interactive or _is_tty():
+            try:
+                return _interactive_loop()
+            except KeyboardInterrupt:
+                print()
+                return 0
+        print(HELP_OVERVIEW)
+        return 0
+
+    # Positional topic — paste-safe text mode.
+    topic = args[0].lower().strip("-")
     if topic in ("h", "help"):
         print(HELP_OVERVIEW)
-        return
+        return 0
+    if topic in TOPICS:
+        print(_resolve_content(topic))
+        return 0
 
-    if topic == "cities":
-        print(_build_cities_section())
-    elif topic in TOPICS:
-        print(TOPICS[topic])
-    else:
-        print(f"\nUnknown help topic: '{topic}'")
-        print(f"\nAvailable topics: {', '.join(TOPICS.keys())}")
-        print("\nUsage: python help.py [topic]")
+    # Unknown topic.
+    print(f"\nUnknown help topic: '{topic}'")
+    print(f"\nAvailable topics: {', '.join(sorted(set(TOPICS.keys())))}")
+    print("\nUsage: python help.py [topic]")
+    print("       python help.py            # interactive menu (TTY)")
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

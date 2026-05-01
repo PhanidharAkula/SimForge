@@ -69,17 +69,16 @@ class ProgressBar:
         elapsed = time.time() - self.start_time
         elapsed_str = self._fmt_time(elapsed)
 
-        if self.current > 0 and self.current < self.total:
-            eta = elapsed * (self.total - self.current) / self.current
-            eta_str = self._fmt_time(eta)
-        else:
-            eta_str = "--:--"
-
+        # No ETA: SimForge runs are wildly heterogeneous (a 1K-trip
+        # bundle next to a 500K-trip one; a 10ms unit test next to a
+        # 30s SUMO integration test), so a running-mean ETA swings
+        # between unhelpful extremes. Percentage + count + elapsed
+        # carry the same information without misleading the operator.
         desc = f"{self.desc}: " if self.desc else ""
         line = (
             f"\r  {desc}[{bar}] {pct:5.1f}%  "
             f"{self.current:,}/{self.total:,}  "
-            f"elapsed {elapsed_str}  eta {eta_str}"
+            f"elapsed {elapsed_str}"
         )
         sys.stderr.write(line)
         sys.stderr.flush()
@@ -423,20 +422,13 @@ class StickyProgress:
         bar = (_BAR_FILL + ("█" * filled) + _RESET
                + _BAR_EMPTY + ("░" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
-        # Need at least 3 completed units for a sensible average. With
-        # 1-2 samples the first cold-start unit (e.g. pytest's first
-        # test paying for all the imports) dominates and ETA blows up
-        # to absurd values like "10 h" before settling. Suppress until
-        # we have enough data to amortise.
-        if 0 < progress < 3:
-            eta_s = "--"
-        elif 0 < progress < self.total:
-            eta = (elapsed / progress) * (self.total - progress)
-            eta_s = _fmt_dur(eta)
-        elif progress >= self.total:
-            eta_s = "0s"
-        else:
-            eta_s = "--"
+        # No ETA — SimForge runs are wildly heterogeneous (1K-trip
+        # bundle next to 500K-trip one, 10ms unit test next to 30s
+        # SUMO integration test) so a running-mean ETA swings between
+        # unhelpful extremes. The cold-start `progress < 3` shim used
+        # to mask the worst of this but couldn't fix the fundamental
+        # variance. Percentage + count + elapsed carry the same
+        # information without misleading the operator.
         if progress >= self.total:
             spinner = _SPINNER_COLOR + "✓" + _RESET
         else:
@@ -466,7 +458,7 @@ class StickyProgress:
         bar_line = (f"  {bar}  {spinner}  {pct:>3.0f}%  "
                     f"{self.unit} {min(progress + 1, self.total)}/{self.total}"
                     f"{label_part}{counters}  "
-                    f"elapsed {_fmt_dur(elapsed)}  ETA {eta_s}")
+                    f"elapsed {_fmt_dur(elapsed)}")
         if _in_place and self._drawn:
             # Flicker-free in-place rewrite: cursor still on the bar
             # line from the previous render. \r jumps to column 0,

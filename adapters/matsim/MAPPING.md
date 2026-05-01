@@ -107,10 +107,18 @@ V5+ Phase 7 wires turn-restriction enforcement into the MATSim adapter.
 For each trip the adapter pre-routes via state-aware BFS using
 `pipeline/network/turn_restrictions.shortest_path_with_restrictions`,
 then writes a `<route type="links" start_link="..." end_link="...">interior</route>`
-per the MATSim 15 plans v4 DTD. The engine drives the prescribed route
-verbatim and never crosses a forbidden movement. Falls back to plain
-BFS when no restriction-respecting path exists (rare; SCC-feasible by
-construction).
+per the MATSim 15 **population_v6** DTD. The engine drives the
+prescribed route verbatim and never crosses a forbidden movement.
+Falls back to plain BFS when no restriction-respecting path exists
+(rare; SCC-feasible by construction).
+
+> Note: pre-V11.2 used the plans_v4 DTD — V11.2 corrected it to
+> population_v6 because plans_v4's `<route>` element only accepts
+> cost-optimisation `type` values (`dist|trav-time|num-nodes|num-intersects`)
+> and treats text content as a *node* sequence, breaking V5 Phase 7's
+> intent. population_v6 accepts arbitrary `type` (CDATA), explicit
+> `start_link` / `end_link` attributes, and link-sequence interior
+> content. Both DTDs ship in the same MATSim 15 JAR.
 
 ### Vehicle type (V11+)
 

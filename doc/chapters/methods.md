@@ -60,7 +60,7 @@ SimForge solves these challenges through five interacting subsystems:
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | DTALite simulator  | DTALite (bundled in [`path4gmns`](https://github.com/jdlph/Path4GMNS)) | 0.10.0+ | CPU mesoscopic Dynamic Traffic Assignment |
 | OpenMP runtime (Mac) | libomp (brew install libomp) | — | DTALite OpenMP runtime on macOS |
-| Testing            | pytest                       | 8.0+    | ~434 tests across all subsystems        |
+| Testing            | pytest                       | 8.0+    | ~477 tests across all subsystems        |
 
 > **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement and after exhaustive integration work in Versions 4–5, the matrix narrows to **three primary engines** (SUMO microscopic + mesoscopic, MATSim queue-based agent, DTALite mesoscopic Dynamic Traffic Assignment) chosen for paradigm spread. Three of the originally-proposed engines were systematically evaluated and ruled out: **QarSUMO** dropped in Version_4 Phase A (no usable public source — LLNL/QarSUMO 404, QarSUMO/QarSUMO empty placeholder, Boulmakoul 2023 IEEE HPCS paper produced no runnable code; full retrospective in [`doc/engines/QARSUMO_RETROSPECTIVE.md`](../engines/QARSUMO_RETROSPECTIVE.md)); **LPSim** integrated in Version_4 Phase B but abandoned in Version_5 after the bundled GPU binary crashed at network sizes > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch (full retrospective in [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md)); **POLARIS** and **CityFlow** evaluated as alternatives during the third-engine selection but ruled out at criteria (POLARIS license-gated, CityFlow scaling-broken — see [`doc/engines/THIRD_ENGINE_OPTIONS.md`](../engines/THIRD_ENGINE_OPTIONS.md)). DTALite (bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS), Apache 2.0) was selected on three grounds: bounded integration cost (pre-built binary, working CMake), paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and CPU-only execution (the full matrix runs on Mac as well as Linux). See [`doc/engines/ENGINE_COMPARISON.md`](../engines/ENGINE_COMPARISON.md) for the full cross-engine comparison and `todo.md` for the rollout history.
 
@@ -675,7 +675,7 @@ config.xml   ──► scenario.sumocfg
 4. Convert the node path to an edge sequence via the `edge_lookup` dictionary.
 5. Write as `<vehicle id="veh_t0" depart="25200"><route edges="l0 l1 l2"/></vehicle>`.
 
-The MATSim adapter uses the same state-aware BFS to pre-route every plan and writes a `<route type="links" start_link="..." end_link="...">interior</route>` per the MATSim 15 plans v4 DTD. The DTALite adapter emits a sibling `movement.csv` with forbidden movements (capacity = 0, penalty = 99999) but path4gmns 0.10.0 does not natively ingest it — a documented cross-engine asymmetry. Trips with no valid path (disconnected OD pairs) are skipped and logged.
+The MATSim adapter uses the same state-aware BFS to pre-route every plan and writes a `<route type="links" start_link="..." end_link="...">interior</route>` per the MATSim 15 **population_v6** DTD (corrected from plans_v4 in V11.2 — plans_v4's `<route>` element rejects `type="links"` and treats text content as a node sequence; population_v6 supports both natively). The DTALite adapter emits a sibling `movement.csv` with forbidden movements (capacity = 0, penalty = 99999) but path4gmns 0.10.0 does not natively ingest it — a documented cross-engine asymmetry. Trips with no valid path (disconnected OD pairs) are skipped and logged.
 
 **Mesoscopic mode**: Activated via `--mesosim` flag in SUMO configuration. Uses queue-based link traversal instead of car-following. Dramatically faster for large scenarios (100-1000× speedup at 500K+ trips) with lower fidelity.
 
@@ -839,10 +839,10 @@ For each (scenario, engine, mode, seed):
     6. Record RunResult           ──► JSON serializable
 ```
 
-**Progress tracking**: The `ProgressTracker` displays real-time progress with ETA:
+**Progress tracking**: The `StickyProgress` bar displays real-time progress with completion ratio, ✓/✗ counts, elapsed clock, and a Braille spinner heartbeat (V11.2+ removed the ETA estimate — SimForge cells are heterogeneous, so a running-mean ETA swings between unhelpful extremes):
 
 ```
-[████████████████████░░░░░░░░░░░░░░░░░░░░] 52.3% | 47/90 runs | ✓45 ✗2 | Elapsed: 12.5m | ETA: 11.4m
+[████████████████████░░░░░░░░░░░░░░░░░░░░] 52.3%  ⠼  47/90 runs  ✓45 ✗2  elapsed 12m 30s
 ```
 
 **Output structure:**
@@ -1029,7 +1029,11 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **406 tests** across all subsystems:
+The framework includes **~477 tests** with the 3 tracked bundles
+(`chicago_1k_car`, `nyc_10k_car`, `la_50k_car`); generating the two
+larger benchmark tiers (`chicago_200k_car`, `nyc_500k_car`) lifts the
+count to ~549 because `test_scenario_data_integrity.py` parametrises
+36 tests over every complete bundle in `scenarios/`.
 
 | Test Module                       | Tests | What It Validates                                       |
 | --------------------------------- | ----- | ------------------------------------------------------- |
@@ -1041,20 +1045,27 @@ The framework includes **406 tests** across all subsystems:
 | `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation         |
 | `test_scalability_metrics.py`     | 8     | Timer, throughput, hardware detection                   |
 | `test_validator.py`               | 2     | Bundle validation: valid and invalid bundles            |
-| `test_scenario_data_integrity.py` | 35    | 7 classes x the bundled scenario                        |
+| `test_scenario_data_integrity.py` | 108   | 7 classes × 36 tests/scenario × 3 tracked bundles (180 with all 5 generated) |
 | `test_pipeline_e2e.py`            | 20    | Bad data detection, routing, adapter robustness         |
 | `test_scc.py`                     | 14    | Iterative Kosaraju + parsing                            |
-| `test_feasibility.py`             | 16    | Shared cross-engine trip filter                         |
-| `test_analyze_benchmark.py`       | 25    | Mode-aware grouping + identity fallback + renderers     |
+| `test_feasibility.py`             | 19    | Shared cross-engine trip filter + V5 mode-aware feasibility |
+| `test_analyze_benchmark.py`       | 24    | Mode-aware grouping + Phase 10 demand composition table |
+| `test_audit_fairness.py`          | 29    | Q1–Q4 audit helpers + 4-layout detector                 |
+| `test_confidence.py`              | 18    | Student's-t 95 % CI core + edge cases                   |
 | `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
+| `test_demand_composition.py` (V5+ Phase 10) | 7 | `purpose` column tally, AM/PM peak split, pre-V5 graceful no-op |
+| `test_parse_model_file.py`        | 27    | ModelGen parser + V5 Phase 5 JWTRNS mapping + Phase 9 HBSchool helpers |
+| `test_turn_restrictions.py` (V5+ Phase 7) | 17 | OSM restriction parser, forbidden-move builder, state-aware BFS, DTALite movement.csv |
+| `test_vehicle_types.py` (V5+ Phase 11) | 19 | Canonical car constants, SUMO/MATSim XML emission, cross-engine equivalence |
 | `test_dtalite_adapter.py`         | 46    | DTALite adapter: writers, settings, demand-driven zoning, determinism, output parsing, end-to-end smoke |
-| `test_engine_smoke.py`            | 3     | Real-binary smoke on SUMO/MATSim                        |
+| `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/DTALite                |
 
-**All ~434 tests passing** as of Version_4 Phase B. Marker registry in
-`pyproject.toml`; shared fixtures in `tests/conftest.py`.  Line coverage
-sits at **76 %** across the adapter, pipeline, and evaluation packages;
-the local gate enforces ≥70 % via `pytest --cov --cov-fail-under=70`.
+**All ~477 tests passing** with the 3 tracked bundles as of Version_5
+Phase 11. Marker registry in `pyproject.toml`; shared fixtures in
+`tests/conftest.py`. Line coverage sits at **76 %** across the
+adapter, pipeline, and evaluation packages; the local gate enforces
+≥70 % via `pytest --cov --cov-fail-under=70`.
 
 ### 3.7.2 Determinism Guarantees
 

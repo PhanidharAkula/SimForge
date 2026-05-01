@@ -285,7 +285,7 @@ collapses them into exactly **4 buckets** that match how road simulators
 think about traffic: `car`, `transit`, `bike`, `walk`. The collapse is
 defined in **one** place (single source of truth):
 
-- `pipeline/demand/parse_model_file.py:176-189` — the `JWTRNS_TO_MODE`
+- `pipeline/demand/parse_model_file.py:200-213` — the `JWTRNS_TO_MODE`
   dict + the derived `MODE_TO_JWTRNS` reverse index + the
   `SUPPORTED_MODES` tuple. The demand generator uses these directly.
 - `pipeline/modelgen_scanner.py:19-22` — re-exports the canonical dict
@@ -490,12 +490,15 @@ $ grep -rln "busStop\|ptlines\|vClass=\"bus\"\|--public-transport\|rail_urban\|t
 (no matches)
 ```
 
-The help.py line that says "SUMO: car (micro/meso), transit (with PT
-module)" describes the engine's *capability*, not what SimForge has
-plumbed. Wiring up PT would require non-trivial additions to
-`pipeline/network/` (to detect bus routes from OSM PT relations) and to
-`adapters/sumo/` (to emit the additionals + ptlines files), plus a
-parallel story for MATSim's transit module.
+The current `python help.py modes` (HELP_MODES) "SIMULATOR SUPPORT" block
+spells out that all three adapters are wired for `car only` and lists the
+engine-side capability in parentheses ("engine supports PT/bike/walk via
+busStop/ptlines/vClass; not wired up" for SUMO). That capability footnote
+describes the engine's reach, not what SimForge has plumbed. Wiring up PT
+would require non-trivial additions to `pipeline/network/` (to detect bus
+routes from OSM PT relations) and to `adapters/sumo/` (to emit the
+additionals + ptlines files), plus a parallel story for MATSim's transit
+module.
 
 ---
 

@@ -553,10 +553,15 @@ class BenchmarkHarness:
         mode_w = max((len(m) for m in modes_used), default=4)
         cell_idx_w = len(str(max(total_runs, 1)))
 
+        # Always route logs through print_above() so WARNING+ records
+        # don't collide with the sticky bar's no-newline writes. Level
+        # threshold: WARNING+ in default mode, INFO+ when --verbose.
+        import logging as _logging
         from pipeline.progress import StickyProgress
         progress = StickyProgress(
             total_runs, unit="run",
-            capture_logs=verbose,
+            capture_logs=True,
+            capture_log_level=_logging.INFO if verbose else _logging.WARNING,
             capture_log_names=("", "adapters", "adapters.sumo",
                                "adapters.matsim", "adapters.dtalite",
                                "adapters.common", "pipeline"),

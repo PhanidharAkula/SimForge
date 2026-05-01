@@ -648,19 +648,37 @@ def generate_census_demand(
             len(school_nodes),
         )
 
-    def _maybe_school_chain_for(person, home_node):
-        """Return school_node if this person has a school-age dependent and a
-        school is reachable within `_SCHOOL_MAX_KM` of their home; else None.
+    def _maybe_school_chain_for(person, home_node, work_node):
+        """Return school_node if this person has a school-age dependent, a
+        school is reachable within `_SCHOOL_MAX_KM` of their home, AND the
+        chain would not collapse to a self-trip; else None.
+
+        Self-trip guard: if the building→node snap puts home, school, or
+        work at the same network node, emitting the chain would produce a
+        ``home → school`` or ``school → work`` row with origin equal to
+        destination — which the bundle-validator's
+        TestDemandIntegrity.test_origin_differs_from_destination correctly
+        rejects. This is most common in dense urban grids where multiple
+        OSM buildings collapse onto a single graph node after SCC pruning.
+        Skip the chain entirely in that case; the caller falls back to a
+        bare HBW row, preserving demand realism without breaking
+        referential integrity.
         """
         if not school_nodes:
             return None
         if not _has_school_age_dependent(person, model_data):
             return None
         home_lon, home_lat = network.node_coords[home_node]
-        return _nearest_school_node(
+        school_node = _nearest_school_node(
             home_lat, home_lon,
             school_nodes, school_lats, school_lons,
         )
+        if school_node is None:
+            return None
+        # Reject chains that would self-trip on either leg.
+        if school_node == home_node or school_node == work_node:
+            return None
+        return school_node
 
     # Phase 1a: Schedule-driven AM trips (home → work, 8 AM arrival).
     # V5+: parents with a school-age dependent emit a chained
@@ -682,9 +700,10 @@ def generate_census_demand(
             )
             mode_str = _trip_mode_for(person)
 
-            school_node = _maybe_school_chain_for(person, home_node)
-            # If chain fits the budget AND a reachable school exists,
-            # emit two rows: home → school + school → work.
+            school_node = _maybe_school_chain_for(person, home_node, dest_node)
+            # If chain fits the budget AND a reachable school exists
+            # AND neither leg would self-trip, emit two rows:
+            # home → school + school → work.
             if school_node is not None and am_emitted + 2 <= n_am_target:
                 # The school drop happens slightly before workplace arrival
                 # (parent stops on the way). For simplicity, emit both
@@ -757,9 +776,10 @@ def generate_census_demand(
             )
             mode_str = _trip_mode_for(person)
 
-            school_node = _maybe_school_chain_for(person, home_node)
-            # If chain fits the budget AND a reachable school exists,
-            # emit two rows: work → school + school → home.
+            school_node = _maybe_school_chain_for(person, home_node, work_node)
+            # If chain fits the budget AND a reachable school exists
+            # AND neither leg would self-trip, emit two rows:
+            # work → school + school → home.
             if school_node is not None and pm_emitted + 2 <= n_pm_target:
                 # Both legs share the same departure_time_s — same
                 # simplification as the AM chain. Engines reorder by

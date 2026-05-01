@@ -1,6 +1,6 @@
 # SimForge Test Suite
 
-**~513 tests** across **23 test files** covering adapters, metrics, validation,
+**~477 tests** across **23 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, the cross-engine
 fairness audit, OSM network fetching (mocked), demand generators, and
@@ -112,6 +112,24 @@ missing geo projection). Includes an all-scenarios sweep that
 Tests the MATSim adapter's helpers (`seconds_to_time_string`, `MATSimConfig`,
 vehicles XML, network XML, plans XML, config XML) and the full
 `prepare_matsim_inputs` pipeline. No Java/JAR required.
+
+**Wall time on M-series Mac: ~10 min.** Most of it is one
+`test_all_scenarios` sweep that pre-routes nyc_10k_car's 10K trips
+through V5 Phase 7's state-aware BFS — legitimate work, not redundancy.
+For routine dev, skip the sweep:
+
+```bash
+python -m pytest tests/test_matsim_adapter.py -k "not test_all_scenarios"
+```
+
+That keeps 23 of 24 assertions live and runs in ~3 min.
+
+V11.3 added session-scoped fixtures (`canonical_network_data`,
+`built_network_xml`, `built_plans_xml`, `prepared_chicago`,
+`prepared_sweep`) so structure-only assertions don't re-trigger the
+prepare/build pipeline per test. That cleared ~75 s of cross-test
+redundancy. Determinism of the cached code paths is enforced separately
+in `tests/test_adapter_determinism.py`.
 
 ### 4. `test_dtalite_adapter.py` — DTALite Adapter (46 tests)
 
@@ -307,7 +325,7 @@ scenarios are well below the threshold and never skip.
 | Confidence (95 % CI)   | 18      | Student's-t helper used by all per-cell summaries           |
 | Engine smoke           | 4       | Real-binary SUMO/MATSim/DTALite smoke + availability report |
 | Audit fairness         | 29      | HMS parser, per-engine TT extractors, 4-layout cell detector, orchestrator integration |
-| **Total**              | **~513** | **~3-4 min** on arm64 (SUMO sweeps skip individually via the netconvert detector); **~22 s** on Linux where SUMO actually runs. Count scales with the number of bundled scenarios — every additional `scenarios/` entry adds 36 parametrized data-integrity tests. V5+ added `tests/test_turn_restrictions.py` (Phase 7), `tests/test_demand_composition.py` (Phase 10), `tests/test_vehicle_types.py` (Phase 11), and the `TestHBSchoolHelpers` class on `tests/test_parse_model_file.py` (Phase 9). |
+| **Total**              | **~477** | **~3-4 min** on arm64 (SUMO sweeps skip individually via the netconvert detector); **~22 s** on Linux where SUMO actually runs. Headline count assumes the **3 tracked bundles** (chicago_1k_car, nyc_10k_car, la_50k_car) — every additional bundle in `scenarios/` adds 36 parametrized data-integrity tests, so generating all 5 standard tiers (`scripts/01..05`) lifts the count to ~549 with proportionally longer wall time (~14 min on M-series Mac). V5+ added `tests/test_turn_restrictions.py` (Phase 7), `tests/test_demand_composition.py` (Phase 10), `tests/test_vehicle_types.py` (Phase 11), and the `TestHBSchoolHelpers` class on `tests/test_parse_model_file.py` (Phase 9). |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
 **~76 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**

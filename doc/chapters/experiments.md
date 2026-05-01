@@ -344,4 +344,4 @@ For any researcher to reproduce these experiments:
 - [ ] Analyse: `python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown`.
 - [ ] Audit fairness: `python -m evaluation.audit_fairness runs/benchmark_small`.
 - [ ] Render figures: `python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json`.
-- [ ] Verify: all 406 tests pass (`python -m pytest tests/ -q`).
+- [ ] Verify: all ~477 tests pass (`python -m pytest tests/ -q`). The headline count assumes the 3 tracked bundles; +36 per additional bundle in `scenarios/` (full local sweep with all 5 generated tiers ≈ 549 tests).

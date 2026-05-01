@@ -473,13 +473,21 @@ def generate_scenario(
 
     t0 = time.time()
     step_times: dict[str, float] = {}
-    # When verbose is on, route adapter INFO logs through the bar's
-    # print_above() so they land above the sticky bar instead of
-    # colliding with its no-newline writes. Bar stays visible the whole
-    # time; the firehose flows above it.
+    # ALWAYS route logs through the bar's print_above() so any record
+    # (including WARNING+ from osmnx / build_network_from_osm.py) lands
+    # cleanly above the sticky bar. Pre-V11.1 capture was gated on
+    # --verbose, which meant default-mode WARNING records (e.g.
+    # "Dropping degenerate edge ...") went straight to stderr and
+    # collided with the bar's no-newline redraws — producing mangled
+    # `░░░░  ⠦  0%  step 1/4 ... elapsed 3m 07sWARNING ...` lines.
+    # The level threshold below decides what passes through:
+    #   default  → WARNING+ (errors still surface, no INFO firehose)
+    #   verbose  → INFO+    (full adapter chatter)
+    capture_log_level = logging.INFO if verbose else logging.WARNING
     progress = StickyProgress(
         _TOTAL_STEPS, unit="step",
-        capture_logs=verbose,
+        capture_logs=True,
+        capture_log_level=capture_log_level,
         capture_log_names=("", "pipeline", "pipeline.network",
                            "pipeline.demand", "pipeline.signals",
                            "adapters"),
@@ -541,16 +549,18 @@ def generate_scenario(
         bbox, out / "network.xml", network_type="drive", pbf_path=effective_pbf
     )
     step_times["Network"] = time.time() - t_step
-    # Defensive: net["osm_source"] records whether the PBF or the Overpass
-    # fallback was used. The ✓ line surfaces it either way so the operator
-    # has a paper trail for which path the simulation actually came from.
+    # Source provenance: PBF is already announced in the pre-step
+    # `source: ...` line (above), so the ✓ line stays clean. Overpass
+    # fallback IS worth surfacing on the ✓ line — it's a divergence
+    # from what we announced (the default-mode path expected PBF) and
+    # the operator should see ⚠ explicitly.
     src = net.get("osm_source", {})
     if src.get("type") == "pbf":
-        src_label = f"from {Path(src.get('path', '?')).name}"
+        src_label = ""  # already shown in pre-step "source:" line
     else:
-        src_label = f"from Overpass API ⚠ ({src.get('endpoint','?')})"
+        src_label = f"  from Overpass API ⚠ ({src.get('endpoint','?')})"
     progress.print_above(f"  ✓ network.xml: {net['node_count']:,} nodes, "
-                         f"{net['link_count']:,} links  {src_label}  "
+                         f"{net['link_count']:,} links{src_label}  "
                          f"({_fmt_dur(step_times['Network'])})")
     progress.advance()
 

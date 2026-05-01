@@ -535,13 +535,18 @@ Examples:
     # Sticky progress bar from the shared pipeline.progress.StickyProgress
     # module. TTY-only with a heartbeat spinner, flicker-free in-place
     # updates, ✓N ✗N counters in the tail. Suppressed silently when
-    # stdout is piped (sbatch logs, CI captures). With --verbose the bar
-    # stays visible and adapter INFO logs are routed above it via
-    # capture_logs=True.
+    # stdout is piped (sbatch logs, CI captures). Logs are ALWAYS routed
+    # above the bar via print_above() so WARNING+ records (e.g. osmnx
+    # "Dropping degenerate edge") don't collide with the bar's
+    # no-newline writes. The level threshold differs by mode:
+    #   default  → WARNING+ only (errors surface, no INFO firehose)
+    #   verbose  → INFO+    (full adapter chatter)
+    import logging as _logging
     from pipeline.progress import StickyProgress
     progress = StickyProgress(
         total_runs, unit="run",
-        capture_logs=args.verbose,
+        capture_logs=True,
+        capture_log_level=_logging.INFO if args.verbose else _logging.WARNING,
         capture_log_names=("", "adapters", "adapters.sumo",
                            "adapters.matsim", "adapters.dtalite",
                            "adapters.common", "pipeline"),

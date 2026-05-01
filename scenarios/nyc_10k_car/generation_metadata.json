@@ -15,7 +15,7 @@
   "node_count": 34121,
   "link_count": 105171,
   "signal_count": 1637,
-  "generation_time_s": 165.0,
+  "generation_time_s": 160.3,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/new-york-2026-04-22.osm.pbf",
@@ -34,9 +34,9 @@
     "pandas": "2.3.3"
   },
   "demand_provenance": {
-    "schedule_driven_count": 1284,
-    "gravity_fallback_count": 8716,
-    "schedule_driven_pct": 12.84,
+    "schedule_driven_count": 1645,
+    "gravity_fallback_count": 8355,
+    "schedule_driven_pct": 16.45,
     "scheduled_pool_size": 1284,
     "fallback_reasons": {
       "schedule_dest_orphan_or_outside_bbox": 27055,

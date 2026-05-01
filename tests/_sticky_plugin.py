@@ -174,7 +174,14 @@ class StickyProgressPlugin:
         # Method monkey-patches: redundant with the stat-pop for some
         # categories but defensive — pytest plugins occasionally render
         # via their own paths instead of tr.stats iteration.
+        # `summary_failures` and `summary_errors` are the FAILURES /
+        # ERRORS traceback blocks pytest emits before our unified
+        # summary; our own summary already lists failed nodeids with
+        # the first-error line in `failed_nodeids`, so the full
+        # traceback dump is duplicate noise.
         tr.summary_warnings = lambda: None
+        tr.summary_failures = lambda: None
+        tr.summary_errors = lambda: None
         tr.short_test_summary = lambda: None
         tr.summary_stats = lambda: None
 
