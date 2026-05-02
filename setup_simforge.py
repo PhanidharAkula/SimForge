@@ -278,16 +278,18 @@ def print_next_steps(has_java: bool, has_sumo: bool, has_libomp: bool = True):
   python generate.py --city chicago --trips 5000
 
 {CYAN}Validate:{RESET}
-  python -m pipeline.validation.validate_bundle scenarios/chicago_5k_car
+  python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 
 {CYAN}Run simulation (all 3 engines):{RESET}
-  python run.py --scenario chicago_5k_car --engine sumo,matsim,dtalite \\
-                --mode meso --repeats 3
+  python run.py --scenario chicago_1k_car --engine sumo,matsim,dtalite --mode meso --repeats 3
+
+{CYAN}Run the canonical benchmark (Phase 12+ — per-scenario JSONs land at runs/<runspec>/<scenario>/):{RESET}
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 {CYAN}Analyze results (canonical 3-step post-benchmark pipeline):{RESET}
-  python -m evaluation.analyze_benchmark runs/benchmark_*/benchmark_results.json
-  python -m evaluation.audit_fairness    runs/benchmark_*
-  python -m evaluation.generate_plots    runs/benchmark_*/benchmark_results.json
+  python -m evaluation.analyze_benchmark runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json
+  python -m evaluation.audit_fairness    runs/benchmark_small
+  python -m evaluation.generate_plots    runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json
 
 {CYAN}Run tests:{RESET}
   python -m pytest tests/ -v --tb=short
