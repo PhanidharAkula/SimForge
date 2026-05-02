@@ -1,10 +1,19 @@
 # Canonical env_report output for the locked thesis-build environment.
 #
-# Source: Mac M4 Pro, captured 2026-04-26 after the uv migration. The Mac
-# reference and the Pitzer reference below were both produced from
-# requirements.lock (pinned by uv) and have byte-identical Python deps.
+# Source: Mac M4 Pro, captured 2026-04-26 after the uv migration and
+# re-verified 2026-05-02 after Phase 12 (sbatch correctness, BFS-prep
+# cache) + Phase 12.1 (MATSim route-text format) + Phase 12.2 (path
+# collapse) — no Python-dep drift. The Mac reference and the Pitzer
+# reference below were both produced from requirements.lock (pinned by
+# uv) and have byte-identical Python deps.
+#
+# Phase 11.x and 12.x added NO new external dependencies — every new
+# code path uses stdlib (hashlib, os, shutil, csv, argparse) or the
+# already-pinned matplotlib/lxml/numpy. requirements.txt and
+# requirements-dev.txt are unchanged from the 2026-04-26 capture.
 #
 # Reproduce locally:
+#   source .venv/bin/activate          # so sumo / netconvert resolve
 #   python tools/env_report.py
 #
 # Compare your output against the appropriate block below. Lines that are
