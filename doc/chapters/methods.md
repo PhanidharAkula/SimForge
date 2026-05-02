@@ -45,6 +45,18 @@ SimForge solves these challenges through five interacting subsystems:
 | **Transparency**    | All data sources documented; every transformation traceable from source to output |
 | **Scalability**     | Scenarios from 1K to 5M trips; runs on laptop or HPC cluster                      |
 
+The "exact version pinning" claim above has an in-repo artifact:
+[`cluster/example_runs/env_report_canonical.txt`](../../cluster/example_runs/env_report_canonical.txt)
+captures the byte-identical Mac M4 Pro and Pitzer Linux x86_64 toolchains
+(both produced from `requirements.lock` via `uv pip install`). The
+`tools/env_report.py` helper regenerates this report locally so any
+operator can `diff` against the canonical reference and surface drift.
+Lines marked **MUST match** in the canonical file are reproducibility-
+critical (Python 3.13.13, osmnx 2.0.7, lxml 6.0.2, SUMO 1.26.0,
+path4gmns 0.10.0, …); lines marked as expected to differ (Mac arm64 vs
+Linux x86_64 binary paths, host-specific executable paths) are flagged
+inline so they are not mistaken for drift.
+
 ### 3.1.2 Technology Stack
 
 | Component          | Technology                   | Version | Role                                    |
