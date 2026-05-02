@@ -8,6 +8,258 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 12.1: MATSim route-text format fix (2026-05-02) — CRITICAL
+
+**Symptom.** Every MATSim run completed in normal wall time and reported
+`status="success"`, but `output_trips.csv.gz` had ZERO trip rows
+(only the header line). MATSim's `logfileWarningsErrors.log` was full of:
+
+```
+WARN DefaultTurnAcceptanceLogic:58 Cannot move vehicle person_t82 from link l1502 to link l28738
+```
+
+— one warning per agent. Mean travel time computed by `parse_matsim_output`
+was 0 (chicago_1k_car) or `~26 s` from a handful of teleport-fallback
+trips (nyc_10k_car). The R-score across 5 reps trivially evaluated to
+1.0000 because the stddev of zero (or near-zero) trip counts is zero;
+this read in analyze_benchmark as "perfect determinism" but was actually
+"perfect breakage". Phase 11.6's `engine_wall_s` numbers for MATSim were
+*real* JVM time but reflected a mobsim that immediately gave up.
+
+**Root cause — wrong text content for `<route type="links">`.**
+SimForge's `build_matsim_plans_xml` emitted:
+
+```xml
+<route type="links" start_link="l28784" end_link="l477">
+    l28738 l52123 l28688 ... l29310 l55755
+</route>
+```
+
+— treating the text content as the *interior* of the route (i.e.
+excluding `start_link` and `end_link`). MATSim 15 / population_v6
+expects the **FULL** link sequence in the text content, with
+`start_link` as the first token and `end_link` as the last:
+
+```xml
+<route type="links" start_link="l29641" end_link="l29299" ...>
+    l29641 l29471 l29644 ... l29310 l29299
+</route>
+```
+
+(Format confirmed against MATSim's own `output_plans.xml.gz` after
+running with the BFS-pre-routing disabled — MATSim's router emits
+this redundant idiom.) When SimForge omitted `start_link` and
+`end_link` from the text, MATSim's mobsim ended up with a route
+disjoint from where the agent physically was, and
+`DefaultTurnAcceptanceLogic` rejected every transition.
+
+**Fix.** `adapters/matsim/matsim_adapter.py:build_matsim_plans_xml`
+now constructs the full link sequence
+`[origin_link, *route_link_ids, dest_link]` (de-duped at the joins
+in case BFS happens to land on origin_link or dest_link directly)
+and writes the entire list as the route text, while *also* setting
+`start_link` and `end_link` to match the surrounding activity links.
+
+**Empirical confirmation against chicago_1k_car/matsim/seed_42:**
+
+| Metric | Before | After |
+|---|---|---|
+| Trips in `output_trips.csv.gz` | 0 | 1000 |
+| `Cannot move vehicle` warnings | 1000 | 0 |
+| Engine wall | 10.1 s | 11.0 s |
+| Mean travel time | n/a (no trips) | 309.6 s |
+| P95 travel time | n/a | 582 s |
+
+**Impact on existing thesis data.** Every MATSim cell in every prior
+benchmark run is invalid as a travel-time / trip-count source. The
+*runtime* numbers (engine wall) are still meaningful (MATSim really did
+spend that time in mobsim), but the trip outputs are not — they
+represent a mobsim that rejected every move. Re-run any benchmark that
+cites MATSim Q3/Q4 / Table 5.2 / Fig 5.3 / Fig 5.7 / Fig 5.8 / Fig 5.9
+numbers. SUMO and DTALite cells are unaffected and don't need re-running.
+
+**Tests added (`tests/test_matsim_adapter.py:TestBuildMATSimPlans`):**
+- `test_route_text_includes_start_and_end_links` — pins the requirement
+  that the `<route>` text first token == `start_link` and last token ==
+  `end_link` for every emitted plan.
+- `test_route_start_link_matches_start_activity_link` — pins the
+  requirement that the route's `start_link` and `end_link` attributes
+  match the activity links that surround the leg.
+
+### Phase 12: Parallel-by-scenario sbatch correctness fixes (2026-05-02)
+
+Two latent bugs in `execution/run_benchmark.py` surfaced when the
+canonical small-tier sbatch (`cluster/jobs/benchmark_small.sbatch`) was
+run on Pitzer with three parallel-by-scenario workers:
+
+**Bug 1 — `--output` CLI override silently clobbered by runspec.**
+`BenchmarkHarness.run_benchmark()` unconditionally re-set
+`self.output_base = Path(runspec.global_output_dir)` after the constructor
+already accepted the CLI value. All three workers ended up with
+`output_base = Path("runs/benchmark_small")` regardless of the per-scenario
+`--output` they were launched with. Each worker wrote its aggregate JSON
+to the same `runs/benchmark_small/benchmark_results_benchmark_small.json`
+path → race condition, last writer wins. The Pitzer dry run lost
+chicago_1k_car's full result set this way (only nyc_10k_car's data
+survived because nyc finished last).
+
+**Fix:** `BenchmarkHarness.__init__` now tracks `_explicit_output` when
+a non-None `output_base` is passed, and `run_benchmark()` only falls back
+to the runspec's `output_dir` when the CLI didn't override. Per-scenario
+workers now write per-scenario JSONs as documented.
+
+```python
+# Before (silently broken):
+harness = BenchmarkHarness()
+harness.output_base = Path(args.output)  # honored by per-cell paths,
+                                         # clobbered for JSON write
+# After (clean):
+harness = BenchmarkHarness(output_base=Path(args.output) if args.output else None)
+```
+
+**Bug 2 — per-cell directory missing the `mode` segment.**
+The path was `<base>/<scenario>/<engine>/seed_<N>/`. SUMO meso and SUMO
+micro for the same seed both wrote to `<scenario>/sumo/seed_42/`, and the
+second invocation overwrote the first's `tripinfo.xml`,
+`feasibility_report.json`, and SUMO config files. The aggregate JSON
+recorded both cells' metrics correctly (it's built in-memory before any
+overwrite hits disk), but the on-disk artefacts that
+`audit_fairness` Q1/Q2/Q3 walk to verify the trip set + SCC + per-engine
+trip counts were destroyed for the first-written mode.
+
+**Fix:** per-cell path now includes `mode` —
+`<base>/<scenario>/<engine>/<mode>/seed_<N>/`. Both meso and micro
+artefacts coexist on disk under their respective subdirs.
+
+**Cascade — `evaluation/audit_fairness.py` layout detector extended.**
+`_find_cell_dir()` and `_discover_scenarios()` now recognise the new
+mode-segmented Phase-12+ layouts as preferred matches, with the
+pre-Phase-12 mode-less layouts kept as fallbacks for back-compat
+against older run dirs. New `_discover_modes()` helper enumerates which
+modes have on-disk cells per scenario, so the orchestrator audits both
+meso and micro independently when both exist (instead of silently picking
+whichever the layout walker found first). The `audit_scenario()` signature
+gained an optional `mode="meso"` parameter; callers without an explicit
+mode default to meso.
+
+**Migration note for old run dirs:**
+- Pre-Phase-12 results (no `<mode>/` segment in the path) are still
+  audit-able — `_find_cell_dir`'s back-compat fallbacks handle them.
+- The on-disk artefacts in those old dirs are whatever was written
+  *last* (sumo micro overwrites sumo meso). The aggregate JSON is the
+  authoritative source for per-cell metrics; the per-cell artefacts are
+  for trip-id intersection and feasibility-report verification only.
+- Re-running affected benchmarks under Phase 12+ gives clean coverage.
+
+**Bug 3 — `prepare_<engine>_inputs` repeated per cell instead of cached.**
+The dominant cost of `prepare_sumo_inputs` / `prepare_matsim_inputs` /
+`prepare_dtalite_inputs` on big networks is per-trip BFS routing on the
+canonical node graph. Those routes are deterministic given (scenario,
+engine) — they never depend on seed, mode, or rep number. The harness
+was nevertheless recomputing them from scratch for every cell. On
+la_50k_car (50,000 trips × 159K-node network) BFS routing takes ~10 h
+**per cell**; the canonical small-tier matrix has 15 la cells, so the
+total cost was ~150 h before any engine even started running. Job
+walltime budgets had no chance.
+
+**Fix:** new `BenchmarkHarness._ensure_prepared_cache()` runs the
+prepare step once per `(scenario_id, engine)` into
+`<output_base>/.cache/<scenario_id>/<engine>/`, then
+`_mirror_cache_to_run_dir()` populates each cell's `run_dir` by
+hardlinking from the cache (falling back to `shutil.copy2` on
+`OSError`, e.g. cross-filesystem). The hardlinks keep total disk use
+~the same as a single prepped dir regardless of repeat count.
+
+**Cache invalidation by bundle hash.** The `.prepared` sentinel now
+stores `sha256(scenario_path/manifest.xml)`. On every cache hit the
+harness compares the stored hash against the bundle's current
+manifest hash; mismatch triggers `shutil.rmtree(cache_dir)` and a
+fresh prepare. So if you regenerate `scenarios/<scenario>/` (e.g.
+bump trip count or change radius) and reuse the same `--output`,
+the next benchmark invocation automatically detects the change and
+re-prepares — no manual `rm -rf .cache/` required. Synthetic /
+partial bundles without `manifest.xml` get an empty hash and the
+cache remains non-invalidating (best-effort behavior).
+
+For MATSim the cell's seed is written into `config.xml`'s
+`global.randomSeed` param; that one file is broken out of the hardlink
+chain and re-rendered per cell with the cell's actual seed. SUMO and
+DTALite consume seed only at run time (`--seed` flag and settings.yml
+RNG respectively), so the cache fully covers them.
+
+Cost collapse on la_50k_car: 150 h → ~10 h (one cold prepare + 14
+millisecond-class mirrors). Even chicago_1k_car sees a ~3× speed-up
+on a 5-rep matrix because the per-trip BFS overhead, while small in
+absolute terms, was being repeated 5 times.
+
+**`evaluation/audit_fairness.py` cache exclusion.**
+`_discover_scenarios()` now skips dotted directory names (`.cache/`
+in particular). Without this guard, the BFS-prep cache directory
+would be walked as if it were a scenario.
+
+**Tests added (`tests/test_run_benchmark.py:TestPreparedCache`):**
+- `test_warm_cache_skips_prepare` — pin the sentinel-driven no-op path.
+- `test_cold_cache_calls_prepare_and_marks_sentinel` — pin the cold-prep
+  path + sentinel write (now containing the bundle's manifest SHA).
+- `test_cache_invalidates_when_bundle_changes` — pin the auto-invalidation:
+  rewrite the bundle's manifest, observe that a subsequent
+  `_ensure_prepared_cache` triggers a fresh prep (called twice across
+  two invocations) and the sentinel reflects the new hash.
+- `test_warm_hit_when_bundle_unchanged` — pin that repeated calls with
+  the SAME manifest content stay as a single cold prep.
+- `test_mirror_hardlinks_cache_to_run_dir` — pin the inode-equality
+  invariant that proves files are hardlinked, plus verify the
+  `.prepared` sentinel doesn't propagate to per-cell dirs.
+- `test_mirror_falls_back_to_copy_on_oserror` — pin the cross-filesystem
+  fallback path.
+
+Empirical confirmation against a real chicago_1k_car bundle:
+- Cold prep: 26 s (BFS routing for 1K trips)
+- Warm cache hit: 0.02 ms (sentinel `is_file()` check)
+- Mirror to a cell dir: 1.3 ms (4 hardlinks + 1 config rewrite)
+- MATSim per-cell `config.xml` correctly carries the cell's seed (seed=42
+  vs seed=43 verified to differ).
+
+**Tests added (`tests/test_run_benchmark.py` + `tests/test_audit_fairness.py`):**
+- `TestExplicitOutputBase` — pins the `_explicit_output` flag and the
+  default-vs-override behaviour of the harness constructor.
+- `TestFindCellDir.test_layout_b_phase12_*` — pin the new mode-segmented
+  layouts as preferred matches over the legacy mode-less ones.
+- `TestFindCellDir.test_back_compat_pre_phase12_layout_b` — pre-Phase-12
+  dirs still resolve.
+- `TestDiscoverModes` — new test class for the modes-per-scenario helper.
+- `TestDiscoverScenarios.test_finds_layout_b_phase12_with_mode_segment` +
+  `test_finds_layout_a_micro_seed` — discovery handles the new layouts
+  and now also catches micro-mode flat dirs.
+
+109 tests pass (29 audit_fairness original + 14 new layout/discover/modes
++ 3 new harness output + 4 new prep-cache) under
+`pytest -m "not requires_sumo"`. The 3 SUMO-binary tests skip on macOS
+arm64 due to the pre-existing netconvert incompatibility (unrelated to
+this phase).
+
+**Bonus — sbatch wrappers now `shopt -s nullglob`.**
+`cluster/jobs/benchmark_small.sbatch` and `cluster/jobs/benchmark_large.sbatch`
+both used `RESULTS=(<base>/*/<glob>.json)` to gather per-scenario JSONs.
+Without `nullglob`, an unmatched glob stays as the literal pattern
+string — the array ends up with one element (`"<base>/*/<glob>.json"`)
+that bash treats as a real path. The aggregation step then reports
+"Found 1 result file" pointing at a path that doesn't exist, and
+`analyze_benchmark` errors with `Results file not found: …/*/…`. Both
+sbatchs now `shopt -s nullglob` at the top, and the aggregation block
+checks `${#RESULTS[@]} -eq 0` and exits 0 with a helpful pointer to the
+per-scenario logs instead of failing opaquely. Both sbatchs also gained
+an inline `audit_fairness` invocation so the `audit_fairness.txt`
+artefact lands alongside the `summary.md` and `plots/` automatically
+(was previously a manual post-step).
+
+**`benchmark_small.sbatch` walltime bumped 24h → 36h.** With the
+BFS-prep cache, la_50k_car (the long-pole worker) now needs ~21–23 h
+of wall (10–11 h SUMO BFS prep + 10–11 h MATSim BFS prep, then 5
+cheap engine reps each + DTALite). 24h was tight; 36h leaves
+headroom for slow Pitzer I/O, JVM startup variance, and node-share
+slowdowns.
+
 ### Phase 11.8: Drop redundant Fig 5.4 (Engine summary panel) + renumber (2026-05-01)
 
 The 3-panel "Engine summary" figure (per-mode runtime + R-score + throughput

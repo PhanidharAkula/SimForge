@@ -7,12 +7,17 @@
 # per-runspec result JSON colliding (the harness names that JSON after
 # the runspec, not the scenario).
 #
-# Wall-clock budget (N=5 repeats):
-#   Sequential worst case ~24 h dominated by la_50k microscopic (sumo
-#   × 5 repeats × 4 h timeout each = 20 h). Parallelising per-scenario
-#   doesn't help la_50k itself, but chicago_1k and nyc_10k workers finish
-#   in ~1 h and ~3 h respectively, leaving la_50k as the wall-time floor.
-#   Budget set to 24 h for headroom.
+# Wall-clock budget (N=5 repeats, with Phase 12 BFS-prep cache):
+#   Per-scenario worker times — la_50k is the long pole because its
+#   per-engine BFS-prep cost on a 50K-trip × 159K-node network is
+#   ~10-11 h (paid once per engine thanks to caching, then 5 cheap
+#   reps reuse the cached prep). The other workers finish much sooner:
+#     chicago_1k_car worker:  ~10 min  (1K trips, small graph)
+#     nyc_10k_car   worker:  ~2-3 h   (SUMO micro × 5 is the long pole)
+#     la_50k_car    worker:  ~21-23 h (SUMO + MATSim BFS prep × 1 each)
+#   Total wall = max(workers) ≈ 23 h. 36 h walltime gives headroom for
+#   slow Pitzer I/O, JVM startup variance, and the la_50k engine runs
+#   themselves which still take a few min each.
 #
 # Resources:
 #   --partition=cpu        : All three engines (SUMO, MATSim, DTALite) are
@@ -45,13 +50,19 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=64G
-#SBATCH --time=24:00:00
+#SBATCH --time=36:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 ##SBATCH --mail-type=END,FAIL
 ##SBATCH --mail-user=your-email@example.com
 
 set -euo pipefail
+# nullglob: an unmatched glob expands to *nothing* instead of staying as the
+# literal pattern. Critical for the RESULTS=(<base>/*/<glob>.json) line below
+# — without it, a missing-files case silently passes the literal "*" path to
+# analyze_benchmark and the script appears to "find 1 result" that doesn't
+# exist (this happened in production on 2026-05-02 — see CHANGELOG Phase 12).
+shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
@@ -107,6 +118,14 @@ echo
 # ---------------------------------------------------------------------------
 echo "=== Aggregating results across all scenarios ==="
 RESULTS=(runs/benchmark_small/*/benchmark_results_benchmark_small.json)
+if [ ${#RESULTS[@]} -eq 0 ]; then
+    echo "No per-scenario result JSONs found under runs/benchmark_small/*/."
+    echo "  Workers may have hit walltime or all failed before writing JSON."
+    echo "  Check the per-scenario logs:"
+    echo "    logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}_<scenario>.log"
+    echo "Skipping aggregation."
+    exit 0
+fi
 echo "Found ${#RESULTS[@]} result files:"
 printf '  %s\n' "${RESULTS[@]}"
 echo
@@ -121,7 +140,13 @@ python -m evaluation.generate_plots "${RESULTS[@]}" \
     --output runs/benchmark_small/plots
 echo
 
+echo "--- Audit cross-engine fairness ---"
+python -m evaluation.audit_fairness runs/benchmark_small \
+    | tee runs/benchmark_small/audit_fairness.txt
+echo
+
 echo "=== Job complete at $(date) ==="
 echo "Per-scenario JSONs: runs/benchmark_small/*/benchmark_results_benchmark_small.json"
 echo "Combined summary:    runs/benchmark_small/summary.md"
+echo "Audit:               runs/benchmark_small/audit_fairness.txt"
 echo "Plots:               runs/benchmark_small/plots/"

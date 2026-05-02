@@ -120,36 +120,49 @@ def _sumo_travel_times(tripinfo_xml: Path) -> list[float]:
     return out
 
 
-def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int) -> Path | None:
-    """Locate the engine-cell directory for a given (scenario, engine, seed).
+def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int,
+                   mode: str = "meso") -> Path | None:
+    """Locate the engine-cell directory for a given (scenario, engine, mode, seed).
 
     SimForge writes benchmark results under several layouts depending on
-    the entry point and any sbatch wrapping:
+    the entry point, the SimForge version, and any sbatch wrapping:
 
-      A. ``python run.py``           — flat layout
+      A. ``python run.py``           — flat layout (mode in dir name)
          ``<base>/<scenario>_<engine>_<mode>_seed<N>/native_files/``
 
-      B. ``python -m execution.run_benchmark`` — nested by scenario/engine
-         ``<base>/<scenario>/<engine>/seed_<N>/``
+      B. ``python -m execution.run_benchmark`` (Phase 12+, mode-segmented)
+         ``<base>/<scenario>/<engine>/<mode>/seed_<N>/``
 
       C. Layout B inside a parallel-by-scenario sbatch wrapper
-         ``<base>/<scenario>/<scenario>/<engine>/seed_<N>/`` (double-nested)
+         ``<base>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/``
+         (double-nested — `--output` already includes scenario)
 
       D. Pointed at the per-scenario subdir of a parallel-by-scenario run
-         ``<base>/<engine>/seed_<N>/`` — scenario name is implicit
+         ``<base>/<engine>/<mode>/seed_<N>/`` — scenario name is implicit
          (= ``base.name``)
+
+      B', C', D'. Pre-Phase-12 layouts WITHOUT the ``mode`` segment —
+         ``<base>/<scenario>/<engine>/seed_<N>/`` etc. Older runs are
+         still readable; mode is unrecoverable from the path alone, so
+         the audit treats whatever's on disk as the requested ``mode``.
 
     Returns the path containing the per-cell prepared inputs and outputs,
     or None if no matching directory exists.
     """
     candidates = [
-        # A: flat run.py output, native_files subdir
-        base / f"{scenario}_{engine}_meso_seed{seed}" / "native_files",
-        # B: nested execution.run_benchmark output
+        # A: flat run.py output, mode embedded in dir name
+        base / f"{scenario}_{engine}_{mode}_seed{seed}" / "native_files",
+        # B (Phase 12+): mode-segmented nested execution.run_benchmark output
+        base / scenario / engine / mode / f"seed_{seed}",
+        # C (Phase 12+): doubly-nested with mode
+        base / scenario / scenario / engine / mode / f"seed_{seed}",
+        # D (Phase 12+): pointed-at scenario subdir, with mode
+        base / engine / mode / f"seed_{seed}",
+        # Back-compat fallbacks — pre-Phase-12 layouts (mode-less). Older
+        # runs only kept the LAST mode written for each (engine, seed) cell,
+        # so on-disk artefacts may belong to micro even when meso was asked.
         base / scenario / engine / f"seed_{seed}",
-        # C: doubly-nested when sbatch wraps run_benchmark per scenario
         base / scenario / scenario / engine / f"seed_{seed}",
-        # D: pointed at <runs>/<scenario>/ (per-worker output of parallel sbatch)
         base / engine / f"seed_{seed}",
     ]
     for c in candidates:
@@ -158,15 +171,16 @@ def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int) -> Path | 
     return None
 
 
-def audit_scenario(base: Path, scenario: str, seed: int = 42) -> None:
+def audit_scenario(base: Path, scenario: str, seed: int = 42,
+                   mode: str = "meso") -> None:
     print("=" * 80)
-    print(f"FAIRNESS AUDIT — {scenario} (seed {seed})")
+    print(f"FAIRNESS AUDIT — {scenario} {mode} (seed {seed})")
     print("=" * 80)
 
     engines = ("sumo", "matsim", "dtalite")
     cells = {}
     for eng in engines:
-        cell = _find_cell_dir(base, scenario, eng, seed)
+        cell = _find_cell_dir(base, scenario, eng, seed, mode=mode)
         if cell is not None:
             cells[eng] = cell
 
@@ -363,62 +377,103 @@ def main() -> int:
     scenarios = _discover_scenarios(base)
     if not scenarios:
         print(f"No engine-cell directories found under {base}\n"
-              f"  Looked for layouts:\n"
+              f"  Looked for layouts (Phase 12+ with mode segment + pre-12 fallbacks):\n"
               f"    A. <base>/<scenario>_<engine>_<mode>_seed<N>/native_files/\n"
-              f"    B. <base>/<scenario>/<engine>/seed_<N>/\n"
-              f"    C. <base>/<scenario>/<scenario>/<engine>/seed_<N>/\n"
-              f"    D. <base>/<engine>/seed_<N>/  (base = the scenario dir itself)",
+              f"    B. <base>/<scenario>/<engine>/<mode>/seed_<N>/\n"
+              f"    C. <base>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/\n"
+              f"    D. <base>/<engine>/<mode>/seed_<N>/  (base = the scenario dir itself)\n"
+              f"    Pre-12: same as B/C/D but without the <mode>/ segment.",
               file=sys.stderr)
         return 1
 
+    # Iterate over (scenario, mode) pairs — Phase 12+ runs may have both meso
+    # and micro under the same scenario; pre-Phase-12 runs default to meso.
     for sc in scenarios:
-        audit_scenario(base, sc, seed)
-        print()
+        for mode in _discover_modes(base, sc):
+            audit_scenario(base, sc, seed, mode=mode)
+            print()
     return 0
 
 
+_ENGINES = ("sumo", "matsim", "dtalite")
+_MODES = ("meso", "micro")
+
+
+def _has_seed_dir(parent: Path) -> bool:
+    """Whether ``parent`` contains any ``seed_<N>`` subdir."""
+    return parent.is_dir() and any(parent.glob("seed_*"))
+
+
+def _has_mode_seed(parent: Path) -> bool:
+    """Whether ``parent/<mode>/seed_<N>`` exists for any known mode."""
+    return parent.is_dir() and any(
+        _has_seed_dir(parent / m) for m in _MODES
+    )
+
+
 def _discover_scenarios(base: Path) -> list[str]:
-    """Find scenario IDs under any of the four supported layouts."""
-    engines = ("sumo", "matsim", "dtalite")
+    """Find scenario IDs under any supported layout (Phase 12+ and pre-12)."""
     found: set[str] = set()
 
-    # Layout D first: <base>/<engine>/seed_<N> — base IS the scenario
+    # Layout D first: <base>/<engine>/[<mode>/]seed_<N> — base IS the scenario
     # (parallel-by-scenario sbatch worker output dir).
-    for eng in engines:
-        if (base / eng).is_dir() and any((base / eng).glob("seed_*")):
+    for eng in _ENGINES:
+        eng_dir = base / eng
+        if _has_seed_dir(eng_dir) or _has_mode_seed(eng_dir):
             found.add(base.name)
             break
 
     # Layout A: flat run.py output — <scenario>_<engine>_<mode>_seed<N>
     for p in base.iterdir():
-        if not p.is_dir() or "_meso_seed" not in p.name:
+        if not p.is_dir() or "_seed" not in p.name:
             continue
-        stem = p.name.split("_meso_seed")[0]
-        for eng in engines:
-            suffix = f"_{eng}"
-            if stem.endswith(suffix):
-                found.add(stem[: -len(suffix)])
-                break
+        for eng in _ENGINES:
+            for m in _MODES:
+                marker = f"_{eng}_{m}_seed"
+                if marker in p.name:
+                    found.add(p.name.split(marker)[0])
+                    break
 
-    # Layouts B and C: <base>/<scenario>/.../<engine>/seed_<N>
+    # Layouts B and C: <base>/<scenario>/.../<engine>/[<mode>/]seed_<N>
     for sc_dir in base.iterdir():
-        if not sc_dir.is_dir():
+        if not sc_dir.is_dir() or sc_dir.name.startswith("."):
+            # Skip dotted helper dirs like `.cache/` (Phase 12+ BFS-prep cache).
             continue
-        for eng in engines:
-            # Layout B: <base>/<scenario>/<engine>/seed_*
-            if (sc_dir / eng).is_dir() and any(
-                (sc_dir / eng).glob("seed_*")
-            ):
-                found.add(sc_dir.name)
-                break
-            # Layout C: <base>/<scenario>/<scenario>/<engine>/seed_*
-            if (sc_dir / sc_dir.name / eng).is_dir() and any(
-                (sc_dir / sc_dir.name / eng).glob("seed_*")
-            ):
+        for eng in _ENGINES:
+            eng_b = sc_dir / eng
+            eng_c = sc_dir / sc_dir.name / eng
+            if (_has_seed_dir(eng_b) or _has_mode_seed(eng_b)
+                    or _has_seed_dir(eng_c) or _has_mode_seed(eng_c)):
                 found.add(sc_dir.name)
                 break
 
     return sorted(found)
+
+
+def _discover_modes(base: Path, scenario: str) -> list[str]:
+    """Which modes have at least one engine cell on disk for this scenario.
+
+    Phase 12+ layouts encode mode in the path (`<engine>/<mode>/seed_*`).
+    Pre-Phase-12 layouts don't — mode is unrecoverable, default to ``meso``
+    (the only mode supported by MATSim and DTALite).
+    """
+    modes_found: set[str] = set()
+    candidates_for_engine = lambda eng: [
+        base / scenario / eng,
+        base / scenario / scenario / eng,
+        base / eng,  # layout D
+    ]
+    for eng in _ENGINES:
+        for eng_dir in candidates_for_engine(eng):
+            if not eng_dir.is_dir():
+                continue
+            for m in _MODES:
+                if _has_seed_dir(eng_dir / m):
+                    modes_found.add(m)
+            # Pre-Phase-12: no mode subdir, cells live directly under engine
+            if _has_seed_dir(eng_dir):
+                modes_found.add("meso")  # best guess for legacy runs
+    return sorted(modes_found) or ["meso"]
 
 
 if __name__ == "__main__":

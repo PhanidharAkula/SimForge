@@ -215,6 +215,74 @@ class TestBuildMATSimPlans:
         assert len(plan.findall("activity")) == 2
         assert len(plan.findall("leg")) == 1
 
+    def test_route_text_includes_start_and_end_links(self, built_plans_xml):
+        """MATSim 15 / population_v6 expects the <route type="links"> text
+        to be the FULL link sequence (including start_link as first token
+        and end_link as last token), NOT just the interior. Confirmed
+        against MATSim's own output_plans.xml.gz format. Pre-V12 SimForge
+        emitted only the interior; MATSim's mobsim then rejected every
+        transition with `DefaultTurnAcceptanceLogic` "Cannot move vehicle"
+        warnings and output_trips.csv.gz ended up empty (zero trips →
+        zero std → trivial R = 1.0000 that read as perfect determinism
+        but was actually no determinism at all). See CHANGELOG Phase 12
+        "MATSim route text format".
+        """
+        root = ET.fromstring(built_plans_xml)
+        for person in root.findall("person"):
+            plan = person.find("plan")
+            assert plan is not None
+            leg = plan.find("leg")
+            if leg is None:
+                continue
+            route = leg.find("route")
+            if route is None or route.get("type") != "links":
+                # Some plans fall back to MATSim's own routing
+                # (no `<route>` element); those are exempt from this check.
+                continue
+            start = route.get("start_link")
+            end = route.get("end_link")
+            assert start, f"{person.get('id')}: route missing start_link"
+            assert end, f"{person.get('id')}: route missing end_link"
+            tokens = (route.text or "").split()
+            assert tokens, f"{person.get('id')}: route text is empty"
+            assert tokens[0] == start, (
+                f"{person.get('id')}: route text first token {tokens[0]!r} "
+                f"must equal start_link {start!r} (MATSim 15 idiom)"
+            )
+            assert tokens[-1] == end, (
+                f"{person.get('id')}: route text last token {tokens[-1]!r} "
+                f"must equal end_link {end!r} (MATSim 15 idiom)"
+            )
+
+    def test_route_start_link_matches_start_activity_link(self, built_plans_xml):
+        """The route's start_link must equal the link of the preceding
+        activity (because the agent is physically *on* that link when the
+        leg starts). Same for end_link / next-activity link. Pre-V12 the
+        adapter emitted route start_link = first BFS-derived edge instead
+        of the activity link, leaving the agent unable to begin the leg.
+        """
+        root = ET.fromstring(built_plans_xml)
+        for person in root.findall("person"):
+            plan = person.find("plan")
+            assert plan is not None
+            activities = plan.findall("activity")
+            leg = plan.find("leg")
+            if leg is None or len(activities) < 2:
+                continue
+            route = leg.find("route")
+            if route is None:
+                continue
+            assert route.get("start_link") == activities[0].get("link"), (
+                f"{person.get('id')}: route start_link "
+                f"{route.get('start_link')!r} ≠ start activity link "
+                f"{activities[0].get('link')!r}"
+            )
+            assert route.get("end_link") == activities[1].get("link"), (
+                f"{person.get('id')}: route end_link "
+                f"{route.get('end_link')!r} ≠ end activity link "
+                f"{activities[1].get('link')!r}"
+            )
+
 
 class TestBuildMATSimConfig:
     def test_valid_xml_output(self):

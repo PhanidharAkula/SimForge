@@ -30,6 +30,7 @@ from evaluation.audit_fairness import (
     _count_dtalite_demand,
     _count_matsim_persons,
     _count_xml_elements,
+    _discover_modes,
     _discover_scenarios,
     _dtalite_travel_times,
     _find_cell_dir,
@@ -263,6 +264,44 @@ class TestFindCellDir:
         assert _find_cell_dir(tmp_path, "x", "sumo", 42) is not None
         assert _find_cell_dir(tmp_path, "x", "sumo", 43) is None
 
+    # -- Phase 12+ layout: mode segment in the path --
+
+    def test_layout_b_phase12_meso_segmented(self, tmp_path: Path):
+        """Phase 12+ layout B: <base>/<scenario>/<engine>/<mode>/seed_<N>/."""
+        cell = tmp_path / "chicago_1k_car" / "sumo" / "meso" / "seed_42"
+        cell.mkdir(parents=True)
+        assert _find_cell_dir(tmp_path, "chicago_1k_car", "sumo", 42) == cell
+
+    def test_layout_b_phase12_explicit_micro_mode(self, tmp_path: Path):
+        """When both meso and micro exist, ``mode='micro'`` returns the micro dir."""
+        meso = tmp_path / "nyc_10k_car" / "sumo" / "meso" / "seed_42"
+        micro = tmp_path / "nyc_10k_car" / "sumo" / "micro" / "seed_42"
+        meso.mkdir(parents=True)
+        micro.mkdir(parents=True)
+        assert _find_cell_dir(tmp_path, "nyc_10k_car", "sumo", 42, mode="meso") == meso
+        assert _find_cell_dir(tmp_path, "nyc_10k_car", "sumo", 42, mode="micro") == micro
+
+    def test_layout_d_phase12_per_scenario_with_mode(self, tmp_path: Path):
+        """Phase 12+ layout D: <base>/<engine>/<mode>/seed_<N>/."""
+        cell = tmp_path / "dtalite" / "meso" / "seed_42"
+        cell.mkdir(parents=True)
+        assert _find_cell_dir(tmp_path, "ignored", "dtalite", 42) == cell
+
+    def test_back_compat_pre_phase12_layout_b(self, tmp_path: Path):
+        """Pre-Phase-12 mode-less layout still found as a fallback."""
+        cell = tmp_path / "chicago_1k_car" / "matsim" / "seed_42"
+        cell.mkdir(parents=True)
+        # Phase 12+ requested mode not on disk → falls back to mode-less layout.
+        assert _find_cell_dir(tmp_path, "chicago_1k_car", "matsim", 42, mode="meso") == cell
+
+    def test_phase12_preferred_over_legacy_when_both_exist(self, tmp_path: Path):
+        """If both mode-less and mode-segmented dirs exist, Phase 12+ wins."""
+        legacy = tmp_path / "x" / "sumo" / "seed_42"
+        new = tmp_path / "x" / "sumo" / "meso" / "seed_42"
+        legacy.mkdir(parents=True)
+        new.mkdir(parents=True)
+        assert _find_cell_dir(tmp_path, "x", "sumo", 42, mode="meso") == new
+
 
 # ---------------------------------------------------------------------------
 # _discover_scenarios
@@ -287,6 +326,42 @@ class TestDiscoverScenarios:
     def test_returns_empty_when_no_scenarios(self, tmp_path: Path):
         (tmp_path / "stray.txt").write_text("x")
         assert _discover_scenarios(tmp_path) == []
+
+    def test_finds_layout_b_phase12_with_mode_segment(self, tmp_path: Path):
+        """Phase 12+ layout B: <base>/<scenario>/<engine>/<mode>/seed_<N>/."""
+        for sc in ("chicago_1k_car", "nyc_10k_car"):
+            (tmp_path / sc / "sumo" / "meso" / "seed_42").mkdir(parents=True)
+        assert _discover_scenarios(tmp_path) == ["chicago_1k_car", "nyc_10k_car"]
+
+    def test_finds_layout_a_micro_seed(self, tmp_path: Path):
+        """Layout A discovery now also recognises micro-mode flat dirs."""
+        (tmp_path / "chicago_1k_car_sumo_micro_seed42").mkdir()
+        assert _discover_scenarios(tmp_path) == ["chicago_1k_car"]
+
+
+# ---------------------------------------------------------------------------
+# _discover_modes — Phase 12+ helper that lets the orchestrator audit
+# both meso and micro for the same (scenario, seed) tuple.
+# ---------------------------------------------------------------------------
+
+
+class TestDiscoverModes:
+    def test_meso_only(self, tmp_path: Path):
+        (tmp_path / "chicago_1k_car" / "matsim" / "meso" / "seed_42").mkdir(parents=True)
+        assert _discover_modes(tmp_path, "chicago_1k_car") == ["meso"]
+
+    def test_meso_and_micro(self, tmp_path: Path):
+        (tmp_path / "nyc_10k_car" / "sumo" / "meso" / "seed_42").mkdir(parents=True)
+        (tmp_path / "nyc_10k_car" / "sumo" / "micro" / "seed_42").mkdir(parents=True)
+        assert _discover_modes(tmp_path, "nyc_10k_car") == ["meso", "micro"]
+
+    def test_pre_phase12_layout_defaults_to_meso(self, tmp_path: Path):
+        """Pre-Phase-12 mode-less dirs report as meso (mode unrecoverable)."""
+        (tmp_path / "old_run" / "sumo" / "seed_42").mkdir(parents=True)
+        assert _discover_modes(tmp_path, "old_run") == ["meso"]
+
+    def test_no_cells_at_all_defaults_to_meso(self, tmp_path: Path):
+        assert _discover_modes(tmp_path, "missing") == ["meso"]
 
 
 # ---------------------------------------------------------------------------

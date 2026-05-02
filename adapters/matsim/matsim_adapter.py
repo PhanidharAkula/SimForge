@@ -493,21 +493,46 @@ def build_matsim_plans_xml(
             lines.append(f'<person id="{person_id}">')
             lines.append('  <plan>')
             lines.append(f'    <activity type="h" link="{origin_link}" end_time="{end_time}"/>')
-            if route_link_ids and len(route_link_ids) >= 2:
-                # population_v6 ATTLIST for <route> accepts arbitrary
-                # `type` (CDATA), explicit `start_link` / `end_link`
-                # attributes, and treats the PCDATA as the *interior*
-                # link sequence (excluding start and end). This is the
-                # native idiom for pre-routed link sequences in MATSim
-                # 15. PopulationReaderMatsimV6.startRoute parses it
-                # exactly as we emit it.
-                start = route_link_ids[0]
-                end = route_link_ids[-1]
-                interior = " ".join(route_link_ids[1:-1])
+            if route_link_ids:
+                # MATSim 15 / population_v6 <route type="links"> format:
+                # the text content is the *FULL* link sequence (NOT just
+                # interior), including the start_link as the first token
+                # and the end_link as the last token. Confirmed against
+                # MATSim's own output_plans.xml.gz format:
+                #     <route type="links" start_link="A" end_link="Z">
+                #         A B C D E ... X Y Z
+                #     </route>
+                # The first/last tokens redundantly mirror the
+                # start_link/end_link attributes — that's the canonical
+                # idiom. Pre-V12 SimForge emitted only "B C D ... Y" in
+                # the text (excluding A and Z), and MATSim's mobsim then
+                # rejected every transition because its parsed route was
+                # disjoint from the agent's start position.
+                # `DefaultTurnAcceptanceLogic` warnings flooded the log
+                # ("Cannot move vehicle person_t82 from link l1502 to
+                # link l28738") and output_trips.csv.gz ended up empty —
+                # std-of-zero gave R = 1.0000 for every MATSim cell,
+                # which read as "perfect determinism" in the analyzer
+                # but was actually no determinism at all.
+                # Discovered 2026-05-02 (Phase 12).
+                #
+                # The agent's physical traversal is
+                # [origin_link, *route_link_ids, dest_link]; we de-dup
+                # in case BFS happened to land on origin_link or
+                # dest_link directly (rare).
+                full_path = []
+                if not route_link_ids or route_link_ids[0] != origin_link:
+                    full_path.append(origin_link)
+                full_path.extend(route_link_ids)
+                if not full_path or full_path[-1] != dest_link:
+                    full_path.append(dest_link)
+                start = full_path[0]
+                end = full_path[-1]
+                full_link_seq = " ".join(full_path)
                 lines.append(f'    <leg mode="{mode}">')
                 lines.append(
                     f'      <route type="links" start_link="{start}" '
-                    f'end_link="{end}">{interior}</route>'
+                    f'end_link="{end}">{full_link_seq}</route>'
                 )
                 lines.append(f'    </leg>')
             else:

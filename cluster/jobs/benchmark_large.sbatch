@@ -34,6 +34,12 @@
 ##SBATCH --mail-user=your-email@example.com
 
 set -euo pipefail
+# nullglob: an unmatched glob expands to *nothing* instead of staying as the
+# literal pattern. Critical for the RESULTS=(<base>/*/<glob>.json) line below
+# — without it, a missing-files case silently passes the literal "*" path to
+# analyze_benchmark and the script appears to "find 1 result" that doesn't
+# exist (this happened in production on 2026-05-02 — see CHANGELOG Phase 12).
+shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
@@ -95,8 +101,12 @@ echo
 # ---------------------------------------------------------------------------
 echo "=== Aggregating results across all scenarios ==="
 RESULTS=(runs/benchmark_large/*/benchmark_results_benchmark_large.json)
-if [ ! -f "${RESULTS[0]}" ]; then
-    echo "No result files produced — both workers likely hit the wall before finishing."
+if [ ${#RESULTS[@]} -eq 0 ]; then
+    echo "No per-scenario result JSONs found under runs/benchmark_large/*/."
+    echo "  Both workers likely hit walltime before writing JSON."
+    echo "  Check the per-scenario logs:"
+    echo "    logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}_<scenario>.log"
+    echo "Skipping aggregation."
     exit 0
 fi
 echo "Found ${#RESULTS[@]} result files:"
@@ -111,6 +121,11 @@ echo
 echo "--- Generating thesis figures ---"
 python -m evaluation.generate_plots "${RESULTS[@]}" \
     --output runs/benchmark_large/plots
+echo
+
+echo "--- Audit cross-engine fairness ---"
+python -m evaluation.audit_fairness runs/benchmark_large \
+    | tee runs/benchmark_large/audit_fairness.txt
 echo
 
 echo "=== Job complete at $(date) ==="

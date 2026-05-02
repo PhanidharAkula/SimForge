@@ -14,7 +14,10 @@ Usage:
     python -m execution.run_benchmark runspecs/benchmark_small.yaml --scenario chicago_1k_car
 """
 
+import hashlib
 import json
+import os
+import shutil
 import subprocess
 import sys
 import time
@@ -131,11 +134,191 @@ class BenchmarkResult:
 
 
 class BenchmarkHarness:
-    """Main benchmark execution harness."""
-    
-    def __init__(self, output_base: Path = Path("runs")):
-        self.output_base = Path(output_base)
+    """Main benchmark execution harness.
+
+    `output_base` controls where every artefact lives — per-cell engine
+    outputs at ``<output_base>/<scenario_id>/<engine>/<mode>/seed_<N>/`` and
+    the aggregate JSON at ``<output_base>/benchmark_results_<runspec>.json``.
+
+    Pass ``output_base`` to override the runspec's ``output_dir:`` field —
+    e.g. when a SLURM sbatch fans out parallel-by-scenario workers, each
+    needs its own per-scenario output dir so the JSONs don't collide.
+    Pass ``None`` (the default) to fall back to the runspec's ``output_dir``.
+    """
+
+    def __init__(self, output_base: Path | None = None):
+        # When output_base is provided here (typically from `--output` on the
+        # CLI), it is the source of truth and run_benchmark() must NOT
+        # overwrite it with the runspec's value. Tracked via the explicit flag.
+        self._explicit_output = output_base is not None
+        self.output_base = Path(output_base) if output_base else Path("runs")
         self.output_base.mkdir(parents=True, exist_ok=True)
+
+    # -- BFS-prep cache (Phase 12+) ---------------------------------------
+    #
+    # `prepare_<engine>_inputs` does per-trip BFS routing on the canonical
+    # node graph as part of converting a SimForge bundle to engine-native
+    # format. For 1K-trip bundles that takes ~30 s; for 50K-trip bundles
+    # on a 159K-node network it can take ~10 hours. The routes are
+    # *deterministic* given (scenario, engine) — they do not depend on
+    # seed, mode, or run number — so SimForge benchmarks were repeating
+    # the entire routing cost N times for N reps. With N=5 reps × 3
+    # engines that's 15× the inherent cost.
+    #
+    # The cache stores prepared inputs at:
+    #     <output_base>/.cache/<scenario_id>/<engine>/
+    # First call to `_ensure_prepared_cache` for each (scenario, engine)
+    # populates it; subsequent calls return immediately. Per-cell run dirs
+    # are populated by `_mirror_cache_to_run_dir`, which hardlinks from
+    # the cache (falling back to copy on cross-filesystem errors). Hard-
+    # links keep total disk use ~the same as a single prepped dir
+    # regardless of repeat count.
+    #
+    # Seed dependencies: SUMO and DTALite consume `seed` only at run time
+    # (`--seed` flag / settings.yml RNG), so their entire prep is cache-
+    # safe. MATSim writes the seed into `config.xml`'s
+    # `global.randomSeed` param; that one file is regenerated per cell
+    # in `_mirror_cache_to_run_dir` after the hardlink mirror so each
+    # rep gets its own seed.
+    # ---------------------------------------------------------------------
+
+    @staticmethod
+    def _bundle_hash(scenario_path: Path) -> str:
+        """SHA-256 of the bundle's manifest.xml — cheap proxy for "did the
+        canonical bundle change since the last prep". manifest.xml itself
+        contains SHA-256 of every other canonical file, so any data change
+        propagates into manifest.xml and therefore into this hash. Returns
+        empty string when the bundle has no manifest (synthetic / partial
+        bundles); in that case the cache is non-invalidating (best-effort).
+        """
+        manifest = Path(scenario_path) / "manifest.xml"
+        if not manifest.is_file():
+            return ""
+        return hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+    def _ensure_prepared_cache(
+        self,
+        scenario_path: Path,
+        scenario_id: str,
+        engine: str,
+        engine_options: Optional[dict],
+    ) -> Path:
+        """Run prepare_*_inputs once per (scenario, engine) into a cache dir.
+
+        Cache is invalidated when the bundle's manifest.xml SHA changes —
+        if you regenerate ``scenarios/<scenario>/`` and reuse the same
+        ``--output``, the next call to this method automatically blows
+        away the stale cache and re-preps. No manual ``rm -rf .cache``.
+        """
+        cache_dir = self.output_base / ".cache" / scenario_id / engine
+        sentinel = cache_dir / ".prepared"
+        bundle_hash = self._bundle_hash(scenario_path)
+
+        if sentinel.is_file():
+            cached_hash = sentinel.read_text().strip()
+            if cached_hash == bundle_hash:
+                return cache_dir
+            # Bundle on disk doesn't match what the cache was built from —
+            # someone regenerated the scenario. Wipe and re-prep so we
+            # don't serve stale prepped inputs.
+            logger.info(
+                "Cache stale for %s/%s (manifest changed); rebuilding",
+                scenario_id, engine,
+            )
+            shutil.rmtree(cache_dir, ignore_errors=True)
+
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        opts = engine_options or {}
+
+        if engine == "matsim":
+            from adapters.matsim import prepare_matsim_inputs, MATSimConfig
+            cfg = MATSimConfig(
+                iterations=opts.get("iterations", 0),
+                java_heap_gb=opts.get("heap_gb", 4),
+            )
+            # Seed in the cached config.xml is a placeholder — every cell
+            # rewrites config.xml in _mirror_cache_to_run_dir with its own.
+            prepare_matsim_inputs(scenario_path, cache_dir, cfg, random_seed=42)
+        elif engine == "dtalite":
+            from adapters.dtalite import prepare_dtalite_inputs, DTALiteConfig
+            cfg = DTALiteConfig(
+                iterations=opts.get("iterations", 5),
+                column_updating_iterations=opts.get(
+                    "column_updating_iterations", 5
+                ),
+                simulation_output=opts.get("simulation_output", 1),
+            )
+            prepare_dtalite_inputs(scenario_path, cache_dir, cfg)
+        elif engine == "sumo":
+            # `seed` arg of self.prepare_sumo_inputs is unused — SUMO
+            # consumes seed at run time via the --seed flag.
+            self.prepare_sumo_inputs(scenario_path, cache_dir, seed=0)
+        else:
+            raise ValueError(f"Unknown engine for cache prep: {engine}")
+
+        # Write the bundle hash into the sentinel so subsequent calls can
+        # detect a regenerated bundle and rebuild instead of serving stale.
+        sentinel.write_text(bundle_hash)
+        logger.info(
+            "Prepared %s inputs cached at %s (subsequent reps will reuse)",
+            engine, cache_dir,
+        )
+        return cache_dir
+
+    def _mirror_cache_to_run_dir(
+        self,
+        cache_dir: Path,
+        run_dir: Path,
+        engine: str,
+        seed: int,
+        engine_options: Optional[dict],
+    ) -> None:
+        """Hardlink (or copy) cache contents into the cell's run dir.
+
+        For MATSim, the per-cell ``config.xml`` is rewritten with the
+        cell's seed *after* the mirror, since that's the only seed-
+        dependent file in MATSim's prepared inputs.
+        """
+        run_dir.mkdir(parents=True, exist_ok=True)
+        for src in cache_dir.rglob("*"):
+            if src.name == ".prepared":
+                continue
+            rel = src.relative_to(cache_dir)
+            dst = run_dir / rel
+            if src.is_dir():
+                dst.mkdir(parents=True, exist_ok=True)
+                continue
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            if dst.exists() or dst.is_symlink():
+                dst.unlink()
+            try:
+                os.link(src, dst)
+            except OSError:
+                shutil.copy2(src, dst)
+
+        if engine == "matsim":
+            from adapters.matsim.matsim_adapter import (
+                build_matsim_config_xml,
+                MATSimConfig,
+            )
+            opts = engine_options or {}
+            cfg = MATSimConfig(
+                iterations=opts.get("iterations", 0),
+                java_heap_gb=opts.get("heap_gb", 4),
+            )
+            config_xml = build_matsim_config_xml(
+                cfg,
+                network_file="network.xml",
+                plans_file="plans.xml",
+                vehicles_file="vehicles.xml",
+                output_dir="./output",
+                random_seed=seed,
+            )
+            config_path = run_dir / "config.xml"
+            if config_path.exists():
+                # Break the hardlink to the cache before writing per-cell.
+                config_path.unlink()
+            config_path.write_text(config_xml, encoding="utf-8")
     
     def validate_bundle(self, scenario_path: Path) -> bool:
         """Validate a canonical scenario bundle."""
@@ -266,8 +449,13 @@ class BenchmarkHarness:
         """Execute a single simulation run."""
 
         mode = "meso" if mesoscopic else "micro"
-        # Create output directory
-        run_dir = self.output_base / scenario_id / engine / f"seed_{seed}"
+        # Per-cell directory MUST include `mode` — without it sumo meso and
+        # sumo micro for the same seed both write to <engine>/seed_<N>/ and
+        # the second call overwrites the first's tripinfo.xml +
+        # feasibility_report.json + cfgs. Layout: scenario / engine / mode /
+        # seed_<N>/. audit_fairness's _find_cell_dir picks this up via its
+        # 5th layout heuristic (see evaluation/audit_fairness.py).
+        run_dir = self.output_base / scenario_id / engine / mode / f"seed_{seed}"
         run_dir.mkdir(parents=True, exist_ok=True)
 
         mode_str = " (mesoscopic)" if mesoscopic else ""
@@ -288,32 +476,18 @@ class BenchmarkHarness:
                 error_message=f"Unsupported engine: {engine}. Supported: {supported_engines}"
             )
         
-        # Prepare inputs based on engine
+        # Prepare inputs once per (scenario, engine) into a cache dir, then
+        # mirror into this cell's run_dir. Cuts the BFS-routing cost from
+        # O(N_reps * N_cells) back to O(1) per (scenario, engine). For
+        # MATSim, _mirror_cache_to_run_dir rewrites config.xml with this
+        # cell's seed (the one MATSim file that depends on seed).
         try:
-            if engine == "matsim":
-                # MATSim activity-based simulator
-                from adapters.matsim import prepare_matsim_inputs, MATSimConfig
-                matsim_opts = engine_options or {}
-                matsim_config = MATSimConfig(
-                    iterations=matsim_opts.get("iterations", 0),
-                    java_heap_gb=matsim_opts.get("heap_gb", 4),
-                )
-                prepare_matsim_inputs(scenario_path, run_dir, matsim_config, random_seed=seed)
-            elif engine == "dtalite":
-                # DTALite mesoscopic Dynamic Traffic Assignment (CPU)
-                from adapters.dtalite import prepare_dtalite_inputs, DTALiteConfig
-                dtalite_opts = engine_options or {}
-                dtalite_config = DTALiteConfig(
-                    iterations=dtalite_opts.get("iterations", 5),
-                    column_updating_iterations=dtalite_opts.get(
-                        "column_updating_iterations", 5
-                    ),
-                    simulation_output=dtalite_opts.get("simulation_output", 1),
-                )
-                prepare_dtalite_inputs(scenario_path, run_dir, dtalite_config)
-            else:
-                # SUMO
-                self.prepare_sumo_inputs(scenario_path, run_dir, seed)
+            cache_dir = self._ensure_prepared_cache(
+                scenario_path, scenario_id, engine, engine_options
+            )
+            self._mirror_cache_to_run_dir(
+                cache_dir, run_dir, engine, seed, engine_options
+            )
         except (OSError, ValueError, RuntimeError) as e:
             return RunResult(
                 scenario=scenario_id,
@@ -473,8 +647,13 @@ class BenchmarkHarness:
         from execution.runspec import RunSpec
 
         runspec = RunSpec.from_file(runspec_path)
-        self.output_base = Path(runspec.global_output_dir)
-        self.output_base.mkdir(parents=True, exist_ok=True)
+        # Honor an explicit CLI override (passed to __init__) over the
+        # runspec's `output_dir:`. Without this guard, parallel-by-scenario
+        # sbatchs that pass distinct --output paths all silently collapse to
+        # the runspec's single value and clobber each other's aggregate JSON.
+        if not self._explicit_output:
+            self.output_base = Path(runspec.global_output_dir)
+            self.output_base.mkdir(parents=True, exist_ok=True)
 
         started_at = datetime.now(timezone.utc).isoformat()
         results: list[RunResult] = []
@@ -813,9 +992,7 @@ def main():
                       "adapters.dtalite", "adapters.common", "pipeline"):
             logging.getLogger(_name).setLevel(logging.WARNING)
 
-    harness = BenchmarkHarness()
-    if args.output:
-        harness.output_base = Path(args.output)
+    harness = BenchmarkHarness(output_base=Path(args.output) if args.output else None)
 
     result = harness.run_benchmark(
         runspec_path=Path(args.runspec),

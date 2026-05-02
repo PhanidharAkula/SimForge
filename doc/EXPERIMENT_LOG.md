@@ -44,6 +44,37 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-02 — Phase 12 + 12.1: parallel-by-scenario + MATSim correctness landed
+
+**Phase:** Version_5 Phase 12 (sbatch correctness) + 12.1 (MATSim route format)
+**Commit:** TBD (single push, this entry written before commit)
+**Job ID:** Triggered by Pitzer SLURM job 47236542 (benchmark_small.sbatch on 2026-05-02), which surfaced three runner bugs and one MATSim adapter bug all in the same session.
+
+**What changed:**
+
+Three runner bugs in `execution/run_benchmark.py`:
+1. `--output` CLI flag was silently overwritten by `runspec.global_output_dir` inside `run_benchmark()`. Three parallel sbatch workers all wrote their aggregate JSON to the runspec's single `output_dir` and raced — chicago's data was lost. Fixed by tracking `_explicit_output` in the harness constructor.
+2. Per-cell directory was `<base>/<scenario>/<engine>/seed_<N>/` with no `mode` segment, so SUMO meso and SUMO micro for the same seed overwrote each other's `tripinfo.xml`. Fixed by adding `mode` to the path.
+3. `prepare_*_inputs` ran per-cell, repeating per-trip BFS routing N×reps times even though routes are deterministic given (scenario, engine). la_50k_car needed ~10 h BFS prep × 15 cells = 150 h, infeasible in any reasonable walltime. Fixed by caching prepared inputs at `<output_base>/.cache/<scenario>/<engine>/`, hardlinking to per-cell dirs, with `manifest.xml`-hash sentinels for invalidation when bundles regenerate.
+
+One MATSim adapter bug in `adapters/matsim/matsim_adapter.py:build_matsim_plans_xml` (Phase 12.1):
+- `<route type="links">` text content was emitting the *interior* of the route only (excluding `start_link` and `end_link`). MATSim 15 / population_v6 expects the FULL link sequence with `start_link` as first token and `end_link` as last token. Without those tokens, `DefaultTurnAcceptanceLogic` rejected every transition; `output_trips.csv.gz` ended up with 0 trip rows; R-scores were trivially 1.0000 (zero-trip std masquerading as perfect determinism).
+
+Cascade: `evaluation/audit_fairness.py` `_find_cell_dir` and `_discover_scenarios` extended for the new mode-segmented layout, `_discover_modes` helper added for per-mode auditing. `cluster/jobs/benchmark_small.sbatch` and `cluster/jobs/benchmark_large.sbatch` got `shopt -s nullglob` + empty-array guard so the result-glob can't silently expand to a literal `*` again. Inline `audit_fairness` step added to both sbatchs so the audit landing alongside `summary.md` and `plots/`. benchmark_small walltime bumped 24h → 36h to give la_50k headroom.
+
+**Result:**
+- chicago_1k_car/matsim/seed_42 verified end-to-end on Mac:
+  - Before MATSim fix: 0 trips in output, 1000 "Cannot move" warnings, mean TT = n/a.
+  - After: 1000 trips, 0 warnings, mean TT 309.6 s, P95 582 s.
+- Local test suite: 73 of 73 matsim/audit_fairness/run_benchmark tests pass under `pytest -m "not requires_sumo"`. The 3 SUMO-binary tests skip on macOS arm64 (pre-existing netconvert ambiguity, unrelated).
+- la_50k_car BFS-prep cost projected at ~10-11 h on Pitzer based on the partially-completed cell from the failed Pitzer run; with caching, that's paid once per (scenario, engine) instead of per cell.
+
+**Decision / lesson:**
+- Every prior MATSim cell across every prior benchmark run is invalid as a travel-time / trip-count source. Engine-runtime numbers are real (MATSim really did spend that JVM time rejecting moves), but Q3/Q4 / Table 5.2 / Figs 5.3, 5.7, 5.8, 5.9 with MATSim columns need re-derivation from a fresh run. SUMO and DTALite cells are unaffected.
+- The `nullglob` thing is a generic bash gotcha worth pinning into every result-aggregating sbatch we ever write. The script "found 1 result" pointing at a literal `*` glob string was a maximally-confusing failure mode.
+- The MATSim format bug had been silently masking thesis-grade data with zero-trip outputs that read as "deterministic" because std-of-zero is zero. Would never have been caught by an automated check that only looked at status="success" and R-score. Caught only because audit_fairness Q4 happened to cross-reference travel-time with trip-count and the 17-trip number didn't make sense. Add a Q3.5: "did each engine actually complete a sensible fraction of trips?" to make this kind of bug self-evident in the future.
+- Bundle hashing in the BFS-prep cache sentinel (`hashlib.sha256(manifest.xml)`) is a tiny line of code that prevents an entire class of stale-cache bugs. Adopt the same pattern anywhere we cache derived data from a versioned input.
+
 ### 2026-04-27 — Pitzer second smoke with microscopic + engine/mode skip fix
 
 **Phase:** Version_5 Phase 4 (post-landing fairness validation)
