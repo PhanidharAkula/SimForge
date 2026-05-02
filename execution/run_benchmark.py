@@ -182,6 +182,29 @@ class BenchmarkHarness:
     # rep gets its own seed.
     # ---------------------------------------------------------------------
 
+    def _scoped_base(self, scenario_id: str) -> Path:
+        """Where (per-cell + per-cache) artefacts for ``scenario_id`` live.
+
+        Phase 12.2: when ``output_base`` already ends in the scenario name
+        — the canonical case for parallel-by-scenario sbatch wrappers that
+        pass ``--output runs/<runspec>/<scenario>`` per worker — collapse
+        the otherwise-doubly-nested path. So instead of:
+
+            runs/<runspec>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/
+
+        we get:
+
+            runs/<runspec>/<scenario>/<engine>/<mode>/seed_<N>/
+
+        Otherwise (single ``--output`` for a multi-scenario run, or no
+        override at all so output_base = ``runs/`` from the runspec)
+        the scenario_id segment is still inserted to keep scenarios
+        distinct under the shared output_base.
+        """
+        if self.output_base.name == scenario_id:
+            return self.output_base
+        return self.output_base / scenario_id
+
     @staticmethod
     def _bundle_hash(scenario_path: Path) -> str:
         """SHA-256 of the bundle's manifest.xml — cheap proxy for "did the
@@ -210,7 +233,7 @@ class BenchmarkHarness:
         ``--output``, the next call to this method automatically blows
         away the stale cache and re-preps. No manual ``rm -rf .cache``.
         """
-        cache_dir = self.output_base / ".cache" / scenario_id / engine
+        cache_dir = self._scoped_base(scenario_id) / ".cache" / engine
         sentinel = cache_dir / ".prepared"
         bundle_hash = self._bundle_hash(scenario_path)
 
@@ -452,10 +475,10 @@ class BenchmarkHarness:
         # Per-cell directory MUST include `mode` — without it sumo meso and
         # sumo micro for the same seed both write to <engine>/seed_<N>/ and
         # the second call overwrites the first's tripinfo.xml +
-        # feasibility_report.json + cfgs. Layout: scenario / engine / mode /
-        # seed_<N>/. audit_fairness's _find_cell_dir picks this up via its
-        # 5th layout heuristic (see evaluation/audit_fairness.py).
-        run_dir = self.output_base / scenario_id / engine / mode / f"seed_{seed}"
+        # feasibility_report.json + cfgs (Phase 12).
+        # _scoped_base() collapses the redundant <scenario>/<scenario>
+        # doubling when output_base already ends in scenario_id (Phase 12.2).
+        run_dir = self._scoped_base(scenario_id) / engine / mode / f"seed_{seed}"
         run_dir.mkdir(parents=True, exist_ok=True)
 
         mode_str = " (mesoscopic)" if mesoscopic else ""

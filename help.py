@@ -708,21 +708,27 @@ REPRODUCE THE THESIS NUMBERS END-TO-END (~40-100 min on M-series Mac;
   python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
 OUTPUT SHAPE (Phase 12+):
-  runs/<runspec_name>/
-    benchmark_results_<runspec_name>.json        # canonical result schema
-    <scenario_id>/<engine>/<mode>/seed_<N>/      # per-cell engine artefacts
-      feasibility_report.json                    # SCC filter audit trail
-      tripinfo.xml / output_trips.csv.gz         # engine-native outputs
-    .cache/<scenario_id>/<engine>/               # BFS-prep cache (auto)
-      .prepared                                  # SHA-256 of bundle manifest
+  runs/<runspec_name>/<scenario_id>/                 # one dir per scenario
+    benchmark_results_<runspec_name>.json            # canonical result schema
+    <engine>/<mode>/seed_<N>/                        # per-cell engine artefacts
+      feasibility_report.json                        # SCC filter audit trail
+      tripinfo.xml / output_trips.csv.gz             # engine-native outputs
+    .cache/<engine>/                                 # BFS-prep cache (auto)
+      .prepared                                      # SHA-256 of bundle manifest
       <prepared inputs hardlinked into cells>
 
-  The `<mode>` segment in per-cell paths (Phase 12) prevents SUMO meso and
-  SUMO micro from overwriting each other's tripinfo.xml. The `.cache/`
-  dir holds prepare_*_inputs output once per (scenario, engine); per-cell
-  dirs receive hardlinks rather than re-running BFS. The cache invalidates
+  Phase 12 added the `<mode>` segment in per-cell paths so SUMO meso and
+  SUMO micro can't overwrite each other's tripinfo.xml. Phase 12.2
+  collapsed the otherwise-doubly-nested `<scenario>/<scenario>/` that
+  parallel-by-scenario sbatch produced. The `.cache/` dir holds
+  prepare_*_inputs output once per (scenario, engine); per-cell dirs
+  receive hardlinks rather than re-running BFS. The cache invalidates
   automatically when the bundle's manifest.xml SHA changes — no manual
   `rm -rf .cache` needed when you regenerate a scenario.
+
+  Pre-Phase-12.2 runs may have a doubly-nested
+  `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/` layout; audit_fairness
+  recognises that as Layout C (back-compat).
 
   Top-level JSON keys: runspec_name, started_at, completed_at, total_runs,
   successful_runs, failed_runs, summary, results[]. Each results[] entry

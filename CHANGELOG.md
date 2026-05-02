@@ -8,6 +8,77 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 12.2: Collapse redundant <scenario>/<scenario>/ doubling (2026-05-02)
+
+**Symptom.** Per-cell artefacts under parallel-by-scenario sbatch
+landed at:
+
+```
+runs/<runspec>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/
+```
+
+The `<scenario>/<scenario>/` doubling came from two sources both
+adding the scenario name: the sbatch passes
+``--output runs/<runspec>/<scenario>/`` per worker (so per-scenario
+JSONs land in their own subdirs and don't race — Phase 12 Bug 1 fix),
+and the harness's `run_single` builds per-cell paths as
+``<output_base>/<scenario_id>/<engine>/<mode>/seed_<N>/``. Functionally
+fine — `audit_fairness`'s 5th layout ("Layout C") handles it — but
+visually ugly and an extra path component for no benefit.
+
+**Fix.** New `BenchmarkHarness._scoped_base(scenario_id)` helper:
+returns `self.output_base` unchanged when its name already matches
+``scenario_id`` (the parallel-by-scenario sbatch case), otherwise
+inserts the scenario_id segment. Used for both per-cell `run_dir`
+and the BFS-prep cache `cache_dir`. Result:
+
+| output_base | scenario_id | run_dir |
+|---|---|---|
+| `runs/benchmark_small/chicago_1k_car` | `chicago_1k_car` | `runs/benchmark_small/chicago_1k_car/sumo/meso/seed_42/` |
+| `runs/benchmark_small` (shared) | `chicago_1k_car` | `runs/benchmark_small/chicago_1k_car/sumo/meso/seed_42/` |
+
+Both forms now produce the same clean five-level path. Single-scenario
+runs (no sbatch wrapper) and shared-base runs both stay correct;
+sbatch parallel-by-scenario stops being doubly-nested.
+
+The cache also moves from `<output_base>/.cache/<scenario>/<engine>/`
+(old, separate-scenario layer) to `<scoped_base>/.cache/<engine>/`
+(Phase 12.2): cache and per-cell artefacts now group together under
+the scenario subdir, which is more intuitive when poking around a
+finished run dir by hand.
+
+**Back-compat for existing run dirs.** The doubly-nested layout (now
+named "Layout C" in `audit_fairness._find_cell_dir`) is still detected
+as a back-compat fallback. Any pre-Phase-12.2 run that produced
+`<scenario>/<scenario>/<engine>/<mode>/seed_<N>/` paths is still
+audit-able as-is — no need to restructure existing data unless you
+want the cleaner layout for visual hygiene.
+
+**Manual restructure for existing runs (optional).** Per-scenario
+on Pitzer:
+
+```bash
+SCENARIO=chicago_1k_car   # or nyc_10k_car, la_50k_car after it finishes
+cd runs/benchmark_small/$SCENARIO
+mv $SCENARIO/* .
+rmdir $SCENARIO
+mv .cache/$SCENARIO/* .cache/
+rmdir .cache/$SCENARIO
+```
+
+After this `runs/benchmark_small/<SCENARIO>/` matches the new layout
+that any future runs would produce.
+
+**Tests added (`tests/test_run_benchmark.py:TestPreparedCache`):**
+- `test_scoped_base_collapses_when_output_matches_scenario` — pins
+  the parallel-by-scenario collapse.
+- `test_scoped_base_inserts_scenario_when_output_is_shared` — pins
+  that multi-scenario shared output_base still inserts scenario_id.
+- `test_cache_dir_collapses_in_per_scenario_output` — pins the
+  cache-dir variant of the same logic.
+
+52/52 tests in `test_run_benchmark.py` + `test_audit_fairness.py` pass.
+
 ### Phase 12.1: MATSim route-text format fix (2026-05-02) — CRITICAL
 
 **Symptom.** Every MATSim run completed in normal wall time and reported

@@ -86,7 +86,10 @@ class TestPreparedCache:
         bundle_hash = self._write_bundle(bundle)
 
         h = BenchmarkHarness(output_base=tmp_path)
-        cache = tmp_path / ".cache" / "chicago_1k_car" / "sumo"
+        # Phase 12.2 path: <scoped_base>/.cache/<engine>/
+        # output_base.name != scenario_id here, so scoped_base inserts
+        # the scenario layer.
+        cache = tmp_path / "chicago_1k_car" / ".cache" / "sumo"
         cache.mkdir(parents=True)
         (cache / ".prepared").write_text(bundle_hash)
 
@@ -172,9 +175,60 @@ class TestPreparedCache:
         assert len(called) == 2, (
             "cache should have rebuilt because bundle's manifest.xml changed"
         )
-        # Sentinel now reflects the new hash.
-        cache = tmp_path / ".cache" / "chicago_1k_car" / "sumo"
+        # Sentinel now reflects the new hash. Phase 12.2 path:
+        # <scoped_base>/.cache/<engine>/.prepared (with scoped_base
+        # = output_base/scenario_id since output_base.name != scenario_id).
+        cache = tmp_path / "chicago_1k_car" / ".cache" / "sumo"
         assert (cache / ".prepared").read_text() == new_hash
+
+    def test_scoped_base_collapses_when_output_matches_scenario(
+        self, tmp_path: Path,
+    ):
+        """Phase 12.2: when output_base.name == scenario_id (typical
+        parallel-by-scenario sbatch case), _scoped_base returns
+        output_base unchanged so per-cell + cache paths don't pick up
+        a redundant <scenario>/<scenario>/ doubling."""
+        per_scenario = tmp_path / "runs_root" / "chicago_1k_car"
+        per_scenario.mkdir(parents=True)
+        h = BenchmarkHarness(output_base=per_scenario)
+        assert h._scoped_base("chicago_1k_car") == per_scenario
+
+    def test_scoped_base_inserts_scenario_when_output_is_shared(
+        self, tmp_path: Path,
+    ):
+        """When output_base is the SHARED runspec output dir (no per-
+        scenario sbatch wrapping), _scoped_base inserts scenario_id so
+        multiple scenarios under one output_base don't collide."""
+        shared = tmp_path / "runs_root"
+        shared.mkdir(parents=True)
+        h = BenchmarkHarness(output_base=shared)
+        assert h._scoped_base("chicago_1k_car") == shared / "chicago_1k_car"
+        assert h._scoped_base("nyc_10k_car") == shared / "nyc_10k_car"
+
+    def test_cache_dir_collapses_in_per_scenario_output(
+        self, tmp_path: Path, monkeypatch,
+    ):
+        """Cold prep into a per-scenario output_base lands the cache at
+        ``<output_base>/.cache/<engine>/`` (no scenario_id segment)."""
+        bundle = tmp_path / "scenarios" / "chicago_1k_car"
+        self._write_bundle(bundle)
+
+        per_scenario = tmp_path / "runs" / "chicago_1k_car"
+        per_scenario.mkdir(parents=True)
+        h = BenchmarkHarness(output_base=per_scenario)
+
+        monkeypatch.setattr(
+            h, "prepare_sumo_inputs",
+            lambda sp, od, seed=0: (od / "toy.sumocfg").write_text("<x/>"),
+        )
+
+        cache = h._ensure_prepared_cache(
+            scenario_path=bundle, scenario_id="chicago_1k_car",
+            engine="sumo", engine_options=None,
+        )
+        # Phase 12.2: collapsed — no <scenario_id>/ between .cache and engine.
+        assert cache == per_scenario / ".cache" / "sumo"
+        assert (cache / ".prepared").is_file()
 
     def test_warm_hit_when_bundle_unchanged(
         self, tmp_path: Path, monkeypatch,
