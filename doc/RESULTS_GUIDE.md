@@ -51,7 +51,7 @@ compare_modes.py  ──►  micro vs meso  ──►  speedup + fidelity
 python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
-Writes to `runs/benchmark_small/benchmark_results_benchmark_small.json` (4 cells × 5 repeats = 20 runs).
+Writes per-scenario JSONs at `runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json` (Phase 12+ — 11 cells × 5 repeats = 55 runs total across the three scenarios).
 
 ### Ad-hoc one-off via `run.py`
 
@@ -75,7 +75,7 @@ Both call the same adapters and produce the same per-cell engine artefacts (`tri
 | ---------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------- |
 | Matrix source                | CLI flags (`--scenario --engine --mode --repeats`)      | Locked YAML in `runspecs/*.yaml`                                          |
 | Output base                  | `runs/benchmark_<timestamp>/` (or `--output`)           | `runs/<runspec.output_dir>/` (or `--output`)                              |
-| Per-cell directory           | flat: `<scenario>_<engine>_<mode>_seed<seed>/`          | nested: `<scenario_id>/<engine>/seed_<seed>/`                             |
+| Per-cell directory           | flat: `<scenario>_<engine>_<mode>_seed<seed>/`          | nested: `<scenario_id>/<engine>/<mode>/seed_<seed>/` (Phase 12+)          |
 | Summary JSON file            | `benchmark_results.json`                                | `benchmark_results_<runspec_name>.json`                                   |
 | Summary JSON top-level keys  | `timestamp`, `matrix`, `summary`, `results`             | `runspec_name`, `started_at`, `completed_at`, `total_runs`, `successful_runs`, `failed_runs`, `summary`, `results` |
 | Per-cell record fields       | `status`, `scenario`, `scenario_id`, `engine`, `mode`, `seed`, `repeat`, `runtime_s`, `cell_wall_s`, `engine_wall_s`, `metrics` (+ adapter extras) | same plus `repeat_index`, `wall_time_s`, `output_dir`, `tripinfo_path`, `error_message` (always present) |
@@ -155,8 +155,8 @@ Two shapes — one per entry point. The `results[]` array fields mostly overlap;
       "wall_time_s": 0.27,
       "engine_wall_s": 0.27,
       "cell_wall_s": 1.83,
-      "output_dir": "runs/benchmark_small/chicago_1k_car/sumo/seed_42",
-      "tripinfo_path": "runs/benchmark_small/chicago_1k_car/sumo/seed_42/tripinfo.xml",
+      "output_dir": "runs/benchmark_small/chicago_1k_car/sumo/meso/seed_42",
+      "tripinfo_path": "runs/benchmark_small/chicago_1k_car/sumo/meso/seed_42/tripinfo.xml",
       "error_message": null,
       "metrics": {
         "travel_time": {

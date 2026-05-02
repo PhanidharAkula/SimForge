@@ -202,7 +202,8 @@ python -m execution.run_benchmark runspecs/benchmark_small.yaml
 python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
 
 # 4. Audit cross-engine fairness (Q1: same trip set, Q2: same network,
-#    Q3: same trip count, Q4: paradigm-spread travel-time ratios)
+#    Q3: same trip count, Q4: paradigm-spread travel-time ratios,
+#    Q5: V5+ demand composition / trip-purpose breakdown)
 python -m evaluation.audit_fairness runs/benchmark_small
 
 # 5. Render the 10 thesis figures
@@ -323,20 +324,32 @@ The Mac↔Pitzer empirical verification we ran on 2026-04-26: every dep version 
 
 ### Output Layout
 
+Phase 12+ layout (mode-segmented per-cell paths, scenario-scoped
+benchmark-results JSON, BFS-prep cache):
+
 ```
 runs/benchmark_small/
-├── benchmark_results_benchmark_small.json
 └── chicago_1k_car/
+    ├── benchmark_results_benchmark_small.json   # per-scenario JSON (Phase 12)
+    ├── .cache/                                   # BFS-prep cache (Phase 12)
+    │   ├── sumo/    .prepared (SHA-256 of bundle manifest) + prepared inputs
+    │   ├── matsim/  .prepared + ...
+    │   └── dtalite/ .prepared + ...
     ├── sumo/
-    │   ├── seed_42/
-    │   │   ├── feasibility_report.json
-    │   │   ├── tripinfo.xml
-    │   │   ├── statistics.xml
-    │   │   └── (SUMO native files)
-    │   ├── seed_43/
-    │   └── seed_44/
-    └── matsim/
+    │   ├── meso/
+    │   │   ├── seed_42/
+    │   │   │   ├── feasibility_report.json
+    │   │   │   ├── tripinfo.xml
+    │   │   │   └── (SUMO native files, hardlinked from .cache)
+    │   │   ├── seed_43/  ...
+    │   └── micro/
+    │       └── seed_42/  ...
+    ├── matsim/meso/seed_<N>/
+    └── dtalite/meso/seed_<N>/
 ```
+
+(Pre-Phase-12.2 doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
+is also still detected by `audit_fairness` — Layout C back-compat.)
 
 `feasibility_report.json` is the audit trail proving every engine was fed the same trip set (see [CHANGELOG.md](../CHANGELOG.md), Addenda 1–2).
 
@@ -366,17 +379,26 @@ Renders Fig 5.1 – Fig 5.10 (PNG + PDF) into `runs/benchmark_small/plots/`. See
 
 ## Expected Results (1K Tier — measured on Apple M4 Pro)
 
-These are the numbers from the most recent canonical stress test (see CHANGELOG.md → Addendum 3):
+> ⚠️ **Phase 12.1 caveat:** the MATSim row in the table below is from a
+> pre-Phase-12.1 run where the adapter's `<route type="links">` text
+> excluded `start_link`/`end_link` and MATSim's mobsim rejected every
+> transition (`output_trips.csv.gz` was effectively empty; the R = 1.0000
+> was a zero-trip-std artifact). After the Phase 12.1 fix, MATSim
+> actually completes its trips — chicago_1k_car/matsim/seed_42 measured
+> 1000 trips, mean TT 309.6 s, P95 582 s. The numbers below will be
+> regenerated; consume the post-fix run results as the source of truth.
 
 | Scenario       | Engine  | Mode  | Trips simulated  | Avg TT (s)  | Runtime (s)  | R-Score |
 | -------------- | ------- | ----- | ---------------- | ----------- | ------------ | ------- |
-| chicago_1k_car | matsim  | meso  | **1000 (100 %)** | 195.7 ± 0.0 | 10.19 ± 0.16 | 1.0000  |
+| chicago_1k_car | matsim  | meso  | _regenerate after Phase 12.1_ |
 | chicago_1k_car | sumo    | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
 | chicago_1k_car | sumo    | micro | 940 (94.0 %)     | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
 
-Total wall-clock for the 8-run matrix: ~22 s.
-
-The remaining 5 – 60 trip gap is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses). It is the simulation outcome we want to *measure*, not an input asymmetry — every `feasibility_report.json` records `feasible_trips == total_trips == 1000`.
+The remaining 5 – 60 trip gap on SUMO is **engine-internal mobsim
+behaviour** (SUMO refuses congested edge insertions; MATSim's queue
+mobsim never refuses). It is the simulation outcome we want to *measure*,
+not an input asymmetry — every `feasibility_report.json` records
+`feasible_trips == total_trips == 1000`.
 
 ---
 

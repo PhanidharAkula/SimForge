@@ -183,8 +183,10 @@ PROJECT STRUCTURE (alphabetical, repo root):
   runspecs/           Benchmark configuration files (YAML)
   scenarios/          Generated canonical data bundles
   scripts/            5 ready-to-use generation scripts (01–05)
-  tests/              Test suite (pytest, ~477 tests across 23 files;
-                      +36 per extra generated bundle in scenarios/)
+  tests/              Test suite (pytest, ~574 tests across 24 files
+                      with all 5 bundles generated; ~502 with just the 3
+                      tracked bundles. +36 per parametrized integrity tests
+                      per bundle in scenarios/)
   tools/              Operator utilities (analyze_scenarios.py, clean.sh,
                       download_osm.py, env_report.py, inspect_network.py)
 
@@ -750,14 +752,18 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships ~477 tests across 23 files with the 3 tracked bundles
-(chicago_1k_car, nyc_10k_car, la_50k_car). The count is
-369 base + 36 parametrized per bundle in `scenarios/`. Generating the
-two larger tiers (`scripts/04_chicago_200k_car.py` + `05_nyc_500k_car.py`)
-adds 72 more tests for a 549-test full local sweep. The shipped 477-test
-suite runs in ~3-4 min on arm64 (~22 s on a Linux box where SUMO doesn't
-crash); the 549-test full sweep takes ~14 min on M-series Mac because
-the integrity tests parse the much larger 200K/500K network.xml files.
+SimForge ships ~574 tests across 24 files when all 5 bundles are
+generated (chicago_1k_car + nyc_10k_car + la_50k_car tracked, plus
+chicago_200k_car + nyc_500k_car generated locally via the scripts/).
+The count is 394 base + 36 parametrized per bundle in `scenarios/`,
+so:
+  • 0 bundles in scenarios/        → 394 tests
+  • 3 tracked bundles only         → 394 + 3×36 = 502 tests
+  • all 5 bundles generated        → 394 + 5×36 = 574 tests
+The 502-test minimum suite runs in ~3-4 min on arm64 (~22 s on a Linux
+box where SUMO doesn't crash); the 574-test full sweep takes ~14 min
+on M-series Mac because the integrity tests parse the much larger
+200K/500K network.xml files.
 
 Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 --strict-markers + --tb=short. Shared fixtures and platform-skip
@@ -789,14 +795,15 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m integration
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (23 files / ~477 tests with the 3 tracked bundles in scenarios/;
-~549 with all 5 generated. Alphabetical):
+TEST FILES (24 files / ~574 tests with all 5 bundles in scenarios/;
+~502 with just the 3 tracked bundles. Alphabetical):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
                                         (incl. Phase 10 demand composition table)
-  test_audit_fairness.py          (29)  Q1-Q5 audit helpers + 4-layout detector
-                                        + synthetic-run-dir orchestrator test
+  test_audit_fairness.py          (40)  Q1-Q5 audit helpers + 5-layout detector
+                                        (Phase 12+ mode-segmented + back-compat)
+                                        + _discover_modes + synthetic-run-dir test
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
   test_demand_composition.py      (7)   V5+ Phase 10 — `purpose` column tally,
                                         AM/PM peak split, chain-leg counter,
@@ -808,7 +815,8 @@ TEST FILES (23 files / ~477 tests with the 3 tracked bundles in scenarios/;
   test_feasibility.py             (19)  Shared cross-engine trip filter
                                         + mode-aware feasibility (V5)
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
-  test_matsim_adapter.py          (24)  MATSim helpers + end-to-end + sweep
+  test_matsim_adapter.py          (26)  MATSim helpers + end-to-end + sweep,
+                                        + Phase 12.1 route-text format pin
                                         (~10 min on M-series Mac — see
                                         TESTING.md §3 for the -k escape)
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
@@ -818,12 +826,17 @@ TEST FILES (23 files / ~477 tests with the 3 tracked bundles in scenarios/;
                                         + AM_PURPOSES/PM_PURPOSES disjointness
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_reproducibility_metrics.py (15)  R-score core + edge cases
+  test_run_benchmark.py           (12)  V5+ Phase 12 — BenchmarkHarness
+                                        explicit-output flag, prep-cache hot/cold
+                                        + bundle-hash invalidation, scoped_base
+                                        collapse (Phase 12.2)
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
   test_scc.py                     (14)  Iterative Kosaraju + parser
-  test_scenario_data_integrity.py (108) 7 classes × 36 tests/scenario, scales
-                                        with scenarios/ contents (108 = 3
-                                        tracked bundles × 36; 180 if all 5
-                                        bundles generated; 0 if scenarios/ empty)
+  test_scenario_data_integrity.py (180) 7 classes × 36 tests per scenario,
+                                        scales with scenarios/ contents:
+                                          0 bundles → 0 tests
+                                          3 tracked → 108 tests (3×36)
+                                          5 generated → 180 tests (5×36)
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep
   test_turn_restrictions.py       (17)  V5+ Phase 7 — OSM restriction parser,
                                         forbidden-move builder, state-aware
@@ -846,7 +859,7 @@ WHAT THE OUTPUT LOOKS LIKE:
   Default — per-file rollup rows + sticky progress bar:
     tests/test_feasibility.py    PASSED
     tests/test_engine_smoke.py   SKIPPED
-    [████████████░░░░░░░░░░░░░░] 50%  ✓ 238  ✗ 0  ⠼  test 238/477  elapsed 1m 30s
+    [████████████░░░░░░░░░░░░░░] 50%  ✓ 287  ✗ 0  ⠼  test 287/574  elapsed 1m 30s
 
   With -v — per-test ✓/✗/⊘ rows:
     ✓ tests/test_feasibility.py::test_drops_outside_scc

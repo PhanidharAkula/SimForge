@@ -24,12 +24,13 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 |---|---|---|
 | Engines shipping (Version_5) | 3 (SUMO, MATSim, DTALite) | `adapters/` |
 | Engines researched + ruled out | 3 (LPSim, QarSUMO, POLARIS, CityFlow) | `doc/engines/` |
-| Test suite | 429 passing, 1 pre-existing arm64 fail, 9 skipped | §3.1 below |
-| Reproducibility ceiling | R = 1.0 across N=3+ on all three engines | §3.4, §3.6 |
-| Fairness audit | Q1✓ Q2✓ Q3✓ Q4 paradigm-spread signal | §3.5, §3.6 |
-| Cross-engine TT spread (chicago_1k) | DTALite 174s / MATSim 244s / SUMO meso 372s | §3.5 |
+| Test suite | 574 passing with all 5 bundles (502 with the 3 tracked); 1 pre-existing arm64 SUMO env fail | §3.1 below |
+| Reproducibility ceiling | R = 1.0 across N=3+ on MATSim and DTALite (Phase 12.1 fix); SUMO R = 0.95 – 0.99 across seeds | §3.4, §3.6 |
+| Fairness audit | Q1✓ Q2✓ Q3✓ Q4 paradigm-spread signal Q5 demand-composition (Phase 10) | §3.5, §3.6 |
+| Cross-engine TT spread (chicago_1k) | _regenerate after Phase 12.1_ — pre-fix MATSim numbers (244s) reflect zero-trip mobsim, not true MATSim simulation; SUMO and DTALite columns unaffected | §3.5 |
 | Mac per-cell wallclock (DTALite chicago_1k) | 8.5 s | §3.4 |
 | Pitzer per-scenario wallclock (chicago_1k, all 3 engines × N=5) | 8.6 min | §3.6 |
+| Pitzer benchmark_small full wall (Phase 12 BFS-prep cache) | ~22-23 h (la_50k worker dominates; chicago + nyc finish in ~10 min and ~3 h respectively) | §3 (2026-05-02 entry) |
 
 ---
 
@@ -38,7 +39,7 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 - **Pre-existing arm64 SUMO failure** on macOS for chicago_1k_car (`netconvert` "Ambiguity in turnarounds" warning treated as error on Apple Silicon). Documented in commit `6acfce8`. Unaffects Pitzer Linux runs. Test `tests/test_sumo_adapter.py::test_sumo_adapter_all_scenarios` skipped on arm64.
 - **DTALite agent.csv volume rounding** introduces ~0.3–5.6 % over/under-counting in DTALite's reported trip count vs canonical (chicago_1k: 997/1000; nyc_10k: 10564/10000). Path-based UE outputs fractional volumes per path; we round per-row when expanding to per-vehicle stats. Cosmetic for travel-time means; would matter only if we report DTALite trip counts as ground-truth-accurate.
 - **DTALite path4gmns wrapper crashes on macOS** after the binary writes output (multiprocessing SemLock issue in path4gmns 0.10.0). Adapter detects success via `link_performance.csv` presence rather than subprocess exit code. Documented in `adapters/dtalite/MAPPING.md` "macOS multiprocessing wrapper bug".
-- **la_50k_car microscopic SUMO** wall time (~25 hr per N=5 cell) exceeds Pitzer's 24 hr CPU partition wall — currently impossible without a route-cache fix to the SUMO adapter (BFS pre-routing is the bottleneck, ~17 h alone for chicago_200k).
+- ~~**la_50k_car microscopic SUMO** wall time (~25 hr per N=5 cell) exceeds Pitzer's 24 hr CPU partition wall — currently impossible without a route-cache fix to the SUMO adapter (BFS pre-routing is the bottleneck, ~17 h alone for chicago_200k).~~ **Resolved by Phase 12 BFS-prep cache (2026-05-02):** `prepare_*_inputs` is now cached once per `(scenario, engine)` instead of per cell, so la_50k_car total wall drops from ~150 h to ~21-23 h (one cold prep + 4 cheap reps per engine). benchmark_small.sbatch walltime bumped 24h → 36h. la_50k_car SUMO micro is also no longer in `runspecs/benchmark_small.yaml` (mesoscopic only at the 50K tier — see runspec header for rationale).
 
 ---
 

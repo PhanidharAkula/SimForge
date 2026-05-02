@@ -189,15 +189,20 @@ For each cell of the stress-test matrix:
 
 ### 4.4.1 Headline numbers (Apple M4 Pro)
 
-The numbers below come from the most recent canonical stress test (see [CHANGELOG.md](../../CHANGELOG.md), Addendum 3):
+The numbers below come from the most recent canonical stress test (see [CHANGELOG.md](../../CHANGELOG.md), Addendum 3).
+
+> ⚠️ **Phase 12.1 caveat:** the MATSim row reflects pre-Phase-12.1
+> behavior where the adapter rejected every transition (zero trips
+> completed, R = 1.0000 from zero-std artifact). After the fix,
+> chicago_1k_car/matsim/seed_42 measured 1000 trips, mean TT 309.6 s,
+> P95 582 s. The row will be regenerated; consume the post-fix run
+> as the source of truth.
 
 | Scenario       | Engine  | Mode  | Trips simulated  | Avg TT (s)  | Runtime (s)  | R-Score |
 | -------------- | ------- | ----- | ---------------- | ----------- | ------------ | ------- |
-| chicago_1k_car | matsim  | meso  | **1000 (100 %)** | 195.7 ± 0.0 | 10.19 ± 0.16 | 1.0000  |
+| chicago_1k_car | matsim  | meso  | _regenerate after Phase 12.1_ |
 | chicago_1k_car | sumo    | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
 | chicago_1k_car | sumo    | micro | 940 (94.0 %)     | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
-
-Total wall-clock across the 8-run matrix: ~22 s.
 
 ### 4.4.2 Fidelity (RQ1)
 

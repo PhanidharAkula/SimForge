@@ -44,6 +44,9 @@ Provenance column on `demand.csv` with values `schedule` (cityscape PUMS-derived
 ### Determinism (byte-identical)
 Property tested by `tests/test_adapter_determinism.py`: two adapter runs with the same input bundle and the same seed produce byte-identical output files. Distinct from *reproducibility*, which is a statistical property of the simulator output itself.
 
+### DTALite
+A C++ open-source mesoscopic Dynamic Traffic Assignment (DTA) engine bundled inside the [`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package (Apache 2.0). Implemented as the 3rd primary engine in **Version_5** after LPSim was abandoned (see *LPSim* below). The adapter at `adapters/dtalite/` translates the canonical bundle into the GMNS open standard (`node.csv` / `link.csv` / `demand.csv` + `settings.{csv,yml}`). Runs on Mac (arm64/x86_64), Linux x86_64, and Windows; on Mac the bundled binary needs `brew install libomp`. Selected for its (1) bounded integration cost (pre-built binary, working CMake), (2) paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and (3) GMNS open-standard input format reinforcing SimForge's reproducibility framing. Pin: `lib/dtalite/manifest.json`. Selection rationale: [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
+
 ---
 
 ## F
@@ -112,6 +115,9 @@ A non-parametric statistic measuring the largest gap between two empirical distr
 
 ### Low-sample cell
 A *coverage diagnostic* class flagged when an `(engine, mode)` cell has fewer than 3 successful runs. R-scores in low-sample cells are statistically weak and the diagnostic prints a warning so they are not over-interpreted. MATSim cells are intentionally low-sample (n = 2) because the engine is deterministic.
+
+### LPSim
+A GPU-accelerated mesoscopic traffic simulator ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT). Implemented as the 3rd primary engine in Version_4 Phase B but **abandoned in Version_5** after exhaustive Pitzer debugging. The bundled `LivingCity` binary had a GPU kernel OOB on networks > a few-K nodes; an in-container source rebuild (sm_70, Boost 1.59 sed-patches) succeeded but the rebuilt binary still SIGSEGV'd at first kernel launch. Replaced by *DTALite* (see above). Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
 
 ---
 
@@ -186,20 +192,6 @@ A GPU-accelerated SUMO variant. Originally listed in the plan as one of five eng
 
 ---
 
-## D
-
-### DTALite
-A C++ open-source mesoscopic Dynamic Traffic Assignment (DTA) engine bundled inside the [`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package (Apache 2.0). Implemented as the 3rd primary engine in **Version_5** after LPSim was abandoned (see *LPSim* below). The adapter at `adapters/dtalite/` translates the canonical bundle into the GMNS open standard (`node.csv` / `link.csv` / `demand.csv` + `settings.{csv,yml}`). Runs on Mac (arm64/x86_64), Linux x86_64, and Windows; on Mac the bundled binary needs `brew install libomp`. Selected for its (1) bounded integration cost (pre-built binary, working CMake), (2) paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and (3) GMNS open-standard input format reinforcing SimForge's reproducibility framing. Pin: `lib/dtalite/manifest.json`. Selection rationale: [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
-
----
-
-## L
-
-### LPSim
-A GPU-accelerated mesoscopic traffic simulator ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT). Implemented as the 3rd primary engine in Version_4 Phase B but **abandoned in Version_5** after exhaustive Pitzer debugging. The bundled `LivingCity` binary had a GPU kernel OOB on networks > a few-K nodes; an in-container source rebuild (sm_70, Boost 1.59 sed-patches) succeeded but the rebuilt binary still SIGSEGV'd at first kernel launch. Replaced by *DTALite* (see above). Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
-
----
-
 ## R
 
 ### Reproducibility (R-score)
@@ -246,13 +238,6 @@ Categorical label on each `demand.csv` row indicating the role of the trip in a 
 ### Turn restriction (V5+)
 An OSM `type=restriction via=node` relation extracted to the `<turn_restrictions>` block in V5+ `network.xml`. Each entry records `from_link`, `via_node`, `to_link`, and the restriction kind (`no_left_turn`, `no_u_turn`, `only_straight_on`, …). SUMO and MATSim adapters enforce them via state-aware BFS pre-routing (`pipeline/network/turn_restrictions.shortest_path_with_restrictions`). DTALite emits a sibling GMNS-conformant `movement.csv` but path4gmns 0.10.0 does not natively ingest it — documented cross-engine asymmetry. See `canonical/schema/network_v0.md` and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
 
----
-
-## V
-
-### Vehicle type (V11+ canonical)
-The canonical SimForge car parameters published in `adapters/common/vehicle_types.py` and consumed by all three adapters. Splits across engines as: SUMO `<vType id="simforge_car" length="5.0" minGap="2.5" width="1.8" maxSpeed="40.0" .../>`; MATSim `<vehicleType id="car"><length meter="7.5"/><width meter="1.8"/></vehicleType>` (length is *effective* spacing in MATSim's idiom = SUMO's physical length + minGap); DTALite `[agent_type] PCE=1.0`. Pre-V11 each adapter declared its own values inline with no shared source of truth — V11 centralises and pins the alignment via `tests/test_vehicle_types.py`. See `CHANGELOG.md` Phase 11.
-
 ### TraCI
 SUMO's Traffic Control Interface — a TCP socket protocol for runtime interaction with a running SUMO instance. SimForge does **not** use TraCI; all SUMO adapter interaction is file-based (input XMLs in, `tripinfo.xml` and `statistics.xml` out) for byte-deterministic execution.
 
@@ -265,6 +250,9 @@ SUMO's per-trip output XML, parsed by `evaluation/metrics/travel_time.py:parse_s
 
 ### Validation
 The pre-flight checks run by `pipeline/validation/validate_bundle.py` before any simulation: schema conformance, manifest hash match, referential integrity (every demand entry references a valid network node), and SCC reachability.
+
+### Vehicle type (V11+ canonical)
+The canonical SimForge car parameters published in `adapters/common/vehicle_types.py` and consumed by all three adapters. Splits across engines as: SUMO `<vType id="simforge_car" length="5.0" minGap="2.5" width="1.8" maxSpeed="40.0" .../>`; MATSim `<vehicleType id="car"><length meter="7.5"/><width meter="1.8"/></vehicleType>` (length is *effective* spacing in MATSim's idiom = SUMO's physical length + minGap); DTALite `[agent_type] PCE=1.0`. Pre-V11 each adapter declared its own values inline with no shared source of truth — V11 centralises and pins the alignment via `tests/test_vehicle_types.py`. See `CHANGELOG.md` Phase 11.
 
 ---
 

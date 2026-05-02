@@ -13,7 +13,7 @@ git clone <repo-url>
 cd SimForge
 python setup_simforge.py        # creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
-python -m pytest tests/ -q      # ~477 tests should pass (369 base + 3 × 36 integrity)
+python -m pytest tests/ -q      # ~574 tests should pass with all 5 bundles (~502 with the 3 tracked)
 ```
 
 If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install path.
@@ -34,27 +34,34 @@ git checkout -b your-feature-branch
 
 ### 2. Write the test first
 
-The ~477-test suite is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The ~574-test suite (with all 5 bundles, ~502 with just the 3 tracked) is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |
 | `test_adapter_determinism.py`          | 8     | Byte-identical re-runs across all adapters                   |
 | `test_sumo_adapter.py`                 | 4     | SUMO adapter input/output shape                              |
-| `test_matsim_adapter.py`               | 24    | MATSim adapter, JAR discovery, classpath, config generation |
+| `test_matsim_adapter.py`               | 26    | MATSim adapter (incl. Phase 12.1 route-text format pin)      |
 | `test_dtalite_adapter.py`              | 46    | DTALite adapter — writers, settings, demand-driven zoning, determinism, output parsing |
 | `test_fidelity_metrics.py`             | 21    | RMSE, GEH, KS                                                |
 | `test_metrics_travel_time.py`          | 2     | tripinfo.xml parser                                          |
 | `test_reproducibility_metrics.py`      | 15    | R-score, edge cases (μ → 0)                                  |
 | `test_scalability_metrics.py`          | 8     | SimulationTimer, throughput, hardware info                   |
 | `test_validator.py`                    | 2     | Bundle validator (manifest + referential integrity)          |
-| `test_scenario_data_integrity.py`      | 35    | Per-bundle hash, manifest, SCC, demand integrity             |
+| `test_scenario_data_integrity.py`      | 36 × N| Per-bundle hash, manifest, SCC, demand integrity (N = bundles in `scenarios/`) |
 | `test_pipeline_e2e.py`                 | 20    | OSM fetch → bundle → adapter → metrics                       |
 | `test_scc.py`                          | 14    | Iterative Kosaraju + bundled-network coverage                |
-| `test_feasibility.py`                  | 16    | Shared SCC-based cross-engine trip filter                    |
+| `test_feasibility.py`                  | 19    | Shared SCC-based cross-engine trip filter (mode-aware, V5+)  |
 | `test_analyze_benchmark.py`            | 24    | Mode-aware grouping, renderers (incl. Adj TT), intersection helpers |
 | `test_osm_fetch.py`                    | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pinning  |
 | `test_demand_generators.py`            | 21    | Uniform / gravity / peak-hour generators, SCC-restricted OD |
-| `test_engine_smoke.py`                 | 3     | Real-binary SUMO/MATSim smoke (skip if missing)              |
+| `test_engine_smoke.py`                 | 4     | Real-binary SUMO/MATSim/DTALite smoke (skip if missing)      |
+| `test_audit_fairness.py`               | 40    | Q1–Q5 audit + 5-layout detector (Phase 12+ mode-segmented + back-compat) |
+| `test_run_benchmark.py`                | 12    | Phase 12+: BenchmarkHarness explicit-output, prep-cache hot/cold, bundle-hash invalidation, Phase 12.2 scoped_base collapse |
+| `test_demand_composition.py`           | 7     | V5+ Phase 10 — `purpose` column tally, AM/PM split, chain legs |
+| `test_parse_model_file.py`             | 27    | ModelGen parser + V5 Phase 5 JWTRNS + Phase 9 HBSchool helpers |
+| `test_turn_restrictions.py`            | 17    | V5+ Phase 7 — OSM restriction parser, BFS, DTALite movement.csv |
+| `test_vehicle_types.py`                | 19    | V5+ Phase 11 — canonical car constants, cross-engine equivalence |
+| `test_confidence.py`                   | 18    | Student's-t 95% CI core + edge cases                         |
 
 If you change adapter behaviour, run the determinism tests *and* the relevant adapter tests — the determinism tests catch silent file-format regressions that the adapter unit tests miss.
 

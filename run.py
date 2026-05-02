@@ -25,9 +25,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-# Suppress unused import warning - subprocess is used in multiple functions
-_ = subprocess  # noqa: F401
-
 from execution.cli_format import format_error_oneline as _format_error_oneline
 
 # =============================================================================

@@ -137,13 +137,13 @@ Larger scenarios are not committed — generate them locally with the helper scr
 
 ### Generation Tiers
 
-| Preset             | Trips   | Horizon  | Helper script                       |
-| ------------------ | ------- | -------- | ----------------------------------- |
-| `quick_test`       | 1,000   | 7–8 AM   | `scripts/01_chicago_1k_car.py`          |
-| `small_commute`    | 10,000  | 7–9 AM   | `scripts/02_nyc_10k_car.py`       |
-| `medium_multimodal`| 50,000  | 6–10 AM  | `scripts/03_la_50k_car.py`   |
-| `large_full_day`   | 200,000 | 24 h     | `scripts/04_chicago_200k_car.py`      |
-| `stress_test`      | 500,000 | 6–10 AM  | `scripts/05_nyc_500k_car.py`         |
+| Preset (`--preset`)  | Trips   | Horizon  | Helper script                          |
+| -------------------- | ------- | -------- | -------------------------------------- |
+| `chicago_1k_car`     | 1,000   | 7–8 AM   | `scripts/01_chicago_1k_car.py`         |
+| `nyc_10k_car`        | 10,000  | 7–9 AM   | `scripts/02_nyc_10k_car.py`            |
+| `la_50k_car`         | 50,000  | 6–10 AM  | `scripts/03_la_50k_car.py`             |
+| `chicago_200k_car`   | 200,000 | 24 h     | `scripts/04_chicago_200k_car.py`       |
+| `nyc_500k_car`       | 500,000 | 6–10 AM  | `scripts/05_nyc_500k_car.py`           |
 
 ### Data Sources
 
@@ -217,7 +217,7 @@ python run.py                                 # All bundled scenarios × all ins
 ### Run Benchmark from RunSpec
 
 ```bash
-# Canonical 4-cell stress test (matches the thesis figures)
+# Canonical 11-cell small-tier benchmark (matches the thesis figures)
 python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 # Dry run (validate without executing)
@@ -334,7 +334,7 @@ Short version:
 
 ```bash
 ssh pitzer
-cd ~ && git clone -b Version_3 https://github.com/PhanidharAkula/SimForge.git
+cd ~ && git clone -b Version_5 https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
 
 # Install uv (manages Python + venv; user-space, no admin)
@@ -369,7 +369,7 @@ sbatch cluster/jobs/05_nyc_500k_car.sbatch       # or any of cluster/jobs/01..05
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 10 thesis figures              |
 | `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the test suite (~477 tests)            |
+| `python -m pytest tests/ -v`                           | Run the test suite (~574 tests with all 5 bundles, ~502 with the 3 tracked) |
 
 ---
 
@@ -400,7 +400,7 @@ SimForge/
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark YAML configurations
 ├── scenarios/              # Bundled canonical scenarios
-├── tests/                  # 406 unit & integration tests
+├── tests/                  # ~574 unit & integration tests
 ├── run.py                  # Convenience CLI
 ├── generate.py             # Scenario generator entry point
 ├── setup_simforge.py       # One-command bootstrap

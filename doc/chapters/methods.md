@@ -60,7 +60,7 @@ SimForge solves these challenges through five interacting subsystems:
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | DTALite simulator  | DTALite (bundled in [`path4gmns`](https://github.com/jdlph/Path4GMNS)) | 0.10.0+ | CPU mesoscopic Dynamic Traffic Assignment |
 | OpenMP runtime (Mac) | libomp (brew install libomp) | — | DTALite OpenMP runtime on macOS |
-| Testing            | pytest                       | 8.0+    | ~477 tests across all subsystems        |
+| Testing            | pytest                       | 8.0+    | ~574 tests across all subsystems (502 with the 3 tracked bundles) |
 
 > **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement and after exhaustive integration work in Versions 4–5, the matrix narrows to **three primary engines** (SUMO microscopic + mesoscopic, MATSim queue-based agent, DTALite mesoscopic Dynamic Traffic Assignment) chosen for paradigm spread. Three of the originally-proposed engines were systematically evaluated and ruled out: **QarSUMO** dropped in Version_4 Phase A (no usable public source — LLNL/QarSUMO 404, QarSUMO/QarSUMO empty placeholder, Boulmakoul 2023 IEEE HPCS paper produced no runnable code; full retrospective in [`doc/engines/QARSUMO_RETROSPECTIVE.md`](../engines/QARSUMO_RETROSPECTIVE.md)); **LPSim** integrated in Version_4 Phase B but abandoned in Version_5 after the bundled GPU binary crashed at network sizes > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch (full retrospective in [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md)); **POLARIS** and **CityFlow** evaluated as alternatives during the third-engine selection but ruled out at criteria (POLARIS license-gated, CityFlow scaling-broken — see [`doc/engines/THIRD_ENGINE_OPTIONS.md`](../engines/THIRD_ENGINE_OPTIONS.md)). DTALite (bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS), Apache 2.0) was selected on three grounds: bounded integration cost (pre-built binary, working CMake), paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and CPU-only execution (the full matrix runs on Mac as well as Linux). See [`doc/engines/ENGINE_COMPARISON.md`](../engines/ENGINE_COMPARISON.md) for the full cross-engine comparison and `todo.md` for the rollout history.
 
@@ -462,19 +462,31 @@ python generate.py --city chicago --trips 5000 --synthetic --seed 42
 
 **Module**: `pipeline/signals/build_signals_default.py`
 
-**Input**: `network.xml`
+**Input**: `network.xml` (Phase 6+ also reads OSM `highway=traffic_signals` tags carried into the canonical bundle)
 
 **Output**: `signals.xml`
 
-**Algorithm:**
+**Algorithm (V5+ Phase 6 — OSM-grounded by default):**
 
-1. Load network and compute **in-degree + out-degree** for each node
-2. Mark nodes with degree ≥ 4 as signalized (heuristic: busy intersections tend to have signals)
-3. For each signalized node, generate a **2-phase controller**:
+1. For each network node carrying an OSM `highway=traffic_signals` tag,
+   emit a signalized junction.
+2. For each signalized node, generate a **2-phase controller**:
    - Phase 1: Green for one set of approach links (e.g., N/S)
    - Phase 2: Green for orthogonal approach links (e.g., E/W)
    - Yellow and all-red clearance phases included
-   - Cycle length computed from number of approaching links
+   - Cycle length is the placeholder 90 s 2-phase template
+   - Placement is real (OSM-tagged); timing is synthetic.
+
+**Empirical signal density** at the OSM-tagged nodes: 1.4 – 4.8 % of
+nodes (Chicago 2.79 %, NYC 4.80 %, LA 1.35 %; chicago_1k_car emits ~84
+controllers in its 2 km radius). See `doc/SCENARIO_GENERATION.md`
+§"Step 2: Traffic Signals" for the full provenance.
+
+**Legacy fallback (pre-V5 / synthetic networks without OSM tags):** the
+generator uses a degree heuristic — mark nodes with degree ≥ 4 as
+signalized, on the assumption that busy intersections tend to have
+signals. This produces ~900 controllers for a 4 km urban radius
+(Chicago: 925) but is not OSM-grounded and is no longer the default.
 
 **Limitations**: Real traffic signal timing involves:
 
@@ -482,9 +494,8 @@ python generate.py --city chicago --trips 5000 --synthetic --seed 42
 - Pedestrian walk/don't-walk intervals
 - Adaptive (actuated) control responding to real-time demand
 - Coordinated "green waves" along arterials
-- None of these are currently modeled
-
-**Typical output**: ~900 signal controllers for a 4km urban radius (Chicago: 925 controllers).
+- None of these are currently modeled — the timing template is the
+  placeholder 90 s cycle described above.
 
 ### 3.3.4 Stage 4: Demand Generation
 
@@ -1029,28 +1040,30 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **~477 tests** with the 3 tracked bundles
-(`chicago_1k_car`, `nyc_10k_car`, `la_50k_car`); generating the two
-larger benchmark tiers (`chicago_200k_car`, `nyc_500k_car`) lifts the
-count to ~549 because `test_scenario_data_integrity.py` parametrises
-36 tests over every complete bundle in `scenarios/`.
+The framework includes **~574 tests** with all 5 bundles generated
+(or **~502** with just the 3 tracked bundles `chicago_1k_car`,
+`nyc_10k_car`, `la_50k_car`). The base count is 394 tests + 36
+parametrized integrity tests per bundle in `scenarios/`, so
+generating the two larger benchmark tiers (`chicago_200k_car`,
+`nyc_500k_car`) lifts the count from 502 to 574.
 
 | Test Module                       | Tests | What It Validates                                       |
 | --------------------------------- | ----- | ------------------------------------------------------- |
 | `test_adapter_determinism.py`     | 8     | Byte-identical outputs from identical inputs            |
 | `test_sumo_adapter.py`            | 4     | SUMO conversion: network, routes, config                |
-| `test_matsim_adapter.py`          | 24    | MATSim adapter: unit + integration, all scenarios       |
+| `test_matsim_adapter.py`          | 26    | MATSim adapter (incl. Phase 12.1 route-text format pin) |
 | `test_fidelity_metrics.py`        | 21    | RMSE, GEH, KS computation correctness                   |
 | `test_metrics_travel_time.py`     | 2     | SUMO tripinfo parsing                                   |
 | `test_reproducibility_metrics.py` | 15    | R-index computation, edge cases, interpretation         |
 | `test_scalability_metrics.py`     | 8     | Timer, throughput, hardware detection                   |
 | `test_validator.py`               | 2     | Bundle validation: valid and invalid bundles            |
-| `test_scenario_data_integrity.py` | 108   | 7 classes × 36 tests/scenario × 3 tracked bundles (180 with all 5 generated) |
+| `test_scenario_data_integrity.py` | 36 × N | 7 classes × 36 tests/scenario × N bundles in `scenarios/` (108 for 3 tracked, 180 for all 5) |
 | `test_pipeline_e2e.py`            | 20    | Bad data detection, routing, adapter robustness         |
 | `test_scc.py`                     | 14    | Iterative Kosaraju + parsing                            |
 | `test_feasibility.py`             | 19    | Shared cross-engine trip filter + V5 mode-aware feasibility |
 | `test_analyze_benchmark.py`       | 24    | Mode-aware grouping + Phase 10 demand composition table |
-| `test_audit_fairness.py`          | 29    | Q1–Q4 audit helpers + 4-layout detector                 |
+| `test_audit_fairness.py`          | 40    | Q1–Q5 audit helpers + 5-layout detector (Phase 12+ mode-segmented + back-compat fallbacks) |
+| `test_run_benchmark.py` (Phase 12+) | 12  | BenchmarkHarness explicit-output, prep-cache, bundle-hash invalidation, scoped_base collapse (Phase 12.2) |
 | `test_confidence.py`              | 18    | Student's-t 95 % CI core + edge cases                   |
 | `test_osm_fetch.py`               | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pin |
 | `test_demand_generators.py`       | 21    | Uniform/gravity/peak-hour generators, SCC restriction   |
@@ -1061,11 +1074,12 @@ count to ~549 because `test_scenario_data_integrity.py` parametrises
 | `test_dtalite_adapter.py`         | 46    | DTALite adapter: writers, settings, demand-driven zoning, determinism, output parsing, end-to-end smoke |
 | `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/DTALite                |
 
-**All ~477 tests passing** with the 3 tracked bundles as of Version_5
-Phase 11. Marker registry in `pyproject.toml`; shared fixtures in
-`tests/conftest.py`. Line coverage sits at **76 %** across the
-adapter, pipeline, and evaluation packages; the local gate enforces
-≥70 % via `pytest --cov --cov-fail-under=70`.
+**All ~574 tests passing** with all 5 bundles as of Version_5
+Phase 12.2 (or ~502 with just the 3 tracked bundles). Marker registry
+in `pyproject.toml`; shared fixtures in `tests/conftest.py`. Line
+coverage sits at **76 %** across the adapter, pipeline, and evaluation
+packages; the local gate enforces ≥70 % via
+`pytest --cov --cov-fail-under=70`.
 
 ### 3.7.2 Determinism Guarantees
 

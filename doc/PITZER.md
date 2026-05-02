@@ -147,7 +147,7 @@ and no separate `pip install eclipse-sumo` step.
 ```bash
 # 4.1 — clone into $HOME (500 GB quota, no advisor permission needed)
 cd $HOME
-git clone -b Version_3 https://github.com/PhanidharAkula/SimForge.git
+git clone -b Version_5 https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
 
 # 4.2 — install uv (manages Python + venv; user-space, no admin)
@@ -369,7 +369,7 @@ Once the bundles exist, run the 4-cell canonical matrix (or a subset):
 #SBATCH --job-name=simforge-bench
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=16
 #SBATCH --mem=96G
-#SBATCH --time=04:00:00
+#SBATCH --time=36:00:00   # benchmark_small canonical wall: la_50k worker dominates at ~21-23 h with Phase 12 BFS-prep cache; 36 h gives headroom
 #SBATCH --output=%x-%j.out
 
 cd $HOME/SimForge
@@ -479,16 +479,30 @@ scancel --user=$USER                # all your jobs (be careful!)
 The thesis numbers come from running `runspecs/benchmark_small.yaml` on Pitzer
 with all three engines. After a successful benchmark job you should have:
 
+Phase 12+ layout (per-scenario JSON, mode-segmented per-cell paths,
+BFS-prep cache):
+
 ```
 runs/benchmark_small/
-├── benchmark_results_benchmark_small.json
 ├── chicago_1k_car/
-│   ├── sumo/     {seed_42,seed_43,seed_44,seed_45,seed_46}/tripinfo.xml
-│   ├── matsim/   {seed_42..seed_46}/output_trips.csv.gz
-│   └── dtalite/  {seed_42..seed_46}/agent.csv + link_performance.csv  (UE assignment)
+│   ├── benchmark_results_benchmark_small.json   # per-scenario JSON
+│   ├── .cache/                                   # BFS-prep cache
+│   │   ├── sumo/    .prepared (SHA-256 of bundle manifest) + prepared inputs
+│   │   ├── matsim/  ...
+│   │   └── dtalite/ ...
+│   ├── sumo/   { meso, micro }/{seed_42..seed_46}/tripinfo.xml
+│   ├── matsim/ meso/{seed_42..seed_46}/output_trips.csv.gz
+│   └── dtalite/meso/{seed_42..seed_46}/agent.csv + link_performance.csv (UE)
+├── nyc_10k_car/  ...
+├── la_50k_car/   ...
+├── summary.md                                    # markdown table (sbatch post-step)
+├── audit_fairness.txt                            # Q1-Q5 (sbatch post-step)
 └── plots/
-    └── fig_5_{1..10}.{png,pdf}
+    └── fig_5_{1..10}.{png,pdf}                   # 10 thesis figures
 ```
+
+(Pre-Phase-12.2 doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
+is also still detected by `audit_fairness` — Layout C back-compat.)
 
 Copy the plots and `benchmark_results_*.json` back to your local machine for
 inclusion in the thesis:

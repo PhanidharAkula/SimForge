@@ -27,7 +27,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (10 thesis figures)     |
-| Test Suite                   | ✅ ~477 tests passing               |
+| Test Suite                   | ✅ ~574 tests passing (502 with 3 tracked bundles) |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 
 Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
@@ -159,7 +159,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache — only populated if the fallback path runs (gitignored)
-├── tests/                  # pytest test suite (~477 tests)
+├── tests/                  # pytest test suite (~574 tests)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -205,7 +205,7 @@ LPSim, POLARIS, and QarSUMO were evaluated and rejected — see the retrospectiv
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all ~477 tests
+pytest tests/ -v          # Run all ~574 tests (502 with just the 3 tracked bundles)
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 

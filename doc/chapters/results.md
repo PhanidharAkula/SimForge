@@ -2,9 +2,20 @@
 
 ## 5.0 Overview
 
-This chapter presents the empirical results of the canonical SimForge stress test (`runspecs/benchmark_small.yaml`) — a 4-cell matrix of `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` with **N=5 repeats per cell**, for **20 simulation runs** in total. All three engines are CPU-only and run on Mac and Linux; the full stress test reproduces from a developer laptop without HPC access.
+> ⚠️ **Phase 12.1 caveat (2026-05-02):** every MATSim cell in every prior
+> benchmark run is invalid as a travel-time / trip-count source. The
+> adapter's `<route type="links">` text content was missing the
+> `start_link` / `end_link` tokens that MATSim 15 / population_v6 requires;
+> MATSim's mobsim rejected every transition (`output_trips.csv.gz`
+> ended up empty); R = 1.0000 below was a zero-trip-std artifact.
+> **Regenerate** this chapter from a Phase-12.1+ run before defending.
+> SUMO and DTALite cells are unaffected. See CHANGELOG Phase 12.1 for
+> the fix and the empirical "0 → 1000 trips, 1000 → 0 warnings"
+> verification.
 
-All numbers in this chapter are reproduced verbatim from `runs/benchmark_small/benchmark_results_benchmark_small.json` and were measured on an Apple M4 Pro (2024) running macOS 25.4.0, Python 3.13.2, SUMO 1.20.0, MATSim 15.0, and Java 17.0.13. The tables and figures below are emitted by:
+This chapter presents the empirical results of the canonical SimForge benchmark (`runspecs/benchmark_small.yaml`) — an 11-cell matrix of `{chicago_1k_car, nyc_10k_car, la_50k_car} × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` (la_50k drops SUMO micro) with **N=5 repeats per cell**, for **55 simulation runs** in total. All three engines are CPU-only and run on Mac and Linux; the full benchmark fits inside a single Pitzer SLURM job (~22-23 h with Phase 12 BFS-prep cache; see CHANGELOG Phase 12).
+
+All numbers in this chapter are reproduced verbatim from the per-scenario JSONs at `runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json` (Phase 12+ — JSONs land in per-scenario subdirs to keep parallel-by-scenario sbatch workers from racing). They were measured on an Apple M4 Pro (2024) running macOS 25.4.0, Python 3.13.2, SUMO 1.26.0, MATSim 15.0, and Java 17.0.13. The tables and figures below are emitted by:
 
 ```bash
 python -m execution.run_benchmark runspecs/benchmark_small.yaml
