@@ -8,6 +8,76 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 12.5: Partial-summary recovery tool + DTALite-at-50k scaling finding (2026-05-03)
+
+**Symptom.** After Phase 12.4's caps (mem=128G, DTALite timeout=14400s)
+and Phase 12.3's progress log shipped, a third la_50k_car re-queue
+(SLURM job 47248311) revealed the *real* DTALite ceiling: path4gmns
+0.10.0's bundled DTALite C++ binary caps internal OpenMP at 4 threads
+regardless of `OMP_NUM_THREADS` or SLURM cpu allocation. Verified by:
+- `nm -gD DTALite.so | grep omp` confirms OpenMP linkage (`GOMP_*`,
+  `omp_get_max_threads`).
+- `strings DTALite.so` shows the binary reads no `[cpu]` section in
+  settings.csv and there's an internal symbol
+  `_Z23g_number_of_CPU_threadsv` (`g_number_of_CPU_threads()`) that
+  determines parallelism.
+- Live `ssh <node> 'top'` while DTALite was running with
+  `export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK` set — process at
+  ~382% CPU (4 threads), unchanged.
+
+At 4 threads, each label-correcting (Bellman-Ford SP) pass over la_50k_car's
+9,660 demand zones takes ~2.5 h wall. The configured UE convergence
+(5 column-gen + 5 column-update iterations) needs 10 such passes →
+~25 h per seed → **structurally exceeds any practical per-cell timeout
+within the 36 h walltime cap.**
+
+**Decision.** This is a path4gmns 0.10.0 binary-side limit, not a
+SimForge pipeline limit. Documenting it as a scalability finding
+rather than chasing it through binary patches. A future path4gmns
+upgrade (or alternative UE solver) would resolve this.
+
+**Recovery.** New `tools/recover_partial_summary.py` walks the on-disk
+per-cell artifacts under `<base_dir>/<engine>/<mode>/seed_*/`,
+extracts metrics via the same `parse_sumo_tripinfo` /
+`parse_matsim_output` / `parse_dtalite_output` parsers the harness
+uses, and synthesizes cells where artifacts are missing. For a
+synthesized DTALite cell, the `error_message` becomes
+`"DTALITE timeout after <runspec timeout_s>s (synthesized — cell did not complete; see CHANGELOG for context)"`,
+recording the timeout we *attempted* (14400s = 4h for la_50k_car
+in the Phase 12.4 runspec) so the JSON is honest about what was
+tried, not zero. Output JSON is schema-compatible with the harness's
+own `BenchmarkResult.save()` — `evaluation/analyze_benchmark` and
+`evaluation/audit_fairness` consume it identically.
+
+**Resulting la_50k_car summary** (10 ✓ + 5 ✗):
+- SUMO meso × 5: ✓ from on-disk `tripinfo.xml` (~16 MB each, byte-identical
+  across all 3 prior runs since SUMO meso is deterministic).
+- MATSim meso × 5: ✓ from on-disk `output/output_trips.csv.gz`
+  (~1.29 MB each, deterministic with `lastIteration=0`).
+- DTALite meso × 5: ✗ synthesized timeout entries, all marked
+  `"DTALITE timeout after 14400s (synthesized)"`.
+
+**Thesis-defense narrative for §5.7 Discussion.** This is a *finding*,
+not a defeat: cross-engine alignment is reported here for SUMO and
+MATSim across all three benchmark_small scenario tiers
+(chicago_1k, nyc_10k, la_50k); DTALite results are reported for
+chicago_1k and nyc_10k where convergence completed in budget; at
+la_50k_car the path4gmns 0.10.0 4-thread cap pushes per-seed UE
+past 25 h wall-clock. Future work: replace the bundled DTALite
+binary with a multi-threaded build, or evaluate alternative UE
+solvers (e.g., `path4gmns.find_ue` Python implementation, or an
+external DTALite compiled with proper thread support).
+
+**Side observation worth pinning.** The `cluster/jobs/benchmark_small.sbatch`
+comment claiming "DTALite uses OpenMP and benefits from the extra cores
+via `number_of_cpu_processors` in settings.yml" is **wrong** — that
+setting doesn't exist in path4gmns 0.10.0's settings.csv schema (no
+`[cpu]` section in the binary's string table). The comment was
+aspirational. Phase 12.5 leaves the comment unchanged for now since
+fixing it requires the same one-line edit as bumping `--mem` and
+either belongs in a docs-cleanup pass or in the eventual post-thesis
+path4gmns upgrade.
+
 ### Phase 12.4: la_50k_car DTALite timeout + sbatch mem cap (2026-05-02)
 
 **Symptom.** Pitzer SLURM job `47237978` (`benchmark_small`,
