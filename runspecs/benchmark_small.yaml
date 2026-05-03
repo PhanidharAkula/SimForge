@@ -58,5 +58,11 @@ runs:
      engine: sumo,    mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
   - {scenario_id: la_50k_car, scenario_path: scenarios/la_50k_car,
      engine: matsim,  mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 1800}
+  # Phase 12.4: DTALite timeout bumped 3600 → 14400 (4 h) after job
+  # 47237978 hit 1 h cap on la_50k_car seed=42 under 64 G memory pressure.
+  # path4gmns DTALiteClassic on 50 k OD × 470 k links needs more headroom
+  # for the first-seed cold start; subsequent seeds are I/O-cheaper but
+  # each is a fresh subprocess (no warm cache between seeds), so the bump
+  # applies per-cell. Pair with sbatch --mem=128G to avoid OOM thrashing.
   - {scenario_id: la_50k_car, scenario_path: scenarios/la_50k_car,
-     engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 3600}
+     engine: dtalite, mode: mesoscopic,  repeats: 5, seed: 42, seed_increment: true, timeout_s: 14400}

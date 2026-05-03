@@ -8,6 +8,119 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 12.4: la_50k_car DTALite timeout + sbatch mem cap (2026-05-02)
+
+**Symptom.** Pitzer SLURM job `47237978` (`benchmark_small`,
+parallel-by-scenario) was OOM-killed at 17h15m elapsed (out of 36 h
+walltime) with MaxRSS 67 G against a 64 G `--mem` cap. Per-scenario
+result JSONs for chicago_1k_car (~03:25) and nyc_10k_car (~05:13) were
+already written and survived. la_50k_car finished SUMO × 5 + MATSim ×
+5 cleanly (Phase 12.1 + Phase 12 cache both confirmed working — 50.2s
+MATSim engine time, 93s cached SUMO seeds), then DTALite seed=42 hit
+the per-cell `timeout_s=3600` cap. The OOM fired during the next
+DTALite cell as path4gmns loaded the 50 k OD × 470 k link C++ side
+under accumulated 3-worker-resident memory.
+
+**Root cause.** Two compounding misfit caps:
+
+1. **`--mem=64G` was sized for the SUMO+MATSim peak** (per old
+   sbatch comment: "≤ 20 GB; 64 GB has headroom"). DTALite's
+   path4gmns C++ side wasn't accounted for — it holds the full
+   network + OD matrix + per-iteration shortest-path trees, which
+   for la_50k pushes the worker to ~30-40 GB by itself. With three
+   parallel workers still resident, the cap was always going to bite
+   somewhere in DTALite's la_50k phase.
+2. **`timeout_s=3600` (1 h) for DTALite la_50k** was set to match
+   the 1 h DTALite cell of nyc_10k_car. But nyc_10k has 10 k OD
+   pairs and la_50k has 50 k OD pairs — UE iteration cost is roughly
+   linear in OD count, so 1 h was always too tight by ~5×. (The 1 h
+   cap fired against a thrashing process under memory pressure, not
+   a healthy convergence — but even with healthy memory, 1 h would
+   have been marginal.)
+
+**Fix.** Two-line patch:
+
+- `runspecs/benchmark_small.yaml:62` — la_50k_car DTALite
+  `timeout_s: 3600` → `timeout_s: 14400` (4 h). Aligns with the
+  ~5× scaling vs nyc_10k and gives healthy convergence room.
+- `cluster/jobs/benchmark_small.sbatch:52` — `#SBATCH --mem=64G` →
+  `#SBATCH --mem=128G`. Pitzer cpu nodes have 192 G physical so 128 G
+  leaves headroom; killed the OS-swap thrashing path that masked the
+  real DTALite runtime.
+
+The DTALite adapter default (`adapters/dtalite/dtalite_adapter.py:727`,
+`timeout_s=3600`) is **unchanged** — it stays a sensible default for
+small scenarios; the runspec overrides per-cell as needed.
+
+**Re-queue cost** (with Phase 12 BFS-prep cache + Phase 12.2
+restructured layout + new caps):
+
+| Phase | Cached | Wall |
+|---|---|---|
+| SUMO BFS-prep + 5 mobsim seeds | yes (816 MB cache) | ~8 min (5 × 93s) |
+| MATSim BFS-prep + 5 mobsim seeds | yes (102 MB cache) | ~4 min (5 × 50s) |
+| DTALite UE × 5 (4 h timeout, 16 OpenMP threads) | input-CSV cache hit | 2.5-10 h realistic |
+| **Total wall** | | **~3-11 h, well inside 36 h** |
+
+**Other sbatch files audited but not patched:**
+- `01-05_*.sbatch` (single-scenario alternatives) and
+  `benchmark_large.sbatch` were not touched — they aren't in the
+  active recovery path. `benchmark_large.sbatch` will need the same
+  treatment before queuing the 200k/500k tier; tracked as future
+  Phase 12.5.
+
+**Existing on-disk artifacts preserved** by the user-side
+Phase 12.2 mv-restructure executed before re-pull: SUMO×5
+`tripinfo.xml` and MATSim×5 `output_trips.csv.gz` survive at the new
+single-nested paths and will be overwritten byte-identically by the
+deterministic re-runs (SUMO meso seeded + MATSim `lastIteration=0`
+both reproducible).
+
+### Phase 12.3: MATSim BFS-prep progress visibility (2026-05-02)
+
+**Symptom.** During Pitzer SLURM job 47237978 (benchmark_small,
+parallel-by-scenario), the la_50k_car worker went silent for 7+ hours
+between SUMO completion and any further log line. Process was at
+sustained 100% CPU with growing CPU time (98 s in 99 s wall) and
+`network.xml` + `feasibility_report.json` written into the cache, but
+no progress signal. py-spy dump revealed it was running
+`shortest_path_with_restrictions` from `build_matsim_plans_xml` —
+silently routing all 219,525 feasible trips through the Python BFS
+one at a time.
+
+**Root cause.** `build_matsim_plans_xml` only emits `logger.info(...)`
+on completion (`"%d trips pre-routed via state-aware BFS"`), not
+during the inner loop. The sbatch wrappers run at WARNING level so
+even a per-trip `info` would be filtered. Result: zero feedback during
+the most expensive single phase of the run, indistinguishable from a
+hang.
+
+**Fix.** Three lines in `adapters/matsim/matsim_adapter.py`
+(`build_matsim_plans_xml`, line 444 and lines 547-551): a
+`PROGRESS_EVERY = 10000` constant, an `n_processed += 1` increment
+at end of each successful loop iteration, and a `logger.warning(...)`
+when `n_processed % PROGRESS_EVERY == 0`. Uses `warning` level
+deliberately so it surfaces through the existing sbatch log filter
+without changing the filter (which would also let through unrelated
+INFO chatter from path4gmns and friends).
+
+**Effect.** Scenarios under 10 k feasible trips (chicago_1k,
+nyc_10k) stay quiet. Larger scenarios get one progress line per
+10,000 trips routed:
+
+```
+[matsim] BFS-prep: 10000 feasible trips routed
+[matsim] BFS-prep: 20000 feasible trips routed
+...
+```
+
+For la_50k_car (~219 k trips) that's ~22 lines spread over the
+prep window — enough to estimate ETA without spamming the log.
+
+**Verification.** `test_matsim_adapter.py` 26/26 pass with no
+behaviour change to the route XML output (the new lines only emit
+side-effect logs).
+
 ### Phase 12.2: Collapse redundant <scenario>/<scenario>/ doubling (2026-05-02)
 
 **Symptom.** Per-cell artefacts under parallel-by-scenario sbatch

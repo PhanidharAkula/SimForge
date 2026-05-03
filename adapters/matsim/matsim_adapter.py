@@ -441,6 +441,8 @@ def build_matsim_plans_xml(
     missing_link = 0
     restriction_fallbacks = 0
     pre_routed = 0
+    n_processed = 0
+    PROGRESS_EVERY = 10000  # Phase 12.3: surface BFS-prep progress at WARNING
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -541,6 +543,12 @@ def build_matsim_plans_xml(
             lines.append(f'    <activity type="w" link="{dest_link}"/>')
             lines.append('  </plan>')
             lines.append('</person>')
+
+            n_processed += 1
+            if n_processed % PROGRESS_EVERY == 0:
+                logger.warning(
+                    "[matsim] BFS-prep: %d feasible trips routed", n_processed
+                )
 
     if forbidden_moves:
         logger.info(

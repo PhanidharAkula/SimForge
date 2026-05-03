@@ -26,10 +26,15 @@
 #                            overhead + post-step analyzer fits comfortably.
 #                            DTALite uses OpenMP and benefits from the extra
 #                            cores via number_of_cpu_processors in settings.yml.
-#   --mem=64G              : Peak per-scenario memory ~5 GB; 3 in parallel
-#                            ≤ 20 GB; 64 GB has headroom (la_50k microscopic
-#                            can spike).
-#   --time=24:00:00        : See wall-clock budget above.
+#   --mem=128G             : Phase 12.4 bump from 64 G. Job 47237978 OOM-killed
+#                            at 67 G MaxRSS while DTALite was loading the
+#                            la_50k_car 50K-OD matrix into path4gmns's C++
+#                            side with all 3 parallel workers still resident.
+#                            Pitzer cpu nodes have 192 G physical, so 128 G
+#                            leaves comfortable headroom and avoids the OS
+#                            swap thrashing that made DTALite hit its 1 h
+#                            engine timeout against a healthy convergence.
+#   --time=36:00:00        : See wall-clock budget above.
 #
 # DTALite: ships inside the path4gmns Python package (already in
 # requirements.lock). No build step required on Pitzer; the bundled
@@ -49,7 +54,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=64G
+#SBATCH --mem=128G
 #SBATCH --time=36:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
