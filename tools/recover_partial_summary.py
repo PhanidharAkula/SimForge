@@ -18,12 +18,28 @@ cell never ran to completion. Pair with a CHANGELOG entry explaining
 why recovery was needed (which run was interrupted, what timeout was
 in force, etc.).
 
+Optionally pass ``--harness-log <path>`` to populate ``runtime_s``,
+``engine_wall_s``, and ``cell_wall_s`` for *successful* cells from
+the harness's own cell-tape output (the lines like ``[N/M] engine
+mode seed=X ✓ Y.Ys wall (Z.Zs engine)``). Without this flag, recovered
+success cells get ``runtime_s = 0`` and Table 5.1 (Runtime) will show
+zeros for them — the travel-time / R-score numbers parsed from on-disk
+artifacts are still correct.
+
 Usage::
 
+    # Minimal — runtime fields will be 0 for success cells:
     python -m tools.recover_partial_summary \\
         --runspec  runspecs/benchmark_small.yaml \\
         --scenario la_50k_car \\
         --base-dir runs/benchmark_small/la_50k_car
+
+    # With harness log — populates runtime fields too:
+    python -m tools.recover_partial_summary \\
+        --runspec  runspecs/benchmark_small.yaml \\
+        --scenario la_50k_car \\
+        --base-dir runs/benchmark_small/la_50k_car \\
+        --harness-log logs/simforge_benchmark_small_la_only_47248311_la_50k_car.log
 
 Writes::
 
@@ -35,6 +51,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import logging
+import re
 import sys
 from pathlib import Path
 
@@ -43,6 +60,73 @@ import yaml
 from execution.run_benchmark import BenchmarkResult, RunResult
 
 logger = logging.getLogger(__name__)
+
+# Cell-tape line emitted by execution/run_benchmark.py per cell. Three forms:
+#   Success: "  [ 1/15]  sumo     meso  seed=42  ✓    92.6s wall  ( 92.1s engine)"
+#   Failure: "  [11/15]  dtalite  meso  seed=42  ✗  FAIL  DTALite timeout after 3600s"
+#   Failure: "  [11/15]  dtalite  meso  seed=42  ✗  FAIL  Adapter failed: ..."
+# We capture engine, mode, seed, status marker, and (for success) wall + engine
+# seconds. Status marker is the unicode check / cross.
+_CELL_TAPE_RE = re.compile(
+    r"^\s*\[\s*\d+/\d+\]\s+"           # cell index "[N/M]"
+    r"(?P<engine>\w+)\s+"              # engine: sumo|matsim|dtalite
+    r"(?P<mode>\w+)\s+"                # mode: meso|micro
+    r"seed=(?P<seed>\d+)\s+"           # seed=42
+    r"(?P<status>[✓✗])"      # ✓ or ✗
+    r"\s*(?P<rest>.*)$"                # rest of line — timing or error
+)
+_TIMING_RE = re.compile(
+    r"(?P<wall>\d+(?:\.\d+)?)s\s+wall\s*\(\s*(?P<engine_s>\d+(?:\.\d+)?)s\s+engine\)"
+)
+
+
+def _parse_harness_log(log_path: Path) -> dict[tuple[str, str, int], dict]:
+    """Parse a harness cell-tape log and return per-cell timing info.
+
+    Returns a dict keyed on ``(engine, mode, seed)`` mapping to::
+
+        {"status": "success"|"failed", "wall_s": float, "engine_s": float,
+         "error_msg": str|None}
+
+    Cells not represented in the log are simply absent from the dict;
+    the caller falls back to its existing default behaviour.
+    """
+    parsed: dict[tuple[str, str, int], dict] = {}
+    if not log_path.is_file():
+        logger.warning("--harness-log %s not found; runtime fields will be 0", log_path)
+        return parsed
+
+    with log_path.open("r", encoding="utf-8", errors="replace") as f:
+        for line in f:
+            m = _CELL_TAPE_RE.match(line)
+            if not m:
+                continue
+            engine = m["engine"].lower()
+            mode = m["mode"].lower()
+            seed = int(m["seed"])
+            status = "success" if m["status"] == "✓" else "failed"
+            rest = (m["rest"] or "").strip()
+
+            wall_s = engine_s = 0.0
+            error_msg: str | None = None
+            if status == "success":
+                tm = _TIMING_RE.search(rest)
+                if tm:
+                    wall_s = float(tm["wall"])
+                    engine_s = float(tm["engine_s"])
+            else:
+                # "FAIL  <error message>" — strip leading "FAIL"
+                error_msg = re.sub(r"^FAIL\s+", "", rest).strip() or "unknown failure"
+
+            parsed[(engine, mode, seed)] = {
+                "status": status,
+                "wall_s": wall_s,
+                "engine_s": engine_s,
+                "error_msg": error_msg,
+            }
+
+    logger.info("Parsed %d cell-tape entries from %s", len(parsed), log_path)
+    return parsed
 
 
 def _short_mode(mode: str) -> str:
@@ -111,6 +195,7 @@ def recover_scenario(
     scenario_id: str,
     base_dir: Path,
     output_path: Path | None = None,
+    harness_log_path: Path | None = None,
 ) -> Path:
     """Walk per-cell artifacts, build summary JSON, write to disk.
 
@@ -122,6 +207,8 @@ def recover_scenario(
     scenario_rows = [r for r in runspec["runs"] if r["scenario_id"] == scenario_id]
     if not scenario_rows:
         raise SystemExit(f"No runs for scenario {scenario_id} in {runspec_path}")
+
+    log_runtimes = _parse_harness_log(harness_log_path) if harness_log_path else {}
 
     results: list[RunResult] = []
     n_success = n_failed = 0
@@ -153,7 +240,21 @@ def recover_scenario(
             else:
                 status, metrics, error = "failed", {}, f"Unknown engine: {engine}"
 
-            runtime_s = float(timeout_s) if status == "failed" and error and "timeout" in error.lower() else 0.0
+            # Determine runtime values. Priority order:
+            #   1. Harness log (most accurate — actual wall + engine times).
+            #   2. Synthesized timeout (when cell failed with a timeout error).
+            #   3. Zero (fallback).
+            log_entry = log_runtimes.get((engine, mode, seed))
+            if log_entry and log_entry["status"] == "success" and status == "success":
+                engine_wall_s = log_entry["engine_s"]
+                cell_wall_s = log_entry["wall_s"]
+                runtime_s = engine_wall_s
+            elif status == "failed" and error and "timeout" in error.lower():
+                runtime_s = float(timeout_s)
+                engine_wall_s = runtime_s
+                cell_wall_s = runtime_s
+            else:
+                runtime_s = engine_wall_s = cell_wall_s = 0.0
 
             results.append(RunResult(
                 scenario=scenario_id,
@@ -167,15 +268,17 @@ def recover_scenario(
                 tripinfo_path=tripinfo_path,
                 error_message=error,
                 metrics=metrics,
-                engine_wall_s=runtime_s,
-                cell_wall_s=runtime_s,
+                engine_wall_s=engine_wall_s,
+                cell_wall_s=cell_wall_s,
             ))
             if status == "success":
                 n_success += 1
             else:
                 n_failed += 1
             tag = "OK" if status == "success" else "FAIL"
-            logger.info("  [%s] %s/%s/%s/seed_%d  %s", tag, scenario_id, engine, mode, seed, error or "")
+            src = "log" if log_entry and log_entry["status"] == "success" else "disk"
+            logger.info("  [%s] %s/%s/%s/seed_%d  runtime=%.1fs (%s)  %s",
+                        tag, scenario_id, engine, mode, seed, runtime_s, src, error or "")
 
     now = datetime.datetime.now(datetime.timezone.utc).isoformat()
     br = BenchmarkResult(
@@ -207,6 +310,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="Per-scenario output dir, e.g. runs/benchmark_small/la_50k_car")
     parser.add_argument("--output", type=Path, default=None,
                         help="Output JSON path (default: <base-dir>/benchmark_results_<runspec>.json)")
+    parser.add_argument("--harness-log", type=Path, default=None,
+                        help="Optional path to the harness's stdout/stderr log "
+                             "(e.g. logs/simforge_benchmark_small_..._<scenario>.log). "
+                             "When supplied, runtime fields for successful cells "
+                             "are populated from the cell-tape lines instead of being 0.")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
@@ -218,7 +326,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"base-dir not found: {args.base_dir}", file=sys.stderr)
         return 2
 
-    recover_scenario(args.runspec, args.scenario, args.base_dir, args.output)
+    recover_scenario(args.runspec, args.scenario, args.base_dir, args.output,
+                     harness_log_path=args.harness_log)
     return 0
 
 

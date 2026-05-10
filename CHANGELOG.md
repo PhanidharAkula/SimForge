@@ -8,6 +8,48 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 12.6: recover_partial_summary --harness-log support (2026-05-03)
+
+**Symptom.** Phase 12.5's `tools/recover_partial_summary.py` left
+`runtime_s = 0` for SUCCESS cells because it had no way to know how
+long they actually ran (it only inspected on-disk artifacts, which
+don't carry per-run wall time). The la_50k_car summary JSON's runtime
+column showed `0.00s ± 0.000s` for SUMO + MATSim cells, requiring a
+manual one-off Python script to backfill from the harness log values.
+
+**Fix.** New `--harness-log <path>` argument to the recovery tool:
+parses the harness's cell-tape stdout (the lines like
+`[ 1/15]  sumo     meso  seed=42  ✓    92.6s wall  ( 92.1s engine)`)
+with a regex (`_CELL_TAPE_RE` + `_TIMING_RE`), builds a dict keyed on
+`(engine, mode, seed)`, and uses the parsed values to populate
+`runtime_s`, `engine_wall_s`, and `cell_wall_s` for matching SUCCESS
+cells. FAILURE cells continue to use the synthesized timeout from the
+runspec.
+
+**Priority order in `recover_scenario`:**
+1. Harness log (most accurate — actual wall + engine times).
+2. Synthesized timeout (when cell failed with a timeout error).
+3. Zero (fallback when no log + no timeout).
+
+The tool's per-cell log line now includes `(log)` or `(disk)` to flag
+where each runtime value came from.
+
+**Tests added (`tests/test_recover_partial_summary.py:TestParseHarnessLog`):**
+- `test_parses_success_cells` — wall + engine seconds extracted.
+- `test_parses_failure_cells_with_error_message` — error after `✗ FAIL`.
+- `test_strips_FAIL_prefix_from_error` — trims literal "FAIL" from message.
+- `test_count` — ignores non-cell-tape lines.
+- `test_missing_log_returns_empty_dict` — graceful no-op.
+- `test_handles_alternate_seeds` — multiple seeds parse independently.
+
+6/6 pass; runs in 0.0 s.
+
+**Verification on real data.** Re-ran the recovery tool against
+`runs/benchmark_small/la_50k_car/` with a synthetic log built from the
+job 47248311 cell-tape values. JSON now shows the right runtimes:
+SUMO meso ~92 s, MATSim meso ~52 s; analyzer Table 5.1 produces clean
+non-zero entries for la_50k_car.
+
 ### Phase 12.5: Partial-summary recovery tool + DTALite-at-50k scaling finding (2026-05-03)
 
 **Symptom.** After Phase 12.4's caps (mem=128G, DTALite timeout=14400s)
