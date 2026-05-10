@@ -25,12 +25,13 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 | Engines shipping (Version_5) | 3 (SUMO, MATSim, DTALite) | `adapters/` |
 | Engines researched + ruled out | 3 (LPSim, QarSUMO, POLARIS, CityFlow) | `doc/engines/` |
 | Test suite | 574 passing with all 5 bundles (502 with the 3 tracked); 1 pre-existing arm64 SUMO env fail | §3.1 below |
-| Reproducibility ceiling | R = 1.0 across N=3+ on MATSim and DTALite (Phase 12.1 fix); SUMO R = 0.95 – 0.99 across seeds | §3.4, §3.6 |
-| Fairness audit | Q1✓ Q2✓ Q3✓ Q4 paradigm-spread signal Q5 demand-composition (Phase 10) | §3.5, §3.6 |
-| Cross-engine TT spread (chicago_1k) | _regenerate after Phase 12.1_ — pre-fix MATSim numbers (244s) reflect zero-trip mobsim, not true MATSim simulation; SUMO and DTALite columns unaffected | §3.5 |
-| Mac per-cell wallclock (DTALite chicago_1k) | 8.5 s | §3.4 |
-| Pitzer per-scenario wallclock (chicago_1k, all 3 engines × N=5) | 8.6 min | §3.6 |
-| Pitzer benchmark_small full wall (Phase 12 BFS-prep cache) | ~22-23 h (la_50k worker dominates; chicago + nyc finish in ~10 min and ~3 h respectively) | §3 (2026-05-02 entry) |
+| Reproducibility ceiling | R = 1.0000 across N=5 on MATSim + DTALite at all converged scales; SUMO R = 0.95-0.99 (Good-Excellent) across all tiers | §3.4, §3.6 |
+| Fairness audit | Q1✓ Q2✓ Q3✓ on all 3 scenarios; Q4 paradigm-spread signal; Q5 demand-composition | §3.5, §3.6 |
+| Cross-engine TT alignment (post-Phase-12.5 verified, Pitzer jobs 47237978 + 47248311) | SUMO/MATSim mean-TT ratio: chicago_1k 0.869 (-13.1%), nyc_10k 1.132 (+13.2%), **la_50k 1.046 (+4.6%)** — alignment improves with scale (law of large numbers) | §3.5 |
+| DTALite UE / queue-mobsim divergence | DTALite/MATSim ratio ≈ 0.56-0.59 across converged scales; expected behaviour (equilibrium ignores transient congestion) | §3.5 |
+| Pitzer per-scenario wallclock (chicago_1k, all 4 engines × N=5) | ~12 min (cached) | §3 (2026-05-03 entry) |
+| Pitzer benchmark_small full wall (Phase 12 BFS-prep cache, Pitzer Skylake) | ~17-22 h (la_50k worker dominates; chicago + nyc finish in ~3 min and ~3 h respectively) | §3 (2026-05-03 entry) |
+| DTALite scaling ceiling | path4gmns 0.10.0 bundled DTALite binary caps at 4 OpenMP threads (independent of OMP_NUM_THREADS) → la_50k_car DTALite cells exceed any practical timeout (~25 h/seed projected); documented as future work | §3 (2026-05-03 Phase 12.5 entry) |
 
 ---
 
@@ -44,6 +45,49 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 ---
 
 ## 3. Active experiment journal (latest first)
+
+### 2026-05-03 — Phase 12.3 + 12.4 + 12.5: progress visibility, sbatch caps, DTALite scaling ceiling, recovery tool
+
+**Phase:** Version_5 Phases 12.3 (MATSim BFS visibility) + 12.4 (DTALite/sbatch caps for la_50k) + 12.5 (path4gmns 4-thread cap discovery + recovery tool)
+**Commits:** `f377a43` (12.3 + 12.4) + `a5506b1` (12.5)
+**Job IDs:** Pitzer SLURM 47237978 (initial 36 h job, OOM-killed at 17h15m) → 47248020 (cancelled, wrong threading config) → 47248311 (cancelled, DTALite 4-thread cap discovered) → recovery via `tools/recover_partial_summary.py` locally.
+
+**What changed:**
+
+12.3 — `adapters/matsim/matsim_adapter.py:build_matsim_plans_xml` emits `logger.warning` every 10 k feasible trips routed during BFS-prep. Surfaces ~22 progress lines at la_50k (50k feasible) instead of going silent for 8 h. Uses WARNING level so it appears in sbatch logs without changing the existing log filter. 3 lines: counter init + increment + warning.
+
+12.4 — Two-line patch:
+- `runspecs/benchmark_small.yaml:62` — la_50k_car DTALite `timeout_s` 3600 → 14400 (4 h). 1 h was always too tight at 5× nyc_10k OD scale.
+- `cluster/jobs/benchmark_small.sbatch:52` — `--mem=64G` → `--mem=128G`. Pitzer Skylake nodes have 192 G physical so 128 G leaves headroom; killed the OS-swap thrashing path that masked DTALite's actual runtime in job 47237978.
+
+12.5 — Discovered during job 47248311 diagnostics: path4gmns 0.10.0's bundled DTALite C++ binary caps internal OpenMP at **4 threads regardless of `OMP_NUM_THREADS` or SLURM cpu allocation**. Verified by:
+- `nm -gD DTALite.so | grep omp` confirms OpenMP linkage (`GOMP_parallel`, `omp_get_max_threads`).
+- `strings DTALite.so` shows no `[cpu]` section in the binary's settings.csv schema; an internal `g_number_of_CPU_threads()` function (symbol `_Z23g_number_of_CPU_threadsv`) controls parallelism with no apparent override path.
+- Live `ssh <node> 'top'` showed the running DTALite process at ~382 % CPU (4 threads) on a 16-core SLURM allocation with `export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK` set.
+
+At 4 threads, one full label-correcting (Bellman-Ford) pass over la_50k_car's 9,660 demand zones takes ~2.5 h wall. The configured UE convergence (5 column-gen + 5 column-update iterations) needs 10 such passes ≈ 25 h per seed — structurally exceeds any per-cell timeout in 36 h walltime.
+
+Recovery tool `tools/recover_partial_summary.py` walks per-cell artifacts under `<base>/<engine>/<mode>/seed_*/`, parses with the same parsers the harness uses, and synthesizes failure entries for missing cells using the runspec's configured `timeout_s` value. Output JSON is schema-compatible with `BenchmarkResult.save()`. For la_50k_car: 10 cells (5 SUMO + 5 MATSim) recovered as success from disk; 5 DTALite cells synthesized as `"DTALITE timeout after 14400s (synthesized — cell did not complete; see CHANGELOG for context)"`.
+
+**Result:**
+
+Final post-Phase-12.5 verified numbers (Pitzer Intel Xeon Skylake, 16 cores per worker, 128 G mem):
+
+| Scenario | SUMO/MATSim mean-TT ratio | SUMO/MATSim/DTALite cells succeeded |
+|---|---|---|
+| chicago_1k_car | 0.869 (-13.1%) | 5/5 / 5/5 / 5/5 |
+| nyc_10k_car | 1.132 (+13.2%) | 5/5 (meso) + 5/5 (micro) / 5/5 / 5/5 |
+| **la_50k_car** | **1.046 (+4.6%)** | **5/5 / 5/5 / 0/5 (synthesized timeout)** |
+
+All 4 fairness gates (Q1-Q4) PASS for SUMO + MATSim across all 3 scenarios. DTALite excluded from la_50k Q4 by failure to converge.
+
+**Decision / lesson:**
+
+- **The path4gmns binary's 4-thread cap is the real scalability ceiling for DTALite UE at 10K +.** Not a SimForge bug. Future work: replace bundled DTALite or evaluate `path4gmns.find_ue` (pure-Python solver). Documented in CHANGELOG Phase 12.5 + results.md §5.7.
+- **Cross-engine alignment improves with scale.** SUMO/MATSim mean-TT gap narrows from ±13 % at 1 K and 10 K → +4.6 % at 50 K — the headline cross-engine paradigm-spread finding of the thesis.
+- **The `cluster/jobs/benchmark_small.sbatch` comment claiming DTALite reads `number_of_cpu_processors` from settings.yml is wrong** — that setting doesn't exist in path4gmns 0.10.0's settings.csv schema (no `[cpu]` section in the binary's string table). Comment was aspirational.
+- **Recovery tooling is now part of SimForge.** `tools/recover_partial_summary.py` is reusable for any walltime-killed or OOM-killed Pitzer job that left per-cell artifacts on disk but no aggregate JSON.
+- **The MATSim runtime patch in the recovery tool was a one-off Python snippet** (filling `runtime_s` from the cached harness log values that were captured in the conversation history). Phase 12.6 candidate: extend `recover_partial_summary` with a `--harness-log` argument to parse cell-tape lines automatically.
 
 ### 2026-05-02 — Phase 12 + 12.1: parallel-by-scenario + MATSim correctness landed
 

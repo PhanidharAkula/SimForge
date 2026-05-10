@@ -377,28 +377,29 @@ Renders Fig 5.1 – Fig 5.10 (PNG + PDF) into `runs/benchmark_small/plots/`. See
 
 ---
 
-## Expected Results (1K Tier — measured on Apple M4 Pro)
+## Expected Results (Canonical 11-Cell Matrix — Pitzer Intel Xeon Skylake, post-Phase-12.5)
 
-> ⚠️ **Phase 12.1 caveat:** the MATSim row in the table below is from a
-> pre-Phase-12.1 run where the adapter's `<route type="links">` text
-> excluded `start_link`/`end_link` and MATSim's mobsim rejected every
-> transition (`output_trips.csv.gz` was effectively empty; the R = 1.0000
-> was a zero-trip-std artifact). After the Phase 12.1 fix, MATSim
-> actually completes its trips — chicago_1k_car/matsim/seed_42 measured
-> 1000 trips, mean TT 309.6 s, P95 582 s. The numbers below will be
-> regenerated; consume the post-fix run results as the source of truth.
+The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `47248311` (post-Phase-12.4 re-queue) + `tools/recover_partial_summary.py` (Phase 12.5 synthesis for la_50k_car DTALite cells). See [CHANGELOG.md](../CHANGELOG.md) Phase 12 series for the diagnostic chain. Table 5.1 in [`doc/chapters/results.md`](chapters/results.md) is the canonical source; a compact summary here:
 
-| Scenario       | Engine  | Mode  | Trips simulated  | Avg TT (s)  | Runtime (s)  | R-Score |
-| -------------- | ------- | ----- | ---------------- | ----------- | ------------ | ------- |
-| chicago_1k_car | matsim  | meso  | _regenerate after Phase 12.1_ |
-| chicago_1k_car | sumo    | meso  | 995 (99.5 %)     | 204.1 ± 0.4 |  0.27 ± 0.00 | 0.9981  |
-| chicago_1k_car | sumo    | micro | 940 (94.0 %)     | 288.0 ± 0.8 |  1.24 ± 0.01 | 0.9971  |
+| Scenario | Engine | Mode | Trips completed | Avg TT (s) | Runtime (s) | R-Score |
+|---|---|---|---|---|---|---|
+| chicago_1k_car | sumo | meso | 794 (79.4 %) | 268.3 ± 0.61 | 9.50 ± 0.125 | 0.9982 |
+| chicago_1k_car | sumo | micro | 754 (75.4 %) | 343.1 ± 2.11 | 15.70 ± 0.623 | 0.9950 |
+| chicago_1k_car | matsim | meso | 1,000 (100.0 %) | 309.6 ± 0.00 | 8.00 ± 0.511 | 1.0000 |
+| chicago_1k_car | dtalite | meso | 999 (99.9 %) | 172.2 ± 0.00 | 22.26 ± 0.102 | 1.0000 |
+| nyc_10k_car | sumo | meso | 10,000 (100.0 %) | 661.6 ± 35.78 | 19.90 ± 0.330 | 0.9564 |
+| nyc_10k_car | sumo | micro | 9,320 (93.2 %) | 1143.8 ± 39.08 | 179.38 ± 6.916 | 0.9725 |
+| nyc_10k_car | matsim | meso | 10,000 (100.0 %) | 568.4 ± 0.03 | 15.24 ± 0.200 | 1.0000 |
+| nyc_10k_car | dtalite | meso | 10,544 (105.4 %)\* | 334.7 ± 0.00 | 583.06 ± 2.241 | 1.0000 |
+| la_50k_car | sumo | meso | 38,947 (77.9 %) | 2621.1 ± 63.86 | 91.68 ± 1.324 | 0.9804 |
+| la_50k_car | matsim | meso | 50,000 (100.0 %) | 2551.7 ± 2.25 | 52.98 ± 2.043 | 0.9993 |
+| la_50k_car | dtalite | meso | _did not converge — path4gmns 0.10.0 4-thread cap; see results.md §5.7_ |
 
-The remaining 5 – 60 trip gap on SUMO is **engine-internal mobsim
-behaviour** (SUMO refuses congested edge insertions; MATSim's queue
-mobsim never refuses). It is the simulation outcome we want to *measure*,
-not an input asymmetry — every `feasibility_report.json` records
-`feasible_trips == total_trips == 1000`.
+\* DTALite per-route trip count exceeds `feasible_trips` when the column-gen pool finds multiple equilibrium paths per OD pair.
+
+The trip-count gap on SUMO is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses; DTALite assigns route paths to all OD pairs). It is the simulation outcome we want to *measure*, not an input asymmetry — every `feasibility_report.json` records `feasible_trips == total_trips`. Verified by Q1 of `audit_fairness` (PASS on all three scenarios).
+
+**Headline cross-engine alignment:** SUMO/MATSim mean-TT ratio is 0.869 (-13.1 %) at 1 K, 1.132 (+13.2 %) at 10 K, and **1.046 (+4.6 %) at 50 K** — alignment improves with scale (law of large numbers). See `doc/chapters/results.md` §5.3 for the discussion.
 
 ---
 
