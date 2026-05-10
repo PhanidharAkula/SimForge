@@ -2,22 +2,40 @@
 # ============================================================================
 # SimForge benchmark — large tier (chicago_200k_car + nyc_500k_car).
 #
-# ⚠️ THIS JOB CURRENTLY EXCEEDS WALL TIME on the unmodified codebase.
-#    The SUMO adapter pre-routes every trip via BFS on the canonical graph
-#    BEFORE handing off to the simulator. Measured cost on chicago_200k:
-#    ~17 h per (engine, seed). With 5 sumo + 5 matsim + 5 dtalite runs that's
-#    ~255 h of SUMO routing alone — past the cpu-partition wall. DTALite and
-#    MATSim run from already-prepared inputs so they're not affected, but
-#    the SUMO bottleneck dominates the wall.
+# 4-cell matrix: 2 scenarios × 2 engines (SUMO meso + MATSim meso) × 5 seeds
+# = 20 simulator invocations. DTALite intentionally excluded at this tier
+# per Phase 12.5 finding — the bundled path4gmns 0.10.0 DTALite C++ binary
+# caps at 4 OpenMP threads and would need ~100-250 h per seed at these
+# scenario sizes (extrapolated from la_50k observed ~25 h/seed). Documented
+# as a path4gmns binary-side scalability ceiling in CHANGELOG Phase 12.5/12.7
+# and in doc/chapters/results.md §5.7. SUMO + MATSim alignment is the
+# reportable cross-engine signal at the 200K + tier.
 #
-#    Until the SUMO adapter caches routes per (origin, destination) — or
-#    parallelises the BFS pass — this sbatch may SLURM-timeout. Use
-#    cluster/jobs/benchmark_small.sbatch for jobs that finish today.
+# Wall-clock budget (with Phase 12 BFS-prep cache):
+#   Per-scenario worker: cold BFS-prep paid once per (scenario, engine),
+#   then 5 seed cells reuse cached prep at cheap mobsim rates.
+#     chicago_200k_car worker:  ~30-40 h × 2 engines + 5×2 cached seeds (~6-12 min each)
+#                              ≈ ~65-85 h
+#     nyc_500k_car     worker:  ~80-110 h × 2 engines + 5×2 cached seeds
+#                              ≈ ~165-225 h
+#   Total wall = max(workers) ≈ ~225 h, inside the 7-day cpu wall (168 h)
+#   only marginally for nyc_500k. If nyc_500k risks the wall, split into
+#   a separate sbatch with --partition=hugemem or stage the workers
+#   sequentially instead of parallel-by-scenario.
 #
 # Resources:
-#   --partition=cpu — all three engines (SUMO, MATSim, DTALite) are CPU-only
-#                            after the LPSim removal in Version_5.
-#   --cpus-per-task=16, --mem=96G, --time=96:00:00.
+#   --partition=cpu        : Both engines (SUMO, MATSim) are CPU-only.
+#   --cpus-per-task=16     : SUMO + MATSim both single-process per cell;
+#                            the spare cores absorb pytest + analyzer
+#                            steps at the end without GIL contention.
+#   --mem=128G             : Phase 12.4 / 12.7 sizing. la_50k peaked at
+#                            ~67 G during DTALite; SUMO + MATSim alone at
+#                            200K should stay well below 128 G. Pitzer cpu
+#                            nodes have 192 G physical; bump to hugemem
+#                            (3 TB) only if the 500K MATSim qsim spills.
+#   --time=7-00:00:00      : 7 days, the cpu partition's max. Required for
+#                            cold BFS-prep at 500K. If the run actually
+#                            comes in under 96 h consider dropping back.
 # ============================================================================
 
 #SBATCH --account=PMIU0110
@@ -26,8 +44,8 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=96G
-#SBATCH --time=96:00:00
+#SBATCH --mem=128G
+#SBATCH --time=7-00:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 ##SBATCH --mail-type=END,FAIL
@@ -44,17 +62,19 @@ shopt -s nullglob
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
 cd ~/SimForge
-source .venv/bin/activate
+source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK  # Phase 12.4 — defensive even though
+                                              # SUMO + MATSim don't use OpenMP at
+                                              # the user level. DTALite is excluded
+                                              # at this tier so the path4gmns 4-thread
+                                              # cap is not relevant here.
 
 echo "=== Job starting on $(hostname) at $(date) ==="
 echo "Python:    $(which python)"
 echo "SUMO:      $(sumo --version 2>&1 | head -1)"
 echo "Java:      $(java -version 2>&1 | head -1)"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
-python -c "from adapters.dtalite import is_dtalite_available, find_dtalite_binary; print(f'DTALite:   {find_dtalite_binary() if is_dtalite_available() else \"NOT INSTALLED — run uv pip install path4gmns\"}')"
-echo
-echo "⚠️  Reminder: SUMO BFS routing pre-step may exceed the wall."
-echo "    See header comment for context."
+echo "Engines:   SUMO + MATSim (DTALite excluded at this tier — see header / CHANGELOG Phase 12.7)"
 echo
 
 # ---------------------------------------------------------------------------
@@ -96,8 +116,7 @@ echo "=== All 2 workers complete at $(date) ==="
 echo
 
 # ---------------------------------------------------------------------------
-# 3. Combined analysis over the 2 per-scenario result JSONs (whatever
-#    completed before the wall expired).
+# 3. Combined analysis over the per-scenario result JSONs.
 # ---------------------------------------------------------------------------
 echo "=== Aggregating results across all scenarios ==="
 RESULTS=(runs/benchmark_large/*/benchmark_results_benchmark_large.json)
@@ -106,6 +125,10 @@ if [ ${#RESULTS[@]} -eq 0 ]; then
     echo "  Both workers likely hit walltime before writing JSON."
     echo "  Check the per-scenario logs:"
     echo "    logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}_<scenario>.log"
+    echo "  If artifacts are on disk but JSON is missing, recover with:"
+    echo "    python -m tools.recover_partial_summary --runspec runspecs/benchmark_large.yaml \\"
+    echo "        --scenario <scenario_id> --base-dir runs/benchmark_large/<scenario_id> \\"
+    echo "        --harness-log <log file>"
     echo "Skipping aggregation."
     exit 0
 fi
@@ -113,13 +136,36 @@ echo "Found ${#RESULTS[@]} result files:"
 printf '  %s\n' "${RESULTS[@]}"
 echo
 
+# Merge per-scenario JSONs into one for analyze_benchmark (which only accepts
+# a single positional results file). Phase 12.7: makes the multi-scenario
+# pattern work without manual post-processing.
+echo "--- Merging per-scenario JSONs ---"
+python -c "
+import json
+from pathlib import Path
+files = sorted(Path('runs/benchmark_large').glob('*/benchmark_results_benchmark_large.json'))
+merged = {'runspec_name': 'benchmark_large', 'started_at': '', 'completed_at': '',
+          'total_runs': 0, 'successful_runs': 0, 'failed_runs': 0, 'results': []}
+for f in files:
+    d = json.load(open(f))
+    merged['total_runs'] += d['total_runs']
+    merged['successful_runs'] += d['successful_runs']
+    merged['failed_runs'] += d['failed_runs']
+    merged['results'].extend(d['results'])
+merged['summary'] = {'total': merged['total_runs'], 'completed': merged['successful_runs'], 'failed': merged['failed_runs']}
+out = Path('runs/benchmark_large/benchmark_results_benchmark_large.json')
+json.dump(merged, open(out, 'w'), indent=2)
+print(f'  merged {len(files)} JSONs -> {out}  ({merged[\"successful_runs\"]} ok / {merged[\"failed_runs\"]} fail)')
+"
+echo
+
 echo "--- Markdown summary table ---"
-python -m evaluation.analyze_benchmark "${RESULTS[@]}" --markdown \
+python -m evaluation.analyze_benchmark runs/benchmark_large/benchmark_results_benchmark_large.json --markdown \
     | tee runs/benchmark_large/summary.md
 
 echo
 echo "--- Generating thesis figures ---"
-python -m evaluation.generate_plots "${RESULTS[@]}" \
+python -m evaluation.generate_plots runs/benchmark_large/benchmark_results_benchmark_large.json \
     --output runs/benchmark_large/plots
 echo
 
@@ -129,3 +175,8 @@ python -m evaluation.audit_fairness runs/benchmark_large \
 echo
 
 echo "=== Job complete at $(date) ==="
+echo "Per-scenario JSONs:  runs/benchmark_large/*/benchmark_results_benchmark_large.json"
+echo "Merged JSON:         runs/benchmark_large/benchmark_results_benchmark_large.json"
+echo "Combined summary:    runs/benchmark_large/summary.md"
+echo "Audit:               runs/benchmark_large/audit_fairness.txt"
+echo "Plots:               runs/benchmark_large/plots/"

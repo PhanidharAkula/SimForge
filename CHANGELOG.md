@@ -8,6 +8,46 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 12.7: benchmark_large drops DTALite + sbatch caps for 200K/500K (2026-05-03)
+
+**Decision.** The Phase 12.5 finding (path4gmns 0.10.0 DTALite C++ binary
+caps at 4 OpenMP threads) extrapolates to ~100 h per seed for chicago_200k
+and ~250 h per seed for nyc_500k — structurally exceeding any practical
+Pitzer walltime even on the 7-day `cpu` partition. Three mitigation paths
+were considered:
+
+| Option | Speedup | Eng. effort | Risk |
+|---|---|---|---|
+| A. Build DTALite from source with proper OpenMP | ~4× | 1-3 days | Med |
+| B. `path4gmns.find_ue` pure-Python solver | unknown | hours to test | Low |
+| C. Custom UE solver in SimForge | unknown | 2-4 weeks | High |
+| **D. Drop DTALite at 200K+, document as ceiling** | n/a | 0 | Low |
+
+**Picked D.** Same pattern as la_50k_car (Phase 12.5) — honest representation
+that path4gmns 0.10.0 cannot drive UE at this scale on a single node. SUMO +
+MATSim cross-engine alignment continues to be the reportable signal at the
+200K+ tier, consistent with the +4.6 % la_50k headline finding (results.md
+§5.3) which extends naturally into larger trip counts.
+
+**Files changed:**
+
+- `runspecs/benchmark_large.yaml` — dropped 2 DTALite cells (chicago_200k +
+  nyc_500k); 6 cells → 4 cells. Header updated with Phase 12.7 rationale.
+- `cluster/jobs/benchmark_large.sbatch` — `--mem=96G → 128G` (Phase 12.4
+  parity), `--time=96:00:00 → 7-00:00:00` (cpu partition max for cold BFS-prep
+  at 500K), removed stale "wall-time exceeded" warning (Phase 12 cache
+  resolved it), removed DTALite preflight check (not used at this tier),
+  added inline JSON-merge step before `analyze_benchmark` so the multi-
+  scenario pattern works without manual post-processing.
+- `doc/chapters/results.md` §5.7 — updated the "No claim about 200K+ tier"
+  paragraph to specifically cite the Phase 12.7 decision and clarify that
+  SUMO + MATSim alignment is the reportable signal at this tier.
+
+**Future re-introduction.** When path4gmns ships a fix (or we replace the
+binary), restoring DTALite at 200K+ is a one-line runspec change — just
+re-add the 2 dropped cells. No other code paths assume DTALite presence
+at this tier.
+
 ### Phase 12.6: recover_partial_summary --harness-log support (2026-05-03)
 
 **Symptom.** Phase 12.5's `tools/recover_partial_summary.py` left
