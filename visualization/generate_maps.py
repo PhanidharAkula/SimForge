@@ -5,13 +5,14 @@ Usage::
     # Coverage report only — what's generatable from current data?
     python -m visualization.generate_maps --scenario chicago_1k_car --dry-run
 
-    # Render origin density (Phase A flagship map):
+    # Render origin density (Phase A flagship map) — defaults to
+    # visualization/output/chicago_1k_car/od_origins.png:
     python -m visualization.generate_maps --scenario chicago_1k_car --maps od_origins
 
     # Render both origin + destination, custom output dir, with grid override:
     python -m visualization.generate_maps --scenario chicago_1k_car \\
         --maps od_origins,od_destinations \\
-        --output runs/benchmark_small/chicago_1k_car/maps \\
+        --output doc/figures/maps/chicago_1k_car \\
         --gridsize 80
 
 The component reports a coverage matrix before doing any work. Maps that
@@ -42,16 +43,14 @@ logger = logging.getLogger("visualization")
 PHASE_A_MAPS: frozenset[str] = frozenset({"od_origins", "od_destinations"})
 
 
-def _resolve_default_output(scenario: str, run_dir: Path | None) -> Path:
-    """Default output dir.
+def _resolve_default_output(scenario: str) -> Path:
+    """Default output dir: ``visualization/output/<scenario>/``.
 
-    If a ``runs/<runspec>/<scenario>/`` dir exists, write maps there
-    (alongside benchmark results). Else write next to the bundle at
-    ``scenarios/<scenario>/maps/``.
+    Single predictable location co-located with the visualization tool.
+    Easy to find, easy to clean, gitignored. Override with ``--output``
+    to publish maps elsewhere (e.g. ``doc/figures/maps/`` for thesis use).
     """
-    if run_dir is not None and run_dir.is_dir():
-        return run_dir / "maps"
-    return Path("scenarios") / scenario / "maps"
+    return Path(__file__).parent / "output" / scenario
 
 
 def _autodetect_run_dir(scenario: str) -> Path | None:
@@ -123,8 +122,7 @@ def main(argv: list[str] | None = None) -> int:
                              f"Known: {','.join(ALL_MAP_TYPES)}")
     parser.add_argument("--output", type=Path, default=None,
                         help="Output dir for PNGs "
-                             "(default: <run-dir>/maps if run dir present, "
-                             "else scenarios/<scenario>/maps)")
+                             "(default: visualization/output/<scenario>/)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print coverage matrix and exit; render nothing")
     parser.add_argument("--gridsize", type=int, default=60,
@@ -144,7 +142,7 @@ def main(argv: list[str] | None = None) -> int:
 
     bundle_dir = args.bundle_dir or (Path("scenarios") / args.scenario)
     run_dir = args.run_dir or _autodetect_run_dir(args.scenario)
-    output_dir = args.output or _resolve_default_output(args.scenario, run_dir)
+    output_dir = args.output or _resolve_default_output(args.scenario)
 
     coverage = discover_bundle(bundle_dir, scenario_id=args.scenario)
     if run_dir is not None:

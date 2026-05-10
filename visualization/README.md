@@ -24,7 +24,7 @@ Render both origin + destination densities at higher resolution, custom output:
 ```bash
 python -m visualization.generate_maps --scenario chicago_1k_car \
     --maps od_origins,od_destinations \
-    --output runs/benchmark_small/chicago_1k_car/maps \
+    --output doc/figures/maps/chicago_1k_car \
     --gridsize 80 \
     --cmap viridis
 ```
@@ -50,9 +50,10 @@ before rendering; missing data results in a `[SKIP]`, never an error.
   hash-pinned OSM PBF). Fully offline, deterministic, no third-party tile
   service. Footways / cycleways / steps are excluded by default to reduce
   visual noise; pass `--include-pedestrian` (Phase B) to keep them.
-- **Output dir**: `runs/<runspec>/<scenario>/maps/` if a benchmark run
-  exists for that scenario; else `scenarios/<scenario>/maps/` next to the
-  bundle. Override with `--output`.
+- **Output dir**: `visualization/output/<scenario>/` (gitignored — single
+  predictable location co-located with the visualization tool). Override
+  with `--output` to publish maps elsewhere (e.g. `doc/figures/maps/`
+  for thesis figures).
 - **Output format**: PNG at 150 DPI (overridable via `--dpi`).
 - **Colormap**: `YlOrRd` (yellow → red, SEARUMS-style aesthetic). Try
   `viridis` for perceptually uniform.
@@ -78,7 +79,7 @@ those will be lazily imported so users not generating videos pay no cost.
 After rendering, the output directory contains one PNG per map type:
 
 ```
-runs/benchmark_small/chicago_1k_car/maps/
+visualization/output/chicago_1k_car/
 ├── od_origins.png            # Phase A
 ├── od_destinations.png       # Phase A
 ├── link_load_sumo_meso.png   # Phase B (per-engine, per-mode)
