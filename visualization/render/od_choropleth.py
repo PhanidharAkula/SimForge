@@ -112,11 +112,11 @@ def render_od_choropleth(
     output_path: Path,
     title: str | None = None,
     state_fips: str | None = None,
-    show_basemap: bool = False,
+    show_basemap: bool = True,
     dpi: int = 220,
     figsize: tuple[float, float] = (14.0, 10.0),
-    border_color: str = "#333333",
-    border_width: float = 0.15,
+    border_color: str = "#222222",
+    border_width: float = 0.4,
     empty_color: str = "#dddddd",
 ) -> Path:
     """CityScape-style choropleth on real census tract polygons.
@@ -203,11 +203,33 @@ def render_od_choropleth(
         ax.add_collection(colored_pc)
 
     if show_basemap:
-        from visualization.render.basemap import render_basemap
-        render_basemap(network, ax, exclude_highway_types=(
-            "footway", "path", "steps", "cycleway", "pedestrian", "service",
-            "track", "residential",
-        ))
+        # Render the road network ON TOP of the colored tracts as thin dark
+        # lines — provides geographic anchoring (downtown, freeways, grid
+        # structure) without obscuring the choropleth colors underneath.
+        from matplotlib.collections import LineCollection
+        major_types = {
+            "motorway", "motorway_link", "trunk", "trunk_link",
+            "primary", "primary_link", "secondary", "secondary_link",
+        }
+        major_segs: list = []
+        minor_segs: list = []
+        for from_id, to_id, ht in network.links:
+            f = network.nodes.get(from_id)
+            t = network.nodes.get(to_id)
+            if not f or not t:
+                continue
+            if ht in major_types:
+                major_segs.append([f, t])
+            elif ht in ("tertiary", "tertiary_link", "residential", "unclassified"):
+                minor_segs.append([f, t])
+        if minor_segs:
+            ax.add_collection(LineCollection(
+                minor_segs, linewidths=0.15, colors="#000000", alpha=0.25, zorder=3,
+            ))
+        if major_segs:
+            ax.add_collection(LineCollection(
+                major_segs, linewidths=0.5, colors="#000000", alpha=0.6, zorder=4,
+            ))
 
     # Set view bounds to the network bbox (with small padding).
     pad_x = (bbox[2] - bbox[0]) * 0.02
