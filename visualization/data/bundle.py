@@ -28,9 +28,10 @@ class Network:
     nodes: dict[str, tuple[float, float]] = field(default_factory=dict)
     """Map ``node_id`` (e.g. ``"n42"``) to ``(lon, lat)``."""
 
-    links: list[tuple[str, str, str]] = field(default_factory=list)
-    """List of ``(from_node_id, to_node_id, highway_type)``.
+    links: list[tuple[str, str, str, str]] = field(default_factory=list)
+    """List of ``(link_id, from_node_id, to_node_id, highway_type)``.
 
+    ``link_id`` is the bundle-canonical ID (e.g. ``"l1234"``).
     ``highway_type`` is the OSM tag (``motorway``, ``primary``, ``residential``,
     ``footway``, etc.) used by the basemap renderer to decide line weight.
     """
@@ -92,11 +93,12 @@ def load_network(network_path: Path) -> Network:
                 continue
             network.nodes[nid] = (x, y)
         elif elem.tag == "link":
+            lid = elem.get("id") or ""
             f = elem.get("from")
             t = elem.get("to")
             ht = elem.get("highway_type", "unclassified")
-            if f and t:
-                network.links.append((f, t, ht))
+            if lid and f and t:
+                network.links.append((lid, f, t, ht))
         elem.clear()
     return network
 

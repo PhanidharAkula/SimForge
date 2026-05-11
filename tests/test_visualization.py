@@ -54,9 +54,9 @@ class TestBundleLoaders:
         assert len(net.nodes) == 4
         assert net.nodes["n1"] == (-87.6, 41.88)
         assert len(net.links) == 3
-        # Each link tuple is (from, to, highway_type)
-        assert ("n1", "n2", "primary") in net.links
-        assert ("n3", "n4", "footway") in net.links
+        # Each link tuple is (link_id, from, to, highway_type)
+        assert ("l1", "n1", "n2", "primary") in net.links
+        assert ("l3", "n3", "n4", "footway") in net.links
 
     def test_network_bbox(self, chicago_bundle: Path) -> None:
         from visualization.data.bundle import load_network

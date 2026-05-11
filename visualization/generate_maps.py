@@ -41,6 +41,22 @@ logger = logging.getLogger("visualization")
 
 
 PHASE_A_MAPS: frozenset[str] = frozenset({"od_origins", "od_destinations"})
+PHASE_B_MAPS: frozenset[str] = frozenset({"link_load", "travel_time", "congestion"})
+
+
+def _pick_engine_cell(coverage, engine_pref: str | None) -> "CellArtifacts | None":
+    """Pick one engine/seed cell to render from. Defaults to first available."""
+    if not coverage.cells:
+        return None
+    candidates = [c for c in coverage.cells if c.has_any_output]
+    if not candidates:
+        return None
+    if engine_pref:
+        engine_matches = [c for c in candidates if c.engine == engine_pref]
+        if engine_matches:
+            candidates = engine_matches
+    candidates.sort(key=lambda c: (c.engine, c.mode, c.seed))
+    return candidates[0]
 
 
 def _resolve_default_output(scenario: str) -> Path:
@@ -104,11 +120,118 @@ def _render_map(
             gridsize=args.gridsize, cmap=args.cmap, dpi=args.dpi,
         )
 
-    # Phase B / C placeholders.
+    if map_type in PHASE_B_MAPS:
+        return _render_phase_b(map_type, coverage, output_dir, args)
+
+    # Phase C placeholders.
     logger.warning(
-        "[%s] not yet implemented (Phase B or C); coverage matrix shows when this becomes generatable",
+        "[%s] not yet implemented (Phase C); coverage matrix shows when this becomes generatable",
         map_type,
     )
+    return None
+
+
+def _render_phase_b(
+    map_type: str,
+    coverage,
+    output_dir: Path,
+    args: argparse.Namespace,
+) -> Path | None:
+    """Phase B renderers: link_load, travel_time, congestion."""
+    from visualization.data.bundle import load_demand, load_network
+
+    net_path = coverage.bundle_files.get("network")
+    dem_path = coverage.bundle_files.get("demand")
+    if not net_path or not dem_path:
+        logger.warning("[%s] skipped: bundle missing network or demand", map_type)
+        return None
+
+    cell = _pick_engine_cell(coverage, getattr(args, "engine", None))
+    if cell is None:
+        logger.warning("[%s] skipped: no engine cells with output", map_type)
+        return None
+    logger.info("[%s] using cell: %s/%s/seed_%d", map_type, cell.engine, cell.mode, cell.seed)
+
+    network = load_network(net_path)
+    demand = load_demand(dem_path)
+
+    if map_type in ("link_load", "congestion"):
+        # Need engine link-level output. DTALite has it natively;
+        # SUMO/MATSim do not at this time.
+        if cell.engine != "dtalite":
+            logger.warning(
+                "[%s] skipped: engine %s does not currently emit link-level "
+                "output. DTALite is the only engine supported for link_load/"
+                "congestion in Phase B; use --engine dtalite.",
+                map_type, cell.engine,
+            )
+            return None
+        if not cell.has_dtalite_link_perf:
+            logger.warning(
+                "[%s] skipped: %s/%s/seed_%d has no link_performance.csv",
+                map_type, cell.engine, cell.mode, cell.seed,
+            )
+            return None
+        from visualization.data.results import load_dtalite_links
+        from visualization.render.link_load import render_link_metric
+
+        links = load_dtalite_links(cell.cell_dir)
+        if not links:
+            logger.warning("[%s] skipped: link_performance.csv parsed empty", map_type)
+            return None
+        out = output_dir / f"{map_type}_{cell.engine}_{cell.mode}.png"
+        metric = "volume" if map_type == "link_load" else "speed_ratio"
+        return render_link_metric(
+            network=network, links=links,
+            metric=metric, output_path=out, engine=cell.engine,
+            dpi=args.dpi,
+        )
+
+    if map_type == "travel_time":
+        from visualization.data.results import (
+            aggregate_trips_by_origin, load_dtalite_trips, load_matsim_trips,
+            load_sumo_trips,
+        )
+        from visualization.render.travel_time import render_travel_time_choropleth
+
+        loaders = {
+            "sumo":    (load_sumo_trips,    cell.has_tripinfo),
+            "matsim":  (load_matsim_trips,  cell.has_matsim_trips),
+            "dtalite": (load_dtalite_trips, cell.has_dtalite_link_perf),
+        }
+        loader_fn, has_data = loaders.get(cell.engine, (None, False))
+        if loader_fn is None or not has_data:
+            logger.warning(
+                "[%s] skipped: no trip-level output for %s/%s/seed_%d",
+                map_type, cell.engine, cell.mode, cell.seed,
+            )
+            return None
+
+        trips = loader_fn(cell.cell_dir)
+        if not trips:
+            logger.warning("[%s] skipped: trip parser returned 0 trips", map_type)
+            return None
+
+        # Build the trip_id -> origin_node_id map from demand.csv. Re-parse
+        # demand to get the full row info (load_demand only stores per-trip
+        # origin+dest in lists, not by trip_id).
+        import csv as _csv
+        demand_origin: dict[str, str] = {}
+        with dem_path.open(newline="", encoding="utf-8") as f:
+            reader = _csv.DictReader(f)
+            for row in reader:
+                tid = (row.get("trip_id") or "").strip()
+                origin = (row.get("origin_node_id") or "").strip()
+                if tid and origin:
+                    demand_origin[tid] = origin
+
+        agg = aggregate_trips_by_origin(trips, demand_origin)
+        out = output_dir / f"{map_type}_{cell.engine}_{cell.mode}.png"
+        return render_travel_time_choropleth(
+            network=network, demand=demand, aggregation=agg,
+            output_path=out, engine=cell.engine, dpi=args.dpi,
+        )
+
     return None
 
 
@@ -146,6 +269,11 @@ def main(argv: list[str] | None = None) -> int:
                              "'Reds', 'plasma', 'viridis', 'Spectral_r'.")
     parser.add_argument("--dpi", type=int, default=220,
                         help="render DPI (default 220)")
+    parser.add_argument("--engine", default=None,
+                        choices=["sumo", "matsim", "dtalite", None],
+                        help="Engine to render Phase B maps from (link_load, "
+                             "travel_time, congestion). Defaults to first "
+                             "available engine in the run dir.")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug-level logging")
     args = parser.parse_args(argv)

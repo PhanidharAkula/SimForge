@@ -65,7 +65,7 @@ def render_basemap(
 
     # Group segments by style so each style group becomes one LineCollection.
     by_style: dict[tuple[float, float, str], list] = {}
-    for from_id, to_id, ht in network.links:
+    for _lid, from_id, to_id, ht in network.links:
         if include is not None and ht not in include:
             continue
         if ht in exclude:
