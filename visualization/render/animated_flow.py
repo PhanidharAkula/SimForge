@@ -252,8 +252,18 @@ def render_flowing_particles(
 
 
 class _PillowPlayOnceWriter(object):
-    """Wrapper around matplotlib's PillowWriter that overrides the
-    hardcoded ``loop=0`` (infinite) in finish() to ``loop=1`` (play once).
+    """Wrapper around matplotlib's PillowWriter that produces a play-once
+    GIF (no Netscape loop extension), instead of matplotlib's hardcoded
+    ``loop=0`` (infinite).
+
+    GIF89a semantics quirks worth knowing:
+      - Pillow ``loop=0`` writes a NETSCAPE2.0 extension with "loop
+        forever", which most viewers honour as infinite.
+      - Pillow ``loop=N`` (N>0) writes the extension with N "extra"
+        plays after the first — so loop=1 actually plays twice.
+      - To get "play once and stop" universally, OMIT the loop
+        parameter entirely. Then Pillow does NOT write the extension,
+        and viewers default to single play (per GIF89a spec).
     """
     def __init__(self, fps: int):
         import matplotlib.animation as _anim
@@ -264,13 +274,13 @@ class _PillowPlayOnceWriter(object):
         return getattr(self._inner, name)
 
     def finish(self):
-        # Replicate matplotlib PillowWriter.finish() with loop=1.
+        # Save WITHOUT loop= → no Netscape extension → single play.
         self._inner._frames[0].save(
             self._inner.outfile,
             save_all=True,
             append_images=self._inner._frames[1:],
             duration=int(1000 / self._inner.fps),
-            loop=1,
+            # no `loop=` → play once
         )
 
 
