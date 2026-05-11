@@ -74,7 +74,6 @@ def _render_map(
     """Dispatch to the appropriate renderer. Returns None if not implemented yet."""
     if map_type in PHASE_A_MAPS:
         from visualization.data.bundle import load_demand, load_network
-        from visualization.render.od_density import render_od_density
 
         net_path = coverage.bundle_files.get("network")
         dem_path = coverage.bundle_files.get("demand")
@@ -89,16 +88,20 @@ def _render_map(
 
         side = "origin" if map_type == "od_origins" else "destination"
         out = output_dir / f"{map_type}.png"
-        logger.info("[%s] rendering -> %s", map_type, out)
+        logger.info("[%s] rendering (%s) -> %s", map_type, args.style, out)
+
+        if args.style == "choropleth":
+            from visualization.render.od_choropleth import render_od_choropleth
+            return render_od_choropleth(
+                network=network, demand=demand, side=side,
+                output_path=out, dpi=args.dpi,
+            )
+
+        from visualization.render.od_density import render_od_density
         return render_od_density(
-            network=network,
-            demand=demand,
-            side=side,
-            output_path=out,
-            style=args.style,
-            gridsize=args.gridsize,
-            cmap=args.cmap,
-            dpi=args.dpi,
+            network=network, demand=demand, side=side,
+            output_path=out, style=args.style,
+            gridsize=args.gridsize, cmap=args.cmap, dpi=args.dpi,
         )
 
     # Phase B / C placeholders.
@@ -126,10 +129,12 @@ def main(argv: list[str] | None = None) -> int:
                              "(default: visualization/output/<scenario>/)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print coverage matrix and exit; render nothing")
-    parser.add_argument("--style", choices=["dots", "hex"], default="dots",
-                        help="od_* render style. 'dots' = proportional symbols "
-                             "(one circle per node, sized + colored by count — best for "
-                             "sparse 1k-50k data); 'hex' = hexbin (better for 200k+).")
+    parser.add_argument("--style", choices=["dots", "hex", "choropleth"], default="dots",
+                        help="od_* render style. 'dots' (default) = uniform small "
+                             "circles, color-only encoding; 'hex' = hexbin (denser "
+                             "data); 'choropleth' = CityScape-style filled census "
+                             "tracts (requires `python -m tools.download_census_tracts "
+                             "--all-bundled` first).")
     parser.add_argument("--gridsize", type=int, default=60,
                         help="hexbin gridsize for --style hex (default 60). Ignored for dots.")
     parser.add_argument("--cmap", default="dark_heat",

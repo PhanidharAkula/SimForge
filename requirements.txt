@@ -24,6 +24,12 @@ pandas
 matplotlib>=3.5
 seaborn>=0.12
 
+# Visualization component (visualization/) — choropleth renderer reads
+# US Census Bureau Cartographic Boundary tract shapefiles via pyshp.
+# Pure-Python ESRI shapefile reader; no native deps. Used only by
+# `python -m visualization.generate_maps --style choropleth`.
+pyshp>=2.3,<4
+
 # Testing
 pytest
 

@@ -29,6 +29,23 @@ python -m visualization.generate_maps --scenario chicago_1k_car \
     --cmap viridis
 ```
 
+CityScape-style filled-tract choropleth (the closest match to the
+SEARUMS aesthetic; requires US Census Bureau tract shapefiles cached
+locally first):
+
+```bash
+# One-time setup: download CB tract shapefiles for the bundled scenarios
+python -m tools.download_census_tracts --all-bundled
+
+# Then render any scenario with --style choropleth:
+python -m visualization.generate_maps --scenario chicago_1k_car \
+    --maps od_origins,od_destinations --style choropleth
+```
+
+The choropleth reproduces CityScape's exact coloring logic
+(`DrawShapes.cpp::getColor`): light gray (`#dddddd`) for empty tracts,
+100-step log-scale blue→red gradient for tracts with ≥10 trips.
+
 ## Map types and data tiers
 
 Each map requires different data. The component reports the coverage matrix
@@ -38,6 +55,7 @@ before rendering; missing data results in a `[SKIP]`, never an error.
 |---|---|---|---|
 | `od_origins` | A (shipped) | Bundle: `network.xml` + `demand.csv` | After `generate.py` — no simulation needed |
 | `od_destinations` | A (shipped) | Bundle: `network.xml` + `demand.csv` | After `generate.py` — no simulation needed |
+| `od_origins` / `od_destinations` with `--style choropleth` | A (shipped) | Bundle + cached US Census tract shapefiles | After `python -m tools.download_census_tracts --all-bundled` |
 | `link_load` | B (planned) | Per-engine cell output (SUMO `tripinfo.xml`, MATSim `output_events.xml.gz`, DTALite `link_performance.csv`) | Any successful seed |
 | `travel_time` | B (planned) | Per-engine per-trip travel time | Any successful seed |
 | `congestion` | B (planned) | Per-engine link speed + free-flow speed | Any successful seed |
