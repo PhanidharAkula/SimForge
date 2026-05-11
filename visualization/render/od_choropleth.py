@@ -114,7 +114,7 @@ def render_od_choropleth(
     state_fips: str | None = None,
     show_basemap: bool = True,
     dpi: int = 220,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
     border_color: str = "#222222",
     border_width: float = 0.4,
     empty_color: str = "#dddddd",
@@ -170,6 +170,9 @@ def render_od_choropleth(
     cmap = _build_cityscape_cmap()
     norm = LogNorm(vmin=1, vmax=max(tract_counts.values()) if tract_counts else 1)
 
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")

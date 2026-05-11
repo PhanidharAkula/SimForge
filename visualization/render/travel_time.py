@@ -34,7 +34,7 @@ def render_travel_time_choropleth(
     state_fips: str | None = None,
     show_basemap: bool = True,
     dpi: int = 220,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
 ) -> Path:
     """Choropleth of mean per-trip travel time by census tract.
 
@@ -108,6 +108,9 @@ def render_travel_time_choropleth(
     else:
         norm = Normalize(vmin=0, vmax=1)
 
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")

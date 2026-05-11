@@ -43,7 +43,7 @@ def render_route_diversity(
     output_path: Path,
     title: str | None = None,
     dpi: int = 220,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
     use_osm_curves: bool = True,
     scenario_id: str | None = None,
 ) -> Path:
@@ -131,6 +131,9 @@ def render_route_diversity(
     from matplotlib.collections import LineCollection
     from matplotlib.lines import Line2D
 
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")

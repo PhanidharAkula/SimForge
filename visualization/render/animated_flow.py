@@ -111,7 +111,7 @@ def render_flowing_particles(
     engine: str = "matsim",
     fps: int = 30,
     sim_seconds_per_frame: float = 5.0,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
     dpi: int = 120,
     dot_size: float = 9.0,
     dot_alpha: float = 0.85,
@@ -169,10 +169,14 @@ def render_flowing_particles(
         n_frames, fps, n_frames / fps, sim_seconds_per_frame * fps,
     )
 
+    bbox = network.bbox
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(bbox) if bbox else (12.0, 10.0)
+
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
-    bbox = network.bbox
     if bbox is not None:
         pad_x = (bbox[2] - bbox[0]) * 0.02
         pad_y = (bbox[3] - bbox[1]) * 0.02
@@ -295,7 +299,7 @@ def render_animated_flow(
     engine: str = "matsim",
     time_bin_seconds: int = 300,
     fps: int = 2,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
     dpi: int = 150,  # lower than statics so MP4 file stays compact
     cmap: str = "Reds",
     use_osm_curves: bool = True,
@@ -385,12 +389,15 @@ def render_animated_flow(
     logger.info("Animating %d frames @ %d fps (~%ds video)",
                 n_frames, fps, n_frames // max(fps, 1))
 
-    # Figure setup
+    # Figure setup — figsize matches data aspect to avoid white margins.
+    bbox = network.bbox
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(bbox) if bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
-    bbox = network.bbox
     if bbox is not None:
         pad_x = (bbox[2] - bbox[0]) * 0.02
         pad_y = (bbox[3] - bbox[1]) * 0.02

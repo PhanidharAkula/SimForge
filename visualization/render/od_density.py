@@ -43,7 +43,7 @@ def render_od_density(
     gridsize: int = 60,
     cmap: str = "dark_heat",
     dpi: int = 220,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
     include_highway_types: tuple[str, ...] | None = None,
     show_basemap: bool = True,
     color_norm: str = "log",
@@ -152,6 +152,9 @@ def render_od_density(
     else:
         norm = None
 
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")

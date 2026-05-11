@@ -37,7 +37,7 @@ def render_link_metric(
     engine: str = "",
     cmap: str | None = None,
     dpi: int = 220,
-    figsize: tuple[float, float] = (14.0, 10.0),
+    figsize: tuple[float, float] | None = None,
     color_norm: str = "log",
     show_inactive: bool = True,
     line_width_min: float = 0.3,
@@ -160,6 +160,9 @@ def render_link_metric(
             "int" if links and links[0].link_id.isdigit() else "str",
         )
 
+    if figsize is None:
+        from visualization.data.bundle import figsize_for_bbox
+        figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")

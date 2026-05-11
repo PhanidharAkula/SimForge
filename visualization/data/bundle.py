@@ -161,6 +161,36 @@ def load_demand(demand_path: Path) -> Demand:
     return demand
 
 
+def figsize_for_bbox(
+    bbox: tuple[float, float, float, float],
+    target_height_in: float = 10.0,
+    extra_width_in: float = 1.5,
+    min_aspect: float = 0.5,
+    max_aspect: float = 2.5,
+) -> tuple[float, float]:
+    """Pick a matplotlib figsize matching the data's lon/lat aspect.
+
+    Avoids the "lots of white space" problem when a portrait-shaped
+    scenario (e.g. nyc_500k_car: tall + narrow Manhattan + boroughs)
+    is rendered into a hard-coded 14x10 landscape figure.
+
+    Returns ``(width, height)`` in inches:
+      - height = ``target_height_in``
+      - width = height × data_aspect + ``extra_width_in`` (room for colorbar)
+
+    Aspect is clamped to ``[min_aspect, max_aspect]`` so degenerate
+    near-1D scenarios don't produce absurd figure shapes.
+    """
+    lon_range = bbox[2] - bbox[0]
+    lat_range = bbox[3] - bbox[1]
+    if lat_range <= 0:
+        return (target_height_in, target_height_in)
+    aspect = lon_range / lat_range
+    aspect = max(min_aspect, min(max_aspect, aspect))
+    plot_width = target_height_in * aspect
+    return (plot_width + extra_width_in, target_height_in)
+
+
 def bundle_paths(bundle_dir: Path) -> dict[str, Path]:
     """Return canonical file paths inside a bundle. Missing files are absent."""
     candidates = {
