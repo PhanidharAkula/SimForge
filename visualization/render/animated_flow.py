@@ -238,8 +238,22 @@ def render_flowing_particles(
         fig, _frame, frames=n_frames, interval=1000 / fps, blit=False,
     )
 
+    output_path = _save_animation(anim, output_path, fps, dpi)
+    plt.close(fig)
+    logger.info("Wrote particle animation -> %s", output_path)
+    return output_path
+
+
+def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
+    """Save a matplotlib FuncAnimation in the right format based on suffix.
+
+    Supported: .mp4 (ffmpeg+libx264), .gif (Pillow), .apng (ffmpeg),
+    .webp (ffmpeg+libwebp_anim — smallest file).
+    """
+    import matplotlib.animation as animation
     output_path.parent.mkdir(parents=True, exist_ok=True)
     suffix = output_path.suffix.lower()
+
     if suffix == ".mp4":
         try:
             writer = animation.FFMpegWriter(fps=fps, bitrate=3200, codec="libx264")
@@ -249,12 +263,37 @@ def render_flowing_particles(
             output_path = output_path.with_suffix(".gif")
             anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
     elif suffix == ".gif":
+        # Pillow writer is the most reliable for GIF. ffmpeg can do GIF
+        # too with -vcodec gif but Pillow handles palette + transparency.
         anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
+    elif suffix == ".apng":
+        # ffmpeg APNG: full color, small (vs GIF), wide modern browser support.
+        try:
+            writer = animation.FFMpegWriter(
+                fps=fps, codec="apng",
+                extra_args=["-plays", "0", "-pix_fmt", "rgba"],
+            )
+            anim.save(str(output_path), writer=writer, dpi=dpi)
+        except Exception as e:
+            logger.warning("APNG write failed (%s); falling back to GIF", e)
+            output_path = output_path.with_suffix(".gif")
+            anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
+    elif suffix == ".webp":
+        # ffmpeg animated WebP: full color, ~5-10x smaller than GIF.
+        try:
+            writer = animation.FFMpegWriter(
+                fps=fps, codec="libwebp",
+                extra_args=["-loop", "0", "-lossless", "0", "-quality", "75"],
+            )
+            anim.save(str(output_path), writer=writer, dpi=dpi)
+        except Exception as e:
+            logger.warning("WebP write failed (%s); falling back to GIF", e)
+            output_path = output_path.with_suffix(".gif")
+            anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
     else:
-        raise ValueError(f"Unsupported output format: {suffix} (use .mp4 or .gif)")
-
-    plt.close(fig)
-    logger.info("Wrote particle animation -> %s", output_path)
+        raise ValueError(
+            f"Unsupported output format: {suffix} (use .mp4, .gif, .apng, .webp)"
+        )
     return output_path
 
 
@@ -442,21 +481,7 @@ def render_animated_flow(
         fig, _frame, frames=n_frames, interval=1000 / fps, blit=False,
     )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    suffix = output_path.suffix.lower()
-    if suffix == ".mp4":
-        try:
-            writer = animation.FFMpegWriter(fps=fps, bitrate=2400, codec="libx264")
-            anim.save(str(output_path), writer=writer, dpi=dpi)
-        except Exception as e:
-            logger.warning("ffmpeg write failed (%s); falling back to GIF", e)
-            output_path = output_path.with_suffix(".gif")
-            anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
-    elif suffix == ".gif":
-        anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
-    else:
-        raise ValueError(f"Unsupported output format: {suffix} (use .mp4 or .gif)")
-
+    output_path = _save_animation(anim, output_path, fps, dpi)
     plt.close(fig)
     logger.info("Wrote animation -> %s", output_path)
     return output_path

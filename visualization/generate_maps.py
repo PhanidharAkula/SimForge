@@ -164,6 +164,7 @@ def _render_phase_c(
         events_path = cell.cell_dir / "output" / "output_events.xml.gz"
 
         anim_mode = getattr(args, "anim_mode", "particles")
+        anim_ext = getattr(args, "anim_format", "mp4")
         if anim_mode == "particles":
             from visualization.data.events import parse_matsim_vehicle_traversals
             from visualization.render.animated_flow import render_flowing_particles
@@ -171,7 +172,7 @@ def _render_phase_c(
             traversals = parse_matsim_vehicle_traversals(
                 events_path, scenario_id=args.scenario, seed=cell.seed,
             )
-            out = output_dir / f"{map_type}_matsim_meso.mp4"
+            out = output_dir / f"{map_type}_matsim_meso.{anim_ext}"
             return render_flowing_particles(
                 network=network, traversals=traversals,
                 output_path=out, engine="matsim",
@@ -188,7 +189,7 @@ def _render_phase_c(
                 events_path, time_bin_seconds=300,
                 scenario_id=args.scenario, seed=cell.seed,
             )
-            out = output_dir / f"{map_type}_matsim_meso.mp4"
+            out = output_dir / f"{map_type}_matsim_meso.{anim_ext}"
             return render_animated_flow(
                 network=network, time_bin_loads=loads,
                 output_path=out, engine="matsim", time_bin_seconds=300,
@@ -421,6 +422,14 @@ def main(argv: list[str] | None = None) -> int:
                         help="animated_flow particles mode: how many simulated "
                              "seconds each frame represents (default 5.0). "
                              "Lower = slower-motion video, longer file.")
+    parser.add_argument("--anim-format", choices=["mp4", "gif", "apng", "webp"],
+                        default="mp4",
+                        help="animated_flow output container: 'mp4' (default — "
+                             "smallest, needs ffmpeg + a video player), "
+                             "'gif' (universal but largest, embeds in "
+                             "markdown/HTML directly), 'apng' (full-color, "
+                             "smaller than GIF, modern browser support), "
+                             "'webp' (smallest animated image format).")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug-level logging")
     args = parser.parse_args(argv)
