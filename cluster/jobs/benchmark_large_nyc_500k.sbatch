@@ -5,9 +5,10 @@
 # 2-cell matrix: 1 scenario × 2 engines (SUMO meso + MATSim meso) × 5 seeds
 # = 10 simulator invocations. Same engine + seed selection as the umbrella
 # `benchmark_large.sbatch` but isolated to nyc_500k_car so the worker gets
-# its own wall budget on the `longcpu` partition (14 days) — this
-# completely removes the wall-margin risk that arose on Pitzer's 7-day
-# cap, where the pessimistic 500K estimate was within ~3 h of busting.
+# its own 7-day wall budget on Cardinal's `cpu` partition. Originally
+# targeted `longcpu` (14 days) for maximum safety, but PMIU0110 isn't
+# authorized for that partition; relying on Cardinal's ~20-30% CPU
+# speedup vs Pitzer to bring the 500K estimate into the 7-day window.
 #
 # DTALite still excluded at this tier per Phase 12.5/12.7 finding (the
 # bundled path4gmns 0.10.0 binary caps internal OpenMP at 4 threads,
@@ -28,17 +29,27 @@
 #   cached mobsim:  5 seeds × ~5-10 min per engine
 #   total per engine: ~55-80 h + ~25-50 min
 #   total job (sequential prep across engines, since same machine):
-#     ~115-165 h. Fits the 14-day longcpu wall (336 h) with massive
-#     margin (50%+ headroom even on the pessimistic estimate).
+#     ~115-180 h. Fits the 7-day cpu wall (168 h) on the optimistic
+#     + mid estimates with 30-50 h of margin; busts only the pessimistic
+#     ~180 h tail by ~12 h. If wall is exceeded, recover via
+#     `recover_partial_summary --harness-log` (see footer below) — all
+#     per-cell engine output on disk remains usable.
 #
 # Resources:
-#   --partition=longcpu   : 14-day max wall — the unconditional safety
-#                           margin for the BFS-prep estimate's pessimistic
-#                           tail. Same node hardware as `cpu` (Xeon Max
-#                           9470, 104c, 503 G); only the max-wall differs.
-#                           Queue may be slightly busier at any moment
-#                           because long-wall jobs dominate, but starting
-#                           a single 14-day job is routine.
+#   --partition=cpu       : 7-day max wall. Cardinal's `longcpu`
+#                           partition (14-day wall) was the preferred
+#                           safety margin, but PMIU0110 isn't authorized
+#                           for it (OSC gates longcpu to allocations
+#                           that explicitly request it). Calculated risk:
+#                           Cardinal's ~20-30% CPU speedup vs Pitzer
+#                           brings the 500K estimate from 165-225 h down
+#                           to ~115-180 h. The 7-day cap (168 h) covers
+#                           the optimistic + mid range and busts only the
+#                           pessimistic ~180 h tail by ~12 h — the
+#                           recovery path (`recover_partial_summary
+#                           --harness-log`, see line ~95 below) covers
+#                           that case. To get longcpu access, file an
+#                           OSC ticket citing the per-cell wall estimates.
 #   --cpus-per-task=24    : Cardinal's cpu/longcpu partitions cap memory
 #                           at MaxMemPerCPU=4956 MB, so --mem and --cpus
 #                           are coupled: max --mem allowed = cpus × 4.84 G.
@@ -54,22 +65,20 @@
 #                           covers the ~84 G actual peak with a ~1.3×
 #                           safety margin, and frees ~80 cores on the
 #                           node for other users.
-#   --time=14-00:00:00    : 14 days, the longcpu partition's max. Drop
-#                           back to `--partition=cpu --time=7-00:00:00`
-#                           if Cardinal's BFS-prep speedup comes in at
-#                           the optimistic end (~115 h fits 7 days with
-#                           53 h to spare). Submit conservatively first;
-#                           retighten once you have a measured run.
+#   --time=7-00:00:00     : 7 days, the cpu partition's max. Required
+#                           by the longcpu access gate above; if OSC
+#                           grants longcpu access later, bump back to
+#                           14-00:00:00 with `--partition=longcpu`.
 # ============================================================================
 
 #SBATCH --account=PMIU0110
 #SBATCH --job-name=simforge_benchmark_large_nyc_500k
-#SBATCH --partition=longcpu
+#SBATCH --partition=cpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=110G
-#SBATCH --time=14-00:00:00
+#SBATCH --time=7-00:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 ##SBATCH --mail-type=END,FAIL
