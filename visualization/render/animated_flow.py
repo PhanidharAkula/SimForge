@@ -251,37 +251,33 @@ def render_flowing_particles(
     return output_path
 
 
-class _PillowPlayOnceWriter(object):
-    """Wrapper around matplotlib's PillowWriter that produces a play-once
-    GIF (no Netscape loop extension), instead of matplotlib's hardcoded
-    ``loop=0`` (infinite).
+def _make_play_once_writer(fps: int):
+    """Return a PillowWriter subclass instance that writes play-once GIFs.
 
-    GIF89a semantics quirks worth knowing:
-      - Pillow ``loop=0`` writes a NETSCAPE2.0 extension with "loop
-        forever", which most viewers honour as infinite.
-      - Pillow ``loop=N`` (N>0) writes the extension with N "extra"
-        plays after the first — so loop=1 actually plays twice.
-      - To get "play once and stop" universally, OMIT the loop
-        parameter entirely. Then Pillow does NOT write the extension,
-        and viewers default to single play (per GIF89a spec).
+    matplotlib's stock PillowWriter hardcodes ``loop=0`` (infinite) in
+    ``finish()``. We subclass it to omit the ``loop=`` kwarg entirely,
+    which prevents Pillow from writing the NETSCAPE2.0 application
+    extension at all — viewers then default to single play (per the
+    GIF89a spec).
+
+    Note: a previous attempt used composition + ``__getattr__`` to wrap
+    PillowWriter, but matplotlib's context manager calls ``self.finish()``
+    on the *inner* writer (whose finish still hardcodes loop=0), bypassing
+    the wrapper's override. Proper subclassing fixes that.
     """
-    def __init__(self, fps: int):
-        import matplotlib.animation as _anim
-        self._inner = _anim.PillowWriter(fps=fps)
+    import matplotlib.animation as _anim
 
-    # Forward setup, grab_frame, etc. to the inner writer.
-    def __getattr__(self, name):
-        return getattr(self._inner, name)
+    class _PillowPlayOnce(_anim.PillowWriter):
+        def finish(self):
+            self._frames[0].save(
+                self.outfile,
+                save_all=True,
+                append_images=self._frames[1:],
+                duration=int(1000 / self.fps),
+                # No `loop=` → no NETSCAPE2.0 extension → single play.
+            )
 
-    def finish(self):
-        # Save WITHOUT loop= → no Netscape extension → single play.
-        self._inner._frames[0].save(
-            self._inner.outfile,
-            save_all=True,
-            append_images=self._inner._frames[1:],
-            duration=int(1000 / self._inner.fps),
-            # no `loop=` → play once
-        )
+    return _PillowPlayOnce(fps=fps)
 
 
 def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
@@ -300,10 +296,10 @@ def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
         except Exception as e:
             logger.warning("ffmpeg write failed (%s); falling back to GIF", e)
             output_path = output_path.with_suffix(".gif")
-            anim.save(str(output_path), writer=_PillowPlayOnceWriter(fps=fps), dpi=dpi)
+            anim.save(str(output_path), writer=_make_play_once_writer(fps), dpi=dpi)
     elif suffix == ".gif":
         # Pillow writer with loop=1 (play once, no infinite repeat).
-        anim.save(str(output_path), writer=_PillowPlayOnceWriter(fps=fps), dpi=dpi)
+        anim.save(str(output_path), writer=_make_play_once_writer(fps), dpi=dpi)
     elif suffix == ".apng":
         # ffmpeg APNG: -plays 1 = play once. Note APNG -plays N actually
         # means "loop N times" (N=0 → infinite); 1 means play exactly once.
@@ -316,7 +312,7 @@ def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
         except Exception as e:
             logger.warning("APNG write failed (%s); falling back to GIF", e)
             output_path = output_path.with_suffix(".gif")
-            anim.save(str(output_path), writer=_PillowPlayOnceWriter(fps=fps), dpi=dpi)
+            anim.save(str(output_path), writer=_make_play_once_writer(fps), dpi=dpi)
     else:
         raise ValueError(
             f"Unsupported output format: {suffix} (use .mp4, .gif, or .apng). "
