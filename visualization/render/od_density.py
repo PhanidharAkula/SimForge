@@ -41,16 +41,15 @@ def render_od_density(
     title: str | None = None,
     style: str = "dots",
     gridsize: int = 60,
-    cmap: str = "Reds",
+    cmap: str = "dark_heat",
     dpi: int = 220,
     figsize: tuple[float, float] = (14.0, 10.0),
     include_highway_types: tuple[str, ...] | None = None,
     show_basemap: bool = True,
-    color_norm: str = "power",
+    color_norm: str = "log",
     color_norm_gamma: float = 0.5,
     fill_empty: bool = False,
-    dot_size_min: float = 8.0,
-    dot_size_max: float = 350.0,
+    dot_size: float = 18.0,
 ) -> Path:
     """Render an origin- or destination-density hexbin onto the basemap.
 
@@ -97,7 +96,38 @@ def render_od_density(
     import matplotlib  # lazy import
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    from matplotlib.colors import LogNorm, PowerNorm
+    import numpy as np
+    from matplotlib.colors import LinearSegmentedColormap, LogNorm, PowerNorm
+
+    # Custom dark colormaps that have NO white/light end. Each one stays
+    # clearly visible against a white background at every count level
+    # while also having enough dynamic range to differentiate low vs
+    # high counts via hue variation.
+    _DARK_CMAPS_TRUNCATED = {
+        # base colormap, low fraction, high fraction
+        "magma_dark":   ("magma",   0.15, 0.85),  # dark blue -> bright pink
+        "inferno_dark": ("inferno", 0.20, 0.85),  # dark red -> bright orange
+        "viridis_dark": ("viridis", 0.10, 0.75),  # dark purple -> teal-green
+        "plasma_dark":  ("plasma",  0.15, 0.85),  # dark purple -> bright pink
+    }
+    # Hand-picked multi-hue dark palette: navy -> blue -> purple -> magenta -> red.
+    # All saturated dark/medium colors, visible against white, with strong
+    # hue variation so even small dots clearly differentiate by count.
+    _DARK_CUSTOM = {
+        "dark_heat":      ["#0a1a4a", "#1a3a8a", "#5a1a8a", "#a01a5a", "#c81a1a"],
+        "dark_spectral":  ["#0a3a5a", "#1a7a5a", "#7a8a1a", "#c85a1a", "#a01a3a"],
+        "dark_fire":      ["#3a0a3a", "#7a0a4a", "#b01a3a", "#d04a1a", "#e08a1a"],
+    }
+    if cmap in _DARK_CMAPS_TRUNCATED:
+        base_name, lo, hi = _DARK_CMAPS_TRUNCATED[cmap]
+        base = matplotlib.colormaps[base_name]
+        cmap_obj = LinearSegmentedColormap.from_list(
+            cmap, base(np.linspace(lo, hi, 256))
+        )
+    elif cmap in _DARK_CUSTOM:
+        cmap_obj = LinearSegmentedColormap.from_list(cmap, _DARK_CUSTOM[cmap])
+    else:
+        cmap_obj = cmap
 
     counts = demand.origin_counts if side == "origin" else demand.destination_counts
     points = [
@@ -136,18 +166,14 @@ def render_od_density(
             render_basemap(network, ax, include_highway_types=include_highway_types)
 
     if style == "dots":
-        # Proportional symbol map: circle area scales linearly with trip count
-        # (sqrt of the marker s value because matplotlib s is area in points^2).
-        # Min/max clamps keep low-count nodes visible without over-weighting them.
-        max_n = max(ns)
-        sizes = [
-            dot_size_min + (dot_size_max - dot_size_min) * (n / max_n) ** 0.7
-            for n in ns
-        ]
+        # Uniform small dots — count is encoded by color only. The dark
+        # colormap means even the lowest-count nodes are visible against
+        # the white background; high-count nodes pop in the brightest end
+        # of the truncated palette.
         sc = ax.scatter(
-            xs, ys, s=sizes, c=ns,
-            cmap=cmap, alpha=0.85, zorder=3,
-            edgecolors="white", linewidths=0.4,
+            xs, ys, s=dot_size, c=ns,
+            cmap=cmap_obj, alpha=0.95, zorder=3,
+            edgecolors="none", linewidths=0,
             norm=norm,
         )
         cbar = fig.colorbar(sc, ax=ax, shrink=0.6, pad=0.015, fraction=0.04)
@@ -158,14 +184,14 @@ def render_od_density(
             f"SimForge  ·  {len(network.nodes):,} nodes  ·  "
             f"{len(network.links):,} links  ·  "
             f"{len(points):,} demand-carrying nodes  ·  "
-            f"cmap={cmap}  ·  norm={color_norm}"
+            f"cmap={cmap}  ·  norm={color_norm}  ·  dot_size={dot_size}"
         )
     else:
         # Hex binning — better for very dense data.
         hb = ax.hexbin(
-            [p[0][0] for p in points for _ in range(p[1])],  # weight by count
+            [p[0][0] for p in points for _ in range(p[1])],
             [p[0][1] for p in points for _ in range(p[1])],
-            gridsize=gridsize, cmap=cmap,
+            gridsize=gridsize, cmap=cmap_obj,
             mincnt=0 if fill_empty else 1,
             alpha=0.92, zorder=3,
             edgecolors="white", linewidths=0.3,

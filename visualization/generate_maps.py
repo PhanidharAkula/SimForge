@@ -132,11 +132,13 @@ def main(argv: list[str] | None = None) -> int:
                              "sparse 1k-50k data); 'hex' = hexbin (better for 200k+).")
     parser.add_argument("--gridsize", type=int, default=60,
                         help="hexbin gridsize for --style hex (default 60). Ignored for dots.")
-    parser.add_argument("--cmap", default="Reds",
-                        help="matplotlib colormap (default 'Reds' — clean white→red, "
-                             "no dark-purple low end). Try 'YlOrRd', 'OrRd' for warmer "
-                             "tones, 'Blues' for cool, 'Spectral_r' for SEARUMS aesthetic, "
-                             "'plasma' / 'viridis' if you want the dark-bg perceptual look.")
+    parser.add_argument("--cmap", default="dark_heat",
+                        help="colormap. Custom dark presets (no white end that blends "
+                             "into white bg): 'dark_heat' (default — navy→blue→purple→"
+                             "magenta→red multi-hue), 'dark_spectral', 'dark_fire'. "
+                             "Truncated standard: 'magma_dark', 'inferno_dark', "
+                             "'viridis_dark', 'plasma_dark'. Or any matplotlib name: "
+                             "'Reds', 'plasma', 'viridis', 'Spectral_r'.")
     parser.add_argument("--dpi", type=int, default=220,
                         help="render DPI (default 220)")
     parser.add_argument("-v", "--verbose", action="store_true",
