@@ -203,33 +203,36 @@ def render_od_choropleth(
         ax.add_collection(colored_pc)
 
     if show_basemap:
-        # Render the road network ON TOP of the colored tracts as thin dark
-        # lines — provides geographic anchoring (downtown, freeways, grid
-        # structure) without obscuring the choropleth colors underneath.
+        # Render TIGER/Line PRISECROADS on top of the colored tracts.
+        # These are public-domain road polylines with proper curve geometry
+        # preserved (unlike SimForge's intersection-only canonical network
+        # which would render every road as a straight angular line).
+        # Primary roads (interstates) thicker, secondary (US/state hwys) thinner.
         from matplotlib.collections import LineCollection
-        major_types = {
-            "motorway", "motorway_link", "trunk", "trunk_link",
-            "primary", "primary_link", "secondary", "secondary_link",
-        }
-        major_segs: list = []
-        minor_segs: list = []
-        for from_id, to_id, ht in network.links:
-            f = network.nodes.get(from_id)
-            t = network.nodes.get(to_id)
-            if not f or not t:
-                continue
-            if ht in major_types:
-                major_segs.append([f, t])
-            elif ht in ("tertiary", "tertiary_link", "residential", "unclassified"):
-                minor_segs.append([f, t])
-        if minor_segs:
-            ax.add_collection(LineCollection(
-                minor_segs, linewidths=0.15, colors="#000000", alpha=0.25, zorder=3,
-            ))
-        if major_segs:
-            ax.add_collection(LineCollection(
-                major_segs, linewidths=0.5, colors="#000000", alpha=0.6, zorder=4,
-            ))
+
+        from visualization.data.tiger_roads import (
+            MTFCC_PRIMARY, MTFCC_SECONDARY, is_state_cached, load_roads_in_bbox,
+        )
+        if not is_state_cached(state_fips):
+            logger.warning(
+                "TIGER roads not cached for state %s — basemap skipped. Run:\n"
+                "  python -m tools.download_tiger_roads --state %s",
+                state_fips, state_fips,
+            )
+        else:
+            roads = load_roads_in_bbox(state_fips, bbox=bbox)
+            primary_segs = [r.points for r in roads if r.mtfcc == MTFCC_PRIMARY]
+            secondary_segs = [r.points for r in roads if r.mtfcc == MTFCC_SECONDARY]
+            if secondary_segs:
+                ax.add_collection(LineCollection(
+                    secondary_segs, linewidths=0.4, colors="#1a1a1a",
+                    alpha=0.45, zorder=3, capstyle="round", joinstyle="round",
+                ))
+            if primary_segs:
+                ax.add_collection(LineCollection(
+                    primary_segs, linewidths=0.9, colors="#000000",
+                    alpha=0.75, zorder=4, capstyle="round", joinstyle="round",
+                ))
 
     # Set view bounds to the network bbox (with small padding).
     pad_x = (bbox[2] - bbox[0]) * 0.02
