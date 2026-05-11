@@ -156,28 +156,54 @@ def _render_phase_b(
     demand = load_demand(dem_path)
 
     if map_type in ("link_load", "congestion"):
-        # Need engine link-level output. DTALite has it natively;
-        # SUMO/MATSim do not at this time.
-        if cell.engine != "dtalite":
-            logger.warning(
-                "[%s] skipped: engine %s does not currently emit link-level "
-                "output. DTALite is the only engine supported for link_load/"
-                "congestion in Phase B; use --engine dtalite.",
-                map_type, cell.engine,
-            )
-            return None
-        if not cell.has_dtalite_link_perf:
-            logger.warning(
-                "[%s] skipped: %s/%s/seed_%d has no link_performance.csv",
-                map_type, cell.engine, cell.mode, cell.seed,
-            )
-            return None
-        from visualization.data.results import load_dtalite_links
+        # All three engines support link_load; only DTALite supports
+        # congestion (needs per-link mean speed which only DTALite
+        # writes natively without re-running with extra adapter flags).
+        from visualization.data.results import (
+            load_dtalite_links, load_matsim_links, load_sumo_links,
+        )
         from visualization.render.link_load import render_link_metric
 
-        links = load_dtalite_links(cell.cell_dir)
+        if map_type == "congestion" and cell.engine != "dtalite":
+            logger.warning(
+                "[%s] skipped: only DTALite supports congestion at this time "
+                "(needs link mean-speed; SUMO/MATSim would require extra "
+                "adapter outputs). Use --engine dtalite.",
+                map_type,
+            )
+            return None
+
+        # Pick loader by engine.
+        if cell.engine == "dtalite":
+            if not cell.has_dtalite_link_perf:
+                logger.warning(
+                    "[%s] skipped: %s/%s/seed_%d has no link_performance.csv",
+                    map_type, cell.engine, cell.mode, cell.seed,
+                )
+                return None
+            links = load_dtalite_links(cell.cell_dir)
+        elif cell.engine == "sumo":
+            if not cell.has_tripinfo:
+                logger.warning(
+                    "[%s] skipped: %s/%s/seed_%d has no tripinfo.xml",
+                    map_type, cell.engine, cell.mode, cell.seed,
+                )
+                return None
+            links = load_sumo_links(cell.cell_dir)
+        elif cell.engine == "matsim":
+            if not cell.has_matsim_trips:
+                logger.warning(
+                    "[%s] skipped: %s/%s/seed_%d has no output/output_trips.csv.gz",
+                    map_type, cell.engine, cell.mode, cell.seed,
+                )
+                return None
+            links = load_matsim_links(cell.cell_dir)
+        else:
+            logger.warning("[%s] skipped: unknown engine %s", map_type, cell.engine)
+            return None
+
         if not links:
-            logger.warning("[%s] skipped: link_performance.csv parsed empty", map_type)
+            logger.warning("[%s] skipped: link loader returned empty", map_type)
             return None
         out = output_dir / f"{map_type}_{cell.engine}_{cell.mode}.png"
         metric = "volume" if map_type == "link_load" else "speed_ratio"

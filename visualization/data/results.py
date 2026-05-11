@@ -149,9 +149,64 @@ def load_dtalite_trips(cell_dir: Path) -> list[TripRecord]:
 
 
 # ---------------------------------------------------------------------------
-# SUMO (per-trip from tripinfo.xml; per-link needs edgedata.xml which the
-# adapter doesn't currently emit by default)
+# SUMO (per-trip from tripinfo.xml; per-link from routes.rou.xml filtered
+# by completed trips)
 # ---------------------------------------------------------------------------
+
+
+def load_sumo_links(cell_dir: Path) -> list[LinkPerformance]:
+    """Per-link traffic volume for SUMO, derived from the routes file
+    filtered by completed trips in tripinfo.xml.
+
+    SimForge writes routes.rou.xml with the BFS-pre-routed link sequence
+    per vehicle. SUMO simulates these and writes tripinfo.xml with one
+    entry per completed trip. We aggregate counts per link, restricted
+    to routes whose vehicle id appears in tripinfo (i.e. trips that
+    finished — SUMO refuses some insertions on congested edges).
+
+    Note: this is "approximate" link load — counts each route's link
+    sequence once per completed trip. It does NOT reflect SUMO's actual
+    second-by-second link usage (would need --edgedata-output enabled
+    in the SUMO config and re-run). Close enough for visualization.
+    """
+    routes_fp = cell_dir / "routes.rou.xml"
+    tripinfo_fp = cell_dir / "tripinfo.xml"
+    if not routes_fp.is_file() or not tripinfo_fp.is_file():
+        return []
+
+    completed_vehs: set[str] = set()
+    try:
+        ctx = etree.iterparse(str(tripinfo_fp), events=("end",), tag="tripinfo")
+        for _, elem in ctx:
+            vid = elem.get("id")
+            if vid:
+                completed_vehs.add(vid)
+            elem.clear()
+    except Exception as e:
+        logger.warning("SUMO tripinfo parse failed for %s: %s", cell_dir, e)
+        return []
+
+    counts: dict[str, int] = {}
+    try:
+        ctx = etree.iterparse(str(routes_fp), events=("end",), tag="vehicle")
+        for _, vehicle in ctx:
+            if vehicle.get("id") not in completed_vehs:
+                vehicle.clear()
+                continue
+            for route in vehicle:
+                edges = (route.get("edges") or "").split()
+                for lid in edges:
+                    counts[lid] = counts.get(lid, 0) + 1
+            vehicle.clear()
+    except Exception as e:
+        logger.warning("SUMO routes parse failed for %s: %s", cell_dir, e)
+        return []
+
+    out = [LinkPerformance(link_id=lid, volume=float(c)) for lid, c in counts.items()]
+    logger.info("SUMO cell %s: aggregated %d links from %d completed trips",
+                cell_dir.name, len(out), len(completed_vehs))
+    return out
+
 
 def load_sumo_trips(cell_dir: Path) -> list[TripRecord]:
     """Parse SUMO ``tripinfo.xml`` -> TripRecord list.
@@ -187,8 +242,70 @@ def load_sumo_trips(cell_dir: Path) -> list[TripRecord]:
 
 
 # ---------------------------------------------------------------------------
-# MATSim (per-trip from output_trips.csv.gz; per-link needs events parsing)
+# MATSim (per-trip from output_trips.csv.gz; per-link from output_plans.xml.gz
+# filtered by completed trips)
 # ---------------------------------------------------------------------------
+
+
+def load_matsim_links(cell_dir: Path) -> list[LinkPerformance]:
+    """Per-link traffic volume for MATSim, derived from output_plans.xml.gz
+    filtered by completed trips in output_trips.csv.gz.
+
+    SimForge MATSim adapter pre-routes via Phase 12.1's
+    ``<route type="links">`` mechanism, so each agent's plan contains
+    the full link sequence. With ``lastIteration=0`` the qsim plays out
+    these plans without replanning, so the route in the plan IS the
+    route the engine simulated.
+
+    Counts each link once per completed trip. Like the SUMO equivalent
+    this is "approximate" link load — true accuracy would require
+    parsing output_events.xml.gz (every link enter event), which is
+    correct but slower for large scenarios.
+    """
+    plans_fp = cell_dir / "output" / "output_plans.xml.gz"
+    trips_fp = cell_dir / "output" / "output_trips.csv.gz"
+    if not plans_fp.is_file() or not trips_fp.is_file():
+        return []
+
+    completed_persons: set[str] = set()
+    try:
+        with gzip.open(trips_fp, "rt", encoding="utf-8") as f:
+            reader = csv.DictReader(f, delimiter=";")
+            for row in reader:
+                pid = (row.get("person") or "").strip()
+                if pid:
+                    completed_persons.add(pid)
+    except Exception as e:
+        logger.warning("MATSim trips parse failed for %s: %s", cell_dir, e)
+        return []
+
+    counts: dict[str, int] = {}
+    try:
+        with gzip.open(plans_fp, "rb") as gz:
+            ctx = etree.iterparse(gz, events=("end",), tag="person")
+            for _, person in ctx:
+                pid = person.get("id")
+                if pid not in completed_persons:
+                    person.clear()
+                    continue
+                for route in person.iter("route"):
+                    if (route.get("type") or "") != "links":
+                        continue
+                    text = (route.text or "").strip()
+                    if not text:
+                        continue
+                    for lid in text.split():
+                        counts[lid] = counts.get(lid, 0) + 1
+                person.clear()
+    except Exception as e:
+        logger.warning("MATSim plans parse failed for %s: %s", cell_dir, e)
+        return []
+
+    out = [LinkPerformance(link_id=lid, volume=float(c)) for lid, c in counts.items()]
+    logger.info("MATSim cell %s: aggregated %d links from %d completed persons",
+                cell_dir.name, len(out), len(completed_persons))
+    return out
+
 
 def load_matsim_trips(cell_dir: Path) -> list[TripRecord]:
     """Parse MATSim ``output_trips.csv.gz`` -> TripRecord list.
