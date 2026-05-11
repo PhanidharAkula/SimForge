@@ -278,21 +278,10 @@ def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
             logger.warning("APNG write failed (%s); falling back to GIF", e)
             output_path = output_path.with_suffix(".gif")
             anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
-    elif suffix == ".webp":
-        # ffmpeg animated WebP: full color, ~5-10x smaller than GIF.
-        try:
-            writer = animation.FFMpegWriter(
-                fps=fps, codec="libwebp",
-                extra_args=["-loop", "0", "-lossless", "0", "-quality", "75"],
-            )
-            anim.save(str(output_path), writer=writer, dpi=dpi)
-        except Exception as e:
-            logger.warning("WebP write failed (%s); falling back to GIF", e)
-            output_path = output_path.with_suffix(".gif")
-            anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
     else:
         raise ValueError(
-            f"Unsupported output format: {suffix} (use .mp4, .gif, .apng, .webp)"
+            f"Unsupported output format: {suffix} (use .mp4, .gif, or .apng). "
+            f"WebP is not supported because Homebrew's ffmpeg lacks libwebp."
         )
     return output_path
 

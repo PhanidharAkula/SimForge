@@ -422,14 +422,16 @@ def main(argv: list[str] | None = None) -> int:
                         help="animated_flow particles mode: how many simulated "
                              "seconds each frame represents (default 5.0). "
                              "Lower = slower-motion video, longer file.")
-    parser.add_argument("--anim-format", choices=["mp4", "gif", "apng", "webp"],
+    parser.add_argument("--anim-format", choices=["mp4", "gif", "apng"],
                         default="mp4",
                         help="animated_flow output container: 'mp4' (default — "
                              "smallest, needs ffmpeg + a video player), "
-                             "'gif' (universal but largest, embeds in "
-                             "markdown/HTML directly), 'apng' (full-color, "
-                             "smaller than GIF, modern browser support), "
-                             "'webp' (smallest animated image format).")
+                             "'gif' (universal, embeds in markdown/HTML "
+                             "directly, but largest file), 'apng' (full-color, "
+                             "~5x smaller than GIF, modern browser support). "
+                             "WebP is NOT supported because the standard "
+                             "Homebrew ffmpeg lacks libwebp; would need a "
+                             "custom ffmpeg build.")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug-level logging")
     args = parser.parse_args(argv)
