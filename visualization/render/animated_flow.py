@@ -185,7 +185,7 @@ def render_flowing_particles(
 
     all_polys = list(link_polys.values())
     ax.add_collection(LineCollection(
-        all_polys, linewidths=0.15, colors="#dddddd", alpha=0.5, zorder=1,
+        all_polys, linewidths=0.4, colors="#555555", alpha=0.65, zorder=1,
     ))
 
     sc = ax.scatter(
@@ -412,9 +412,11 @@ def render_animated_flow(
     for sp in ax.spines.values():
         sp.set_visible(False)
 
-    # Faded inactive basemap underneath (always visible).
+    # Inactive-link basemap underneath (always visible). Slightly thicker
+    # + darker than the renderer's default so the road network is clearly
+    # readable behind the colored active links.
     ax.add_collection(LineCollection(
-        link_polys, linewidths=0.15, colors="#dddddd", alpha=0.6, zorder=1,
+        link_polys, linewidths=0.4, colors="#555555", alpha=0.65, zorder=1,
     ))
 
     # Mutable LineCollection for "currently active" links.
