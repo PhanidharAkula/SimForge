@@ -42,7 +42,7 @@ logger = logging.getLogger("visualization")
 
 PHASE_A_MAPS: frozenset[str] = frozenset({"od_origins", "od_destinations"})
 PHASE_B_MAPS: frozenset[str] = frozenset({"link_load", "travel_time", "congestion"})
-PHASE_C_MAPS: frozenset[str] = frozenset({"route_diversity"})
+PHASE_C_MAPS: frozenset[str] = frozenset({"route_diversity", "animated_flow"})
 
 
 def _pick_engine_cell(coverage, engine_pref: str | None) -> "CellArtifacts | None":
@@ -147,6 +147,36 @@ def _render_phase_c(
     if not net_path:
         logger.warning("[%s] skipped: bundle missing network", map_type)
         return None
+
+    if map_type == "animated_flow":
+        # MATSim-only: needs event-level data (events.xml.gz). Find a
+        # MATSim cell with events present.
+        matsim_cells = [c for c in coverage.cells
+                        if c.engine == "matsim" and c.has_event_output]
+        if not matsim_cells:
+            logger.warning(
+                "[%s] skipped: no MATSim cell with output_events.xml.gz on disk",
+                map_type,
+            )
+            return None
+        cell = sorted(matsim_cells, key=lambda c: c.seed)[0]
+        from visualization.data.bundle import load_network
+        from visualization.data.events import parse_matsim_throughput
+        from visualization.render.animated_flow import render_animated_flow
+
+        network = load_network(net_path)
+        events_path = cell.cell_dir / "output" / "output_events.xml.gz"
+        loads = parse_matsim_throughput(
+            events_path, time_bin_seconds=300,
+            scenario_id=args.scenario, seed=cell.seed,
+        )
+        out = output_dir / f"{map_type}_matsim_meso.mp4"
+        return render_animated_flow(
+            network=network, time_bin_loads=loads,
+            output_path=out, engine="matsim", time_bin_seconds=300,
+            fps=2, dpi=args.dpi // 2,  # halve the static-map default to keep MP4 small
+            scenario_id=args.scenario,
+        )
 
     if map_type == "route_diversity":
         # Aggregate links per engine using whichever loader fits.
