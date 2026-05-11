@@ -113,9 +113,9 @@ def render_flowing_particles(
     sim_seconds_per_frame: float = 5.0,
     figsize: tuple[float, float] = (14.0, 10.0),
     dpi: int = 120,
-    dot_size: float = 4.0,
-    dot_alpha: float = 0.7,
-    dot_color: str = "#d62728",
+    dot_size: float = 9.0,
+    dot_alpha: float = 0.85,
+    dot_color: str = "#e60026",
     use_osm_curves: bool = True,
     scenario_id: str | None = None,
 ) -> Path:
@@ -185,7 +185,7 @@ def render_flowing_particles(
 
     all_polys = list(link_polys.values())
     ax.add_collection(LineCollection(
-        all_polys, linewidths=0.4, colors="#555555", alpha=0.65, zorder=1,
+        all_polys, linewidths=0.35, colors="#888888", alpha=0.55, zorder=1,
     ))
 
     sc = ax.scatter(
@@ -401,11 +401,11 @@ def render_animated_flow(
     for sp in ax.spines.values():
         sp.set_visible(False)
 
-    # Inactive-link basemap underneath (always visible). Slightly thicker
-    # + darker than the renderer's default so the road network is clearly
-    # readable behind the colored active links.
+    # Inactive-link basemap underneath (always visible). Medium-light
+    # gray so the road network is readable but doesn't dominate the
+    # colored active overlay on top.
     ax.add_collection(LineCollection(
-        link_polys, linewidths=0.4, colors="#555555", alpha=0.65, zorder=1,
+        link_polys, linewidths=0.35, colors="#888888", alpha=0.55, zorder=1,
     ))
 
     # Mutable LineCollection for "currently active" links.
