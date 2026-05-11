@@ -130,6 +130,39 @@ So when `link_load` aggregates "which links appear in completed trip routes":
 
 For maps that visualize the routing difference between engines, see `--maps route_diversity` (Phase C).
 
+### Why animated_flow shows "departure bursts"
+
+When watching the particle animation, the swarm of moving dots may
+appear to *jump* at certain moments — many vehicles materialize on the
+network at once, then traffic thins again until the next jump. Users
+typically notice 2-3 such bursts in a chicago_1k playback, more in
+nyc_10k.
+
+This is **real demand behaviour**, not a rendering glitch. Per
+methods.md §3.3 step 9, departures are computed as
+``t_depart = t_arrival - JWMNP × 60`` where JWMNP (PUMS-reported
+commute time in minutes) is quantised by Census to **integer minutes**.
+Every person reporting the same JWMNP value lands on the exact same
+``departure_time_s``:
+
+- chicago_1k_car: 1000 trips compressed onto **20 unique departure
+  timestamps**. Largest burst: 148 trips departing at 28440 s
+  (7:54:00 AM).
+- nyc_10k_car: 10000 trips onto **34 unique timestamps**. Largest
+  burst: 1561 trips at 27000 s (7:30:00 AM).
+
+The animation shows these bursts faithfully — at each PUMS departure
+mark (7:00, 7:15, 7:30, 7:40, 7:54…) hundreds-to-thousands of vehicles
+enter the network in the same simulation second. The aggregate peak
+shape is realistic; the per-second discretisation is the PUMS data
+property, not a SimForge artefact.
+
+A future enhancement would add sub-minute uniform jitter
+(``random.uniform(-30, +30) s``) to spread bucket-mates across their
+60 s window. That's feature-ready in the demand generator but disabled
+by default to preserve byte-deterministic ``demand.csv`` across
+regenerations.
+
 ### Why chicago_200k_car od_origins ≈ od_destinations
 
 Among the bundled scenarios, **chicago_200k_car is the only one with a full-day horizon (7am-4pm)** that produces both AM **and** PM trips per Phase 9c. Other scenarios are AM-only (single peak hour).
