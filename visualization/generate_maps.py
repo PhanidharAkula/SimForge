@@ -9,11 +9,10 @@ Usage::
     # visualization/output/chicago_1k_car/od_origins.png:
     python -m visualization.generate_maps --scenario chicago_1k_car --maps od_origins
 
-    # Render both origin + destination, custom output dir, with grid override:
+    # Render both origin + destination to a custom output dir:
     python -m visualization.generate_maps --scenario chicago_1k_car \\
         --maps od_origins,od_destinations \\
-        --output doc/figures/maps/chicago_1k_car \\
-        --gridsize 80
+        --output doc/figures/maps/chicago_1k_car
 
 The component reports a coverage matrix before doing any work. Maps that
 require data not on disk are skipped (logged, not error). Phase A ships
@@ -105,20 +104,12 @@ def _render_map(
 
         side = "origin" if map_type == "od_origins" else "destination"
         out = output_dir / f"{map_type}.png"
-        logger.info("[%s] rendering (%s) -> %s", map_type, args.style, out)
+        logger.info("[%s] rendering (choropleth) -> %s", map_type, out)
 
-        if args.style == "choropleth":
-            from visualization.render.od_choropleth import render_od_choropleth
-            return render_od_choropleth(
-                network=network, demand=demand, side=side,
-                output_path=out, dpi=args.dpi,
-            )
-
-        from visualization.render.od_density import render_od_density
-        return render_od_density(
+        from visualization.render.od_choropleth import render_od_choropleth
+        return render_od_choropleth(
             network=network, demand=demand, side=side,
-            output_path=out, style=args.style,
-            gridsize=args.gridsize, cmap=args.cmap, dpi=args.dpi,
+            output_path=out, dpi=args.dpi,
         )
 
     if map_type in PHASE_B_MAPS:
@@ -387,21 +378,6 @@ def main(argv: list[str] | None = None) -> int:
                              "(default: visualization/output/<scenario>/)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print coverage matrix and exit; render nothing")
-    parser.add_argument("--style", choices=["dots", "hex", "choropleth"], default="dots",
-                        help="od_* render style. 'dots' (default) = uniform small "
-                             "circles, color-only encoding; 'hex' = hexbin (denser "
-                             "data); 'choropleth' = CityScape-style filled census "
-                             "tracts (requires `python -m tools.download_census_tracts "
-                             "--all-bundled` first).")
-    parser.add_argument("--gridsize", type=int, default=60,
-                        help="hexbin gridsize for --style hex (default 60). Ignored for dots.")
-    parser.add_argument("--cmap", default="dark_heat",
-                        help="colormap. Custom dark presets (no white end that blends "
-                             "into white bg): 'dark_heat' (default — navy→blue→purple→"
-                             "magenta→red multi-hue), 'dark_spectral', 'dark_fire'. "
-                             "Truncated standard: 'magma_dark', 'inferno_dark', "
-                             "'viridis_dark', 'plasma_dark'. Or any matplotlib name: "
-                             "'Reds', 'plasma', 'viridis', 'Spectral_r'.")
     parser.add_argument("--dpi", type=int, default=220,
                         help="render DPI (default 220)")
     parser.add_argument("--engine", default=None,

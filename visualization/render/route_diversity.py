@@ -135,6 +135,7 @@ def render_route_diversity(
         from visualization.data.bundle import figsize_for_bbox
         figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    fig.subplots_adjust(left=0.02, right=0.92, top=0.93, bottom=0.05)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
@@ -178,16 +179,6 @@ def render_route_diversity(
         engines_used = sorted(engine_links.keys())
         title = f"Route diversity across {len(engines_used)} engines: {' + '.join(engines_used)}"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-
-    n_unique_dtalite_only = len(by_agreement.get(1, []))
-    n_consensus = len(by_agreement.get(3, []))
-    fig.text(
-        0.5, 0.015,
-        f"SimForge  ·  {len(network.nodes):,} nodes  ·  "
-        f"{len(network.links):,} links  ·  "
-        f"{n_consensus:,} consensus links (red = engine-specific routing diversity)",
-        ha="center", fontsize=7, color="#888",
-    )
 
     fig.tight_layout(pad=0.8)
     output_path.parent.mkdir(parents=True, exist_ok=True)

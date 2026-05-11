@@ -19,20 +19,25 @@
 #     nyc_500k_car     worker:  ~80-110 h × 2 engines + 5×2 cached seeds
 #                              ≈ ~165-225 h
 #   Total wall = max(workers) ≈ ~225 h, inside the 7-day cpu wall (168 h)
-#   only marginally for nyc_500k. If nyc_500k risks the wall, split into
-#   a separate sbatch with --partition=hugemem or stage the workers
-#   sequentially instead of parallel-by-scenario.
+#   only marginally for nyc_500k. If nyc_500k risks the wall, submit
+#   `cluster/jobs/benchmark_large_nyc_500k.sbatch` (Phase 13 sibling)
+#   instead — it runs nyc_500k alone with its own 7-day wall, leaving
+#   this script to handle chicago_200k by itself (~85 h max). Or stage
+#   the workers sequentially, or escalate to --partition=hugemem.
 #
 # Resources:
 #   --partition=cpu        : Both engines (SUMO, MATSim) are CPU-only.
 #   --cpus-per-task=16     : SUMO + MATSim both single-process per cell;
 #                            the spare cores absorb pytest + analyzer
 #                            steps at the end without GIL contention.
-#   --mem=128G             : Phase 12.4 / 12.7 sizing. la_50k peaked at
-#                            ~67 G during DTALite; SUMO + MATSim alone at
-#                            200K should stay well below 128 G. Pitzer cpu
-#                            nodes have 192 G physical; bump to hugemem
-#                            (3 TB) only if the 500K MATSim qsim spills.
+#   --mem=180G             : Phase 13 bump (was 128 G). Pitzer cpu nodes
+#                            have 192 G physical; 180 G is the safe
+#                            ceiling after the OS reserve. Free headroom
+#                            for the nyc_500k MATSim qsim peak (never
+#                            measured at this tier; la_50k DTALite peaked
+#                            at ~67 G). Same node type + queue priority
+#                            as the prior 128 G; only switch to hugemem
+#                            (3 TB) if 180 G still spills.
 #   --time=7-00:00:00      : 7 days, the cpu partition's max. Required for
 #                            cold BFS-prep at 500K. If the run actually
 #                            comes in under 96 h consider dropping back.
@@ -44,7 +49,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=128G
+#SBATCH --mem=180G
 #SBATCH --time=7-00:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err

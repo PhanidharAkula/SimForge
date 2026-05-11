@@ -29,6 +29,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | Metrics & Plots              | ✅ Complete (10 thesis figures)     |
 | Test Suite                   | ✅ ~574 tests passing (502 with 3 tracked bundles) |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
+| Visualization Component (opt-in, separate branch) | ✅ Complete (7 map types — OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
 
 Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
 
@@ -152,14 +153,17 @@ SimForge/
 ├── scripts/                # Per-tier scenario generation (01_chicago_1k_car.py … 05_nyc_500k_car.py)
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py,
 │                           # env_report.py, inspect_network.py,
-│                           # analyze_scenarios.py — see `python help.py analyzer`)
+│                           # analyze_scenarios.py — see `python help.py analyzer`,
+│                           # download_census_tracts.py + download_tiger_roads.py
+│                           # for the visualization-branch shapefile cache)
 ├── runspecs/               # Benchmark configurations (YAML)
 ├── scenarios/              # Bundled canonical scenarios
 │   └── chicago_1k_car/     # (larger tiers are generated on demand via scripts/)
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
-├── cache/                  # Overpass HTTP cache — only populated if the fallback path runs (gitignored)
+├── cache/                  # Overpass HTTP cache + US Census shapefiles (gitignored)
 ├── tests/                  # pytest test suite (~574 tests)
+├── visualization/          # Opt-in geographic-map renderer (on visualization branch)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
 ├── requirements.txt
@@ -243,6 +247,35 @@ For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECT
 
 ---
 
+## 🗺️ Geographic Visualization (opt-in)
+
+A standalone visualization component on the `visualization` branch
+renders **7 map types** from any bundle / benchmark run — OD demand
+choropleths on US Census tracts, per-engine link load + congestion +
+travel time, cross-engine route diversity, and MATSim-driven flow
+animations (mp4/gif/apng). The main SimForge code paths do not import
+it, so the locked benchmark numbers are independent of any plot.
+
+```bash
+# One-time setup: cache US Census tracts + TIGER roads
+python -m tools.download_census_tracts --all-bundled
+python -m tools.download_tiger_roads --all-bundled
+
+# Coverage report (what's renderable from what's on disk?)
+python -m visualization.generate_maps --scenario chicago_1k_car --dry-run
+
+# Render every available map type
+python -m visualization.generate_maps --scenario chicago_1k_car --maps all
+```
+
+Output defaults to `visualization/output/<scenario>/`. See
+[`visualization/README.md`](visualization/README.md) for the full
+catalogue, CLI reference, and the cross-engine interpretation notes
+(SUMO ≈ MATSim vs DTALite, PUMS departure bursts, full-day OD
+symmetry).
+
+---
+
 ## 📚 Documentation
 
 | Document                                                   | Description                                   |
@@ -261,6 +294,7 @@ For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECT
 | [doc/chapters/results.md](doc/chapters/results.md)         | Thesis Chapter 5 — Results                    |
 | [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                    |
 | `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules               |
+| [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types) |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                         | Contribution workflow and code style          |
 | `python help.py`                                           | In-CLI help: curses TUI in a terminal, `python help.py <topic>` (overview / setup / generate / run / scripts / cities / modes / adapters / metrics / evaluation / schema / benchmark / tests / analyzer / troubleshooting) for paste-safe text |
 

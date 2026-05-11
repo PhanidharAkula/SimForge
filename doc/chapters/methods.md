@@ -1115,3 +1115,90 @@ packages; the local gate enforces ≥70 % via
 - **Informative errors**: Demand generation provides specific guidance when model file lacks data for the target city
 - **Timeout protection**: Each simulation run has a configurable timeout to prevent HPC job hangs
 - **Progress tracking**: Real-time progress bars with ETA prevent silent failures in long benchmark runs
+
+## 3.8 Geographic Visualization (Opt-in)
+
+A separate, opt-in component on the `visualization` branch generates
+geographic maps from canonical bundles and benchmark results. The
+component is **independent of the fairness contract**: adapters,
+`audit_fairness`, and the thesis runtime numbers do not import it,
+and the locked benchmark numbers in Chapter 5 are unchanged by any
+rendered plot. The module exists to *visualize* findings that the
+quantitative analysis already establishes.
+
+### 3.8.1 Map Catalogue
+
+Seven map types are shipped, grouped by what input data they need:
+
+| Map | Inputs | Engine specificity |
+|---|---|---|
+| `od_origins`, `od_destinations` | Canonical bundle + cached US Census tract polygons + TIGER PRISECROADS basemap | — (cross-engine, demand only) |
+| `link_load` | Per-cell engine output (SUMO `tripinfo.xml`, MATSim `output_trips.csv.gz`, or DTALite `link_performance.csv`) | per `(engine, mode)` |
+| `congestion` | DTALite `link_performance.csv` (needs link mean speed) | DTALite only |
+| `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` |
+| `route_diversity` | Cell output from ≥ 2 engines | cross-engine |
+| `animated_flow` | MATSim `output_events.xml.gz` | MATSim only |
+
+The `od_*` and `travel_time` renderers use the CityScape-derived
+choropleth style (100-step blue→red log palette on Census tract
+polygons, light gray for empty tracts) layered on top of the US Census
+TIGER PRISECROADS basemap — chosen for cartographic legibility over
+the canonical SimForge network underlay (which is denser and competes
+visually with the colored tract fills).
+
+### 3.8.2 Design Principles
+
+The visualization layer enforces three invariants:
+
+1. **No effect on simulation inputs.** The renderer only reads files
+   produced upstream; it never writes any artefact that an adapter or
+   `audit_fairness` consumes. This is enforced by directory
+   convention — outputs land in `visualization/output/<scenario>/`,
+   distinct from `scenarios/`, `runs/`, and `doc/figures/`.
+2. **Coverage-first dispatch.** Before any rendering, the CLI walks the
+   bundle directory + the per-cell run directory and prints a coverage
+   matrix flagging each map type `[OK]` (renderable) or `[--]`
+   (missing input, with reason). `--maps all` then skips the unavailable
+   maps rather than erroring, so the tool is usable on partial data.
+3. **Lazy imports.** Matplotlib, shapely, pyshp, pyosmium, and the FFmpeg
+   subprocess used by `animated_flow` are imported only inside the
+   render path, so the main SimForge test suite has no dependency on
+   them.
+
+### 3.8.3 Cross-Engine Interpretation Surfaces
+
+Three properties become directly visible in the maps and reinforce
+quantitative findings stated elsewhere in this chapter:
+
+- **SUMO and MATSim `link_load` are visually identical; DTALite differs.**
+  The fairness contract forces SUMO and MATSim to use SimForge's
+  pre-routed BFS link sequences (§3.4.2 and §3.4.3), so they render the
+  same spatial traffic structure. DTALite computes its own UE
+  assignment (§3.4.4) and picks alternative paths under congestion. The
+  `route_diversity` map shades this difference directly: links picked
+  by all three engines are gray (the BFS consensus), links picked by
+  only one are red (typically DTALite's UE alternates). This is the
+  *visual proof* of the fair-comparison contract whose quantitative
+  signal lives in `audit_fairness` Q4 (cross-engine travel-time spread).
+
+- **`animated_flow` shows the PUMS departure-burst effect** discussed
+  in §3.3.4 step 9. Every person reporting the same JWMNP commute time
+  receives the same `departure_time_s`, so 1000 chicago_1k_car trips
+  collapse onto only 20 unique departure timestamps. The animation is
+  *faithful to the PUMS data property*, not a SimForge bug — a future
+  uniform-jitter pass would smooth the bursts at the cost of byte-
+  deterministic `demand.csv`.
+
+- **chicago_200k_car's `od_origins` ≈ `od_destinations`** (74 % node
+  overlap vs 5.5 % for AM-only bundles). The full-day horizon (07:00–
+  16:00) emits both AM home→work and PM work→home pairs per the Phase
+  9c chain mechanism, so the OD sets become the same {homes} ∪
+  {workplaces} visited at different times. This is direct evidence
+  that the schedule-driven generator produces genuinely symmetric
+  commute patterns at the metro scale.
+
+The full CLI reference, render defaults, data-source provenance, and
+caching layout are documented in
+[`visualization/README.md`](../../visualization/README.md). The post-
+run analysis pipeline that wraps the visualization tool is in
+[`doc/RESULTS_GUIDE.md`](../RESULTS_GUIDE.md) §4.4.

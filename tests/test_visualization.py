@@ -164,44 +164,6 @@ class TestCoverage:
 
 
 # ---------------------------------------------------------------------------
-# OD density renderer
-# ---------------------------------------------------------------------------
-
-
-class TestOdDensityRenderer:
-    def test_renders_origin_png(self, chicago_bundle: Path, tmp_path: Path) -> None:
-        from visualization.data.bundle import load_demand, load_network
-        from visualization.render.od_density import render_od_density
-
-        net = load_network(chicago_bundle / "network.xml")
-        dem = load_demand(chicago_bundle / "demand.csv")
-        out = tmp_path / "od_origins.png"
-        result = render_od_density(net, dem, side="origin", output_path=out, gridsize=10)
-        assert result == out
-        assert out.is_file()
-        assert out.stat().st_size > 1000  # non-trivial PNG
-
-    def test_renders_destination_png(self, chicago_bundle: Path, tmp_path: Path) -> None:
-        from visualization.data.bundle import load_demand, load_network
-        from visualization.render.od_density import render_od_density
-
-        net = load_network(chicago_bundle / "network.xml")
-        dem = load_demand(chicago_bundle / "demand.csv")
-        out = tmp_path / "od_destinations.png"
-        render_od_density(net, dem, side="destination", output_path=out, gridsize=10)
-        assert out.is_file()
-
-    def test_invalid_side_raises(self, chicago_bundle: Path, tmp_path: Path) -> None:
-        from visualization.data.bundle import load_demand, load_network
-        from visualization.render.od_density import render_od_density
-
-        net = load_network(chicago_bundle / "network.xml")
-        dem = load_demand(chicago_bundle / "demand.csv")
-        with pytest.raises(ValueError):
-            render_od_density(net, dem, side="bogus", output_path=tmp_path / "x.png")
-
-
-# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -238,17 +200,31 @@ class TestCli:
         assert "bogus_map" in err
 
     def test_render_writes_png(
-        self, chicago_bundle: Path, tmp_path: Path, monkeypatch
+        self, chicago_bundle: Path, tmp_path: Path
     ) -> None:
-        from visualization.generate_maps import main
-        monkeypatch.chdir(tmp_path)
-        out_dir = tmp_path / "out"
-        rc = main([
-            "--scenario", "tiny",
-            "--bundle-dir", str(chicago_bundle),
-            "--maps", "od_origins",
-            "--output", str(out_dir),
-            "--gridsize", "10",
-        ])
-        assert rc == 0
-        assert (out_dir / "od_origins.png").is_file()
+        # OD render requires US Census tract shapefiles cached on disk
+        # (the choropleth is the only OD style). Resolve relative to the
+        # repo root (the runtime looks at ./cache/census/<fips>/).
+        import os
+        from visualization.data.census import is_state_cached
+        repo_root = Path(__file__).resolve().parents[1]
+        prev_cwd = os.getcwd()
+        os.chdir(repo_root)
+        try:
+            if not is_state_cached("17"):
+                pytest.skip(
+                    "Illinois census tracts not cached; run "
+                    "`python -m tools.download_census_tracts --all-bundled`"
+                )
+            from visualization.generate_maps import main
+            out_dir = tmp_path / "out"
+            rc = main([
+                "--scenario", "tiny",
+                "--bundle-dir", str(chicago_bundle),
+                "--maps", "od_origins",
+                "--output", str(out_dir),
+            ])
+            assert rc == 0
+            assert (out_dir / "od_origins.png").is_file()
+        finally:
+            os.chdir(prev_cwd)

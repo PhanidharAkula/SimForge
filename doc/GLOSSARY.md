@@ -26,7 +26,10 @@ A *coverage diagnostic* class flagged when an `(engine, mode)` cell is present i
 The simulator-agnostic intermediate representation defined in `canonical/schema/`. A scenario bundle consists of `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, and `manifest.xml`. Documented in `doc/SCENARIO_GENERATION.md`.
 
 ### Census tract
-A US Census Bureau geographic unit of ~4,000 residents. SimForge uses *PUMS* tract-level demographic and commute data to calibrate trip origins and travel-time targets.
+A US Census Bureau geographic unit of ~4,000 residents. SimForge uses *PUMS* tract-level demographic and commute data to calibrate trip origins and travel-time targets. On the *visualization* branch, the Cartographic Boundary 2024 (500k resolution) tract polygons are used directly as the `od_*` and `travel_time` choropleth geometry — see *Choropleth*.
+
+### Choropleth
+A thematic map style in which a scalar value (here: per-tract trip count or per-tract mean travel time) is rendered as a fill color on a pre-defined polygon (here: a US Census tract). SimForge's `od_origins` / `od_destinations` / `travel_time` renderers all use the choropleth style with a CityScape-derived 100-step blue→red log palette (origin/destination density) or `RdYlGn_r` (travel time). Light gray (`#dddddd`) marks tracts with no demand. Implementation: `visualization/render/od_choropleth.py` and `visualization/render/travel_time.py`.
 
 ### Cityscape
 The C++ population synthesizer (Schedule-generator branch) that produces `<city>_model.txt` modelgen files. Combines OSM, LandScan, US Census PUMS, and PUMA shapefiles into a streaming text format with `bld`/`hld`/`per` records. SimForge V5+ relies on cityscape's `model_gen/ScheduleGenerator.h:211-233` JWTRNS enum (Phase 5) and its `schedule[0]/[1]` workplace+home tuples (Phases 8-9). Source: <https://github.com/raodj/cityscape/tree/Schedule-generator>.
@@ -238,11 +241,14 @@ Categorical label on each `demand.csv` row indicating the role of the trip in a 
 ### Turn restriction (V5+)
 An OSM `type=restriction via=node` relation extracted to the `<turn_restrictions>` block in V5+ `network.xml`. Each entry records `from_link`, `via_node`, `to_link`, and the restriction kind (`no_left_turn`, `no_u_turn`, `only_straight_on`, …). SUMO and MATSim adapters enforce them via state-aware BFS pre-routing (`pipeline/network/turn_restrictions.shortest_path_with_restrictions`). DTALite emits a sibling GMNS-conformant `movement.csv` but path4gmns 0.10.0 does not natively ingest it — documented cross-engine asymmetry. See `canonical/schema/network_v0.md` and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
 
+### TIGER/Line PRISECROADS
+US Census Bureau Topologically Integrated Geographic Encoding and Referencing roads dataset — *PRImary and SECondary ROADS*. Public-domain shapefiles at `tl_2024_<state_fips>_prisecroads.{shp,shx,dbf}`, cached under `cache/tiger/<fips>/` by `python -m tools.download_tiger_roads`. Used by the *visualization* branch as the roads basemap underneath the `od_*` and `travel_time` choropleths (renders cleaner than the canonical SimForge network for cartographic context).
+
 ### TraCI
 SUMO's Traffic Control Interface — a TCP socket protocol for runtime interaction with a running SUMO instance. SimForge does **not** use TraCI; all SUMO adapter interaction is file-based (input XMLs in, `tripinfo.xml` and `statistics.xml` out) for byte-deterministic execution.
 
 ### tripinfo.xml
-SUMO's per-trip output XML, parsed by `evaluation/metrics/travel_time.py:parse_sumo_tripinfo` to extract mean travel time, P95, and trip count.
+SUMO's per-trip output XML, parsed by `evaluation/metrics/travel_time.py:parse_sumo_tripinfo` to extract mean travel time, P95, and trip count. On the *visualization* branch, `visualization/data/results.py:load_sumo_links` also reads this file to derive per-link volumes for `link_load` / `travel_time` rendering.
 
 ---
 
@@ -253,6 +259,9 @@ The pre-flight checks run by `pipeline/validation/validate_bundle.py` before any
 
 ### Vehicle type (V11+ canonical)
 The canonical SimForge car parameters published in `adapters/common/vehicle_types.py` and consumed by all three adapters. Splits across engines as: SUMO `<vType id="simforge_car" length="5.0" minGap="2.5" width="1.8" maxSpeed="40.0" .../>`; MATSim `<vehicleType id="car"><length meter="7.5"/><width meter="1.8"/></vehicleType>` (length is *effective* spacing in MATSim's idiom = SUMO's physical length + minGap); DTALite `[agent_type] PCE=1.0`. Pre-V11 each adapter declared its own values inline with no shared source of truth — V11 centralises and pins the alignment via `tests/test_vehicle_types.py`. See `CHANGELOG.md` Phase 11.
+
+### Visualization component (Phase 13)
+Standalone, opt-in module under `visualization/` (on the `visualization` branch only). Renders seven map types from canonical bundles and benchmark results: `od_origins`, `od_destinations`, `link_load`, `congestion`, `travel_time`, `route_diversity`, `animated_flow`. CLI: `python -m visualization.generate_maps --scenario <id> --maps <list>`. Reads canonical bundle + per-cell engine output, writes PNG / MP4 / GIF / APNG to `visualization/output/<scenario>/`. Never imported by main SimForge code paths; the locked benchmark numbers are independent of any rendered plot. See [`visualization/README.md`](../visualization/README.md). Tests: `tests/test_visualization.py` (13 tests).
 
 ---
 

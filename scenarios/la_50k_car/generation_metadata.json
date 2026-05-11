@@ -15,7 +15,7 @@
   "node_count": 159042,
   "link_count": 466938,
   "signal_count": 2153,
-  "generation_time_s": 470.5,
+  "generation_time_s": 445.5,
   "osm_source": {
     "type": "pbf",
     "path": "/Users/phanidharakula/Library/Mobile Documents/com~apple~CloudDocs/Projects/SimForge/osm_data/california-2026-04-22.osm.pbf",
@@ -37,12 +37,11 @@
     "schedule_driven_count": 50000,
     "gravity_fallback_count": 0,
     "schedule_driven_pct": 100.0,
-    "scheduled_pool_size": 85469,
+    "scheduled_pool_size": 83017,
     "fallback_reasons": {
-      "schedule_dest_orphan_or_outside_bbox": 257073,
-      "home_outside_scc": 97,
-      "schedule_dest_outside_scc": 642,
-      "schedule_dest_equals_home": 5
+      "schedule_dest_orphan_or_outside_bbox": 248207,
+      "home_outside_scc": 22,
+      "schedule_dest_outside_scc": 1103
     }
   }
 }

@@ -164,6 +164,7 @@ def render_link_metric(
         from visualization.data.bundle import figsize_for_bbox
         figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    fig.subplots_adjust(left=0.02, right=0.92, top=0.93, bottom=0.05)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 

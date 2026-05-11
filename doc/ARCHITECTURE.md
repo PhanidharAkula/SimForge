@@ -223,6 +223,88 @@ Three metric families, each in a dedicated module:
 | Reproducibility | `metrics/reproducibility.py` | R-index, CV, multi-KPI                | Consistency         |
 | Travel Time     | `metrics/travel_time.py`     | Mean, P95, completion rate            | Per-run extraction  |
 
+### 2.6 Visualization Component (Phase 13, separate branch)
+
+Standalone, opt-in module under `visualization/`. Generates geographic
+maps from canonical bundles and benchmark results. Lives on the
+`visualization` branch and is not imported by any main SimForge code
+path — `generate.py`, `run_benchmark.py`, `analyze_benchmark`,
+`audit_fairness`, and `generate_plots` are agnostic to it.
+
+```
+canonical bundle ──┐
+                   ├──► visualization/coverage.py ──► coverage matrix
+runs/<runspec>/ ───┘                                      │
+                                                          ▼
+                                          dispatch by map_type
+                                                          │
+        ┌─────────────────────────────────────────────────┼─────────────────────────────────────┐
+        ▼                                                 ▼                                     ▼
+   Phase A maps                                     Phase B maps                          Phase C maps
+   (bundle only)                                  (per-engine cell)                    (cross-engine / event)
+        │                                                 │                                     │
+        ▼                                                 ▼                                     ▼
+  od_choropleth.py                               link_load.py                           route_diversity.py
+  (od_origins,                                   travel_time.py                         animated_flow.py
+   od_destinations)                              (link_load,                            (route_diversity,
+                                                  congestion,                            animated_flow)
+                                                  travel_time)
+```
+
+Seven map types are shipped:
+
+| Map | Phase | Inputs | Engine specificity |
+|---|---|---|---|
+| `od_origins` / `od_destinations` | A | Bundle (`network.xml` + `demand.csv`) + cached US Census tracts + TIGER roads | — (cross-engine) |
+| `link_load` | B | Per-cell engine output | per `(engine, mode)` |
+| `congestion` | B | DTALite `link_performance.csv` | DTALite only (needs link mean speed) |
+| `travel_time` | B | Per-cell engine output + bundle | per `(engine, mode)` |
+| `route_diversity` | C | Cell output from ≥ 2 engines | cross-engine |
+| `animated_flow` | C | MATSim `output_events.xml.gz` | MATSim only |
+
+**Data flow per map type:**
+
+```
+visualization/data/bundle.py      ─► Network, Demand dataclasses
+visualization/data/census.py      ─► TractPolygon list (cb_2024_<fips>_tract_500k.shp)
+visualization/data/tiger_roads.py ─► road polylines (tl_2024_<fips>_prisecroads.shp)
+visualization/data/osm_ways.py    ─► curved link polylines (sliced from the bundle's PBF)
+visualization/data/results.py     ─► LinkPerformance + Trip loaders for SUMO/MATSim/DTALite
+visualization/data/events.py      ─► MATSim per-vehicle traversals (for animated_flow particles)
+        │
+        ▼
+visualization/render/<map_type>.py  (matplotlib-only)
+        │
+        ▼
+visualization/output/<scenario>/<map_type>[_<engine>_<mode>].{png,mp4,gif,apng}
+```
+
+All `data/` loaders are pure (no matplotlib import); render modules
+lazy-import matplotlib + shapely + pyshp. The entire visualization
+layer is invisible to anyone who never runs
+`python -m visualization.generate_maps`.
+
+**Cross-engine interpretation surfaces.** Three properties visible from
+the maps and documented in `visualization/README.md`:
+
+- **SUMO ≈ MATSim, DTALite differs in `link_load`** — same routes
+  (SimForge BFS) produce same spatial traffic structure; DTALite's UE
+  picks different links. Direct visual proof of the fair-comparison
+  contract.
+- **`animated_flow` shows departure bursts** — PUMS JWMNP integer-
+  minute discretization means 1000 trips share ~20 departure
+  timestamps; the bursts are faithful to the data, not a SimForge
+  artefact. Cross-referenced with `methods.md` §3.3 step 9.
+- **`chicago_200k_car od_origins ≈ od_destinations`** — only the
+  full-day scenario emits both AM + PM HBW pairs; origins and
+  destinations are then the same set of nodes ({homes} ∪ {workplaces})
+  visited at different times.
+
+The component is documented in detail in
+[`visualization/README.md`](../visualization/README.md) and consumed by
+the post-run pipeline section of
+[`doc/RESULTS_GUIDE.md`](RESULTS_GUIDE.md) §4.5.
+
 ---
 
 ## 3. Module Dependency Graph
@@ -265,6 +347,14 @@ evaluation/metrics/fidelity.py      (numpy, scipy.stats)
 evaluation/metrics/scalability.py   (time, platform, psutil)
 evaluation/metrics/reproducibility.py (statistics)
 evaluation/metrics/travel_time.py   (xml.etree — SUMO tripinfo parser)
+    │
+    ▼  (separate, opt-in — visualization branch)
+visualization/data/{bundle,census,events,osm_ways,results,tiger_roads}.py
+    │ uses: lxml, csv, pyshp, shapely, pyosmium, gzip
+visualization/render/{basemap,od_choropleth,link_load,travel_time,route_diversity,animated_flow}.py
+    │ uses: matplotlib (lazy-imported), numpy, shapely
+visualization/generate_maps.py + visualization/coverage.py
+    └ CLI entrypoint; reads canonical bundle + per-cell engine output
 ```
 
 **External dependencies** (from `requirements.txt`):

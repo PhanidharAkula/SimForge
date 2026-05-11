@@ -112,6 +112,7 @@ def render_travel_time_choropleth(
         from visualization.data.bundle import figsize_for_bbox
         figsize = figsize_for_bbox(network.bbox) if network.bbox else (12.0, 10.0)
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    fig.subplots_adjust(left=0.02, right=0.92, top=0.93, bottom=0.05)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
 
@@ -161,12 +162,6 @@ def render_travel_time_choropleth(
     if title is None:
         title = f"Mean travel time by origin tract — {engine}  —  N={demand.trip_count:,}"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    fig.text(
-        0.5, 0.015,
-        f"SimForge  ·  {len(tracts):,} tracts  ·  {len(tract_mean_tt):,} non-empty"
-        f"  ·  state FIPS {state_fips}  ·  engine={engine}  ·  cmap=RdYlGn_r",
-        ha="center", fontsize=7, color="#888",
-    )
 
     fig.tight_layout(pad=0.8)
     output_path.parent.mkdir(parents=True, exist_ok=True)

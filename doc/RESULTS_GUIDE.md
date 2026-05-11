@@ -273,7 +273,102 @@ Runs both micro and meso modes on the same scenario and computes:
 - **Fidelity metrics**: RMSE, GEH, KS-statistic between micro/meso travel-time distributions
 - **Trip completion ratio** for each mode
 
-### 4.4 Pre-Run Bundle Inspection — `tools/analyze_scenarios.py`
+### 4.4 Geographic Visualization — `python -m visualization.generate_maps`
+
+Separate, opt-in component on the `visualization` branch. Reads the
+same canonical bundle + per-cell engine output as the other analysis
+tools and renders seven geographic map types — two from the bundle
+alone, three per-engine maps, and two cross-engine maps. The main
+SimForge code paths do not import it, so the locked benchmark numbers
+are independent of any rendered plot.
+
+```bash
+# One-time setup: cache the US Census tract + TIGER roads shapefiles
+python -m tools.download_census_tracts --all-bundled
+python -m tools.download_tiger_roads --all-bundled
+
+# Coverage report (what's generatable from what's on disk?)
+python -m visualization.generate_maps --scenario chicago_1k_car --dry-run
+
+# Render every available map type
+python -m visualization.generate_maps --scenario chicago_1k_car --maps all
+
+# Render one engine's Phase B maps
+python -m visualization.generate_maps --scenario nyc_10k_car \
+    --maps link_load,travel_time --engine matsim
+
+# MATSim particle animation, GIF format, half-speed playback
+python -m visualization.generate_maps --scenario chicago_1k_car \
+    --maps animated_flow --anim-format gif --anim-sim-per-frame 10
+```
+
+**Map catalogue:**
+
+| Map | Inputs | Engine specificity | Use in thesis |
+|---|---|---|---|
+| `od_origins` / `od_destinations` | Bundle + cached US Census tracts + TIGER roads | — (cross-engine, demand only) | §3.3 demand realism — proves the V5+ Phase 9c PM-chain mechanism produces symmetric metro-scale demand |
+| `link_load` | Per-cell engine output | per `(engine, mode)` | §5.0 cross-engine sanity — SUMO ≈ MATSim, DTALite distinct (same data as `route_diversity`, different framing) |
+| `congestion` | DTALite `link_performance.csv` | DTALite only | §5.0 — visualizes UE equilibrium link-level congestion |
+| `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` | §5.2 — choropleth of mean travel time by origin tract |
+| `route_diversity` | Cell output from ≥ 2 engines | cross-engine | §5.0 — direct visual proof of the SimForge BFS contract: consensus links gray, DTALite UE alternates red |
+| `animated_flow` | MATSim `output_events.xml.gz` | MATSim only | §3.3 — visualizes PUMS integer-minute departure bursts (cross-references `methods.md` step 9) |
+
+**Coverage matrix.** The CLI prints what's renderable before doing
+work, similar to `analyze_scenarios`:
+
+```text
+Scenario:  chicago_1k_car
+Bundle:    [OK]    scenarios/chicago_1k_car  (demand, manifest, network, signals)
+Cells:     [OK]    dtalite/meso  seeds=[42, 43, 44, 45, 46]
+Cells:     [OK]    matsim/meso   seeds=[42, 43, 44, 45, 46]
+Cells:     [OK]    sumo/meso     seeds=[42, 43, 44, 45, 46]
+Cells:     [OK]    sumo/micro    seeds=[42, 43, 44, 45, 46]
+
+Available maps:
+  [OK]  od_origins            (bundle present (4 files))
+  [OK]  link_load             (engines with results: ['dtalite', 'matsim', 'sumo'])
+  [OK]  congestion            (engines with results: ['dtalite', 'matsim', 'sumo'])
+  [OK]  travel_time           (engines with results: ['dtalite', 'matsim', 'sumo'])
+  [OK]  route_diversity       (3 engines with results)
+  [OK]  animated_flow         (event-level output present)
+```
+
+Maps whose inputs aren't on disk render as `[--]` in the matrix and
+`[SKIP]` when actually requested — never an error.
+
+**Output layout.** Default destination is
+`visualization/output/<scenario>/` (gitignored). Naming convention:
+
+- `<map_type>.png` for bundle-only or cross-engine maps
+  (`od_origins.png`, `od_destinations.png`, `route_diversity.png`)
+- `<map_type>_<engine>_<mode>.<ext>` for engine-specific maps
+  (`link_load_dtalite_meso.png`, `animated_flow_matsim_meso.mp4`)
+
+Animations support three containers: `mp4` (default, smallest), `gif`
+(embeds directly in markdown, one-shot playback), `apng` (full color,
+~5× smaller than GIF).
+
+**Cross-engine interpretation surfaces.** Three properties the maps
+make visible — see `visualization/README.md` for the full detail:
+
+- *SUMO and MATSim `link_load` look identical, DTALite differs.* Same
+  SimForge BFS routes → same spatial traffic structure across SUMO /
+  MATSim; DTALite's UE picks alternative paths. Direct visual proof of
+  the fair-comparison contract.
+- *`animated_flow` shows "departure bursts".* PUMS JWMNP is integer-
+  minute, so chicago_1k_car's 1000 trips share only ~20 unique
+  departure timestamps. Faithful to data, not a SimForge artefact —
+  documented in `methods.md` §3.3 step 9.
+- *`chicago_200k_car od_origins ≈ od_destinations` (74 % overlap).*
+  Full-day scenarios emit both AM + PM HBW pairs; OD sets are the same
+  places at different times. AM-only bundles see only 5.5 % overlap.
+
+See [`visualization/README.md`](../visualization/README.md) for the
+full CLI reference, output conventions, data-source provenance, and
+the `tools/download_census_tracts.py` / `tools/download_tiger_roads.py`
+helpers that populate the public-domain shapefile cache.
+
+### 4.5 Pre-Run Bundle Inspection — `tools/analyze_scenarios.py`
 
 Tabular end-to-end analysis of every (or any) scenario bundle in
 `scenarios/`. Useful before running the benchmark to verify the

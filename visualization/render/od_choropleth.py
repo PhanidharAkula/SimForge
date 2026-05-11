@@ -123,7 +123,8 @@ def render_od_choropleth(
 
     Parameters
     ----------
-    network, demand : as for ``render_od_density``
+    network : Network
+    demand : Demand
     side : "origin" | "destination"
     output_path : Path
     title : str, optional
@@ -252,13 +253,6 @@ def render_od_choropleth(
     if title is None:
         title = f"Trip {side} density by census tract  —  N={demand.trip_count:,}"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
-    fig.text(
-        0.5, 0.015,
-        f"SimForge  ·  {len(tracts):,} census tracts  ·  "
-        f"{len(tract_counts):,} non-empty  ·  state FIPS {state_fips}  ·  "
-        f"CityScape-style log-scale palette  ·  source: US Census TIGER/Line CB 2024",
-        ha="center", fontsize=7, color="#888",
-    )
 
     fig.tight_layout(pad=0.8)
     output_path.parent.mkdir(parents=True, exist_ok=True)

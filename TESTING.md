@@ -270,7 +270,19 @@ demand generator. Covers header detection, mode-code mapping
 fallback logic, and the per-city aggregate counts surfaced by
 `python help.py cities`.
 
-### 20. `test_audit_fairness.py` — Cross-engine fairness audit (29 tests)
+### 20. `test_visualization.py` — Visualization component (13 tests, visualization branch only)
+
+`visualization/` is opt-in and not imported by main SimForge code
+paths, so its tests live on the `visualization` branch. The 13 tests
+cover the bundle / network / demand loaders, the coverage matrix
+(`discover_bundle`, `discover_run_cells`, `format_coverage_matrix`,
+`map_generatable`), the CLI dry-run + bogus-map-name rejection, and an
+end-to-end render that writes a non-trivial PNG. The render test
+auto-skips when the Illinois Census tracts aren't cached locally
+(`is_state_cached("17")`), so the suite passes on a machine that hasn't
+yet run `python -m tools.download_census_tracts --all-bundled`.
+
+### 21. `test_audit_fairness.py` — Cross-engine fairness audit (29 tests)
 
 `evaluation/audit_fairness.py`: the post-benchmark Q1–Q4 audit script
 that proves every engine in a run directory was given the same problem
@@ -325,6 +337,7 @@ scenarios are well below the threshold and never skip.
 | Confidence (95 % CI)   | 18      | Student's-t helper used by all per-cell summaries           |
 | Engine smoke           | 4       | Real-binary SUMO/MATSim/DTALite smoke + availability report |
 | Audit fairness         | 29      | HMS parser, per-engine TT extractors, 4-layout cell detector, orchestrator integration |
+| Visualization (opt-in) | 13      | Bundle / coverage loaders, CLI dry-run + render smoke (visualization branch only) |
 | **Total**              | **~477** | **~3-4 min** on arm64 (SUMO sweeps skip individually via the netconvert detector); **~22 s** on Linux where SUMO actually runs. Headline count assumes the **3 tracked bundles** (chicago_1k_car, nyc_10k_car, la_50k_car) — every additional bundle in `scenarios/` adds 36 parametrized data-integrity tests, so generating all 5 standard tiers (`scripts/01..05`) lifts the count to ~549 with proportionally longer wall time (~14 min on M-series Mac). V5+ added `tests/test_turn_restrictions.py` (Phase 7), `tests/test_demand_composition.py` (Phase 10), `tests/test_vehicle_types.py` (Phase 11), and the `TestHBSchoolHelpers` class on `tests/test_parse_model_file.py` (Phase 9). |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at

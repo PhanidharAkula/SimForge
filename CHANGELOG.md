@@ -8,6 +8,140 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 13.1: benchmark_large memory bump + dedicated nyc_500k sbatch (2026-05-11)
+
+**Symptom.** `cluster/jobs/benchmark_large.sbatch` requested
+`--mem=128G` against Pitzer cpu nodes that have 192 G physical —
+~60 G of headroom left unallocated on every node. The script's own
+header warned the parallel-by-scenario pattern was "only marginally"
+inside the 7-day cap for nyc_500k (~165–225 h vs the 168 h
+`--time=7-00:00:00` ceiling), with no escape hatch other than
+"--partition=hugemem" (long queue) or "stage sequentially" (manual
+re-submission).
+
+**Fixes:**
+
+- `cluster/jobs/benchmark_large.sbatch`: `--mem=128G → 180G`. Same
+  partition, same queue priority, same node type. 180 G is the safe
+  ceiling after the OS reserve on a 192 G node. Header comments
+  updated to point at the new sibling sbatch as the wall-risk escape.
+
+- `cluster/jobs/benchmark_large_nyc_500k.sbatch` (new): isolates
+  nyc_500k_car into its own job with its own 7-day wall budget +
+  `--mem=180G`. Submit this alongside the umbrella sbatch when the
+  pessimistic wall estimate for nyc_500k threatens to bust the
+  combined-parallel job's 168 h window. Drives the same runspec
+  (`runspecs/benchmark_large.yaml`) via `--scenario nyc_500k_car`,
+  writes per-scenario JSON under
+  `runs/benchmark_large/nyc_500k_car/`, runs the same downstream
+  analyze + plots + audit_fairness chain, and prints the recovery
+  recipe (Phase 12.6 `recover_partial_summary --harness-log`) if it
+  hits the wall.
+
+**Operational note.** Once both per-scenario JSONs exist on disk
+(from the umbrella job + this sibling), re-submitting the umbrella
+sbatch picks both up: its merge step is idempotent and writes
+`runs/benchmark_large/benchmark_results_benchmark_large.json` with the
+combined records for the cross-scenario audit. The merge logic was
+introduced in Phase 12.7; no new code, just a documented invocation
+pattern.
+
+**Memory is not the wall-time fix.** A higher `--mem` doesn't shorten
+BFS prep or MATSim qsim. The split into the dedicated nyc_500k sbatch
+is the wall-time fix; the memory bump is defensive headroom for the
+unknown 500K MATSim qsim peak.
+
+### Phase 13: Geographic visualization component (2026-05-11)
+
+**Scope.** Adds `visualization/` — a standalone, opt-in module for
+rendering seven map types from SimForge bundles and benchmark results.
+Runs on a separate branch (`visualization`); none of the main
+SimForge code paths import it, so the main workflow incurs no startup
+cost. Mirrors the SEARUMS/CityScape aesthetic but driven entirely by
+SimForge's canonical bundle + benchmark JSON.
+
+**Map types shipped (7 total):**
+
+| Map | Inputs | Engine specificity |
+|---|---|---|
+| `od_origins` | Bundle + cached US Census tracts + TIGER roads | — (cross-engine, demand only) |
+| `od_destinations` | (same) | — |
+| `link_load` | Per-cell engine output (any of SUMO/MATSim/DTALite) | per `(engine, mode)` |
+| `congestion` | Per-cell DTALite `link_performance.csv` | DTALite only |
+| `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` |
+| `route_diversity` | Cell output from ≥ 2 engines | cross-engine |
+| `animated_flow` | MATSim `output_events.xml.gz` | MATSim only |
+
+`animated_flow` ships with two render modes (`particles` —
+one moving dot per vehicle on curved OSM polylines; `throughput` —
+5-min link-load snapshots) and three output containers (`mp4`, `gif`
+with one-shot playback, `apng`).
+
+**CLI.**
+
+```bash
+python -m visualization.generate_maps --scenario chicago_1k_car --dry-run
+python -m visualization.generate_maps --scenario chicago_1k_car --maps all
+python -m visualization.generate_maps --scenario nyc_10k_car \
+    --maps link_load,travel_time --engine matsim
+```
+
+The CLI prints a coverage matrix before rendering; maps whose inputs
+aren't on disk are flagged `[--]` and skipped (never errored). Output
+defaults to `visualization/output/<scenario>/` (gitignored).
+
+**Files added:**
+
+- `visualization/generate_maps.py` — CLI entry point + per-phase
+  render dispatch (Phase A / B / C helpers).
+- `visualization/coverage.py` — `ScenarioCoverage`, `CellArtifacts`,
+  bundle + run-dir discovery, `map_generatable()` reasoning.
+- `visualization/data/{bundle,census,events,osm_ways,results,tiger_roads}.py` —
+  pure loaders (no matplotlib import). Lazy shapefile / shapely /
+  pyosmium use.
+- `visualization/render/{basemap,od_choropleth,link_load,travel_time,route_diversity,animated_flow}.py` —
+  one file per map type. Matplotlib-only.
+- `tools/download_census_tracts.py`, `tools/download_tiger_roads.py` —
+  one-shot downloaders for the cached US Census shapefiles
+  (`cache/census/<fips>/`, `cache/tiger/<fips>/`). Skip if hashes
+  already match.
+- `tests/test_visualization.py` — 13 tests covering loaders, coverage
+  matrix, CLI dispatch + dry-run + bogus-map rejection, and an
+  end-to-end render smoke test (skips when census shapefiles aren't
+  cached).
+- `visualization/README.md` — component-level doc with the full map
+  catalogue, CLI reference, data sources, defaults, and the three
+  cross-engine interpretation notes.
+
+**Cross-engine interpretation surfaces:** the new component visualizes
+findings that previously lived only in `audit_fairness` output and the
+methods chapter:
+
+- *SUMO and MATSim `link_load` look identical, DTALite doesn't*. Direct
+  visual proof of the fair-comparison contract — when routes are held
+  constant via SimForge BFS, spatial traffic structure is identical;
+  any cross-engine TT difference is engine-internal mobsim behaviour.
+- *`animated_flow` shows departure bursts*. PUMS JWMNP is integer-
+  minute; 1000 trips collapse onto ~20 unique departure timestamps.
+  Faithful to the data, not an artefact. Documented next to the
+  Phase 8 caveat in `methods.md` §3.3 step 9.
+- *`chicago_200k_car od_origins ≈ od_destinations`*. The full-day
+  scenario produces AM + PM HBW pairs; origin-set and destination-set
+  become the same set of places ({homes} ∪ {workplaces}), just visited
+  at different times. 74 % overlap vs 5.5 % for AM-only bundles.
+
+**Determinism / fairness invariants preserved:** the visualization
+component reads canonical bundle files + per-cell engine outputs; it
+does not write any input that any adapter or `audit_fairness` consumes.
+Locked benchmark numbers are independent of any rendered plot.
+
+**Documentation updates:** new visualization section in
+`doc/ARCHITECTURE.md` §2.6; new §4.5 in `doc/RESULTS_GUIDE.md`; new
+short section in top-level `README.md` and `project notes`; entries added
+to `TESTING.md`, `CONTRIBUTING.md`, and `doc/GLOSSARY.md`; reference
+from `doc/chapters/methods.md` step 9 (already documents PUMS
+discretization → departure bursts).
+
 ### Phase 12.7: benchmark_large drops DTALite + sbatch caps for 200K/500K (2026-05-03)
 
 **Decision.** The Phase 12.5 finding (path4gmns 0.10.0 DTALite C++ binary

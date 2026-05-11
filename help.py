@@ -14,6 +14,7 @@ Usage:
   python help.py modes              # Travel modes reference
   python help.py adapters           # Simulator adapters help
   python help.py metrics            # Evaluation metrics help
+  python help.py visualization      # Geographic map renderer (opt-in)
   python help.py troubleshooting    # Common issues & fixes
 """
 
@@ -167,6 +168,7 @@ PASTE-SAFE TEXT MODE (any topic name, any environment):
   python help.py benchmark          Benchmark harness and runspecs
   python help.py tests              Test suite reference
   python help.py analyzer           tools/analyze_scenarios.py — bundle analyzer
+  python help.py visualization      Geographic map renderer (7 map types, opt-in)
   python help.py troubleshooting    Common issues and fixes
 
 PROJECT STRUCTURE (alphabetical, repo root):
@@ -188,7 +190,11 @@ PROJECT STRUCTURE (alphabetical, repo root):
                       tracked bundles. +36 per parametrized integrity tests
                       per bundle in scenarios/)
   tools/              Operator utilities (analyze_scenarios.py, clean.sh,
-                      download_osm.py, env_report.py, inspect_network.py)
+                      download_osm.py, env_report.py, inspect_network.py,
+                      download_census_tracts.py + download_tiger_roads.py
+                      for the visualization-branch shapefile cache)
+  visualization/      Opt-in geographic-map renderer (visualization branch
+                      — generate_maps.py CLI + 7 map types)
 
   Top-level files:
   generate.py         Unified scenario generator (start here)
@@ -967,7 +973,114 @@ WHEN TO USE:
 
 SEE ALSO:
   python help.py evaluation         audit_fairness + analyze_benchmark
-  doc/RESULTS_GUIDE.md sec 4.4      full reference + usage examples
+  doc/RESULTS_GUIDE.md sec 4.5      full reference + usage examples
+"""
+
+HELP_VISUALIZATION = """
+====================================================================
+  GEOGRAPHIC VISUALIZATION (visualization/generate_maps.py)
+====================================================================
+
+Standalone, opt-in renderer for seven geographic map types: two
+bundle-only OD choropleths, three per-engine maps (link load,
+congestion, travel time), and two cross-engine maps (route diversity,
+MATSim-driven flow animation). Lives on the `visualization` branch
+and is not imported by main SimForge code paths — locked benchmark
+numbers are independent of any rendered plot.
+
+ONE-TIME SETUP (cache the public-domain US Census shapefiles):
+  python -m tools.download_census_tracts --all-bundled
+  python -m tools.download_tiger_roads --all-bundled
+
+USAGE:
+  python -m visualization.generate_maps --scenario chicago_1k_car --dry-run
+  python -m visualization.generate_maps --scenario chicago_1k_car --maps all
+  python -m visualization.generate_maps --scenario nyc_10k_car \\
+      --maps link_load,travel_time --engine matsim
+  python -m visualization.generate_maps --scenario chicago_1k_car \\
+      --maps animated_flow --anim-format gif --anim-sim-per-frame 10
+
+MAP TYPES (7 total):
+  od_origins        bundle-only       CityScape-style filled census-tract
+                                      choropleth on TIGER PRISECROADS
+                                      basemap (origin side)
+  od_destinations   bundle-only       same renderer, destination side
+  link_load         per (engine,mode) color + linewidth = volume per link
+                                      (log scale); all 3 engines supported
+  congestion        DTALite only      color = mean speed / free-flow speed
+                                      (needs link mean speed)
+  travel_time       per (engine,mode) choropleth of mean per-trip travel
+                                      time by origin tract (RdYlGn_r)
+  route_diversity   cross-engine      3 engines = gray (BFS consensus),
+                                      2 = blue, 1 = red (typically
+                                      DTALite UE alternate)
+  animated_flow     MATSim only       particles (one dot per vehicle) or
+                                      throughput (5-min link-load
+                                      snapshots); mp4 / gif / apng
+
+KEY CLI FLAGS:
+  --scenario <id>           required; chicago_1k_car / nyc_10k_car /
+                            chicago_200k_car / la_50k_car / nyc_500k_car
+  --maps <list> | all       comma-separated map types, or 'all'
+  --output <dir>            default: visualization/output/<scenario>/
+  --dry-run                 print the coverage matrix and exit
+  --dpi <N>                 default 220 (statics and animations share this)
+  --engine sumo|matsim|dtalite  which engine's data to use for Phase B maps
+  --anim-mode particles|throughput  default particles
+  --anim-fps <N>            default 30 (particles); throughput is fixed at 2
+  --anim-sim-per-frame <s>  default 5.0; lower = slower motion, longer file
+  --anim-format mp4|gif|apng  default mp4 (smallest, needs ffmpeg)
+
+COVERAGE MATRIX (printed before any render):
+  [OK]   map_type inputs on disk; will render
+  [--]   input missing; skipped if requested (one-line reason printed)
+  [FAIL] input present but renderer raised; run continues with the rest
+
+OUTPUT NAMING:
+  <map_type>.<ext>                       bundle-only / cross-engine maps
+                                         (od_origins, od_destinations,
+                                          route_diversity)
+  <map_type>_<engine>_<mode>.<ext>       engine-specific maps
+                                         (link_load_dtalite_meso.png,
+                                          animated_flow_matsim_meso.mp4)
+
+DATA SOURCES (cached locally, public-domain US gov):
+  cache/census/<fips>/cb_2024_<fips>_tract_500k.{shp,shx,dbf}
+                  Cartographic Boundary census tracts (CB 2024, 500k)
+  cache/tiger/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}
+                  TIGER/Line primary + secondary roads (2024)
+  scenarios/<id>/network.xml + demand.csv
+                  canonical bundle (provided by generate.py)
+  runs/benchmark_*/<id>/<engine>/<mode>/seed_*/
+                  per-cell engine outputs (Phase B + C maps)
+
+CROSS-ENGINE INTERPRETATION (full notes in visualization/README.md):
+  - SUMO and MATSim link_load look identical, DTALite differs.
+    Same SimForge BFS routes -> same spatial traffic structure;
+    DTALite UE picks alternative paths. Visual proof of the fair-
+    comparison contract.
+  - animated_flow shows PUMS "departure bursts". 1000 chicago_1k_car
+    trips collapse onto 20 unique departure timestamps because PUMS
+    JWMNP is integer-minute. Faithful to data, not a SimForge artefact.
+  - chicago_200k_car od_origins ≈ od_destinations (74% overlap).
+    Full-day scenarios emit both AM + PM HBW pairs; OD sets are the
+    same {homes} ∪ {workplaces} at different times.
+
+WHEN TO USE:
+  After a benchmark run, when you want to *see* what the cross-engine
+  numbers describe — link_load makes the SimForge BFS contract
+  visible; route_diversity shades the DTALite UE divergence; the OD
+  choropleths show demand-realism evidence (HBW + HBSchool chains
+  spatially distributed across tracts); animated_flow communicates the
+  scenario in a defense / presentation context.
+
+SEE ALSO:
+  visualization/README.md           full map catalogue + defaults
+  doc/RESULTS_GUIDE.md sec 4.4      post-run pipeline + invocation
+  doc/chapters/methods.md sec 3.8   thesis methods entry
+  python help.py evaluation         the related post-run analysis
+                                    pipeline (analyze_benchmark +
+                                    audit_fairness + generate_plots)
 """
 
 HELP_TROUBLESHOOTING = """
@@ -1167,6 +1280,10 @@ TOPICS = {
     "testing": HELP_TESTS,
     "analyzer": HELP_ANALYZER,
     "analyze": HELP_ANALYZER,
+    "visualization": HELP_VISUALIZATION,
+    "visualisation": HELP_VISUALIZATION,
+    "visualize": HELP_VISUALIZATION,
+    "maps": HELP_VISUALIZATION,
     "troubleshooting": HELP_TROUBLESHOOTING,
 }
 
@@ -1197,6 +1314,7 @@ TOPIC_GROUPS = [
         ("metrics", "Evaluation metric definitions"),
         ("evaluation", "audit_fairness + analyze_benchmark + plots"),
         ("analyzer", "tools/analyze_scenarios.py — bundle analyzer"),
+        ("visualization", "Geographic map renderer (7 map types, opt-in)"),
     ]),
     ("Troubleshooting", [
         ("troubleshooting", "Common issues + fixes"),
