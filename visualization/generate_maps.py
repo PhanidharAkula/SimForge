@@ -149,8 +149,7 @@ def _render_phase_c(
         return None
 
     if map_type == "animated_flow":
-        # MATSim-only: needs event-level data (events.xml.gz). Find a
-        # MATSim cell with events present.
+        # MATSim-only: needs event-level data (events.xml.gz).
         matsim_cells = [c for c in coverage.cells
                         if c.engine == "matsim" and c.has_event_output]
         if not matsim_cells:
@@ -161,22 +160,40 @@ def _render_phase_c(
             return None
         cell = sorted(matsim_cells, key=lambda c: c.seed)[0]
         from visualization.data.bundle import load_network
-        from visualization.data.events import parse_matsim_throughput
-        from visualization.render.animated_flow import render_animated_flow
-
         network = load_network(net_path)
         events_path = cell.cell_dir / "output" / "output_events.xml.gz"
-        loads = parse_matsim_throughput(
-            events_path, time_bin_seconds=300,
-            scenario_id=args.scenario, seed=cell.seed,
-        )
-        out = output_dir / f"{map_type}_matsim_meso.mp4"
-        return render_animated_flow(
-            network=network, time_bin_loads=loads,
-            output_path=out, engine="matsim", time_bin_seconds=300,
-            fps=2, dpi=args.dpi // 2,  # halve the static-map default to keep MP4 small
-            scenario_id=args.scenario,
-        )
+
+        anim_mode = getattr(args, "anim_mode", "particles")
+        if anim_mode == "particles":
+            from visualization.data.events import parse_matsim_vehicle_traversals
+            from visualization.render.animated_flow import render_flowing_particles
+
+            traversals = parse_matsim_vehicle_traversals(
+                events_path, scenario_id=args.scenario, seed=cell.seed,
+            )
+            out = output_dir / f"{map_type}_matsim_meso.mp4"
+            return render_flowing_particles(
+                network=network, traversals=traversals,
+                output_path=out, engine="matsim",
+                fps=getattr(args, "anim_fps", 30),
+                sim_seconds_per_frame=getattr(args, "anim_sim_per_frame", 5.0),
+                dpi=args.dpi // 2,
+                scenario_id=args.scenario,
+            )
+        else:  # throughput
+            from visualization.data.events import parse_matsim_throughput
+            from visualization.render.animated_flow import render_animated_flow
+
+            loads = parse_matsim_throughput(
+                events_path, time_bin_seconds=300,
+                scenario_id=args.scenario, seed=cell.seed,
+            )
+            out = output_dir / f"{map_type}_matsim_meso.mp4"
+            return render_animated_flow(
+                network=network, time_bin_loads=loads,
+                output_path=out, engine="matsim", time_bin_seconds=300,
+                fps=2, dpi=args.dpi // 2, scenario_id=args.scenario,
+            )
 
     if map_type == "route_diversity":
         # Aggregate links per engine using whichever loader fits.
@@ -391,6 +408,19 @@ def main(argv: list[str] | None = None) -> int:
                         help="Engine to render Phase B maps from (link_load, "
                              "travel_time, congestion). Defaults to first "
                              "available engine in the run dir.")
+    parser.add_argument("--anim-mode", choices=["particles", "throughput"],
+                        default="particles",
+                        help="animated_flow rendering: 'particles' (default) = "
+                             "moving dots per vehicle (fluid, cinematic); "
+                             "'throughput' = per-bin link-load snapshots stitched "
+                             "together (cartographic convention).")
+    parser.add_argument("--anim-fps", type=int, default=30,
+                        help="animated_flow real-time playback fps (default 30 "
+                             "for particles, ignored for throughput which uses 2)")
+    parser.add_argument("--anim-sim-per-frame", type=float, default=5.0,
+                        help="animated_flow particles mode: how many simulated "
+                             "seconds each frame represents (default 5.0). "
+                             "Lower = slower-motion video, longer file.")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug-level logging")
     args = parser.parse_args(argv)

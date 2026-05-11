@@ -34,6 +34,91 @@ def cache_path(
     )
 
 
+def traversals_cache_path(scenario_id: str, engine: str, seed: int) -> Path:
+    return (
+        Path("cache") / "events" / scenario_id /
+        f"{engine}_seed{seed}_traversals.json"
+    )
+
+
+def parse_matsim_vehicle_traversals(
+    events_path: Path,
+    scenario_id: str | None = None,
+    seed: int | None = None,
+    force_refresh: bool = False,
+) -> dict[str, list[tuple[str, float, float]]]:
+    """Parse a MATSim events.xml.gz into per-vehicle link traversal records.
+
+    Returns ``{vehicle_id: [(link_id, enter_time_s, leave_time_s), ...]}``
+    sorted by enter_time per vehicle.
+
+    Used by the flowing-particle animation to interpolate each
+    vehicle's continuous position over time.
+    """
+    cache_fp: Path | None = None
+    if scenario_id and seed is not None:
+        cache_fp = traversals_cache_path(scenario_id, "matsim", seed)
+        if cache_fp.is_file() and not force_refresh:
+            try:
+                data = json.loads(cache_fp.read_text())
+                logger.info("MATSim traversals cache hit: %d vehicles from %s",
+                            len(data), cache_fp)
+                return {
+                    vid: [(t[0], float(t[1]), float(t[2])) for t in records]
+                    for vid, records in data.items()
+                }
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning("Traversals cache corrupt at %s: %s — re-parsing",
+                               cache_fp, e)
+
+    open_intervals: dict[tuple[str, str], float] = {}  # (vehicle, link) -> enter_time
+    out: dict[str, list[tuple[str, float, float]]] = defaultdict(list)
+
+    logger.info("Parsing MATSim vehicle traversals: %s", events_path)
+    with gzip.open(events_path, "rb") as gz:
+        ctx = etree.iterparse(gz, events=("end",), tag="event")
+        for _, elem in ctx:
+            etype = elem.get("type")
+            if etype not in ("entered link", "left link"):
+                elem.clear()
+                continue
+            try:
+                t = float(elem.get("time", 0))
+            except (TypeError, ValueError):
+                elem.clear()
+                continue
+            link = elem.get("link")
+            veh = elem.get("vehicle") or elem.get("person")
+            if not link or not veh:
+                elem.clear()
+                continue
+            key = (veh, link)
+            if etype == "entered link":
+                open_intervals[key] = t
+            else:  # left link
+                enter_t = open_intervals.pop(key, None)
+                if enter_t is not None and t > enter_t:
+                    out[veh].append((link, enter_t, t))
+            elem.clear()
+
+    # Sort each vehicle's records by enter_time (already in order from
+    # event stream, but defensive).
+    for veh in out:
+        out[veh].sort(key=lambda r: r[1])
+
+    n_traversals = sum(len(v) for v in out.values())
+    logger.info("MATSim traversals: %d vehicles, %d total link visits",
+                len(out), n_traversals)
+
+    if cache_fp is not None:
+        cache_fp.parent.mkdir(parents=True, exist_ok=True)
+        cache_fp.write_text(json.dumps(
+            dict(out), separators=(",", ":"),
+        ))
+        logger.info("Cached traversals -> %s", cache_fp)
+    return dict(out)
+
+
 def parse_matsim_throughput(
     events_path: Path,
     time_bin_seconds: int = 300,
