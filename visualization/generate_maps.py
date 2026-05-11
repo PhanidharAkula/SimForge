@@ -42,6 +42,7 @@ logger = logging.getLogger("visualization")
 
 PHASE_A_MAPS: frozenset[str] = frozenset({"od_origins", "od_destinations"})
 PHASE_B_MAPS: frozenset[str] = frozenset({"link_load", "travel_time", "congestion"})
+PHASE_C_MAPS: frozenset[str] = frozenset({"route_diversity"})
 
 
 def _pick_engine_cell(coverage, engine_pref: str | None) -> "CellArtifacts | None":
@@ -123,11 +124,71 @@ def _render_map(
     if map_type in PHASE_B_MAPS:
         return _render_phase_b(map_type, coverage, output_dir, args)
 
-    # Phase C placeholders.
+    if map_type in PHASE_C_MAPS:
+        return _render_phase_c(map_type, coverage, output_dir, args)
+
     logger.warning(
-        "[%s] not yet implemented (Phase C); coverage matrix shows when this becomes generatable",
+        "[%s] not yet implemented; coverage matrix shows when this becomes generatable",
         map_type,
     )
+    return None
+
+
+def _render_phase_c(
+    map_type: str,
+    coverage,
+    output_dir: Path,
+    args: argparse.Namespace,
+) -> Path | None:
+    """Phase C renderers: route_diversity (and future animated_flow)."""
+    from visualization.data.bundle import load_network
+
+    net_path = coverage.bundle_files.get("network")
+    if not net_path:
+        logger.warning("[%s] skipped: bundle missing network", map_type)
+        return None
+
+    if map_type == "route_diversity":
+        # Aggregate links per engine using whichever loader fits.
+        from visualization.data.results import (
+            load_dtalite_links, load_matsim_links, load_sumo_links,
+        )
+
+        # Pick first available cell per engine that has the right artifacts.
+        engine_links = {}
+        per_engine_first_cell: dict[str, "CellArtifacts"] = {}
+        for cell in coverage.cells:
+            if cell.engine in per_engine_first_cell:
+                continue
+            per_engine_first_cell[cell.engine] = cell
+
+        for engine, cell in per_engine_first_cell.items():
+            try:
+                if engine == "sumo" and cell.has_tripinfo:
+                    engine_links[engine] = load_sumo_links(cell.cell_dir)
+                elif engine == "matsim" and cell.has_matsim_trips:
+                    engine_links[engine] = load_matsim_links(cell.cell_dir)
+                elif engine == "dtalite" and cell.has_dtalite_link_perf:
+                    engine_links[engine] = load_dtalite_links(cell.cell_dir)
+            except Exception as e:
+                logger.warning("[%s] %s loader failed: %s", map_type, engine, e)
+
+        engine_links = {k: v for k, v in engine_links.items() if v}
+        if len(engine_links) < 2:
+            logger.warning(
+                "[%s] skipped: need >= 2 engines with link data, found %d (%s)",
+                map_type, len(engine_links), list(engine_links.keys()),
+            )
+            return None
+
+        from visualization.render.route_diversity import render_route_diversity
+        network = load_network(net_path)
+        out = output_dir / f"{map_type}.png"
+        return render_route_diversity(
+            network=network, engine_links=engine_links,
+            output_path=out, dpi=args.dpi, scenario_id=args.scenario,
+        )
+
     return None
 
 

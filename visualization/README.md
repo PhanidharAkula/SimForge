@@ -110,6 +110,42 @@ visualization/output/chicago_1k_car/
 Naming: `<map_type>_<engine>_<mode>.png` for engine-specific maps, plain
 `<map_type>.png` for cross-engine or pre-simulation maps.
 
+## Cross-engine interpretation notes
+
+### Why SUMO and MATSim link_load look identical
+
+SimForge's fairness contract forces SUMO and MATSim to **use the same routes** — both adapters read SimForge's pre-routed link sequences via state-aware BFS:
+
+| Engine | Route source | Mobsim job |
+|---|---|---|
+| SUMO | SimForge BFS routes in `routes.rou.xml` | Queue dynamics + completion |
+| MATSim | SimForge BFS routes in `<route type="links">` of plans.xml | Qsim + completion |
+| DTALite | Computes its own UE routes via Frank-Wolfe / column generation | Routing + flow assignment |
+
+So when `link_load` aggregates "which links appear in completed trip routes":
+- SUMO and MATSim render the **same** input route distribution (just scaled by completion rate — SUMO drops some trips at congested-edge insertion, MATSim never does)
+- DTALite renders its own UE-equilibrated routes, which spread flow across alternative paths
+
+**Visual implication**: SUMO and MATSim link_load maps look ~identical (same shape, slightly different intensity); DTALite looks distinctly different. This is **direct visual proof of the fair-comparison contract** — when routes are held constant, spatial traffic structure is identical, so any cross-engine TT difference is purely engine-internal mobsim behavior, not an input asymmetry.
+
+For maps that visualize the routing difference between engines, see `--maps route_diversity` (Phase C).
+
+### Why chicago_200k_car od_origins ≈ od_destinations
+
+Among the bundled scenarios, **chicago_200k_car is the only one with a full-day horizon (7am-4pm)** that produces both AM **and** PM trips per Phase 9c. Other scenarios are AM-only (single peak hour).
+
+In a full-day demand:
+- AM HBW: home → work (origin=home, destination=work)
+- PM HBW: work → home (origin=work, destination=home)
+
+The combined demand.csv's origin-set and destination-set are then the **same set of places** ({homes} ∪ {workplaces}), just visited at different times. The OD choropleths necessarily look identical because they aggregate the same node visits.
+
+Numerically:
+- chicago_1k_car (AM only): 5.5% origin↔destination set overlap
+- chicago_200k_car (full day): **74%** overlap
+
+This is correct behavior, not a bug — it reflects the symmetry of commute patterns once both AM and PM are included. Useful for thesis §3.3 as evidence the Phase 9c PM chain mechanism produces genuinely symmetric demand at the metro scale.
+
 ## Why a separate component?
 
 The visualization layer has different concerns from the rest of SimForge:
