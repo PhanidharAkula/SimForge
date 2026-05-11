@@ -95,6 +95,7 @@ def _render_map(
             demand=demand,
             side=side,
             output_path=out,
+            style=args.style,
             gridsize=args.gridsize,
             cmap=args.cmap,
             dpi=args.dpi,
@@ -125,12 +126,19 @@ def main(argv: list[str] | None = None) -> int:
                              "(default: visualization/output/<scenario>/)")
     parser.add_argument("--dry-run", action="store_true",
                         help="Print coverage matrix and exit; render nothing")
+    parser.add_argument("--style", choices=["dots", "hex"], default="dots",
+                        help="od_* render style. 'dots' = proportional symbols "
+                             "(one circle per node, sized + colored by count — best for "
+                             "sparse 1k-50k data); 'hex' = hexbin (better for 200k+).")
     parser.add_argument("--gridsize", type=int, default=60,
-                        help="hexbin gridsize for od_* maps (default 60)")
-    parser.add_argument("--cmap", default="YlOrRd",
-                        help="matplotlib colormap (default YlOrRd; try viridis)")
-    parser.add_argument("--dpi", type=int, default=150,
-                        help="render DPI (default 150)")
+                        help="hexbin gridsize for --style hex (default 60). Ignored for dots.")
+    parser.add_argument("--cmap", default="Reds",
+                        help="matplotlib colormap (default 'Reds' — clean white→red, "
+                             "no dark-purple low end). Try 'YlOrRd', 'OrRd' for warmer "
+                             "tones, 'Blues' for cool, 'Spectral_r' for SEARUMS aesthetic, "
+                             "'plasma' / 'viridis' if you want the dark-bg perceptual look.")
+    parser.add_argument("--dpi", type=int, default=220,
+                        help="render DPI (default 220)")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="enable debug-level logging")
     args = parser.parse_args(argv)
