@@ -172,11 +172,14 @@ def render_flowing_particles(
     bbox = network.bbox
     if figsize is None:
         from visualization.data.bundle import figsize_for_bbox
-        figsize = figsize_for_bbox(bbox) if bbox else (12.0, 10.0)
+        # Particle mode has no colorbar — no extra width needed.
+        figsize = figsize_for_bbox(bbox, extra_width_in=0.0) if bbox else (10.0, 10.0)
 
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
+    # Tight subplot margins so axes fill the figure (no big white border).
+    fig.subplots_adjust(left=0.01, right=0.99, top=0.95, bottom=0.05)
     if bbox is not None:
         pad_x = (bbox[2] - bbox[0]) * 0.02
         pad_y = (bbox[3] - bbox[1]) * 0.02
@@ -390,6 +393,7 @@ def render_animated_flow(
                 n_frames, fps, n_frames // max(fps, 1))
 
     # Figure setup — figsize matches data aspect to avoid white margins.
+    # Throughput mode HAS a colorbar (per-bin link load), so leave room.
     bbox = network.bbox
     if figsize is None:
         from visualization.data.bundle import figsize_for_bbox
@@ -397,6 +401,7 @@ def render_animated_flow(
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     fig.patch.set_facecolor("white")
     ax.set_facecolor("white")
+    fig.subplots_adjust(left=0.02, right=0.92, top=0.93, bottom=0.05)
 
     if bbox is not None:
         pad_x = (bbox[2] - bbox[0]) * 0.02
