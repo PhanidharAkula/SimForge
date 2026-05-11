@@ -204,15 +204,14 @@ def render_od_choropleth(
 
     if show_basemap:
         # Render TIGER/Line PRISECROADS on top of the colored tracts.
-        # These are public-domain road polylines with proper curve geometry
-        # preserved (unlike SimForge's intersection-only canonical network
-        # which would render every road as a straight angular line).
-        # Primary roads (interstates) thicker, secondary (US/state hwys) thinner.
+        # All road classes (primary + secondary) at the SAME style so
+        # the natural classification transitions in TIGER data don't
+        # look like discontinuities. Slightly thicker line + round caps
+        # also helps mask small real gaps where adjacent TIGER survey
+        # segments don't perfectly stitch.
         from matplotlib.collections import LineCollection
 
-        from visualization.data.tiger_roads import (
-            MTFCC_PRIMARY, MTFCC_SECONDARY, is_state_cached, load_roads_in_bbox,
-        )
+        from visualization.data.tiger_roads import is_state_cached, load_roads_in_bbox
         if not is_state_cached(state_fips):
             logger.warning(
                 "TIGER roads not cached for state %s — basemap skipped. Run:\n"
@@ -221,17 +220,11 @@ def render_od_choropleth(
             )
         else:
             roads = load_roads_in_bbox(state_fips, bbox=bbox)
-            primary_segs = [r.points for r in roads if r.mtfcc == MTFCC_PRIMARY]
-            secondary_segs = [r.points for r in roads if r.mtfcc == MTFCC_SECONDARY]
-            if secondary_segs:
+            segs = [r.points for r in roads]
+            if segs:
                 ax.add_collection(LineCollection(
-                    secondary_segs, linewidths=0.4, colors="#1a1a1a",
-                    alpha=0.45, zorder=3, capstyle="round", joinstyle="round",
-                ))
-            if primary_segs:
-                ax.add_collection(LineCollection(
-                    primary_segs, linewidths=0.9, colors="#000000",
-                    alpha=0.75, zorder=4, capstyle="round", joinstyle="round",
+                    segs, linewidths=0.7, colors="#1a1a1a",
+                    alpha=0.7, zorder=3, capstyle="round", joinstyle="round",
                 ))
 
     # Set view bounds to the network bbox (with small padding).
