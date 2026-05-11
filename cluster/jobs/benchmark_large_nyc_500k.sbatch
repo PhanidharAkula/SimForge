@@ -39,15 +39,21 @@
 #                           Queue may be slightly busier at any moment
 #                           because long-wall jobs dominate, but starting
 #                           a single 14-day job is routine.
-#   --cpus-per-task=16    : SimForge cells are single-process per cell;
-#                           the spare cores absorb pytest + analyzer
-#                           steps at the end without GIL contention.
-#                           104-core node is overkill — harmless.
-#   --mem=480G            : Phase 13.2 sizing — Cardinal nodes have ~503 G
-#                           physical, 480 G is the safe ceiling after the
-#                           OS reserve. Plenty of headroom for MATSim
-#                           qsim at 500K (the unknown workload that
-#                           Pitzer's 192 G ceiling worried us about).
+#   --cpus-per-task=24    : Cardinal's cpu/longcpu partitions cap memory
+#                           at MaxMemPerCPU=4956 MB, so --mem and --cpus
+#                           are coupled: max --mem allowed = cpus × 4.84 G.
+#                           24 CPUs → ~116 G ceiling, enough for the 64 G
+#                           MATSim heap + ~8 G JVM overhead + ~12 G OS
+#                           and workspace ≈ ~84 G actual peak. SimForge
+#                           cells are single-process per cell; the 8
+#                           extra cores vs chicago_200k are the price of
+#                           admission for the bigger heap memory.
+#   --mem=110G            : Phase 13.3 sizing for Cardinal (Pitzer was
+#                           --mem=128/180 G with no per-CPU coupling).
+#                           110 G sits comfortably below the 24-CPU cap,
+#                           covers the ~84 G actual peak with a ~1.3×
+#                           safety margin, and frees ~80 cores on the
+#                           node for other users.
 #   --time=14-00:00:00    : 14 days, the longcpu partition's max. Drop
 #                           back to `--partition=cpu --time=7-00:00:00`
 #                           if Cardinal's BFS-prep speedup comes in at
@@ -61,8 +67,8 @@
 #SBATCH --partition=longcpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=16
-#SBATCH --mem=480G
+#SBATCH --cpus-per-task=24
+#SBATCH --mem=110G
 #SBATCH --time=14-00:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err

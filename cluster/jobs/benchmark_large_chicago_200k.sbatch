@@ -33,17 +33,21 @@
 # Resources:
 #   --partition=cpu       : SUMO + MATSim are CPU-only. Cardinal's cpu
 #                           partition has ~100 nodes at 104 cores / 503 G.
-#   --cpus-per-task=16    : SimForge cells are single-process per cell;
-#                           the spare cores absorb pytest + analyzer
-#                           steps at the end without GIL contention.
-#                           104-core node is overkill for this workload
-#                           but harmless — only `--mem`-bytes matter for
-#                           scheduling priority.
-#   --mem=480G            : Phase 13.2 sizing — Cardinal cpu nodes have
-#                           ~503 G physical, 480 G is the safe ceiling
-#                           after the OS reserve. Defensive headroom; the
-#                           actual peak for chicago_200k SUMO + MATSim
-#                           should stay well under 100 G.
+#   --cpus-per-task=16    : Cardinal's cpu partition caps memory at
+#                           MaxMemPerCPU=4956 MB, so --mem and --cpus
+#                           are coupled: max --mem allowed = cpus × 4.84 G.
+#                           16 CPUs → ~77 G ceiling, enough for the 32 G
+#                           MATSim heap + ~5 G JVM overhead + ~10 G OS
+#                           and workspace ≈ ~47 G actual peak. SimForge
+#                           cells are single-process; extra cores absorb
+#                           pytest + analyzer at the end without GIL
+#                           contention.
+#   --mem=72G             : Phase 13.3 sizing for Cardinal (Pitzer was
+#                           --mem=128/180 G with no per-CPU coupling).
+#                           72 G sits comfortably below the 16-CPU cap,
+#                           covers the ~47 G actual peak with a 1.5×
+#                           safety margin, and frees the rest of the
+#                           node for other users.
 #   --time=7-00:00:00     : 7 days, the cpu partition's max. The estimate
 #                           comes in well under 65 h — use `longcpu` only
 #                           if a margin-of-safety run busts this for any
@@ -57,7 +61,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
-#SBATCH --mem=480G
+#SBATCH --mem=72G
 #SBATCH --time=7-00:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
