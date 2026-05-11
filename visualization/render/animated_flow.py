@@ -251,11 +251,33 @@ def render_flowing_particles(
     return output_path
 
 
+class _PillowPlayOnceWriter(object):
+    """Wrapper around matplotlib's PillowWriter that overrides the
+    hardcoded ``loop=0`` (infinite) in finish() to ``loop=1`` (play once).
+    """
+    def __init__(self, fps: int):
+        import matplotlib.animation as _anim
+        self._inner = _anim.PillowWriter(fps=fps)
+
+    # Forward setup, grab_frame, etc. to the inner writer.
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    def finish(self):
+        # Replicate matplotlib PillowWriter.finish() with loop=1.
+        self._inner._frames[0].save(
+            self._inner.outfile,
+            save_all=True,
+            append_images=self._inner._frames[1:],
+            duration=int(1000 / self._inner.fps),
+            loop=1,
+        )
+
+
 def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
     """Save a matplotlib FuncAnimation in the right format based on suffix.
 
-    Supported: .mp4 (ffmpeg+libx264), .gif (Pillow), .apng (ffmpeg),
-    .webp (ffmpeg+libwebp_anim — smallest file).
+    Supported: .mp4 (ffmpeg+libx264), .gif (Pillow, play-once), .apng (ffmpeg).
     """
     import matplotlib.animation as animation
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -268,23 +290,23 @@ def _save_animation(anim, output_path: Path, fps: int, dpi: int) -> Path:
         except Exception as e:
             logger.warning("ffmpeg write failed (%s); falling back to GIF", e)
             output_path = output_path.with_suffix(".gif")
-            anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
+            anim.save(str(output_path), writer=_PillowPlayOnceWriter(fps=fps), dpi=dpi)
     elif suffix == ".gif":
-        # Pillow writer is the most reliable for GIF. ffmpeg can do GIF
-        # too with -vcodec gif but Pillow handles palette + transparency.
-        anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
+        # Pillow writer with loop=1 (play once, no infinite repeat).
+        anim.save(str(output_path), writer=_PillowPlayOnceWriter(fps=fps), dpi=dpi)
     elif suffix == ".apng":
-        # ffmpeg APNG: full color, small (vs GIF), wide modern browser support.
+        # ffmpeg APNG: -plays 1 = play once. Note APNG -plays N actually
+        # means "loop N times" (N=0 → infinite); 1 means play exactly once.
         try:
             writer = animation.FFMpegWriter(
                 fps=fps, codec="apng",
-                extra_args=["-plays", "0", "-pix_fmt", "rgba"],
+                extra_args=["-plays", "1", "-pix_fmt", "rgba"],
             )
             anim.save(str(output_path), writer=writer, dpi=dpi)
         except Exception as e:
             logger.warning("APNG write failed (%s); falling back to GIF", e)
             output_path = output_path.with_suffix(".gif")
-            anim.save(str(output_path), writer="pillow", fps=fps, dpi=dpi)
+            anim.save(str(output_path), writer=_PillowPlayOnceWriter(fps=fps), dpi=dpi)
     else:
         raise ValueError(
             f"Unsupported output format: {suffix} (use .mp4, .gif, or .apng). "
