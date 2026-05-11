@@ -178,7 +178,7 @@ def _render_phase_c(
                 output_path=out, engine="matsim",
                 fps=getattr(args, "anim_fps", 30),
                 sim_seconds_per_frame=getattr(args, "anim_sim_per_frame", 5.0),
-                dpi=args.dpi // 2,
+                dpi=args.dpi,
                 scenario_id=args.scenario,
             )
         else:  # throughput
@@ -193,7 +193,7 @@ def _render_phase_c(
             return render_animated_flow(
                 network=network, time_bin_loads=loads,
                 output_path=out, engine="matsim", time_bin_seconds=300,
-                fps=2, dpi=args.dpi // 2, scenario_id=args.scenario,
+                fps=2, dpi=args.dpi, scenario_id=args.scenario,
             )
 
     if map_type == "route_diversity":
