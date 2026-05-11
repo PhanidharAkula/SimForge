@@ -42,6 +42,8 @@ def render_link_metric(
     show_inactive: bool = True,
     line_width_min: float = 0.3,
     line_width_max: float = 2.5,
+    use_osm_curves: bool = True,
+    scenario_id: str | None = None,
 ) -> Path:
     """Render road links colored by a per-link metric.
 
@@ -105,23 +107,51 @@ def render_link_metric(
 
     cmap_obj = matplotlib.colormaps[cmap]
 
-    # Build segment list + per-segment metric value, plus "inactive" pile.
+    # Build per-link polylines (curved if OSM way data is available).
+    way_geoms: dict[int, list[tuple[float, float]]] = {}
+    if use_osm_curves and scenario_id and network.link_osm_way_ids:
+        from visualization.data.osm_ways import load_way_geometries
+        needed = set()
+        for ids in network.link_osm_way_ids.values():
+            needed.update(ids)
+        if needed:
+            way_geoms = load_way_geometries(scenario_id, needed)
+
     inactive_segs: list = []
     active_segs: list = []
     active_vals: list[float] = []
 
-    for lid, from_id, to_id, _ht in network.links:
-        f = network.nodes.get(from_id)
-        t = network.nodes.get(to_id)
-        if not f or not t:
-            continue
-        seg = [f, t]
-        val = link_metric.get(lid)
-        if val is None or val == 0:
-            inactive_segs.append(seg)
-        else:
-            active_segs.append(seg)
-            active_vals.append(val)
+    if way_geoms:
+        from visualization.data.osm_ways import link_polyline
+        for lid, from_id, to_id, _ht in network.links:
+            f = network.nodes.get(from_id)
+            t = network.nodes.get(to_id)
+            if not f or not t:
+                continue
+            way_ids = network.link_osm_way_ids.get(lid, [])
+            poly = link_polyline(
+                lid, from_id, to_id, way_ids,
+                way_geoms, network.nodes, network.node_osm_ids,
+            )
+            val = link_metric.get(lid)
+            if val is None or val == 0:
+                inactive_segs.append(poly)
+            else:
+                active_segs.append(poly)
+                active_vals.append(val)
+    else:
+        for lid, from_id, to_id, _ht in network.links:
+            f = network.nodes.get(from_id)
+            t = network.nodes.get(to_id)
+            if not f or not t:
+                continue
+            seg = [f, t]
+            val = link_metric.get(lid)
+            if val is None or val == 0:
+                inactive_segs.append(seg)
+            else:
+                active_segs.append(seg)
+                active_vals.append(val)
 
     if not active_vals:
         logger.warning(

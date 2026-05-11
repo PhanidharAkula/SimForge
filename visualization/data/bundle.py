@@ -28,13 +28,19 @@ class Network:
     nodes: dict[str, tuple[float, float]] = field(default_factory=dict)
     """Map ``node_id`` (e.g. ``"n42"``) to ``(lon, lat)``."""
 
-    links: list[tuple[str, str, str, str]] = field(default_factory=list)
-    """List of ``(link_id, from_node_id, to_node_id, highway_type)``.
+    node_osm_ids: dict[str, int] = field(default_factory=dict)
+    """Map ``node_id`` to its underlying OSM node ID (int). Used by the
+    OSM-way curve-extraction pipeline to find where each SimForge link's
+    endpoints land within the parent OSM way's vertex sequence."""
 
-    ``link_id`` is the bundle-canonical ID (e.g. ``"l1234"``).
-    ``highway_type`` is the OSM tag (``motorway``, ``primary``, ``residential``,
-    ``footway``, etc.) used by the basemap renderer to decide line weight.
-    """
+    links: list[tuple[str, str, str, str]] = field(default_factory=list)
+    """List of ``(link_id, from_node_id, to_node_id, highway_type)``."""
+
+    link_osm_way_ids: dict[str, list[int]] = field(default_factory=dict)
+    """Map ``link_id`` to the OSM way IDs the link came from. Most links
+    map to one way; some (where SimForge merged adjacent collinear ways)
+    map to a list. Used by the OSM curve extractor to fetch the original
+    way geometry for proper curved rendering of link_load / congestion."""
 
     @property
     def bbox(self) -> tuple[float, float, float, float] | None:
@@ -92,6 +98,12 @@ def load_network(network_path: Path) -> Network:
                 elem.clear()
                 continue
             network.nodes[nid] = (x, y)
+            osm_id_str = elem.get("osm_id")
+            if osm_id_str:
+                try:
+                    network.node_osm_ids[nid] = int(osm_id_str)
+                except ValueError:
+                    pass
         elif elem.tag == "link":
             lid = elem.get("id") or ""
             f = elem.get("from")
@@ -99,8 +111,34 @@ def load_network(network_path: Path) -> Network:
             ht = elem.get("highway_type", "unclassified")
             if lid and f and t:
                 network.links.append((lid, f, t, ht))
+                osm_way_str = (elem.get("osm_way_id") or "").strip()
+                if osm_way_str:
+                    way_ids = _parse_osm_way_id_field(osm_way_str)
+                    if way_ids:
+                        network.link_osm_way_ids[lid] = way_ids
         elem.clear()
     return network
+
+
+def _parse_osm_way_id_field(s: str) -> list[int]:
+    """Parse the ``osm_way_id`` attribute, which is either a single int
+    (``"123"``) or a Python-list-style string (``"[123, 456]"``).
+    """
+    s = s.strip()
+    if s.startswith("[") and s.endswith("]"):
+        out: list[int] = []
+        for part in s[1:-1].split(","):
+            part = part.strip()
+            if part:
+                try:
+                    out.append(int(part))
+                except ValueError:
+                    pass
+        return out
+    try:
+        return [int(s)]
+    except ValueError:
+        return []
 
 
 def load_demand(demand_path: Path) -> Demand:

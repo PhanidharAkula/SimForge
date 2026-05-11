@@ -210,7 +210,7 @@ def _render_phase_b(
         return render_link_metric(
             network=network, links=links,
             metric=metric, output_path=out, engine=cell.engine,
-            dpi=args.dpi,
+            dpi=args.dpi, scenario_id=args.scenario,
         )
 
     if map_type == "travel_time":
