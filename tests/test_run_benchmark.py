@@ -117,12 +117,16 @@ class TestPreparedCache:
         h = BenchmarkHarness(output_base=tmp_path)
         called = []
 
-        def fake_prepare(scenario_path, output_dir, seed=0):
+        def fake_prepare(scenario_path, output_dir, seed=0, canonical_routes=None):
             called.append(output_dir)
             (output_dir / "toy.sumocfg").write_text("<dummy/>")
             (output_dir / "tripinfo.xml").write_text("<dummy/>")
 
         monkeypatch.setattr(h, "prepare_sumo_inputs", fake_prepare)
+        # Phase 14: stub the canonical-routes computation — the synthetic
+        # bundle has no network.xml/demand.csv. The cache-management
+        # behavior under test is independent of route content.
+        monkeypatch.setattr(h, "_canonical_routes_for", lambda *a, **kw: {})
 
         cache = h._ensure_prepared_cache(
             scenario_path=bundle,
@@ -153,11 +157,12 @@ class TestPreparedCache:
         h = BenchmarkHarness(output_base=tmp_path)
         called = []
 
-        def fake_prepare(scenario_path, output_dir, seed=0):
+        def fake_prepare(scenario_path, output_dir, seed=0, canonical_routes=None):
             called.append(output_dir)
             (output_dir / "toy.sumocfg").write_text("<dummy/>")
 
         monkeypatch.setattr(h, "prepare_sumo_inputs", fake_prepare)
+        monkeypatch.setattr(h, "_canonical_routes_for", lambda *a, **kw: {})
 
         # Cold prep with v1 bundle.
         h._ensure_prepared_cache(
@@ -219,8 +224,11 @@ class TestPreparedCache:
 
         monkeypatch.setattr(
             h, "prepare_sumo_inputs",
-            lambda sp, od, seed=0: (od / "toy.sumocfg").write_text("<x/>"),
+            lambda sp, od, seed=0, canonical_routes=None: (
+                (od / "toy.sumocfg").write_text("<x/>")
+            ),
         )
+        monkeypatch.setattr(h, "_canonical_routes_for", lambda *a, **kw: {})
 
         cache = h._ensure_prepared_cache(
             scenario_path=bundle, scenario_id="chicago_1k_car",
@@ -243,6 +251,7 @@ class TestPreparedCache:
             h, "prepare_sumo_inputs",
             lambda *a, **kw: called.append(1),
         )
+        monkeypatch.setattr(h, "_canonical_routes_for", lambda *a, **kw: {})
 
         for _ in range(3):
             h._ensure_prepared_cache(

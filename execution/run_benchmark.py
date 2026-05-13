@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Dict, List, Optional
 import logging
 
 from execution.cli_format import format_error_oneline as _format_error_oneline
@@ -154,6 +154,14 @@ class BenchmarkHarness:
         self.output_base = Path(output_base) if output_base else Path("runs")
         self.output_base.mkdir(parents=True, exist_ok=True)
 
+        # Phase 14: canonical-routes cache, keyed by bundle_hash so a
+        # single harness call across the SUMO + MATSim adapters runs
+        # the BFS once. On-disk JSONL persistence via
+        # ``adapters.common.canonical_routes`` survives harness restarts
+        # too — the in-memory dict is just a fast path for the second
+        # adapter within the same process.
+        self._canonical_routes_cache: Dict[str, Dict[str, List[str]]] = {}
+
     # -- BFS-prep cache (Phase 12+) ---------------------------------------
     #
     # `prepare_<engine>_inputs` does per-trip BFS routing on the canonical
@@ -219,6 +227,47 @@ class BenchmarkHarness:
             return ""
         return hashlib.sha256(manifest.read_bytes()).hexdigest()
 
+    def _canonical_routes_for(
+        self,
+        scenario_path: Path,
+        scenario_id: str,
+    ) -> Dict[str, List[str]]:
+        """Compute (or recall) the canonical BFS routes for a scenario.
+
+        Phase 14: SUMO and MATSim both need per-trip BFS paths through
+        the canonical network. Pre-Phase 14, each adapter ran its own
+        BFS — paying the full cost twice per scenario. This helper
+        computes the routes once and memoizes them by bundle hash so
+        the second adapter (e.g. MATSim after SUMO) gets the dict from
+        memory instead of repeating the BFS.
+
+        Cross-process persistence is handled inside
+        ``compute_canonical_routes``: the result is also written to a
+        JSONL file under ``<scoped_base>/.canonical_routes/`` so a
+        subsequent harness invocation (next sbatch submission) reads
+        it from disk in seconds without recomputing.
+
+        DTALite skips this path entirely — its UE assignment computes
+        its own paths internally, so SimForge BFS is irrelevant there.
+        """
+        from adapters.common.canonical_routes import (
+            compute_canonical_routes_for_scenario,
+        )
+        bundle_hash = self._bundle_hash(scenario_path)
+        cached = self._canonical_routes_cache.get(bundle_hash)
+        if cached is not None:
+            return cached
+
+        cache_root = self._scoped_base(scenario_id) / ".canonical_routes"
+        routes = compute_canonical_routes_for_scenario(
+            scenario_dir=scenario_path,
+            workers=1,                 # Phase 14.5 will bump to multi-CPU
+            cache_root=cache_root,
+            supported_modes={"car"},
+        )
+        self._canonical_routes_cache[bundle_hash] = routes
+        return routes
+
     def _ensure_prepared_cache(
         self,
         scenario_path: Path,
@@ -232,6 +281,12 @@ class BenchmarkHarness:
         if you regenerate ``scenarios/<scenario>/`` and reuse the same
         ``--output``, the next call to this method automatically blows
         away the stale cache and re-preps. No manual ``rm -rf .cache``.
+
+        Phase 14+ behavior: for SUMO and MATSim, the canonical BFS routes
+        are computed once per scenario (via ``_canonical_routes_for``)
+        and passed into each adapter's prepare function. The adapters
+        skip their inline BFS pass when these routes are provided.
+        DTALite ignores them — it runs its own UE assignment.
         """
         cache_dir = self._scoped_base(scenario_id) / ".cache" / engine
         sentinel = cache_dir / ".prepared"
@@ -253,6 +308,13 @@ class BenchmarkHarness:
         cache_dir.mkdir(parents=True, exist_ok=True)
         opts = engine_options or {}
 
+        # Phase 14: compute the shared canonical routes once per
+        # scenario before the adapter prep step (only relevant for
+        # SUMO + MATSim — DTALite computes its own paths internally).
+        canonical_routes: Optional[Dict[str, List[str]]] = None
+        if engine in ("sumo", "matsim"):
+            canonical_routes = self._canonical_routes_for(scenario_path, scenario_id)
+
         if engine == "matsim":
             from adapters.matsim import prepare_matsim_inputs, MATSimConfig
             cfg = MATSimConfig(
@@ -261,7 +323,10 @@ class BenchmarkHarness:
             )
             # Seed in the cached config.xml is a placeholder — every cell
             # rewrites config.xml in _mirror_cache_to_run_dir with its own.
-            prepare_matsim_inputs(scenario_path, cache_dir, cfg, random_seed=42)
+            prepare_matsim_inputs(
+                scenario_path, cache_dir, cfg, random_seed=42,
+                canonical_routes=canonical_routes,
+            )
         elif engine == "dtalite":
             from adapters.dtalite import prepare_dtalite_inputs, DTALiteConfig
             cfg = DTALiteConfig(
@@ -275,7 +340,10 @@ class BenchmarkHarness:
         elif engine == "sumo":
             # `seed` arg of self.prepare_sumo_inputs is unused — SUMO
             # consumes seed at run time via the --seed flag.
-            self.prepare_sumo_inputs(scenario_path, cache_dir, seed=0)
+            self.prepare_sumo_inputs(
+                scenario_path, cache_dir, seed=0,
+                canonical_routes=canonical_routes,
+            )
         else:
             raise ValueError(f"Unknown engine for cache prep: {engine}")
 
@@ -362,13 +430,22 @@ class BenchmarkHarness:
         self,
         scenario_path: Path,
         output_dir: Path,
-        seed: int
+        seed: int,
+        canonical_routes: Optional[Dict[str, List[str]]] = None,
     ) -> dict:
-        """Prepare SUMO inputs from canonical bundle."""
+        """Prepare SUMO inputs from canonical bundle.
+
+        Phase 14: passes ``canonical_routes`` (the shared BFS dict)
+        through to the adapter so the inline routing pass is skipped
+        when the harness has pre-computed the routes.
+        """
         _ = seed  # SUMO adapter handles seeds at runtime, not during input prep
         from adapters.sumo.sumo_adapter import prepare_sumo_inputs
-        
-        return prepare_sumo_inputs(scenario_path, output_dir)
+
+        return prepare_sumo_inputs(
+            scenario_path, output_dir,
+            canonical_routes=canonical_routes,
+        )
     
     def run_sumo(
         self,
