@@ -1116,7 +1116,143 @@ packages; the local gate enforces ≥70 % via
 - **Timeout protection**: Each simulation run has a configurable timeout to prevent HPC job hangs
 - **Progress tracking**: Real-time progress bars with ETA prevent silent failures in long benchmark runs
 
-## 3.8 Geographic Visualization (Opt-in)
+## 3.8 Canonical-Routes BFS Deduplication and Parallelization (Phase 14)
+
+A late-stage thesis-engineering finding worth recording as an
+optimization narrative: measure, identify, fix, re-measure.
+
+### 3.8.1 The Cost That Wasn't Modelled
+
+The cross-engine fairness contract (§3.4.2 SUMO, §3.4.3 MATSim)
+requires both engines to consume identical pre-computed routes — the
+state-aware BFS pre-routing introduced in V5 Phase 7 (`pipeline.\
+network.turn_restrictions.shortest_path_with_restrictions`). Until
+late in Version_5, each adapter ran an independent copy of this BFS
+loop over the canonical network, despite the inputs (network,
+turn-restrictions, feasible-trip set) being identical:
+
+- `adapters/sumo/sumo_adapter.py:build_sumo_routes_xml` — per-trip
+  BFS embedded in the routes-XML emitter.
+- `adapters/matsim/matsim_adapter.py:build_matsim_plans_xml` —
+  per-trip BFS embedded in the plans-XML emitter.
+
+At small bundle scales (1K–10K trips) the duplication is invisible
+(seconds), so the architectural inefficiency went unmeasured. Two
+empirical data points exposed it during the 200K/500K benchmark
+run on OSC Cardinal (job 9332478 / 9332482, 2026-05-12):
+
+| Network | Trips | Per-trip BFS rate | Cold prep per engine |
+|---|---|---|---|
+| chicago_200k_car (50 km² bbox, ~50K nodes) | 200,000 | 1.48 s/trip | ~82 h |
+| nyc_500k_car (80 km² bbox, ~80K nodes) | 500,000 | 2.16 s/trip | ~300 h |
+
+With two engines (SUMO + MATSim) each paying the cold prep
+sequentially, total adapter-prep walls projected to ~164 h
+(chicago_200k) and ~600 h (nyc_500k). Cardinal's 7-day `cpu`
+partition cap is 168 h. nyc_500k was therefore structurally
+infeasible to complete: the job was cancelled (`scancel 9332482`)
+once the projection became measurable from a 22 h sample.
+
+Three compounding factors explain the per-trip cost:
+
+1. **Network size scaling.** State-aware BFS visits `O(V + E)`; the
+   200K/500K bundles use 15–20 km bbox radii, producing graphs an
+   order of magnitude larger than the small-tier scenarios used in
+   pre-V5 development.
+2. **State-aware expansion.** The Phase 7 state is
+   `(node, last_link_id)`, expanding the BFS visited set by a factor
+   roughly equal to the average in-degree.
+3. **CPython overhead.** The inner loop is pure Python; at ~5 µs per
+   state expansion on a 200K-edge graph, individual BFS calls cost
+   1–2 s wall.
+
+### 3.8.2 Two Compounding Optimisations
+
+The fix has two independent levers; both preserve the byte-identity
+invariant required by the audit:
+
+**Phase 14a — canonical-routes deduplication.** Introduces a shared
+module `adapters/common/canonical_routes.py` that computes the
+state-aware BFS once per `(scenario, feasible-trip-set)` and returns
+a `Dict[trip_id, List[node_id]]`. The result is content-addressed
+on disk in a JSONL cache (SHA-256 over network + demand + sorted
+feasible IDs), so subsequent harness invocations or re-runs read
+from cache in seconds. Both adapters acquire an optional
+`canonical_routes=` kwarg; when provided, they skip their inline BFS
+and consume the pre-computed dict. When `None` (back-compat path),
+the inline BFS still runs — preserving standalone CLI use.
+
+**Phase 14b — multiprocessing parallel BFS.** The shared module
+dispatches to `multiprocessing.Pool` (spawn start method) when
+`workers > 1`. Each worker loads the SCC-filtered network once via
+the initializer, then processes one big chunk of trips sequentially.
+`Pool.imap` preserves submission order; combined with sorted-by-
+trip_id chunking, the parallel output is byte-identical to the
+serial output. The execution harness reads `SLURM_CPUS_PER_TASK`
+to size the pool, defaulting to one worker per SBATCH-allocated CPU.
+
+### 3.8.3 Determinism Invariants Preserved
+
+The byte-identity contract that `audit_fairness` Q1–Q3 enforces is
+preserved at every layer of the refactor, pinned by an explicit
+test suite (`tests/test_canonical_routes.py`):
+
+1. `TestByteIdentityVsLegacy`: paths from the new shared BFS are
+   byte-identical to those from the legacy inline BFS, per trip_id,
+   on the tracked `chicago_1k_car` bundle.
+2. `TestSumoRoutesXmlByteIdentity`: `routes.rou.xml` is byte-
+   identical whether the SUMO adapter consumes pre-computed routes
+   or runs its own BFS.
+3. `TestMatsimPlansXmlByteIdentity`: `plans.xml` is byte-identical
+   under the same with/without-canonical_routes comparison.
+4. `TestParallelDeterminism`: routes from `workers=2` and
+   `workers=4` are byte-identical to `workers=1`.
+
+The 8 existing `test_adapter_determinism.py` checks (byte-identical
+re-runs of the full adapter pipeline) continue to hold, because the
+canonical-routes JSONL cache file is itself byte-deterministic
+(sorted by trip_id on write).
+
+### 3.8.4 Measured Speedup
+
+Local measurement on chicago_1k_car (M-series Mac, single-bundle
+cold start, no on-disk cache):
+
+| Worker count | Wall (s) | Speedup |
+|---|---|---|
+| 1 | 27.2 | 1.0× |
+| 2 | 17.4 | 1.56× |
+| 4 | 11.3 | 2.41× |
+| 8 |  6.6 | 4.12× |
+
+Sub-linear scaling at 1K trips reflects the per-worker init cost
+(parsing the network, building the forbidden-moves table) which
+does not amortize over only ~125–500 trips per worker. At the
+200K/500K cluster scales, the per-worker init cost is dwarfed by
+the in-worker BFS time (12.5K–31K trips per worker at 16-way), so
+the Amdahl ratio is much closer to ideal. Cluster re-measurement
+on Cardinal is recorded as a future addendum to `CHANGELOG.md`
+Phase 14 once the next `benchmark_large` run lands.
+
+### 3.8.5 Engineering Implications
+
+This phase illustrates a methodology point that the thesis defense
+benefits from: **the fairness contract talks about engine output,
+not engineering effort**. The original architecture satisfied
+fairness (same routes per trip across engines) by running the same
+BFS twice; the Phase 14 architecture satisfies the same contract by
+running the BFS once and sharing the output. The audit invariants
+are insensitive to that change — they verify the produced trip set,
+SCC, and travel times, all of which are byte-stable.
+
+The optimisation also generalises: any cross-engine pre-processing
+step that today lives inside per-engine adapters is a candidate for
+the same treatment (deduplication via a shared module, then
+parallelisation as a follow-up). Future engines added to SimForge
+inherit the canonical_routes API for free — they accept the dict
+or fall back to their own routing.
+
+## 3.9 Geographic Visualization (Opt-in)
 
 A separate, opt-in component on the `visualization` branch generates
 geographic maps from canonical bundles and benchmark results. The

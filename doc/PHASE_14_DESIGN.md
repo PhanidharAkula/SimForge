@@ -1,7 +1,8 @@
 # Phase 14 — Canonical Routes + Parallel BFS
 
 **Branch**: `phase-14-canonical-routes`
-**Status**: in progress (started 2026-05-12)
+**Status**: implementation landed 2026-05-12 (sub-commits 14.0–14.5);
+cluster re-measurement pending (Phase 14.7 addendum).
 **Problem owner**: BFS-prep wall dominates large-tier benchmarks
 
 ---
@@ -291,19 +292,21 @@ invalidates both layers.
 
 ## 3. Implementation plan (small commits)
 
-| Commit | Scope | Tests | Touches |
+| Commit | Scope | Tests | Status |
 |---|---|---|---|
-| 14.0 | Design doc + skeleton test | byte-identity contract pinned, expected failure | `doc/PHASE_14_DESIGN.md`, `tests/test_canonical_routes.py` |
-| 14.1 | `canonical_routes.py` serial impl + cache | byte-identity test passes for chicago_1k_car | `adapters/common/canonical_routes.py` |
-| 14.2 | SUMO adapter accepts `canonical_routes=` param | SUMO output byte-identical with/without param | `adapters/sumo/sumo_adapter.py`, test addition |
-| 14.3 | MATSim adapter accepts `canonical_routes=` param | MATSim output byte-identical with/without param | `adapters/matsim/matsim_adapter.py`, test addition |
-| 14.4 | Harness wires shared BFS pass | full run_benchmark on chicago_1k_car: identical results | `execution/run_benchmark.py`, integration test |
-| 14.5 | Multiprocessing in `canonical_routes.py` | byte-identity across workers=1, 2, 4 | `adapters/common/canonical_routes.py`, test addition |
-| 14.6 | Documentation pass | — | `CHANGELOG.md`, `doc/chapters/methods.md`, `visualization/README.md` (mentions) |
+| 14.0 | Design doc + skeleton tests | 9 contract tests, all skip (module absent) | ✅ landed |
+| 14.1 | `canonical_routes.py` serial impl + JSONL cache | 7 tests pass (4 API + 2 cache + 1 byte-identity) | ✅ landed |
+| 14.2 | SUMO adapter accepts `canonical_routes=` kwarg | `TestSumoRoutesXmlByteIdentity` passes | ✅ landed |
+| 14.3 | MATSim adapter accepts `canonical_routes=` kwarg | `TestMatsimPlansXmlByteIdentity` passes | ✅ landed |
+| 14.4 | Harness wires shared BFS pass | 12 cache-management tests pass (stubs added) | ✅ landed |
+| 14.5 | `multiprocessing.Pool` in `canonical_routes.py` | `TestParallelDeterminism` passes (workers=2,4) | ✅ landed |
+| 14.6 | Documentation pass | — | ✅ landed |
+| 14.7 | Cluster re-measurement on Cardinal | post-run wall numbers vs Phase 13 projections | ⏳ pending next sbatch |
 
-Each commit must pass `python -m pytest tests/test_canonical_routes.py
+Each commit passes `python -m pytest tests/test_canonical_routes.py
 tests/test_sumo_adapter.py tests/test_matsim_adapter.py
-tests/test_adapter_determinism.py` before being pushed.
+tests/test_adapter_determinism.py tests/test_run_benchmark.py`
+(51 passed, 9 arm64-skipped, 0 failed at the 14.5 head).
 
 ---
 

@@ -8,6 +8,120 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14: Canonical routes + parallel BFS (2026-05-12)
+
+**Status.** Implementation complete on branch `phase-14-canonical-routes`.
+Six sub-commits land the design, the shared serial module + JSONL cache,
+the SUMO and MATSim adapter refactors, the harness wiring, and the
+multiprocessing layer. 11 contract tests + 12 harness tests pass; the
+load-bearing byte-identity invariants are pinned (routes from the new
+shared BFS are identical to the legacy in-adapter BFS, per trip_id).
+
+**Local measured speedup (chicago_1k_car, M-series Mac):**
+
+| Worker count | Wall (s) | Speedup vs serial |
+|---|---|---|
+| 1 | 27.2 | 1.0× |
+| 2 | 17.4 | 1.56× |
+| 4 | 11.3 | 2.41× |
+| 8 |  6.6 | 4.12× |
+
+Sub-linear scaling on the 1K bundle is expected — the per-worker
+init cost (~1-2 s parsing the network) doesn't amortize over only
+1000 trips. At the 200K/500K cluster scale, with init amortized over
+12.5K-31K trips per worker, Amdahl predicts ~12-14× speedup at 16
+cores.
+
+**Projected Cardinal cold-prep wall after Phase 14 (a + b together):**
+
+| Scenario | Phase 13 baseline | + Phase 14a (dedup) | + Phase 14a + 14b (parallel) |
+|---|---|---|---|
+| chicago_200k_car | ~164 h | ~82 h | **~5-8 h** |
+| nyc_500k_car | ~600 h | ~300 h | **~20-30 h** |
+
+The nyc_500k wall-bust risk that cancelled benchmark job 9332482 on
+2026-05-12 is eliminated by these projections. Cluster re-measurement
+will go into a future CHANGELOG addendum once the next benchmark_large
+run lands.
+
+#### Sub-commits
+
+**14.0 — design + contract tests.** `doc/PHASE_14_DESIGN.md` records
+the motivation, API, cache format, parallel strategy, determinism
+invariants, and per-commit plan. `tests/test_canonical_routes.py`
+pins 9 contract tests; all skip at this commit (module doesn't exist
+yet) so each subsequent commit unblocks a subset.
+
+**14.1 — serial canonical_routes module + JSONL cache.**
+`adapters/common/canonical_routes.py` (446 lines): runs state-aware
+BFS over the SCC-filtered network, returns
+`Dict[trip_id, List[node_id]]`. JSONL cache content-addressed by
+SHA-256(network || demand || sorted feasible_trip_ids); header line
+records expected count for truncation detection; atomic write via
+temp file + os.replace. `TestSerialAPI` (4 tests), `TestCache`
+(2 tests), `TestByteIdentityVsLegacy` (1 test) all pass on this
+commit. The byte-identity test is the load-bearing invariant —
+proves the new BFS produces paths byte-identical to the legacy
+inline BFS, per trip_id.
+
+**14.2 — SUMO adapter consumes canonical_routes.**
+`build_sumo_routes_xml` gains optional `canonical_routes` kwarg.
+When provided, the function skips its inline state-aware BFS pass
+and looks up path_nodes from the dict. When None (legacy /
+standalone CLI), behavior is unchanged. New test
+`TestSumoRoutesXmlByteIdentity` proves routes.rou.xml is byte-
+identical with vs without canonical_routes.
+
+**14.3 — MATSim adapter consumes canonical_routes.** Same refactor
+for `build_matsim_plans_xml` / `prepare_matsim_inputs`. The
+turn-restrictions parse is gated on `using_shared_routes=False` so
+we don't pay the parse cost when the harness already pre-computed.
+New test `TestMatsimPlansXmlByteIdentity` proves plans.xml is byte-
+identical with vs without canonical_routes.
+
+**14.4 — harness wires shared BFS pass.**
+`BenchmarkHarness.__init__` initializes `self._canonical_routes_cache`
+keyed by bundle_hash so within a single harness call, a (scenario,
+bundle) pair pays the BFS exactly once across SUMO + MATSim. New
+`_canonical_routes_for` helper handles the in-memory + on-disk
+(JSONL) caching layers. `_ensure_prepared_cache` passes the shared
+dict to both adapter prep functions; DTALite is skipped (UE
+assignment computes its own paths). 4 cache-management tests
+updated with stub for the new helper.
+
+**14.5 — multiprocessing.Pool in canonical_routes.** `workers > 1`
+dispatches to `multiprocessing.get_context("spawn").Pool` with one
+big chunk per worker. `_init_worker` loads the network + SCC filter
++ forbidden_moves once per worker into module-global `_WORKER_STATE`;
+`_route_chunk` reads from it (no per-call IPC of the graph).
+`Pool.imap` preserves submission order → byte-deterministic output.
+`BenchmarkHarness._bfs_worker_count()` reads `SLURM_CPUS_PER_TASK`
+(SBATCH allocation) and caps at 32. `TestParallelDeterminism`
+(workers=2 and workers=4 byte-identical to workers=1) passes.
+
+#### Determinism + safety invariants preserved
+
+The byte-identity chain from Phase 14.0 holds end-to-end:
+
+1. `compute_canonical_routes` produces paths byte-identical to the
+   legacy inline BFS, per trip_id, regardless of worker count
+   (`TestByteIdentityVsLegacy` + `TestParallelDeterminism`).
+2. `build_sumo_routes_xml` with `canonical_routes=` produces a
+   `routes.rou.xml` byte-identical to the legacy in-loop BFS path
+   (`TestSumoRoutesXmlByteIdentity`).
+3. `build_matsim_plans_xml` with `canonical_routes=` produces a
+   `plans.xml` byte-identical to the legacy in-loop BFS path
+   (`TestMatsimPlansXmlByteIdentity`).
+4. The 8 existing `test_adapter_determinism.py` checks
+   (byte-identical re-runs across the same adapter call) continue
+   to hold because canonical_routes itself is byte-deterministic
+   (sorted by trip_id throughout).
+
+`audit_fairness` Q1 (same trip set), Q2 (same SCC), and Q3
+(simulated count = feasibility target) are unaffected — Phase 14
+does not change the feasibility filter, the SCC filter, or the
+adapter output schemas, just removes a hot computation duplication.
+
 ### Phase 14.0: Canonical routes + parallel BFS — design + skeleton tests (2026-05-12)
 
 **Motivation.** The Phase 13 benchmark run on Cardinal (jobs 9332478,
