@@ -8,6 +8,62 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14.0: Canonical routes + parallel BFS — design + skeleton tests (2026-05-12)
+
+**Motivation.** The Phase 13 benchmark run on Cardinal (jobs 9332478,
+9332482) made an unmodeled cost visible: BFS routing in the SUMO and
+MATSim adapters runs at ~1.5 s/trip on the chicago_200k network and
+~2.16 s/trip on the nyc_500k network. Extrapolated cold-prep walls:
+~164 h for chicago_200k (marginal fit in the 168 h cap), ~600 h for
+nyc_500k (~4× over). The nyc_500k job was cancelled (`scancel 9332482`)
+once this projection became clear; the chicago_200k job continues.
+
+Two compounding causes of the cost:
+
+1. **Per-adapter duplication.** SUMO and MATSim each run the identical
+   state-aware BFS over the identical canonical network with the
+   identical feasible-trip set. Both produce byte-identical path lists
+   per trip_id; only the surrounding XML wrapper differs.
+
+2. **Single-threaded routing.** The per-trip loop is a serial Python
+   `for` over `demand.csv`. Each sbatch allocates 16-24 CPUs but only
+   1 does routing work.
+
+**Phase 14 plan.** Two compounding optimizations:
+
+- **14a — canonical routes**: extract the BFS into
+  `adapters/common/canonical_routes.py`; both adapters consume a shared
+  `dict[trip_id, list[node_id]]` instead of running their own BFS. JSONL
+  cache keyed by SHA-256(network || demand || feasible set) survives
+  across cells, seeds, and runs.
+- **14b — parallel BFS**: `multiprocessing.Pool` across trips with
+  deterministic merge by sorted trip_id. ~12-15× expected speedup at
+  16-worker concurrency.
+
+Expected combined effect on Cardinal cold prep:
+
+| Scenario | Phase 13 (today) | + Phase 14a | + Phase 14a + 14b |
+|---|---|---|---|
+| chicago_200k_car | ~164 h | ~82 h | **~5-8 h** |
+| nyc_500k_car | ~600 h | ~300 h | **~20-30 h** |
+
+**Files added (this commit, 14.0):**
+
+- `doc/PHASE_14_DESIGN.md` — full design (motivation, module API,
+  cache format, parallel strategy, determinism invariants, risk +
+  safety, measurement plan, implementation breakdown by sub-commit).
+- `tests/test_canonical_routes.py` — 9 contract tests pinning the API
+  before implementation lands. All tests skip on this commit with
+  reason "Phase 14 in progress" because
+  `adapters.common.canonical_routes` doesn't exist yet. Each subsequent
+  Phase 14.x commit unblocks a subset.
+
+**Determinism invariant (load-bearing).** The byte-identity guard
+`TestByteIdentityVsLegacy::test_byte_identical_to_legacy_inline_bfs`
+pins the contract that the new shared BFS produces paths byte-
+identical to the legacy in-adapter BFS, per trip_id. This is what
+preserves `audit_fairness` Q1/Q3 across the refactor.
+
 ### Phase 13.1: benchmark_large memory bump + dedicated nyc_500k sbatch (2026-05-11)
 
 **Symptom.** `cluster/jobs/benchmark_large.sbatch` requested
