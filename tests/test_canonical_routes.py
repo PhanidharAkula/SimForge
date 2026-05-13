@@ -206,7 +206,7 @@ class TestSerialAPI:
         self, bundled_scenario: Path, tmp_path: Path
     ) -> None:
         """Every consecutive (u, v) in a path must be a directed edge."""
-        from pipeline.network import parse_canonical_network
+        from adapters.sumo.sumo_adapter import parse_canonical_network
         graph = parse_canonical_network(bundled_scenario / "network.xml")
         valid_edges = {(lk.from_node, lk.to_node) for lk in graph.links}
 
