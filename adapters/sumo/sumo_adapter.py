@@ -420,16 +420,30 @@ def build_sumo_routes_xml(
     graph: NetworkGraph,
     demand_path: Path,
     feasible: Set[str],
+    canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> str:
     """
     Build a SUMO routes file based on canonical demand.csv and the network graph.
 
     Only trips in ``feasible`` (the shared cross-engine feasibility set) are
-    routed. For each feasible trip we run a state-aware BFS that respects
-    OSM turn restrictions (V5+); when no restricted-aware path exists we
-    fall back to the plain BFS so the trip is still rendered (consistent
-    with pre-V5 behavior — turn restrictions don't disconnect ODs in
-    practice on real OSM networks).
+    routed.
+
+    Phase 14+ behavior:
+      - When ``canonical_routes`` is provided (the shared BFS output from
+        ``adapters.common.canonical_routes.compute_canonical_routes``),
+        this function skips its inline BFS pass and consumes the
+        pre-computed ``Dict[trip_id, List[node_id]]`` directly. Both
+        SUMO and MATSim adapters can take the same dict, so each
+        scenario pays the BFS cost once instead of twice.
+      - When ``canonical_routes`` is ``None`` (legacy / standalone CLI
+        usage), this function falls back to running its own state-aware
+        BFS in-loop — pre-Phase-14 behavior preserved for back-compat.
+
+    State-aware BFS notes (apply to both paths above): the V5+ pass
+    respects OSM turn restrictions; when no restricted-aware path
+    exists we fall back to plain BFS so the trip is still rendered
+    (consistent with pre-V5 behavior — turn restrictions don't
+    disconnect ODs in practice on real OSM networks).
     """
     from pipeline.network.turn_restrictions import (
         parse_turn_restrictions, build_forbidden_moves,
@@ -450,24 +464,37 @@ def build_sumo_routes_xml(
     # ≡ MATSim effective length ≡ DTALite PCE).
     lines.append(sumo_vtype_xml())
 
-    # Load OSM turn restrictions (V5+). Pre-V5 networks return empty list,
-    # in which case state-aware BFS reduces to plain BFS — back-compat.
-    network_path = demand_path.parent / "network.xml"
-    restrictions = parse_turn_restrictions(network_path)
+    # Phase 14: when the harness pre-computed routes via the shared
+    # BFS, skip the inline BFS entirely. Set up local state to mirror
+    # the legacy path's logging so downstream observers see the same
+    # counters either way.
+    using_shared_routes = canonical_routes is not None
     forbidden_moves: dict = {}
-    if restrictions:
-        # Build outgoing-links-by-node for `only_*_turn` expansion.
-        outgoing_links_by_node: dict = {}
-        for u, neighbors in graph.adjacency.items():
-            outgoing_links_by_node[u] = [
-                graph.edge_lookup[(u, v)].id
-                for v in neighbors
-                if (u, v) in graph.edge_lookup
-            ]
-        forbidden_moves = build_forbidden_moves(restrictions, outgoing_links_by_node)
+    network_path = demand_path.parent / "network.xml"
+    if not using_shared_routes:
+        # Load OSM turn restrictions (V5+). Pre-V5 networks return
+        # empty list, in which case state-aware BFS reduces to plain
+        # BFS — back-compat.
+        restrictions = parse_turn_restrictions(network_path)
+        if restrictions:
+            # Build outgoing-links-by-node for `only_*_turn` expansion.
+            outgoing_links_by_node: dict = {}
+            for u, neighbors in graph.adjacency.items():
+                outgoing_links_by_node[u] = [
+                    graph.edge_lookup[(u, v)].id
+                    for v in neighbors
+                    if (u, v) in graph.edge_lookup
+                ]
+            forbidden_moves = build_forbidden_moves(restrictions, outgoing_links_by_node)
+            logger.info(
+                "[sumo] state-aware BFS: %d turn restrictions, %d forbidden (via,from)→to entries",
+                len(restrictions), len(forbidden_moves),
+            )
+    else:
         logger.info(
-            "[sumo] state-aware BFS: %d turn restrictions, %d forbidden (via,from)→to entries",
-            len(restrictions), len(forbidden_moves),
+            "[sumo] using pre-computed canonical routes (Phase 14): "
+            "%d trips routed via shared BFS",
+            len(canonical_routes),
         )
 
     route_failures: List[str] = []
@@ -487,12 +514,14 @@ def build_sumo_routes_xml(
             dest = (row.get("destination_node_id") or "").strip()
             depart = (row.get("departure_time_s") or "").strip()
 
-            # State-aware BFS first (V5+); fall back to plain BFS if no
-            # restriction-respecting path exists. The fallback rate is
-            # near-zero on real OSM (turn restrictions typically force
-            # detours, not disconnections) but log the count so any spike
-            # is visible in --verbose mode.
-            if forbidden_moves:
+            # Phase 14: consume pre-computed routes when available;
+            # otherwise run the legacy inline BFS. The pre-computed
+            # routes are byte-identical to what the inline BFS would
+            # produce per trip_id (pinned by
+            # tests/test_canonical_routes.py::TestByteIdentityVsLegacy).
+            if using_shared_routes:
+                path_nodes = canonical_routes.get(trip_id) or None
+            elif forbidden_moves:
                 path_nodes = shortest_path_with_restrictions(
                     origin=origin, dest=dest,
                     adjacency=graph.adjacency,
@@ -561,7 +590,11 @@ def build_sumo_routes_xml(
 # Public entrypoint
 # ---------------------------------------------------------------------------
 
-def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummary:
+def prepare_sumo_inputs(
+    scenario_root: Path,
+    output_dir: Path,
+    canonical_routes: Optional[Dict[str, List[str]]] = None,
+) -> ScenarioSummary:
     """
     Prepare SUMO input files for the given canonical scenario.
 
@@ -695,8 +728,13 @@ def prepare_sumo_inputs(scenario_root: Path, output_dir: Path) -> ScenarioSummar
     _feasibility.log_report(feas_report, engine="sumo")
     _feasibility.write_feasibility_report(feas_report, output_dir / "feasibility_report.json")
 
-    # Build SUMO routes
-    routes_content = build_sumo_routes_xml(summary, graph, demand_path, feasible)
+    # Build SUMO routes. Phase 14+: if the caller pre-computed canonical
+    # routes via adapters.common.canonical_routes.compute_canonical_routes,
+    # consume them here and skip the inline BFS — Phase 14.2.
+    routes_content = build_sumo_routes_xml(
+        summary, graph, demand_path, feasible,
+        canonical_routes=canonical_routes,
+    )
     routes_path = output_dir / "routes.rou.xml"
     routes_path.write_text(routes_content, encoding="utf-8")
 

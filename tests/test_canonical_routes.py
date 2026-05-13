@@ -355,6 +355,76 @@ class TestByteIdentityVsLegacy:
 
 
 # ---------------------------------------------------------------------------
+# Phase 14.2 — SUMO adapter byte-identity (with vs without canonical_routes)
+# ---------------------------------------------------------------------------
+
+
+class TestSumoRoutesXmlByteIdentity:
+    """``build_sumo_routes_xml`` must produce identical output whether
+    routes come from the inline BFS (legacy path, canonical_routes=None)
+    or from the shared pre-computed dict (Phase 14 path).
+    """
+
+    def test_routes_rou_xml_byte_identical(
+        self, bundled_scenario: Path, tmp_path: Path
+    ) -> None:
+        from adapters.common import feasibility as _feasibility
+        from adapters.sumo.sumo_adapter import (
+            build_sumo_routes_xml, parse_canonical_network, summarize_scenario,
+        )
+        from pipeline.network.scc import compute_largest_scc
+
+        # Mirror the prep_sumo_inputs SCC-filtering step so the graph
+        # we pass to build_sumo_routes_xml matches what the harness
+        # would pass at runtime.
+        summary = summarize_scenario(bundled_scenario)
+        graph = parse_canonical_network(bundled_scenario / "network.xml")
+        scc = compute_largest_scc(
+            set(graph.nodes.keys()),
+            [(lk.from_node, lk.to_node) for lk in graph.links],
+        )
+        scc_nodes = {nid: n for nid, n in graph.nodes.items() if nid in scc}
+        scc_links = [lk for lk in graph.links
+                     if lk.from_node in scc and lk.to_node in scc]
+        from adapters.sumo.sumo_adapter import NetworkGraph
+        scc_adjacency: dict = {}
+        scc_edge_lookup: dict = {}
+        for lk in scc_links:
+            scc_adjacency.setdefault(lk.from_node, []).append(lk.to_node)
+            scc_edge_lookup[(lk.from_node, lk.to_node)] = lk
+        scc_graph = NetworkGraph(
+            nodes=scc_nodes, links=scc_links,
+            adjacency=scc_adjacency, edge_lookup=scc_edge_lookup,
+        )
+
+        feasible, _ = _feasibility.feasible_trip_ids(
+            network_path=bundled_scenario / "network.xml",
+            demand_path=bundled_scenario / "demand.csv",
+            supported_modes={"car"},
+        )
+
+        # Legacy path — adapter runs its own BFS.
+        legacy_xml = build_sumo_routes_xml(
+            summary, scc_graph, bundled_scenario / "demand.csv", feasible,
+        )
+        # Phase 14 path — adapter consumes pre-computed routes.
+        routes = compute_canonical_routes(
+            scenario_dir=bundled_scenario,
+            feasible_trip_ids=feasible,
+            workers=1,
+            cache_root=tmp_path,
+        )
+        new_xml = build_sumo_routes_xml(
+            summary, scc_graph, bundled_scenario / "demand.csv", feasible,
+            canonical_routes=routes,
+        )
+        assert legacy_xml == new_xml, (
+            "SUMO routes.rou.xml diverged between legacy in-loop BFS "
+            "and Phase 14 pre-computed routes"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Phase 14.5 — multiprocessing determinism
 # ---------------------------------------------------------------------------
 
