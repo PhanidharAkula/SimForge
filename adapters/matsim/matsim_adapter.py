@@ -370,27 +370,39 @@ def build_matsim_plans_xml(
     links: List,
     feasible: Set[str],
     network_path: Optional[Path] = None,
+    canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> str:
     """Build MATSim plans.xml from canonical demand.csv.
 
     Only trips in ``feasible`` (the shared cross-engine feasibility set) are
     emitted. This keeps MATSim's trip set identical to every other engine.
 
-    V5+ behavior:
-      - When ``network_path`` is provided and the canonical network.xml
-        carries an OSM `<turn_restrictions>` block, every plan is
-        pre-routed via the same state-aware BFS the SUMO adapter uses
-        (`pipeline.network.turn_restrictions.shortest_path_with_restrictions`)
-        and the resulting link sequence is written into MATSim's
-        `<route type="links">` element. MATSim then drives the prescribed
-        path verbatim instead of routing internally, so SUMO and MATSim
-        consume identical paths and the cross-engine TT comparison stays
+    Phase 14+ behavior:
+      - When ``canonical_routes`` is provided (the shared BFS output
+        from ``adapters.common.canonical_routes.compute_canonical_routes``),
+        this function skips its inline state-aware BFS pass and looks
+        up path_nodes per trip_id from the pre-computed dict. SUMO and
+        MATSim adapters share the same dict, so each scenario pays the
+        BFS cost once instead of twice.
+      - When ``canonical_routes`` is ``None`` (legacy / standalone CLI
+        usage), this function falls back to running its own state-aware
+        BFS in-loop using ``network_path`` to load turn restrictions —
+        pre-Phase-14 behavior preserved for back-compat.
+
+    V5+ state-aware BFS behavior (applies in both paths above):
+      - When the canonical network.xml carries an OSM
+        `<turn_restrictions>` block, plans are pre-routed via the same
+        state-aware BFS the SUMO adapter uses and the resulting link
+        sequence is written into MATSim's `<route type="links">`
+        element. MATSim then drives the prescribed path verbatim
+        instead of routing internally, so SUMO and MATSim consume
+        identical paths and the cross-engine TT comparison stays
         apples-to-apples while both engines respect real-world turn
         restrictions.
-      - When ``network_path`` is None or the network has no
-        ``<turn_restrictions>`` block (legacy bundles, synthetic
-        networks), MATSim is left to do its own routing on its
-        MATSim-format network — pre-V5 behavior preserved as fallback.
+      - When the network has no ``<turn_restrictions>`` block (legacy
+        bundles, synthetic networks), MATSim is left to do its own
+        routing on its MATSim-format network — pre-V5 behavior
+        preserved as fallback.
     """
     from pipeline.network.turn_restrictions import (
         parse_turn_restrictions, build_forbidden_moves,
@@ -421,21 +433,32 @@ def build_matsim_plans_xml(
         for link in valid_links
     }
 
-    # Load OSM turn restrictions (V5+) when network_path is provided.
-    restrictions = parse_turn_restrictions(network_path) if network_path else []
+    # Phase 14: when the harness pre-computed routes via the shared
+    # BFS, skip the inline turn-restriction BFS setup entirely. Track
+    # the flag so the per-trip loop below picks the right code path.
+    using_shared_routes = canonical_routes is not None
     forbidden_moves: dict = {}
-    if restrictions:
-        outgoing_links_by_node: dict = {}
-        for u, neighbors in link_adjacency.items():
-            outgoing_links_by_node[u] = [
-                edge_lookup[(u, v)].id for v in neighbors
-                if (u, v) in edge_lookup
-            ]
-        forbidden_moves = build_forbidden_moves(restrictions, outgoing_links_by_node)
+    if not using_shared_routes:
+        # Load OSM turn restrictions (V5+) when network_path is provided.
+        restrictions = parse_turn_restrictions(network_path) if network_path else []
+        if restrictions:
+            outgoing_links_by_node: dict = {}
+            for u, neighbors in link_adjacency.items():
+                outgoing_links_by_node[u] = [
+                    edge_lookup[(u, v)].id for v in neighbors
+                    if (u, v) in edge_lookup
+                ]
+            forbidden_moves = build_forbidden_moves(restrictions, outgoing_links_by_node)
+            logger.info(
+                "[matsim] state-aware BFS: %d turn restrictions, "
+                "%d forbidden (via,from)→to entries",
+                len(restrictions), len(forbidden_moves),
+            )
+    else:
         logger.info(
-            "[matsim] state-aware BFS: %d turn restrictions, "
-            "%d forbidden (via,from)→to entries",
-            len(restrictions), len(forbidden_moves),
+            "[matsim] using pre-computed canonical routes (Phase 14): "
+            "%d trips routed via shared BFS",
+            len(canonical_routes),
         )
 
     missing_link = 0
@@ -469,9 +492,14 @@ def build_matsim_plans_xml(
                 missing_link += 1
                 continue
 
-            # Pre-route when restrictions are present so MATSim respects them.
+            # Pre-route when restrictions are present (or when the
+            # harness pre-computed canonical routes — Phase 14) so
+            # MATSim drives the prescribed path verbatim.
             route_link_ids: Optional[List[str]] = None
-            if forbidden_moves:
+            path_nodes: Optional[List[str]] = None
+            if using_shared_routes:
+                path_nodes = canonical_routes.get(trip_id) or None
+            elif forbidden_moves:
                 path_nodes = shortest_path_with_restrictions(
                     origin=origin, dest=dest,
                     adjacency=link_adjacency,
@@ -480,14 +508,14 @@ def build_matsim_plans_xml(
                 )
                 if path_nodes is None:
                     restriction_fallbacks += 1
-                else:
-                    route_link_ids = [
-                        edge_lookup[(u, v)].id
-                        for u, v in zip(path_nodes[:-1], path_nodes[1:])
-                        if (u, v) in edge_lookup
-                    ]
-                    if route_link_ids:
-                        pre_routed += 1
+            if path_nodes is not None:
+                route_link_ids = [
+                    edge_lookup[(u, v)].id
+                    for u, v in zip(path_nodes[:-1], path_nodes[1:])
+                    if (u, v) in edge_lookup
+                ]
+                if route_link_ids:
+                    pre_routed += 1
 
             end_time = seconds_to_time_string(depart_seconds)
             person_id = f"person_{trip_id}"
@@ -691,17 +719,24 @@ def prepare_matsim_inputs(
     scenario_path: str | Path,
     output_dir: str | Path,
     config: Optional[MATSimConfig] = None,
-    random_seed: int = 42
+    random_seed: int = 42,
+    canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> Path:
     """
     Prepare inputs for MATSim simulation.
-    
+
     Args:
         scenario_path: Path to canonical scenario bundle
         output_dir: Output directory for generated files
         config: MATSim configuration options
         random_seed: Random seed for simulation
-        
+        canonical_routes: Phase 14+ optional pre-computed shared BFS
+            routes (``Dict[trip_id, List[node_id]]``). When provided,
+            the inline state-aware BFS in build_matsim_plans_xml is
+            skipped; the plans consume these routes directly. When
+            ``None`` (default / legacy), MATSim's plan builder runs
+            its own BFS.
+
     Returns:
         Path to the generated MATSim config file
     """
@@ -751,10 +786,13 @@ def prepare_matsim_inputs(
     # Convert demand to plans (only feasible trips; subset matches every engine).
     # Pass `network_path` so V5+ turn-restriction enforcement can pre-route
     # via the same state-aware BFS the SUMO adapter uses (cross-engine
-    # paths align when restrictions are present).
+    # paths align when restrictions are present). Phase 14+: when the
+    # harness pre-computed routes via the shared canonical_routes
+    # module, pass them in to skip the inline BFS entirely.
     logger.info("Converting demand to MATSim plans...")
     plans_xml = build_matsim_plans_xml(
         demand_path, links, feasible, network_path=network_path,
+        canonical_routes=canonical_routes,
     )
     plans_out = output_dir / "plans.xml"
     plans_out.write_text(plans_xml, encoding="utf-8")

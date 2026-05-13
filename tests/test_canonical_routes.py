@@ -425,6 +425,63 @@ class TestSumoRoutesXmlByteIdentity:
 
 
 # ---------------------------------------------------------------------------
+# Phase 14.3 — MATSim adapter byte-identity (with vs without canonical_routes)
+# ---------------------------------------------------------------------------
+
+
+class TestMatsimPlansXmlByteIdentity:
+    """``build_matsim_plans_xml`` must produce identical output whether
+    routes come from the inline BFS (legacy path, canonical_routes=None)
+    or from the shared pre-computed dict (Phase 14 path).
+    """
+
+    def test_plans_xml_byte_identical(
+        self, bundled_scenario: Path, tmp_path: Path
+    ) -> None:
+        from adapters.common import feasibility as _feasibility
+        from adapters.matsim.matsim_adapter import (
+            build_matsim_plans_xml, clean_network, load_canonical_network,
+        )
+
+        # Mirror what prepare_matsim_inputs does: load network, SCC-prune
+        # via clean_network, then pass `links` to build_matsim_plans_xml.
+        nodes, links = load_canonical_network(bundled_scenario / "network.xml")
+        nodes, links, _ = clean_network(nodes, links)
+
+        feasible, _ = _feasibility.feasible_trip_ids(
+            network_path=bundled_scenario / "network.xml",
+            demand_path=bundled_scenario / "demand.csv",
+            supported_modes={"car"},
+        )
+
+        # Legacy path — adapter runs its own BFS.
+        legacy_xml = build_matsim_plans_xml(
+            demand_path=bundled_scenario / "demand.csv",
+            links=links,
+            feasible=feasible,
+            network_path=bundled_scenario / "network.xml",
+        )
+        # Phase 14 path — adapter consumes pre-computed routes.
+        routes = compute_canonical_routes(
+            scenario_dir=bundled_scenario,
+            feasible_trip_ids=feasible,
+            workers=1,
+            cache_root=tmp_path,
+        )
+        new_xml = build_matsim_plans_xml(
+            demand_path=bundled_scenario / "demand.csv",
+            links=links,
+            feasible=feasible,
+            network_path=bundled_scenario / "network.xml",
+            canonical_routes=routes,
+        )
+        assert legacy_xml == new_xml, (
+            "MATSim plans.xml diverged between legacy in-loop BFS "
+            "and Phase 14 pre-computed routes"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Phase 14.5 — multiprocessing determinism
 # ---------------------------------------------------------------------------
 
