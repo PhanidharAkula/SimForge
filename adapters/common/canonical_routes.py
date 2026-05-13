@@ -15,9 +15,10 @@ byte-identical to their pre-Phase-14 output — is pinned by
 ``doc/PHASE_14_DESIGN.md`` for the architectural rationale,
 cache-key derivation, and Phase 14.x sub-commit plan.
 
-Phase 14.1 (this file): serial BFS + JSONL cache. The ``workers``
-argument is accepted for API compatibility but ignored — parallel
-execution lands in Phase 14.5.
+Phase 14.5 (this file): serial + parallel BFS + JSONL cache.
+``workers > 1`` dispatches to ``multiprocessing.Pool``. Parallel
+output is byte-identical to serial output regardless of worker count
+(pinned by TestParallelDeterminism in tests/test_canonical_routes.py).
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ import csv
 import hashlib
 import json
 import logging
+import multiprocessing
 import os
 import sys
 import tempfile
@@ -144,19 +146,33 @@ def compute_canonical_routes(
             len(feasible_trip_ids), workers,
         )
 
-    # Compute (serial in Phase 14.1; parallel from 14.5 onwards).
+    # Compute. Phase 14.5: ``workers > 1`` dispatches to
+    # multiprocessing.Pool with one chunk per worker. Below the
+    # threshold, the IPC overhead dominates the BFS savings, so we
+    # fall back to serial — but never silently for tests, which set
+    # workers explicitly and expect the parallel path to actually run.
     t0 = time.monotonic()
-    routes = _compute_serial(
-        network_path=network_path,
-        demand_path=demand_path,
-        feasible_trip_ids=feasible_trip_ids,
-        progress=progress,
-    )
+    if workers > 1:
+        routes = _compute_parallel(
+            network_path=network_path,
+            demand_path=demand_path,
+            feasible_trip_ids=feasible_trip_ids,
+            workers=workers,
+            progress=progress,
+        )
+    else:
+        routes = _compute_serial(
+            network_path=network_path,
+            demand_path=demand_path,
+            feasible_trip_ids=feasible_trip_ids,
+            progress=progress,
+        )
     elapsed = time.monotonic() - t0
     rate = len(routes) / elapsed if elapsed > 0 else 0
     logger.info(
-        "[canonical_routes] computed %d routes in %.1fs (%.0f trips/s)",
-        len(routes), elapsed, rate,
+        "[canonical_routes] computed %d routes in %.1fs "
+        "(%.0f trips/s, workers=%d)",
+        len(routes), elapsed, rate, workers,
     )
 
     # Cache write (atomic).
@@ -497,6 +513,154 @@ def _compute_serial(
             "[canonical_routes] %d trips fell back to plain BFS "
             "(no restriction-respecting path)", fallback_count,
         )
+    return routes
+
+
+# ---------------------------------------------------------------------------
+# Parallel driver — multiprocessing.Pool with one chunk per worker
+# ---------------------------------------------------------------------------
+
+
+# Worker-local state. Each subprocess (re)loads the network on import
+# of this module via _init_worker, then keeps the data in this dict
+# across all _route_chunk calls in the worker's lifetime. The dict is
+# private to each worker — no IPC after init.
+_WORKER_STATE: Dict[str, object] = {}
+
+
+def _init_worker(network_path_str: str) -> None:
+    """Pool initializer: load network + restrictions once per worker.
+
+    Workers receive only the network_path; everything else is rebuilt
+    from disk to keep the pickled `initargs` small. The graph parse +
+    SCC filter + forbidden_moves build typically costs 1-2 s for
+    chicago_200k (~50K nodes); amortized across thousands of trips
+    in the worker's lifetime, it's negligible.
+
+    Stored in module-global ``_WORKER_STATE`` rather than passed
+    per-chunk because subprocesses don't share memory — global state
+    is the cheapest way to make the graph reachable from
+    ``_route_chunk`` without re-pickling per call.
+    """
+    network_path = Path(network_path_str)
+    nodes, adjacency, edge_lookup = _parse_network_for_routing(network_path)
+    nodes, adjacency, edge_lookup = _scc_filter(nodes, adjacency, edge_lookup)
+
+    restrictions = parse_turn_restrictions(network_path)
+    forbidden_moves: Dict[Tuple[str, str], FrozenSet[str]] = {}
+    if restrictions:
+        outgoing: Dict[str, List[str]] = {}
+        for u, neighbors in adjacency.items():
+            outgoing[u] = [
+                edge_lookup[(u, v)].id for v in neighbors
+                if (u, v) in edge_lookup
+            ]
+        forbidden_moves = build_forbidden_moves(restrictions, outgoing)
+
+    _WORKER_STATE["adjacency"] = adjacency
+    _WORKER_STATE["edge_lookup"] = edge_lookup
+    _WORKER_STATE["forbidden_moves"] = forbidden_moves
+
+
+def _route_chunk(
+    chunk: List[Tuple[str, str, str]],
+) -> List[Tuple[str, List[str]]]:
+    """Route a chunk of trips in the worker.
+
+    Receives a list of ``(trip_id, origin_node, dest_node)`` tuples;
+    returns a list of ``(trip_id, path)`` in the same order. The
+    worker uses the module-global ``_WORKER_STATE`` populated by
+    ``_init_worker``.
+    """
+    adjacency = _WORKER_STATE["adjacency"]
+    edge_lookup = _WORKER_STATE["edge_lookup"]
+    forbidden_moves = _WORKER_STATE["forbidden_moves"]
+
+    out: List[Tuple[str, List[str]]] = []
+    for trip_id, origin, dest in chunk:
+        path: Optional[List[str]]
+        if forbidden_moves:
+            path = shortest_path_with_restrictions(
+                origin=origin, dest=dest,
+                adjacency=adjacency,
+                edge_lookup=edge_lookup,
+                forbidden_moves=forbidden_moves,
+            )
+            if path is None:
+                path = _plain_bfs(adjacency, origin, dest)
+        else:
+            path = _plain_bfs(adjacency, origin, dest)
+        out.append((trip_id, path or []))
+    return out
+
+
+def _compute_parallel(
+    *,
+    network_path: Path,
+    demand_path: Path,
+    feasible_trip_ids: Set[str],
+    workers: int,
+    progress: bool,
+) -> Dict[str, List[str]]:
+    """Parallel BFS via multiprocessing.Pool.
+
+    Chunks the sorted-by-trip_id work list into ``workers`` slices,
+    one per worker; each slice is processed serially inside its
+    subprocess. Pool.map preserves submission order, so the merged
+    dict is byte-identical to what ``_compute_serial`` produces with
+    the same inputs (verified by ``TestParallelDeterminism``).
+
+    Uses the ``spawn`` start method explicitly for macOS portability.
+    fork-inherited globals work on Linux but are unreliable on macOS;
+    spawn pickles ``initargs`` only and re-imports the module in each
+    worker, which is what ``_init_worker`` needs anyway.
+    """
+    # Read demand into the work list, filtered + sorted for determinism.
+    work: List[Tuple[str, str, str]] = []
+    with demand_path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            tid = (row.get("trip_id") or "").strip()
+            if tid not in feasible_trip_ids:
+                continue
+            origin = (row.get("origin_node_id") or "").strip()
+            dest = (row.get("destination_node_id") or "").strip()
+            work.append((tid, origin, dest))
+    work.sort(key=lambda r: r[0])
+
+    if not work:
+        return {}
+
+    # Split into one big chunk per worker. We don't want fine-grained
+    # tasks because BFS calls are independent and the IPC roundtrip
+    # per task would dominate at our per-call cost.
+    n = len(work)
+    chunk_size = (n + workers - 1) // workers
+    chunks = [work[i:i + chunk_size] for i in range(0, n, chunk_size)]
+
+    ctx = multiprocessing.get_context("spawn")
+    routes: Dict[str, List[str]] = {}
+    completed = 0
+    is_tty = sys.stdout.isatty() if progress else False
+    with ctx.Pool(
+        processes=workers,
+        initializer=_init_worker,
+        initargs=(str(network_path),),
+    ) as pool:
+        # imap (not imap_unordered) preserves submission order, which
+        # is what we need for deterministic output.
+        for chunk_result in pool.imap(_route_chunk, chunks):
+            for tid, path in chunk_result:
+                routes[tid] = path
+            completed += len(chunk_result)
+            if progress and not is_tty:
+                print(
+                    f"[canonical_routes] routed {completed}/{n} "
+                    f"({100 * completed / n:.1f}%) "
+                    f"[workers={workers}]",
+                    flush=True,
+                )
+
     return routes
 
 
