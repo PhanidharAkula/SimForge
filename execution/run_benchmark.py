@@ -281,8 +281,12 @@ class BenchmarkHarness:
 
         cache_root = self._scoped_base(scenario_id) / ".canonical_routes"
         workers = self._bfs_worker_count()
-        logger.info(
-            "Computing canonical routes for %s (workers=%d, cache=%s)",
+        # WARNING level so the BFS-prep banner is visible without
+        # --verbose (mirrors the existing convention in
+        # adapters/common/canonical_routes.py: BFS lifecycle events
+        # are always-on, INFO is reserved for verbose-only chatter).
+        logger.warning(
+            "[bfs] start      : scenario=%s workers=%d cache=%s",
             scenario_id, workers, cache_root,
         )
         routes = compute_canonical_routes_for_scenario(

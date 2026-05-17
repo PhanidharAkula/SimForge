@@ -29,7 +29,6 @@ import json
 import logging
 import multiprocessing
 import os
-import sys
 import tempfile
 import time
 from collections import deque
@@ -46,18 +45,46 @@ from pipeline.network.turn_restrictions import (
     shortest_path_with_restrictions,
 )
 
-logger = logging.getLogger(__name__)
-
-
 # Cache schema version. Bump when changing how routes are computed or
 # stored on disk; the version is part of the cache key, so a bump
 # invalidates every existing cache file in one go.
 _CACHE_SCHEMA_VERSION = 1
 
-# Periodic-print interval when stdout is redirected (no TTY for
-# tqdm-style progress bars). Trades log noise for visibility — at
-# 5,000 trips per line, chicago_200k_car emits 40 progress lines.
-_PROGRESS_EVERY_NON_TTY = 5_000
+# Minimum wall-clock seconds between progress emissions. We rate-limit
+# by time rather than by trip count so the heartbeat is meaningful on
+# both fast hardware (would otherwise flood the log) and slow hardware
+# (where trip-count thresholds emit too infrequently). The 10 s cap
+# yields about one progress line per ~5 minutes on a 200K bundle at
+# ~10 trips/s parallel, and about one per minute on a 1K bundle at
+# 30+ trips/s serial — both readable.
+_PROGRESS_INTERVAL_S = 10.0
+
+# Progress lines are emitted at WARNING level so they're visible
+# without --verbose. WARNING isn't a semantic complaint here — it's
+# the only stdlib level that the StickyProgress capture_logs handler
+# always routes above the sticky bar regardless of the user's
+# verbosity choice. (The harness drops the threshold to INFO when
+# --verbose is set, but progress should be visible either way.)
+_BFS_LOGGER_NAME = "adapters.common.canonical_routes"
+logger = logging.getLogger(_BFS_LOGGER_NAME)
+
+
+def _fmt_dur(seconds: float) -> str:
+    """Format seconds as `Xs` / `Xm YYs` / `Xh YYm` for log readability."""
+    s = int(seconds)
+    if s < 60:
+        return f"{s}s"
+    if s < 3600:
+        m, s = divmod(s, 60)
+        return f"{m}m {s:02d}s"
+    h, rem = divmod(s, 3600)
+    m = rem // 60
+    return f"{h}h {m:02d}m"
+
+
+def _fmt_int(n: int) -> str:
+    """1234 → '1,234'. Aligns columns visually in the log."""
+    return f"{n:,}"
 
 
 # ---------------------------------------------------------------------------
@@ -136,14 +163,14 @@ def compute_canonical_routes(
         cache_file = cache_root / f"canonical_routes_{cache_key}.jsonl"
         cached = _load_cache(cache_file, expected_count=len(feasible_trip_ids))
         if cached is not None:
-            logger.info(
-                "[canonical_routes] cache hit: %d routes from %s",
-                len(cached), cache_file.name,
+            logger.warning(
+                "[bfs] cache hit  : %s routes loaded from %s",
+                _fmt_int(len(cached)), cache_file.name,
             )
             return cached
-        logger.info(
-            "[canonical_routes] cache miss; computing %d routes (workers=%d)",
-            len(feasible_trip_ids), workers,
+        logger.warning(
+            "[bfs] cache miss : computing %s routes  (workers=%d)",
+            _fmt_int(len(feasible_trip_ids)), workers,
         )
 
     # Compute. Phase 14.5: ``workers > 1`` dispatches to
@@ -169,18 +196,17 @@ def compute_canonical_routes(
         )
     elapsed = time.monotonic() - t0
     rate = len(routes) / elapsed if elapsed > 0 else 0
-    logger.info(
-        "[canonical_routes] computed %d routes in %.1fs "
-        "(%.0f trips/s, workers=%d)",
-        len(routes), elapsed, rate, workers,
+    logger.warning(
+        "[bfs] done       : %s routes in %s  (%.0f trips/s, workers=%d)",
+        _fmt_int(len(routes)), _fmt_dur(elapsed), rate, workers,
     )
 
     # Cache write (atomic).
     if cache_file is not None:
         _write_cache(cache_file, routes, cache_key)
-        logger.info(
-            "[canonical_routes] cached %d routes -> %s",
-            len(routes), cache_file,
+        logger.warning(
+            "[bfs] cached     : %s routes -> %s",
+            _fmt_int(len(routes)), cache_file.name,
         )
 
     return routes
@@ -456,10 +482,9 @@ def _compute_serial(
                 if (u, v) in edge_lookup
             ]
         forbidden_moves = build_forbidden_moves(restrictions, outgoing)
-        logger.info(
-            "[canonical_routes] state-aware BFS active: "
-            "%d turn restrictions, %d forbidden (via,from)->to entries",
-            len(restrictions), len(forbidden_moves),
+        logger.warning(
+            "[bfs] state-aware: %d turn restrictions, %s forbidden moves",
+            len(restrictions), _fmt_int(len(forbidden_moves)),
         )
 
     # Read the demand once into a list of (trip_id, origin, dest)
@@ -481,8 +506,9 @@ def _compute_serial(
 
     routes: Dict[str, List[str]] = {}
     total = len(work)
-    is_tty = sys.stdout.isatty() if progress else False
     fallback_count = 0
+    bfs_start = time.monotonic()
+    last_progress_at = bfs_start
     for i, (tid, origin, dest) in enumerate(work, start=1):
         path: Optional[List[str]]
         if forbidden_moves:
@@ -499,21 +525,46 @@ def _compute_serial(
             path = _plain_bfs(adjacency, origin, dest)
         routes[tid] = path or []
 
-        # Progress emission. TTY case piggybacks on the existing
-        # StickyProgress mechanic via a lazy import; non-TTY (SBATCH)
-        # case emits a periodic log line so tail -f shows something.
-        if progress and i % _PROGRESS_EVERY_NON_TTY == 0 and not is_tty:
-            print(
-                f"[canonical_routes] routed {i}/{total} ({100*i/total:.1f}%)",
-                flush=True,
-            )
+        # Progress: emit a structured heartbeat every _PROGRESS_INTERVAL_S
+        # wall-clock seconds (not every N trips — wall-clock rate gives a
+        # stable cadence across hardware speeds). Routed via logger so
+        # StickyProgress.print_above() puts it cleanly above the sticky
+        # bar instead of competing with the bar's TTY writes.
+        now = time.monotonic()
+        if progress and (now - last_progress_at) >= _PROGRESS_INTERVAL_S:
+            _emit_progress(i, total, bfs_start, now, workers=1)
+            last_progress_at = now
 
     if fallback_count:
-        logger.info(
-            "[canonical_routes] %d trips fell back to plain BFS "
-            "(no restriction-respecting path)", fallback_count,
+        logger.warning(
+            "[bfs] fallback   : %s trips used plain BFS (no restriction-respecting path)",
+            _fmt_int(fallback_count),
         )
     return routes
+
+
+def _emit_progress(
+    routed: int, total: int, bfs_start: float, now: float, workers: int,
+) -> None:
+    """Single column-aligned progress line. Format:
+
+        [bfs] progress  :   53,028/200,000 (26.5%)  ⏱  8h 30m   2,937 trips/s  w=16
+
+    Width-aligned so successive lines stack cleanly in any log viewer.
+    """
+    elapsed = now - bfs_start
+    rate = routed / elapsed if elapsed > 0 else 0.0
+    pct = 100.0 * routed / total if total else 100.0
+    # Number widths: routed is at most total, so align to total's width
+    # plus the thousands separators that _fmt_int introduces.
+    routed_str = _fmt_int(routed)
+    total_str = _fmt_int(total)
+    width = len(total_str)
+    logger.warning(
+        "[bfs] progress   : %*s/%s (%5.1f%%)  elapsed %-9s %6.0f trips/s  w=%d",
+        width, routed_str, total_str, pct,
+        _fmt_dur(elapsed), rate, workers,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -641,7 +692,8 @@ def _compute_parallel(
     ctx = multiprocessing.get_context("spawn")
     routes: Dict[str, List[str]] = {}
     completed = 0
-    is_tty = sys.stdout.isatty() if progress else False
+    bfs_start = time.monotonic()
+    last_progress_at = bfs_start
     with ctx.Pool(
         processes=workers,
         initializer=_init_worker,
@@ -653,13 +705,10 @@ def _compute_parallel(
             for tid, path in chunk_result:
                 routes[tid] = path
             completed += len(chunk_result)
-            if progress and not is_tty:
-                print(
-                    f"[canonical_routes] routed {completed}/{n} "
-                    f"({100 * completed / n:.1f}%) "
-                    f"[workers={workers}]",
-                    flush=True,
-                )
+            now = time.monotonic()
+            if progress and (now - last_progress_at) >= _PROGRESS_INTERVAL_S:
+                _emit_progress(completed, n, bfs_start, now, workers=workers)
+                last_progress_at = now
 
     return routes
 

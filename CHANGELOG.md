@@ -8,6 +8,74 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14.7: Output polish — unified sticky bar, structured BFS logs (2026-05-12)
+
+**Symptom.** Phase 14.5's output mixed three different progress styles
+in the same SBATCH log: SUMO's `\r`-mangled in-line ProgressBar
+(appended into one giant line in `.out`), MATSim's WARNING-level
+periodic heartbeat (in `.err`), and Phase 14's `print(... flush=True)`
+emissions bypassing both. Readers had to grep across two files in two
+formats to understand a single run.
+
+**Fix.** Single source of progress (the existing `StickyProgress`
+sticky bar from `pipeline/progress.py`) with structured WARNING-level
+log lines flowing above it via `StickyProgress.capture_logs=True`
+(already supported by the harness for `--verbose` and default modes
+alike). All emissions now share the `[bfs]` prefix, fixed-width
+column alignment, and wall-clock-rate-limited cadence (one heartbeat
+every 10 s regardless of trip rate). The `print()` calls that were
+bypassing StickyProgress are gone.
+
+**New unified output format (under sticky bar, both TTY and SBATCH):**
+
+```
+WARNING  [bfs] start      : scenario=chicago_200k_car workers=16 cache=runs/.../canonical_routes
+WARNING  [bfs] cache miss : computing 200,000 routes  (workers=16)
+WARNING  [bfs] state-aware: 4127 turn restrictions, 11,843 forbidden moves
+WARNING  [bfs] progress   :  12,500/200,000 ( 6.3%)  elapsed 30s          417 trips/s  w=16
+WARNING  [bfs] progress   :  25,000/200,000 (12.5%)  elapsed 1m 00s       417 trips/s  w=16
+   ...
+WARNING  [bfs] progress   : 200,000/200,000 (100.0%)  elapsed 8h 00m      693 trips/s  w=16
+WARNING  [bfs] done       : 200,000 routes in 8h 00m  (693 trips/s, workers=16)
+WARNING  [bfs] cached     : 200,000 routes -> canonical_routes_a3f7c8....jsonl
+INFO     [sumo] using pre-routed canonical paths: 200000 trips
+   [ 1/10]  sumo    meso  seed=42  ✓   20089.7s wall  ( 242.3s engine)
+```
+
+The `[ 1/10]` cell-tape lines and the `[bfs]` BFS heartbeats both
+flow above the same sticky bar via `StickyProgress.print_above()`,
+and the sticky bar at the bottom shows the live spinner + percentage
++ ✓/✗ counters as before. No competing progress mechanisms; one
+unified visual.
+
+**File changes:**
+
+- `adapters/common/canonical_routes.py`:
+  - Removed direct `print()` calls; everything goes through
+    `logger.warning("[bfs] ...")`.
+  - New `_emit_progress(routed, total, bfs_start, now, workers)`
+    helper produces the column-aligned progress line; called from
+    both `_compute_serial` and `_compute_parallel` paths.
+  - Rate-limited by wall clock (`_PROGRESS_INTERVAL_S = 10s`) instead
+    of trip count — gives stable cadence on any hardware speed.
+  - Added `_fmt_dur(seconds)` and `_fmt_int(n)` helpers for consistent
+    formatting matching `pipeline/progress.py:_fmt_dur`.
+  - Removed unused `import sys`.
+- `execution/run_benchmark.py:_canonical_routes_for`:
+  - `logger.info` → `logger.warning` for the "start" banner so it's
+    visible without `--verbose` (matches the BFS-lifecycle convention
+    in the new module).
+  - Banner format: `[bfs] start      : scenario=... workers=... cache=...`.
+- `adapters/sumo/sumo_adapter.py` + `adapters/matsim/matsim_adapter.py`:
+  - Pre-routed-paths confirmation message shortened to one line:
+    `[sumo|matsim] using pre-routed canonical paths: N trips`.
+
+**Verification.** 23/23 tests pass (11 canonical_routes contract
+tests + 12 harness cache-management tests). Local visual smoke on
+chicago_1k_car (workers=4) produced exactly the expected output:
+cache-miss banner → progress at 100% → done → cached path. Re-running
+hits the cache and prints a single `[bfs] cache hit` line.
+
 ### Phase 14: Canonical routes + parallel BFS (2026-05-12)
 
 **Status.** Implementation complete on branch `phase-14-canonical-routes`.

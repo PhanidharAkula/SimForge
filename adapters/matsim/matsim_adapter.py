@@ -456,8 +456,7 @@ def build_matsim_plans_xml(
             )
     else:
         logger.info(
-            "[matsim] using pre-computed canonical routes (Phase 14): "
-            "%d trips routed via shared BFS",
+            "[matsim] using pre-routed canonical paths: %d trips",
             len(canonical_routes),
         )
 

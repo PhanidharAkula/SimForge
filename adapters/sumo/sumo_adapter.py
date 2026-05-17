@@ -492,8 +492,7 @@ def build_sumo_routes_xml(
             )
     else:
         logger.info(
-            "[sumo] using pre-computed canonical routes (Phase 14): "
-            "%d trips routed via shared BFS",
+            "[sumo] using pre-routed canonical paths: %d trips",
             len(canonical_routes),
         )
 
