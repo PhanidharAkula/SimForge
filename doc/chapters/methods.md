@@ -1215,8 +1215,7 @@ canonical-routes JSONL cache file is itself byte-deterministic
 
 ### 3.8.4 Measured Speedup
 
-Local measurement on chicago_1k_car (M-series Mac, single-bundle
-cold start, no on-disk cache):
+**Local serial-vs-parallel calibration (chicago_1k_car, M-series Mac):**
 
 | Worker count | Wall (s) | Speedup |
 |---|---|---|
@@ -1226,13 +1225,34 @@ cold start, no on-disk cache):
 | 8 |  6.6 | 4.12× |
 
 Sub-linear scaling at 1K trips reflects the per-worker init cost
-(parsing the network, building the forbidden-moves table) which
-does not amortize over only ~125–500 trips per worker. At the
-200K/500K cluster scales, the per-worker init cost is dwarfed by
-the in-worker BFS time (12.5K–31K trips per worker at 16-way), so
-the Amdahl ratio is much closer to ideal. Cluster re-measurement
-on Cardinal is recorded as a future addendum to `CHANGELOG.md`
-Phase 14 once the next `benchmark_large` run lands.
+(parsing the network, building the forbidden-moves table) which does
+not amortize over only ~125–500 trips per worker. At the cluster
+scale these init costs are dwarfed by the in-worker BFS time
+(12.5K–31K trips per worker at 16-way), so the Amdahl ratio is
+much closer to ideal.
+
+**Cluster Phase 13 baseline — chicago_200k_car on Cardinal (job
+9332478, 2026-05-12 to 2026-05-18):**
+
+| Step | Wall | Notes |
+|---|---|---|
+| Cold SUMO BFS-prep (cell 1/10) | ~68.2 h | 200,000 trips × ~1.226 s/trip, single-thread |
+| Cached SUMO mobsim cells (2–5 / 10) | ~242–246 s each | hardlink from `.cache/sumo/` (Phase 12) |
+| Cold MATSim BFS-prep (cell 6/10) | ~68 h | second pass over the same network (the redundancy Phase 14a eliminates) |
+| Cached MATSim mobsim cells (7–10 / 10) | ~210 s each | |
+| analyze + audit + plots | ~10 min | |
+| **Total wall** | **141.87 h** | of 168 h cap (15.5 % margin) |
+
+The two cold BFS passes consume ~136 h of the 141.87 h total — **96 %
+of the run was per-trip BFS routing**. This is the empirical signal
+that motivated the Phase 14 refactor.
+
+**Cluster Phase 14 re-measurement** (jobs 9954279 chicago_200k + 9954287
+nyc_500k, submitted 2026-05-18 14:30 EDT) is pending. Expected post-
+Phase-14 walls per the Amdahl extrapolation: ~5–8 h chicago_200k_car,
+~20–30 h nyc_500k_car. The post-landing numbers replace this paragraph
+with the measured-speedup table; see `CHANGELOG.md` Phase 14.9 (post-
+landing) for the full diff.
 
 ### 3.8.5 Engineering Implications
 

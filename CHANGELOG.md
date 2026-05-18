@@ -8,6 +8,50 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14.8: Phase 13 baseline measured on Cardinal — chicago_200k_car (2026-05-18)
+
+**Job 9332478 completed cleanly** at 2026-05-18 14:09:09 EDT after **5d 21h 51m 58s (141.87 h)** of wall on Cardinal `cpu` partition (Xeon Max 9470, 16 cores allocated, single core used for BFS; MaxRSS 23.28 GB out of 72 GB). This is the **pre-Phase-14 baseline** the canonical-routes refactor measures against.
+
+**Wall-time breakdown (from the cell-tape lines):**
+
+| Cell | Engine | Seed | Wall | Engine | Implied prep |
+|---|---|---|---|---|---|
+| [1/10] | sumo | 42 | 245,606 s (68.22 h) | 242.8 s | **~68.16 h cold BFS** |
+| [2/10] | sumo | 43 | 242.5 s | 241.5 s | 1.0 s (cache hardlink) |
+| [3/10] | sumo | 44 | 243.4 s | 242.3 s | 1.1 s |
+| [4/10] | sumo | 45 | 246.2 s | 245.1 s | 1.1 s |
+| [5/10] | sumo | 46 | 246.3 s | 245.4 s | 0.9 s |
+| [6/10] | matsim | 42 | ~245,000 s | ~210 s | **~68 h cold BFS** (second pass) |
+| [7/10] | matsim | 43 | ~210 s | ~210 s | (cached) |
+| [8/10]–[10/10] | matsim | 44–46 | ~210 s each | ~210 s each | (cached) |
+
+**~136 h of the 141.87 h total (~96 %) was per-trip BFS routing** — the redundancy Phase 14a (deduplication) eliminates and Phase 14b (parallel) further compresses.
+
+**Fairness audit (Q1-Q5) all passed.** The Q4 finding is the headline result for Chapter 5:
+
+- SUMO completed **N = 116,270** trips (mean TT 8,746.4 s, P95 44,364 s)
+- MATSim completed **N = 200,000** trips (mean TT 13,555.8 s, P95 40,734 s)
+- **SUMO/MATSim mean-TT ratio = 0.645 (−35.5 %)**
+
+SUMO meso's queue model refuses vehicle insertion at congested origin-edges → 41.9 % of trips never start → mean TT biased toward the easier 58.1 % that *did* start. MATSim's queue-based mobsim holds vehicles in queue until they can advance → all 200,000 complete. Same canonical bundle, same SCC, same feasibility set, same SimForge-BFS-pre-routed paths — divergent mobsim behavior. The 35.5 % gap is the measurement, not a bug.
+
+**Reproducibility** (Tables 5.1 / 5.2 ready):
+
+| Engine | Mean engine wall | 95 % CI | Std | R-score | Rating |
+|---|---|---|---|---|---|
+| matsim meso | 209.80 s | ±12.91 s | 10.40 s | **0.9998** | Excellent |
+| sumo meso | 243.43 s | ±2.16 s | 1.74 s | **0.9879** | Good |
+
+MATSim virtually perfectly deterministic at `lastIteration=0`; SUMO meso has small seed-driven variance in completion rate at 200K (not visible at 1K-10K scales).
+
+**Demand realism** (Q5): 50/50 AM/PM split (full-day scenario), **55.8 % school-related trips** (27,929 AM HBSchool + 27,929 AM chain partners, 27,858 + 27,858 PM equivalents) — Phase 9b/9c chain mechanism producing the symmetric structure it was designed for.
+
+**Projection holds.** Pre-run wall estimate: ~137 h. Measured: 141.87 h. Within 3.6 % → the BFS-per-trip cost model is calibrated; Phase 14's ~5-8 h projection for the same workload inherits that confidence.
+
+**Phase 14 cycle launched same day.** Jobs **9954279** (chicago_200k_car re-run under Phase 14, cache wiped beforehand) and **9954287** (nyc_500k_car first attempt — pre-Phase-14 was structurally infeasible) submitted to Cardinal `cpu` at ~14:30 EDT 2026-05-18. Expected wall: ~5-8 h chicago, ~20-30 h nyc. When they land, the measured speedup goes into a Phase 14.9 addendum below.
+
+Full per-day journal: `doc/EXPERIMENT_LOG.md` 2026-05-18 entry.
+
 ### Phase 14.7: Output polish — unified sticky bar, structured BFS logs (2026-05-12)
 
 **Symptom.** Phase 14.5's output mixed three different progress styles

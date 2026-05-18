@@ -31,6 +31,12 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 | DTALite UE / queue-mobsim divergence | DTALite/MATSim ratio ≈ 0.56-0.59 across converged scales; expected behaviour (equilibrium ignores transient congestion) | §3.5 |
 | Pitzer per-scenario wallclock (chicago_1k, all 4 engines × N=5) | ~12 min (cached) | §3 (2026-05-03 entry) |
 | Pitzer benchmark_small full wall (Phase 12 BFS-prep cache, Pitzer Skylake) | ~17-22 h (la_50k worker dominates; chicago + nyc finish in ~3 min and ~3 h respectively) | §3 (2026-05-03 entry) |
+| **Cardinal benchmark_large chicago_200k_car full wall (Phase 13 baseline, single-thread BFS)** | **141.87 h (job 9332478)** | §3 (2026-05-18 entry) |
+| **Cardinal SUMO BFS-prep cold cell (chicago_200k_car)** | **~68 h, then mobsim 243 s** | §3 (2026-05-18 entry) |
+| **Cardinal MATSim BFS-prep cold cell (chicago_200k_car)** | **~68 h, then mobsim 210 s** | §3 (2026-05-18 entry) |
+| **Cardinal SUMO meso completion rate (chicago_200k_car)** | **116,270 / 200,000 = 58.1 %** — Q4 paradigm signal | §3 (2026-05-18 entry) |
+| **Cardinal MATSim meso completion rate (chicago_200k_car)** | **200,000 / 200,000 = 100 %** | §3 (2026-05-18 entry) |
+| **Cardinal SUMO/MATSim mean-TT ratio at 200K** | **0.645 (−35.5 %)** — biased by SUMO's selection effect on which trips actually started | §3 (2026-05-18 entry) |
 | DTALite scaling ceiling | path4gmns 0.10.0 bundled DTALite binary caps at 4 OpenMP threads (independent of OMP_NUM_THREADS) → la_50k_car DTALite cells exceed any practical timeout (~25 h/seed projected); documented as future work | §3 (2026-05-03 Phase 12.5 entry) |
 
 ---
@@ -45,6 +51,43 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 ---
 
 ## 3. Active experiment journal (latest first)
+
+### 2026-05-18 — chicago_200k_car cold baseline complete; Phase 14 cycle launched
+
+Phase: Version_5 Phase 13 baseline measurement → Phase 14 (canonical-routes branch) cycle start
+Commit: `b42da78` (Phase 14.7 head on `phase-14-canonical-routes`); chicago_200k_car run pre-dates Phase 14 (`visualization` branch)
+Job ID: **9332478** completed; **9954279** + **9954287** submitted
+
+**What happened.** The chicago_200k_car benchmark_large run that started 2026-05-12 16:17:11 EDT on Cardinal completed cleanly at 2026-05-18 14:09:09 EDT — total wall **5d 21h 51m 58s = 141.87 h** out of the 168 h cap (15.5 % margin). SLURM exit `0:0`; MaxRSS 23.28 GB (the `--mem=72G` allocation had 48 GB of headroom). The full 10-cell matrix (chicago_200k_car × {SUMO meso, MATSim meso} × 5 seeds) executed end-to-end, including `analyze_benchmark`, `audit_fairness`, and `generate_plots`. This is the **Phase 13 baseline** the Phase 14 work measures against.
+
+**Cell-level wall observations** (`runs/benchmark_large/chicago_200k_car/`):
+- `[1/10] sumo seed=42` — cold cell: **245,606 s wall** (242.8 s engine + **~68.16 h BFS-prep**)
+- `[2/10]-[5/10] sumo seeds 43-46` — cached cells: **242-246 s** each (BFS cost amortised via Phase 12 hardlink cache)
+- `[6/10] matsim seed=42` — cold cell: another ~68 h BFS-prep + ~210 s engine
+- `[7/10]-[10/10] matsim seeds 43-46` — cached, ~210 s each
+- Two cold BFS passes (one per engine, sequential) consumed ~136 h of the 141.87 h total — **96 % of the wall went to per-trip BFS routing**. This is exactly the cost Phase 14a (deduplication) eliminates and Phase 14b (parallel) further compresses.
+
+**Fairness audit results** (`audit_fairness.txt`):
+- **Q1**: byte-identical feasibility verdict across SUMO + MATSim — both engines: 200,000/200,000 trips feasible, SCC 333,188/333,847 nodes (99.80 % SCC coverage), 1,072,312/1,073,070 links — **PASS**
+- **Q2**: byte-identical SCC-filtered network emitted by both adapters — **PASS**
+- **Q3**: both engines simulated the target trip count (200,000 person/trip records) — **PASS**
+- **Q4 (the paradigm-divergence finding)**: SUMO completed **N=116,270** trips (mean TT 8,746 s, P95 44,364 s), MATSim completed **N=200,000** trips (mean TT 13,556 s, P95 40,734 s). **SUMO/MATSim mean-TT ratio = 0.645 (−35.5 %)**.
+- **Q5**: 50/50 AM/PM split (full-day scenario), 55.8 % school-related trips (27,929 + 27,929 AM HBSchool + chain pairs, 27,858 + 27,858 PM equivalents) — Phase 9b/9c chain mechanism producing the designed symmetric demand structure.
+
+**The Q4 finding is the headline result for Chapter 5.** SUMO meso's queue model refuses vehicle insertion at congested origin-edges, so 41.9 % of the 200,000 trips never start; SUMO's mean TT is consequently biased toward the "easier" 58.1 % of trips that *did* get inserted. MATSim's queue-based mobsim holds vehicles in queue until they can advance, so all 200,000 trips report a TT. Same canonical bundle, same SCC, same feasibility set, same routes (BFS pre-routed) — divergent mobsim behavior. This is the framework working as designed: the fairness contract holds (Q1-Q3 PASS), and Q4 surfaces the engine-internal paradigm difference. The 35.5 % gap is not a SUMO bug or a MATSim bug — it's the measurement.
+
+**Reproducibility (Tables 5.1 + 5.2)**:
+- MATSim meso: mean engine wall 209.80 s ± 12.91 s (95 % CI half-width), std 10.40 s, **R = 0.9998 (Excellent)**
+- SUMO meso: mean engine wall 243.43 s ± 2.16 s, std 1.74 s, **R = 0.9879 (Good)**
+- MATSim near-perfectly deterministic at `lastIteration=0`. SUMO meso has small seed-driven variance in completion rate at 200K (didn't appear at the 1K-10K scales) — still within "Good" R-rating but visibly noisier than MATSim.
+
+**Decision / lesson.** The 141.87 h vs the pre-run projection of 137 h came in within 3.6 % — the BFS-per-trip cost model holds at the 200K tier. nyc_500k would have projected to ~600 h (4× over the wall), confirming the cancellation decision on 2026-05-12. The Phase 14 work (canonical-routes deduplication + parallel BFS, branch `phase-14-canonical-routes`, HEAD `b42da78`) targets ~5-8 h for the same chicago_200k workload — a ~25× speedup if the local 4-worker benchmark (4.12×) extrapolates predictably to 16 workers + 200K trips.
+
+**Next on the cluster**: jobs **9954279** (chicago_200k_car under Phase 14, cold start; cache wiped beforehand) and **9954287** (nyc_500k_car under Phase 14, first ever attempt at this scale) were submitted 2026-05-18 ~14:30 EDT on Cardinal `cpu` partition. Expected wall: ~5-8 h chicago, ~20-30 h nyc. When they land, the measured speedup goes into `CHANGELOG.md` Phase 14.8 and `doc/chapters/methods.md` §3.8.4 replaces the projection table with the measurement table.
+
+**Artefacts saved.** `~/phase13_baseline_chicago_200k/` on Cardinal contains the `.out` + `.err` logs from job 9332478. `runs/benchmark_large/chicago_200k_car/` contains the result JSON, summary.md, audit_fairness.txt, and `plots/` (10 figures via `generate_plots`). These are the load-bearing thesis artefacts for Chapter 5; will rsync to local Mac for inspection.
+
+---
 
 ### 2026-05-03 — Phase 12.3 + 12.4 + 12.5: progress visibility, sbatch caps, DTALite scaling ceiling, recovery tool
 
