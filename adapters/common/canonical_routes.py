@@ -50,14 +50,13 @@ from pipeline.network.turn_restrictions import (
 # invalidates every existing cache file in one go.
 _CACHE_SCHEMA_VERSION = 1
 
-# Minimum wall-clock seconds between progress emissions. We rate-limit
-# by time rather than by trip count so the heartbeat is meaningful on
-# both fast hardware (would otherwise flood the log) and slow hardware
-# (where trip-count thresholds emit too infrequently). The 10 s cap
-# yields about one progress line per ~5 minutes on a 200K bundle at
-# ~10 trips/s parallel, and about one per minute on a 1K bundle at
-# 30+ trips/s serial — both readable.
-_PROGRESS_INTERVAL_S = 10.0
+# Minimum wall-clock seconds between progress emissions. Rate-limit by
+# time, not trip count, so the heartbeat is meaningful at any hardware
+# speed. 60 s is a defense-presentable cadence: for a ~4 h chicago_200k
+# Phase 14 run that's ~240 progress lines, one per minute; for a ~25 h
+# nyc_500k Phase 14 run that's ~1,500 lines. Both readable; both
+# tight enough that the operator sees the job is alive.
+_PROGRESS_INTERVAL_S = 60.0
 
 # Progress lines are emitted at WARNING level so they're visible
 # without --verbose. WARNING isn't a semantic complaint here — it's
@@ -508,7 +507,10 @@ def _compute_serial(
     total = len(work)
     fallback_count = 0
     bfs_start = time.monotonic()
-    last_progress_at = bfs_start
+    # Init to -inf so the first eligible emission fires immediately —
+    # otherwise short jobs (1K bundle finishing in ~3 s) would never
+    # see a heartbeat at all, only the final "done" line.
+    last_progress_at = float("-inf")
     for i, (tid, origin, dest) in enumerate(work, start=1):
         path: Optional[List[str]]
         if forbidden_moves:
@@ -682,18 +684,36 @@ def _compute_parallel(
     if not work:
         return {}
 
-    # Split into one big chunk per worker. We don't want fine-grained
-    # tasks because BFS calls are independent and the IPC roundtrip
-    # per task would dominate at our per-call cost.
+    # Phase 14.10: aim for ~1,000 chunks total so each worker handles
+    # many small chunks rather than one massive slab. Two reasons:
+    #  1. PROGRESS VISIBILITY. The progress emitter only fires when a
+    #     chunk returns. One-chunk-per-worker (the original design)
+    #     meant the first heartbeat didn't appear until the first
+    #     worker finished its entire share — ~4 hours into a 200K
+    #     run, by which point ~25% of work was already done. Smaller
+    #     chunks → more frequent returns → progress visible within
+    #     minutes.
+    #  2. LOAD BALANCING. If one worker hits a slower CPU or a noisy
+    #     neighbour, its big slab takes longer than the others and
+    #     drags the whole job's wall. Fine-grained chunks let the
+    #     other workers steal forward and absorb the imbalance.
+    # Floor at 100 trips per chunk so the per-chunk IPC overhead
+    # (pickle the chunk in, pickle the result back) stays negligible
+    # vs the in-chunk BFS time (~100 × 1.2 s = ~2 minutes of BFS
+    # per chunk on a 200K bundle, ~1 ms of IPC).
     n = len(work)
-    chunk_size = (n + workers - 1) // workers
+    target_chunks = 1_000
+    chunk_size = max(100, (n + target_chunks - 1) // target_chunks)
     chunks = [work[i:i + chunk_size] for i in range(0, n, chunk_size)]
 
     ctx = multiprocessing.get_context("spawn")
     routes: Dict[str, List[str]] = {}
     completed = 0
     bfs_start = time.monotonic()
-    last_progress_at = bfs_start
+    # -inf so the first chunk return always emits — gives the operator
+    # an early "alive + on track" signal instead of waiting a full
+    # _PROGRESS_INTERVAL_S before the first heartbeat.
+    last_progress_at = float("-inf")
     with ctx.Pool(
         processes=workers,
         initializer=_init_worker,

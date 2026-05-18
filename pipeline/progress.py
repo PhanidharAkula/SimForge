@@ -241,7 +241,16 @@ class StickyProgress:
                 self._tty_fd = os.open("/dev/tty", os.O_WRONLY | os.O_NOCTTY)
             except OSError:
                 self._tty_fd = None
-        if capture_logs and self.is_tty:
+        # Phase 14.10: install log capture even when non-TTY (SBATCH).
+        # The handler routes records through ``print_above()``, which is
+        # already non-TTY-safe (it falls back to ``print(line)`` when
+        # the sticky bar can't render). Effect under SBATCH: all
+        # captured WARNING+ records land on stdout (the ``.out`` file)
+        # alongside the cell-tape rows, instead of being routed to
+        # Python's default stderr handler (the ``.err`` file). Result is
+        # one unified log stream per job, which is what callers asked
+        # for when they passed ``capture_logs=True``.
+        if capture_logs:
             self._install_log_capture(capture_log_level, capture_log_names)
 
     # ---- public API --------------------------------------------------

@@ -8,6 +8,92 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14.10: SBATCH visibility — chunk size + non-TTY log capture (2026-05-18)
+
+**Symptom (observed in jobs 9954279 + 9954287 at 22 min elapsed).**
+Two cosmetic-but-irritating issues with the Phase 14.7 design under
+the SBATCH non-TTY environment:
+
+1. **No progress lines for ~4 hours.** `_compute_parallel` chunked
+   work as one big slab per worker (`chunks = workers`). With
+   `chunk_size = 12,500` trips per chunk at 1.226 s/trip, the first
+   chunk didn't return until ~4 hours in — by which point ~25 % of
+   work was already done. Progress emitter only fires on chunk
+   return, so nothing visible to the operator for ~4 hours.
+
+2. **`[bfs]` lines landed in `.err`, not `.out`.** `StickyProgress`
+   gated `capture_logs=True` on `self.is_tty`; under SBATCH (stdout
+   redirected to file → non-TTY), the log capture handler was never
+   installed. WARNING-level records fell back to Python's default
+   stderr handler. Result: `[bfs]` heartbeats in `.err`, cell-tape
+   rows in `.out` — readers had to grep two files.
+
+**Fixes (two small commits-worth of change, both in this entry):**
+
+- `adapters/common/canonical_routes.py:_compute_parallel`:
+  - New chunking rule: `target_chunks = 1,000`, with
+    `chunk_size = max(100, n // target_chunks)`. For chicago_200k
+    that's 200 trips × 1,000 chunks; for nyc_500k it's 500 × 1,000.
+    Each chunk takes ~2-10 minutes single-thread, so chunks return
+    every ~10-40 seconds at 16-way parallelism — plenty of granularity
+    for the 60s rate-limited heartbeat without IPC overhead becoming
+    significant (~140 KB pickle per chunk, ~1ms each).
+  - Better load balancing as a side-effect: many small chunks let
+    workers steal forward when one core is slower than others.
+- `adapters/common/canonical_routes.py`: heartbeat cadence:
+  - `_PROGRESS_INTERVAL_S = 10s → 60s`. At chicago_200k Phase 14's
+    ~4 h wall, that's ~240 progress lines (~1/min). At nyc_500k's
+    ~25 h wall, ~1,500 lines. Both sparse enough to read line-by-line.
+  - `last_progress_at` initialized to `-inf` so the **first** chunk
+    return always emits a heartbeat — operator sees an "alive +
+    on track" signal within minutes instead of waiting a full
+    rate-limit interval.
+- `pipeline/progress.py:StickyProgress.__init__`:
+  - Dropped the `and self.is_tty` gate on `capture_logs`. The
+    log-capture handler routes records through `print_above()`,
+    which is already non-TTY-safe (falls back to `print(line)`).
+    Effect: under SBATCH non-TTY, all captured WARNING+ records
+    now flow to stdout (`.out`) alongside the cell-tape rows.
+    `.err` stays empty unless something actually fails.
+
+**Verification.** Local smoke on chicago_1k_car (workers=4):
+
+```
+WARNING  [bfs] cache miss : computing 1,000 routes  (workers=4)
+WARNING  [bfs] progress   :   100/1,000 ( 10.0%)  elapsed 3s     28 trips/s  w=4
+WARNING  [bfs] done       : 1,000 routes in 10s  (91 trips/s, workers=4)
+WARNING  [bfs] cached     : 1,000 routes -> canonical_routes_de66d3....jsonl
+```
+
+First progress emits at 3s (first chunk return) — previously waited
+until end. The 60s rate limit doesn't suppress the very first emission
+because `last_progress_at = -inf`.
+
+23/23 tests pass (`test_canonical_routes.py` + `test_run_benchmark.py`).
+Byte-identity guards remain green — chunking strategy changes
+*how* work is dispatched, not *what* gets computed.
+
+**Operator note.** Jobs 9954279 (chicago Phase 14) and 9954287 (nyc
+Phase 14) currently running on Cardinal use the pre-Phase-14.10 code
+(they were submitted before this fix landed). They'll complete
+correctly with byte-identical routes, but the operator UX will still
+exhibit the two issues above. **For the *next* re-run** (or if you
+choose to scancel + resubmit these to pick up Phase 14.10):
+
+  ```bash
+  cd ~/SimForge
+  git pull origin phase-14-canonical-routes
+  scancel 9954279 9954287        # only if you want the new UX now
+  sbatch cluster/jobs/benchmark_large_chicago_200k.sbatch
+  sbatch cluster/jobs/benchmark_large_nyc_500k.sbatch
+  ```
+
+Trade-off: cancelling burns the ~22 min already elapsed in each job
+but the wall-clock penalty is tiny (<0.5 % of total). Letting them
+run preserves the BFS work already in-flight but produces logs in
+the old split-file format. The benchmark *result* is unaffected
+either way.
+
 ### Phase 14.8: Phase 13 baseline measured on Cardinal — chicago_200k_car (2026-05-18)
 
 **Job 9332478 completed cleanly** at 2026-05-18 14:09:09 EDT after **5d 21h 51m 58s (141.87 h)** of wall on Cardinal `cpu` partition (Xeon Max 9470, 16 cores allocated, single core used for BFS; MaxRSS 23.28 GB out of 72 GB). This is the **pre-Phase-14 baseline** the canonical-routes refactor measures against.
