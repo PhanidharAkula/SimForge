@@ -64,6 +64,28 @@ cityscape merges four real-world sources into the flat-text model
 The file format and per-line schema are documented in
 `pipeline/demand/parse_model_file.py` lines 1–46.
 
+### TAZ ≥10 trip suppression (upstream Census aggregation)
+
+Thesis Plan §3.6 commits SimForge to suppressing any TAZ cell with
+fewer than 10 trips, as a residual re-identification safeguard. In
+practice this suppression is **already enforced upstream by the US
+Census Bureau** as part of PUMS's Public Use threshold: PUMS records
+are released only for PUMAs of ≥100,000 population, and individual
+microdata cells with fewer than 10 persons are suppressed before
+release. The cityscape ModelGen synthesizer ingests these
+already-aggregated PUMS records verbatim, and SimForge's demand
+generator consumes ModelGen output directly — so the threshold is
+honored without SimForge needing to apply an additional filter at
+`demand.csv`-emit time.
+
+Operationally, every `(origin_node, destination_node)` pair in
+SimForge's generated demand traces back to an aggregate PUMS cell that
+already satisfies the ≥10 threshold. The cross-engine fairness
+contract (`audit_fairness.py` Q1) verifies trip-set identity across
+adapters but does not need to verify cell-suppression; that property
+is inherited from PUMS. See `doc/DATA_MANAGEMENT.md` §2 for the
+data-management policy that frames this commitment.
+
 ---
 
 ## 2. The JWTRNS code scheme

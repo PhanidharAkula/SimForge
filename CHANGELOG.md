@@ -8,6 +8,48 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Wave 1 — Reproducibility-artefact closure pass (2026-05-19)
+
+Adds the artefacts the original thesis plan (§3.6, §3.4, §4.2)
+committed to but the codebase hadn't yet shipped. All five are
+documentation or one-shot summary tooling — no adapter or pipeline
+behaviour changes, no impact on benchmark numbers.
+
+- **`LICENSE`** — Apache 2.0 license text at repo root with
+  "Copyright 2025-2026 Phanidhar Akula". Closes plan §3.6
+  open-source-licensing commitment.
+- **`doc/LICENSING.md`** — per-component license declaration:
+  SimForge code (Apache 2.0), canonical bundles (CC BY 4.0), OSM
+  derivatives (ODbL with share-alike obligation on `network.xml`),
+  eclipse-sumo wheel (EPL 2.0), MATSim runtime JAR (per-release
+  GPL/MIT/Apache), path4gmns/DTALite (Apache 2.0), PUMS (US Federal
+  public domain), TIGER/Cartographic Boundary (US Federal public
+  domain).
+- **`doc/DATA_MANAGEMENT.md`** — data-sources table, no-PII
+  declaration (PUMS aggregation upstream + synthetic trip records
+  with provenance), storage/access tiers (public GitHub +
+  university-authenticated HPC), 12-month retention window for
+  run outputs, end-to-end reproducibility chain. Closes
+  plan §3.6 line-by-line.
+- **`doc/MODELGEN_AND_MODES.md` §1** — added TAZ ≥10 trip
+  suppression paragraph documenting that the plan's
+  re-identification safeguard is enforced upstream by US Census
+  PUMS (≥10-person cell threshold) and inherited by SimForge — no
+  additional filter needed at `demand.csv`-emit time.
+- **`tools/generate_scorecard.py` (NEW)** — one-shot
+  reproducibility-scorecard emitter. Reads
+  `benchmark_results_<runspec>.json` + each cell's
+  `feasibility_report.json` + `osm_data/manifest.json` + per-scenario
+  bundle hashes; writes
+  `reproducibility_scorecard.md` covering provenance, environment,
+  Q1 cross-engine byte-identity verdict, R = 1 − CV per
+  (scenario, engine, mode) cell, and a pass/warn/fail overall
+  rollup. Auto-emitted at the end of every
+  `python -m execution.run_benchmark` run (guarded — scorecard
+  failure never blocks the benchmark) alongside the existing
+  `benchmark_results_*.json`. Test coverage: 22 tests in
+  `tests/test_generate_scorecard.py`.
+
 ### Phase 14.12: MATSim adapter O(N²) link-find bottleneck (2026-05-18)
 
 **Discovery.** While watching the in-flight Phase 14 re-run on

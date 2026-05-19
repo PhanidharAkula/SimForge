@@ -1034,7 +1034,21 @@ class BenchmarkHarness:
                       f"{ci.mean:>7.1f}s ± {ci.half_width:>5.1f}s wall  "
                       f"(engine {eng_mean:>5.1f}s)  ({ci.n} runs){note}")
 
-        print(f"\n  📁 Results:    {results_path}\n")
+        print(f"\n  📁 Results:    {results_path}")
+
+        # Reproducibility scorecard — one-shot Markdown summary of provenance,
+        # environment, Q1 fairness, and R per cell. Guarded because the
+        # generator shells out to `git rev-parse` and reads OSM/scenario
+        # manifest files that may be absent on cluster nodes; a scorecard
+        # failure must not fail the benchmark itself.
+        try:
+            from tools.generate_scorecard import _render
+            scorecard_path = self.output_base / "reproducibility_scorecard.md"
+            scorecard_path.write_text(_render(results_path))
+            print(f"  📋 Scorecard:  {scorecard_path}\n")
+        except Exception as e:  # noqa: BLE001 — cosmetic artefact, never block on failure
+            logger.warning("Skipped reproducibility scorecard: %s", e)
+            print()
         print("=" * 60 + "\n")
 
         return benchmark_result
