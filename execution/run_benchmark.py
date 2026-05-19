@@ -244,6 +244,72 @@ class BenchmarkHarness:
         cpu = os.cpu_count() or 1
         return max(1, min(32, cpu - 1)) if cpu > 1 else 1
 
+    @staticmethod
+    def _canonical_routes_cache_root() -> Path:
+        """Phase 14.13: global, content-addressable canonical-routes cache.
+
+        Hoisted from the per-output-dir ``<scoped_base>/.canonical_routes/``
+        (Phase 14.4-14.12 behaviour) to a single shared location
+        ``cache/canonical_routes/``. The cache filename itself is a
+        SHA256 hash of (network.xml + demand.csv + feasible_trip_ids),
+        so identical inputs map to one cache file regardless of which
+        runspec/output dir invokes the BFS.
+
+        Before the hoist (Phase 14.4-14.12): the SUMO micro pilot
+        running in ``runs/pilots/chicago_200k_sumo_micro/`` would miss
+        the cache built earlier in ``runs/benchmark_large/chicago_200k_car/``
+        and pay a redundant cold BFS pass (~3 h on chicago_200k tier;
+        empirically measured on Cardinal job 9980007). After the hoist:
+        any future run of the same scenario hits the existing cache.
+
+        Matches the existing ``cache/<type>/[<scope>/]<filename>`` layout
+        used by ``cache/census/``, ``cache/tiger_roads/``,
+        ``cache/osm_ways/``, ``cache/events/``.
+        """
+        return Path("cache") / "canonical_routes"
+
+    def _migrate_legacy_canonical_routes_cache(
+        self, scenario_id: str, target_root: Path,
+    ) -> None:
+        """Phase 14.13: migrate any pre-hoist cache files for this scenario
+        to the global location. Idempotent — no-op if target already has
+        the file. Logs each move at WARNING level so the operator sees
+        the one-time migration.
+
+        Looks at ``<scoped_base>/.canonical_routes/canonical_routes_*.jsonl``
+        and moves each file (preserving the content-hash filename) into
+        ``cache/canonical_routes/``. The function uses ``rename`` so the
+        operation is atomic and the migration cost is O(directory entry),
+        not O(file size) — the cache file may be GB-scale.
+        """
+        legacy_root = self._scoped_base(scenario_id) / ".canonical_routes"
+        if not legacy_root.is_dir():
+            return
+        target_root.mkdir(parents=True, exist_ok=True)
+        for legacy_file in sorted(legacy_root.glob("canonical_routes_*.jsonl")):
+            target_file = target_root / legacy_file.name
+            if target_file.exists():
+                # Global cache already has this content-hash; the
+                # legacy file is redundant. Leave it in place rather
+                # than deleting, so a human can verify before manual
+                # cleanup if anything looks off.
+                continue
+            try:
+                legacy_file.rename(target_file)
+                logger.warning(
+                    "[bfs] migrated   : %s -> %s (Phase 14.13 cache hoist)",
+                    legacy_file, target_file,
+                )
+            except OSError as e:
+                # Cross-filesystem rename can fail; fall back to copy +
+                # delete (atomic-ish), but never block the BFS itself —
+                # if migration fails the cache miss will trigger a
+                # recompute, which is correct (if slow).
+                logger.warning(
+                    "[bfs] migration failed (%s): %s -> %s",
+                    type(e).__name__, legacy_file, target_file,
+                )
+
     def _canonical_routes_for(
         self,
         scenario_path: Path,
@@ -264,9 +330,12 @@ class BenchmarkHarness:
 
         Cross-process persistence is handled inside
         ``compute_canonical_routes``: the result is also written to a
-        JSONL file under ``<scoped_base>/.canonical_routes/`` so a
-        subsequent harness invocation (next sbatch submission) reads
-        it from disk in seconds without recomputing.
+        JSONL file under ``cache/canonical_routes/`` (Phase 14.13: hoisted
+        from the per-output-dir ``<scoped_base>/.canonical_routes/`` to
+        a global, content-addressable cache so all runs of the same
+        scenario share one cache regardless of output dir). A subsequent
+        harness invocation (next sbatch submission, pilot, micro re-run,
+        etc.) reads it from disk in seconds without recomputing.
 
         DTALite skips this path entirely — its UE assignment computes
         its own paths internally, so SimForge BFS is irrelevant there.
@@ -279,7 +348,8 @@ class BenchmarkHarness:
         if cached is not None:
             return cached
 
-        cache_root = self._scoped_base(scenario_id) / ".canonical_routes"
+        cache_root = self._canonical_routes_cache_root()
+        self._migrate_legacy_canonical_routes_cache(scenario_id, cache_root)
         workers = self._bfs_worker_count()
         # WARNING level so the BFS-prep banner is visible without
         # --verbose (mirrors the existing convention in

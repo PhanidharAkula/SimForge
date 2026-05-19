@@ -60,6 +60,46 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-19 — Phase 14.13: canonical_routes cache hoist (cache-scope bug found via SUMO micro pilot)
+
+Phase: Version_5 Phase 14.13 — cache-scope hotfix
+Commit: HEAD on `phase-14-canonical-routes` after this entry lands
+Triggering observation: Cardinal job 9980007 BFS prep log
+
+**What I discovered.** The 2026-05-19 SUMO micro pilot entry below claims the pilot would hit the warm canonical_routes cache built by chicago_200k_car job 9971041 (6.52 h cold BFS pass) — *"hit warm cache and pay ~1 s prep"*. **That claim was wrong.** The pilot actually paid its own **3 h 13 m cold BFS pass** on Cardinal node c0044 (27 workers, 17 trips/s). Logged at:
+
+```
+WARNING  [bfs] done       : 200,000 routes in 3h 13m  (17 trips/s, workers=27)
+WARNING  [bfs] cached     : 200,000 routes -> canonical_routes_51e882679e1ee2fdb83111a911179463464af2a4af83c0ca07184f1b79e80770.jsonl
+```
+
+**Root cause.** The Phase 14.4-14.12 canonical_routes cache was scoped per-output-dir (`<scoped_base>/.canonical_routes/`) by the harness caller (`execution/run_benchmark.py:282` pre-fix). chicago_200k_car job 9971041 wrote its cache to `runs/benchmark_large/chicago_200k_car/.canonical_routes/`. The pilot ran with `--output runs/pilots/chicago_200k_sumo_micro/`, looked for its cache at `runs/pilots/chicago_200k_sumo_micro/.canonical_routes/`, found none, recomputed from scratch.
+
+The cache file itself IS content-addressable (filename is SHA256 of network + demand + feasible_trip_ids) — same scenario produces the same filename regardless of caller. The bug was the directory the file was placed in, not the filename.
+
+**Fix landed (Phase 14.13).** Hoist cache to `cache/canonical_routes/<hash>.jsonl` (global, content-addressable, scenario-deduplicated across all output dirs). Matches the existing `cache/<type>/[<scope>/]<filename>` pattern used by `cache/census/`, `cache/tiger_roads/`, `cache/osm_ways/`, `cache/events/`. Migration: on first lookup for a scenario, any existing per-output-dir cache is `rename()`d into the global location (atomic, O(directory entry)).
+
+**Cross-scale BFS rate update.** With the pilot's empirical data:
+
+| Run | Trips | Workers | Cold BFS wall | trips/s/worker |
+|---|---:|---:|---:|---:|
+| chicago_200k Phase 14 (job 9971041) | 200K | 16 | 6.52 h | 0.53 |
+| nyc_500k Phase 14 (job 9971042) | 500K | 24 | 11.16 h | 0.52 |
+| **chicago_200k Phase 14 (job 9980007 — pilot redundant cold pass)** | **200K** | **27** | **3.22 h** | **0.64** |
+
+Pilot's 0.64 trips/s/worker is ~21% faster per worker than the original chicago_200k run (0.53), likely from Cardinal node c0044 being a faster/quieter node than c0005. Either way: per-worker BFS rate is consistent across node + scale within ~25%, confirming the Phase 14.5 multiprocessing.Pool design scales near-linearly.
+
+**Wall-time impact going forward.**
+- Re-run of any cached scenario: skips cold BFS entirely. chicago_200k_car saves ~6.52 h, nyc_500k_car saves ~11.16 h per redundant cold pass.
+- SUMO micro pilot if resubmitted: skips the 3 h 13 m BFS pass, goes straight to engine_wall.
+- Cross-runspec runs (umbrella + pilot + small) of the same scenario share one cache file instead of duplicating it per output dir.
+
+**Implications for the pilot's wall projection.** The pilot's total wall now decomposes as: 3.22 h cold BFS (paid, can't recover) + ~28-38 h SUMO micro engine = ~31-41 h total. The original `--time=2-00:00:00` (48 h) budget still has 7-17 h margin. Job 9980007 still on track.
+
+**Doc corrections.** The 2026-05-19 SUMO micro pilot entry below (the original "warm cache" claim) is now incorrect. Keeping the original prose for historical record + adding this entry above it as the corrected interpretation.
+
+---
+
 ### 2026-05-19 — SUMO micro pilot prepared for chicago_200k_car (within-engine resolution check)
 
 Phase: post-Phase-14, post-Wave-3 — within-engine resolution-comparison setup

@@ -498,6 +498,37 @@ The adapter functions keep their pre-Phase-14 signature working when
 `canonical_routes=None` (default). Standalone CLI users
 (`python -m adapters.sumo.cli ...`) see no behavior change.
 
+### Cache scope (Phase 14.13 hotfix)
+
+**Bug found 2026-05-19 via SUMO micro pilot (Cardinal job 9980007).**
+The Phase 14.4-14.12 cache was scoped per-output-dir
+(`<scoped_base>/.canonical_routes/`) by the harness caller in
+`execution/run_benchmark.py:282`. This meant the SUMO micro pilot,
+running with `--output runs/pilots/chicago_200k_sumo_micro/`, did not
+share the cache built earlier by job 9971041 at
+`runs/benchmark_large/chicago_200k_car/.canonical_routes/`. The pilot
+paid a redundant 3 h 13 m cold BFS pass.
+
+**Fix.** Hoist the cache to a global location
+`cache/canonical_routes/<hash>.jsonl`. The cache filename is already
+SHA-256 content-addressable per §2.2 above, so identical inputs map to
+one cache file regardless of which output dir invokes the BFS. Matches
+existing `cache/<type>/[<scope>/]<filename>` layout for `cache/census/`,
+`cache/tiger_roads/`, `cache/osm_ways/`, `cache/events/`.
+
+**Migration.** On first lookup for a scenario after the fix landed, any
+pre-existing per-output-dir cache file is `rename()`d (atomic) into the
+global location. Operator sees a `[bfs] migrated   :` log line per moved
+file. Cross-filesystem rename failures log a warning but don't block the
+BFS — a cache miss triggers recompute (correct, just slow).
+
+**Scope.** Only the harness caller changed
+(`execution/run_benchmark.py::_canonical_routes_for`); the cache-handling
+in `adapters/common/canonical_routes.py` is unchanged. Tests in
+`tests/test_canonical_routes.py` pass `cache_root=tmp_path` and remain
+valid. New tests in `tests/test_run_benchmark.py::TestCanonicalRoutesCacheRoot`
+and `::TestLegacyCanonicalRoutesCacheMigration` cover the caller behavior.
+
 ---
 
 ## 5. Measurement plan

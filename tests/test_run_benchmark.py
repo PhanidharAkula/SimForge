@@ -310,3 +310,139 @@ class TestPreparedCache:
         assert (
             os.stat(cache / "f.txt").st_ino != os.stat(run_dir / "f.txt").st_ino
         )
+
+
+# ---------------------------------------------------------------------------
+# Phase 14.13 — canonical_routes cache hoist + legacy-cache migration.
+# ---------------------------------------------------------------------------
+
+
+class TestCanonicalRoutesCacheRoot:
+    """Phase 14.13: cache moved from per-output-dir to global cache/canonical_routes/."""
+
+    def test_cache_root_is_global_under_cache_dir(self):
+        """Cache root is cache/canonical_routes/ regardless of output_base."""
+        root = BenchmarkHarness._canonical_routes_cache_root()
+        assert root == Path("cache") / "canonical_routes"
+
+    def test_cache_root_does_not_depend_on_harness_output_base(
+        self, tmp_path: Path,
+    ):
+        """The global cache root is independent of the harness's output_base.
+
+        Two harnesses with different output_base values must agree on the
+        cache location — that's the entire point of the Phase 14.13 hoist.
+        """
+        h1 = BenchmarkHarness(output_base=tmp_path / "runA")
+        h2 = BenchmarkHarness(output_base=tmp_path / "runB")
+        assert (
+            h1._canonical_routes_cache_root()
+            == h2._canonical_routes_cache_root()
+        )
+
+
+class TestLegacyCanonicalRoutesCacheMigration:
+    """Phase 14.13: one-time migration of pre-hoist cache files."""
+
+    def test_migrates_legacy_cache_file_to_global_location(
+        self, tmp_path: Path,
+    ):
+        """A cache file at the old per-output-dir location is moved into
+        the global location on first lookup.
+        """
+        h = BenchmarkHarness(output_base=tmp_path)
+        legacy_root = tmp_path / "chicago_1k_car" / ".canonical_routes"
+        legacy_root.mkdir(parents=True)
+        cache_file = legacy_root / "canonical_routes_deadbeef.jsonl"
+        cache_file.write_text('{"_meta":true,"version":1,"trip_count":0}\n')
+        original_inode = os.stat(cache_file).st_ino
+
+        target_root = tmp_path / "global_cache"
+        h._migrate_legacy_canonical_routes_cache("chicago_1k_car", target_root)
+
+        # File moved to global location, original gone.
+        assert not cache_file.exists()
+        migrated = target_root / "canonical_routes_deadbeef.jsonl"
+        assert migrated.exists()
+        # Same inode → atomic rename, not copy.
+        assert os.stat(migrated).st_ino == original_inode
+
+    def test_no_op_when_legacy_dir_absent(self, tmp_path: Path):
+        """A scenario that never used the per-output-dir cache must not
+        cause errors when migration is attempted.
+        """
+        h = BenchmarkHarness(output_base=tmp_path)
+        target = tmp_path / "global"
+        # No exception — migration is a defensive operation.
+        h._migrate_legacy_canonical_routes_cache("never_run_scenario", target)
+        # Target dir doesn't get created if there's nothing to migrate.
+        assert not target.exists()
+
+    def test_preserves_legacy_when_target_already_has_file(
+        self, tmp_path: Path,
+    ):
+        """If the global cache already contains the same content-hash file,
+        the legacy file is left in place (operator can verify before
+        manually cleaning up).
+        """
+        h = BenchmarkHarness(output_base=tmp_path)
+        legacy_root = tmp_path / "chicago_1k_car" / ".canonical_routes"
+        legacy_root.mkdir(parents=True)
+        legacy_file = legacy_root / "canonical_routes_aaa.jsonl"
+        legacy_file.write_text("legacy-content")
+
+        target_root = tmp_path / "global_cache"
+        target_root.mkdir()
+        target_file = target_root / "canonical_routes_aaa.jsonl"
+        target_file.write_text("global-content")
+
+        h._migrate_legacy_canonical_routes_cache("chicago_1k_car", target_root)
+
+        # Both files still exist; global wins; legacy untouched.
+        assert legacy_file.read_text() == "legacy-content"
+        assert target_file.read_text() == "global-content"
+
+    def test_migrates_multiple_cache_files_for_same_scenario(
+        self, tmp_path: Path,
+    ):
+        """When the legacy dir has multiple hash files (e.g. bundle was
+        regenerated with different demand), all migrate.
+        """
+        h = BenchmarkHarness(output_base=tmp_path)
+        legacy_root = tmp_path / "chicago_1k_car" / ".canonical_routes"
+        legacy_root.mkdir(parents=True)
+        for hash_id in ("hash_a", "hash_b", "hash_c"):
+            (legacy_root / f"canonical_routes_{hash_id}.jsonl").write_text(
+                f"content-{hash_id}"
+            )
+
+        target_root = tmp_path / "global_cache"
+        h._migrate_legacy_canonical_routes_cache("chicago_1k_car", target_root)
+
+        for hash_id in ("hash_a", "hash_b", "hash_c"):
+            assert (
+                target_root / f"canonical_routes_{hash_id}.jsonl"
+            ).exists(), f"hash_id {hash_id} not migrated"
+        # Legacy dir is empty (everything moved out).
+        assert not list(legacy_root.glob("canonical_routes_*.jsonl"))
+
+    def test_only_migrates_canonical_routes_files(self, tmp_path: Path):
+        """Other files in the legacy dir (e.g. accidentally-placed
+        garbage) are NOT migrated — only canonical_routes_*.jsonl.
+        """
+        h = BenchmarkHarness(output_base=tmp_path)
+        legacy_root = tmp_path / "chicago_1k_car" / ".canonical_routes"
+        legacy_root.mkdir(parents=True)
+        (legacy_root / "canonical_routes_a.jsonl").write_text("yes")
+        (legacy_root / "garbage.txt").write_text("no")
+        (legacy_root / "canonical_routes_b.json").write_text("no")  # wrong ext
+
+        target_root = tmp_path / "global_cache"
+        h._migrate_legacy_canonical_routes_cache("chicago_1k_car", target_root)
+
+        assert (target_root / "canonical_routes_a.jsonl").exists()
+        assert not (target_root / "garbage.txt").exists()
+        assert not (target_root / "canonical_routes_b.json").exists()
+        # Garbage left in legacy dir untouched.
+        assert (legacy_root / "garbage.txt").exists()
+        assert (legacy_root / "canonical_routes_b.json").exists()

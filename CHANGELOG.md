@@ -8,6 +8,77 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14.13: canonical_routes cache hoist to global scenario-scoped location (2026-05-19)
+
+**Discovery.** SUMO micro pilot (Cardinal job 9980007) was supposed to
+hit the warm canonical_routes cache built by chicago_200k_car job
+9971041 (the 6.52 h cold BFS pass). Instead it paid its own **3 h 13 m
+cold BFS pass** (27 workers, 17 trips/s). Root cause: the canonical_routes
+cache was being written to `<output_dir>/.canonical_routes/`, scoped
+by the harness's `_scoped_base(scenario_id)` — i.e. per-output-dir.
+chicago_200k_car job 9971041 wrote to
+`runs/benchmark_large/chicago_200k_car/.canonical_routes/`; the pilot
+ran with `--output runs/pilots/chicago_200k_sumo_micro/`, found no
+cache at its own per-output-dir location, and recomputed from scratch.
+
+**The fix.** Hoist the cache to a global location
+`cache/canonical_routes/<hash>.jsonl`. The cache filename is already
+SHA256-content-addressable (computed from network.xml + demand.csv +
+feasible_trip_ids), so identical inputs → identical filename → automatic
+deduplication. All runs of the same scenario hit the same cache file
+regardless of `--output` dir.
+
+The change is in the harness caller (`execution/run_benchmark.py`),
+not in `adapters/common/canonical_routes.py` — the function signature
+accepts an arbitrary `cache_root`, the bug was the caller passing a
+per-output-dir path. The new caller path:
+
+```python
+cache_root = self._canonical_routes_cache_root()  # Path("cache") / "canonical_routes"
+self._migrate_legacy_canonical_routes_cache(scenario_id, cache_root)
+```
+
+Includes a one-time migration: on first lookup for a scenario, any
+existing per-output-dir cache file is `rename()`d (atomic, O(directory
+entry)) into the global location. Operator sees a `[bfs] migrated   :`
+log line. Cross-filesystem rename failures log a warning but don't
+block the BFS — a cache miss triggers recompute (correct, just slow).
+
+**Layout** (matches existing `cache/<type>/[<scope>/]<filename>` pattern
+used by `cache/census/`, `cache/tiger_roads/`, `cache/osm_ways/`,
+`cache/events/`):
+
+```
+cache/canonical_routes/
+├── canonical_routes_<sha256_for_chicago_200k>.jsonl
+├── canonical_routes_<sha256_for_nyc_500k>.jsonl
+└── canonical_routes_<sha256_for_chicago_1k>.jsonl
+```
+
+**What this saves going forward.**
+- Any future re-run of an already-cached scenario: skips cold BFS
+  entirely. chicago_200k_car: ~6.52 h saved. nyc_500k_car: ~11.16 h saved.
+- The SUMO micro pilot itself, if re-submitted: would skip the 3 h 13 m
+  BFS pass and go straight to engine_wall.
+- Cross-runspec runs (benchmark_large + benchmark_small + pilots) of
+  the same scenario share one cache instead of writing copies under
+  each output dir.
+
+**What this does NOT recover.** Job 9980007's 3 h 13 m of already-spent
+cold BFS prep — that's gone. The fix prevents it from happening again.
+
+**Tests.** 6 new tests in `tests/test_run_benchmark.py::TestCanonicalRoutesCacheRoot`
+and `::TestLegacyCanonicalRoutesCacheMigration` covering: cache-root
+location, output-base independence, migration of one + multiple files,
+no-op on absent legacy dir, no-collision behavior when target already
+has the same content-hash, no-collateral-damage on non-canonical_routes
+files in the legacy dir.
+
+**Backward compatibility.** `adapters/common/canonical_routes.py` is
+unchanged — its `cache_root` parameter still accepts any path. Tests
+in `tests/test_canonical_routes.py` continue to pass `cache_root=tmp_path`
+and remain valid. Only the harness caller changed.
+
 ### Documentation + sbatch hygiene pass (2026-05-19, post-Wave-1)
 
 Three groups of doc/operational changes landed after Wave 1, all
