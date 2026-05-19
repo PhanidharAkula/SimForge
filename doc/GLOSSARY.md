@@ -133,10 +133,10 @@ A GPU-accelerated mesoscopic traffic simulator ([Xuan-1998/LPSim](https://github
 Multi-Agent Transport Simulation; an activity-based, event-driven, queue-mobsim simulator written in Java. SimForge bundles MATSim 15.0 and runs it in single-iteration mode (`lastIteration = 0`) for reproducibility.
 
 ### Mesoscopic (meso)
-A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso, MATSim, and DTALite are all mesoscopic. DTALite uses an iterative Dynamic Traffic Assignment formulation rather than a one-shot queue simulation.
+A simulation paradigm that aggregates per-vehicle behaviour into per-link queue dynamics. Faster than *microscopic* but does not capture intersection-level delays. SUMO meso, MATSim, and DTALite are all mesoscopic. DTALite uses an iterative Dynamic Traffic Assignment formulation rather than a one-shot queue simulation. SimForge's cross-engine fairness comparisons run at meso because it's the only paradigm all three engines support. Full treatment: [`doc/SIMULATION_PARADIGMS.md`](SIMULATION_PARADIGMS.md).
 
 ### Microscopic (micro)
-A simulation paradigm that models each vehicle individually with car-following and lane-changing dynamics. Higher fidelity at the cost of order-of-magnitude longer runtime. SUMO micro is the only microscopic engine in the canonical *RunSpec*.
+A simulation paradigm that models each vehicle individually with car-following and lane-changing dynamics. Higher fidelity at the cost of order-of-magnitude longer runtime. SUMO micro is the only microscopic engine in the canonical *RunSpec*; runs as a within-engine resolution comparison on smaller bundles (chicago_1k_car, nyc_10k_car) since MATSim and DTALite are meso-only. Full treatment: [`doc/SIMULATION_PARADIGMS.md`](SIMULATION_PARADIGMS.md).
 
 ### ModelGen
 Cityscape's PUMS-based population synthesizer. Produces flat-text `<city>_model.txt` files (in `modelgen/`) containing buildings, households, and persons with full demographics + per-person workplace+home schedules. Parsed by `pipeline/demand/parse_model_file.py`. See *Cityscape* for branch and source pointers.
