@@ -17,7 +17,7 @@ markers = [
     "integration: tests that exercise multiple subsystems end-to-end",
     "requires_sumo: tests that require the SUMO `netconvert` / `sumo` binaries",
     "requires_java: tests that require Java + the MATSim JAR",
-    "requires_gpu: tests that require an NVIDIA GPU + a built LPSim binary (no CPU fallback)",
+    "requires_gpu: tests that require an NVIDIA GPU (registered for future GPU engine work; no test currently uses it — LPSim was the original consumer, see doc/engines/LPSIM_RETROSPECTIVE.md)",
     "determinism: tests that verify byte-identical adapter outputs across re-runs",
 ]
 

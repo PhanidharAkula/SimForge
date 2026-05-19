@@ -804,8 +804,9 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
   determinism     Verifies byte-identical adapter outputs across re-runs
   requires_sumo   Needs sumo / netconvert on PATH
   requires_java   Needs Java 17+ and the MATSim JAR
-  requires_gpu    Needs an NVIDIA GPU + a built LPSim binary (no CPU
-                  fallback; preserved for the LPSim retrospective)
+  requires_gpu    Needs an NVIDIA GPU (registered for future GPU engine
+                  work; no test currently uses it — LPSim was the
+                  original consumer, see doc/engines/LPSIM_RETROSPECTIVE.md)
 
   Filter examples:
     python -m pytest -m determinism
