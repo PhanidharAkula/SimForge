@@ -11,36 +11,45 @@
 # and in doc/chapters/results.md §5.7. SUMO + MATSim alignment is the
 # reportable cross-engine signal at the 200K + tier.
 #
-# Wall-clock budget (with Phase 12 BFS-prep cache):
-#   Per-scenario worker: cold BFS-prep paid once per (scenario, engine),
-#   then 5 seed cells reuse cached prep at cheap mobsim rates.
-#     chicago_200k_car worker:  ~30-40 h × 2 engines + 5×2 cached seeds (~6-12 min each)
-#                              ≈ ~65-85 h
-#     nyc_500k_car     worker:  ~80-110 h × 2 engines + 5×2 cached seeds
-#                              ≈ ~165-225 h
-#   Total wall = max(workers) ≈ ~225 h, inside the 7-day cpu wall (168 h)
-#   only marginally for nyc_500k. If nyc_500k risks the wall, submit
-#   `cluster/jobs/benchmark_large_nyc_500k.sbatch` (Phase 13 sibling)
-#   instead — it runs nyc_500k alone with its own 7-day wall, leaving
-#   this script to handle chicago_200k by itself (~85 h max). Or stage
-#   the workers sequentially, or escalate to --partition=hugemem.
+# Wall-clock budget (Phase 14 canonical_routes cache + parallel BFS):
+#   Phase 14 moved BFS routing from per-engine inline cost (Phase 13) to a
+#   single shared, parallel-multiprocessing.Pool pass per scenario. Result:
+#     chicago_200k_car worker: cold BFS ~6.5 h (1 pass shared by both
+#                              engines) + 10 cells × ~200-245 s sim
+#                              ≈ ~7.1 h cold, ~37 min warm-cache re-run
+#     nyc_500k_car     worker: cold BFS ~20 h (projected, 24 workers,
+#                              500K trips on ~2.5 M-link SCC) + 10 cells
+#                              × ~3-5 min sim ≈ ~22 h cold,
+#                              ~1-2 h warm-cache re-run
+#   Total wall = max(workers) ≈ ~22 h cold, comfortable inside the
+#   --time=2-00:00:00 (48 h) budget below. Both per-scenario fallback
+#   sbatchs (Phase 13.2 wall-margin insurance) deleted post-Phase-14 —
+#   this umbrella is now the single source of truth.
+#
+#   Phase 13 baseline reference (for the CHANGELOG comparison story):
+#   chicago_200k under Phase 13 took 141.87 h wall (jobs 9332478).
+#   Phase 14 cold-vs-cold speedup ~20×; warm-cache re-run ~228×.
+#   See doc/EXPERIMENT_LOG.md 2026-05-19 entry for the full breakdown.
 #
 # Resources:
 #   --partition=cpu        : Both engines (SUMO, MATSim) are CPU-only.
 #   --cpus-per-task=16     : SUMO + MATSim both single-process per cell;
-#                            the spare cores absorb pytest + analyzer
-#                            steps at the end without GIL contention.
+#                            the spare cores feed the canonical_routes
+#                            multiprocessing.Pool (Phase 14.5) and absorb
+#                            pytest + analyzer steps at the end.
 #   --mem=180G             : Phase 13 bump (was 128 G). Pitzer cpu nodes
 #                            have 192 G physical; 180 G is the safe
 #                            ceiling after the OS reserve. Free headroom
-#                            for the nyc_500k MATSim qsim peak (never
-#                            measured at this tier; la_50k DTALite peaked
-#                            at ~67 G). Same node type + queue priority
-#                            as the prior 128 G; only switch to hugemem
-#                            (3 TB) if 180 G still spills.
-#   --time=7-00:00:00      : 7 days, the cpu partition's max. Required for
-#                            cold BFS-prep at 500K. If the run actually
-#                            comes in under 96 h consider dropping back.
+#                            for the nyc_500k MATSim qsim peak. Cardinal
+#                            cpu nodes have 503 G so 180 G is ample there
+#                            too. Only switch to hugemem if 180 G spills.
+#   --time=2-00:00:00      : 48 h. ~2× margin over the worst-case ~22 h
+#                            nyc_500k cold wall under Phase 14. Was
+#                            7-00:00:00 (168 h) under Phase 13; reduced
+#                            so SLURM queue priority is higher and we
+#                            don't reserve unused budget. Bump back to
+#                            7-00:00:00 if you wipe the canonical_routes
+#                            cache AND tackle a network larger than NYC.
 # ============================================================================
 
 #SBATCH --account=PMIU0110
@@ -50,7 +59,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=180G
-#SBATCH --time=7-00:00:00
+#SBATCH --time=2-00:00:00
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 ##SBATCH --mail-type=END,FAIL

@@ -17,6 +17,14 @@
 # This is the matrix you can actually finish in a single SLURM wall — and
 # now also runs end-to-end on a Mac laptop because DTALite is CPU-only.
 #
+# Phase 14 effect on this tier: canonical_routes shared cache + parallel
+# BFS collapses la_50k SUMO+MATSim BFS-prep from ~10-11 h per engine
+# (Phase 13) to ~1-2 h shared across both. DTALite la_50k is unchanged
+# — it computes its own routes via UE/SUE iteration, doesn't use BFS —
+# so the path4gmns 4-thread cap on 50K × 466K-link is the new long pole
+# (~4 h per cell × 5 seeds, often timing out at the 14400 s budget;
+# see comment on the la_50k DTALite row below).
+#
 # Prerequisites:
 #   - All 3 bundles are tracked in git — `git pull` brings them down.
 #   - DTALite ships inside the path4gmns Python package

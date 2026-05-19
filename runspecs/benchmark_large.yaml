@@ -11,7 +11,10 @@
 #
 # Submit with cluster/jobs/benchmark_large.sbatch (parallel by scenario,
 # 2 backgrounded workers, --output-isolated). Bundles must be present:
-# both 200K and 500K are gitignored, rsync from your dev box first.
+# both 200K and 500K are gitignored, rsync from your dev box first. The
+# per-scenario fallback sbatchs (benchmark_large_chicago_200k.sbatch +
+# benchmark_large_nyc_500k.sbatch) were Phase 13.2 wall-margin insurance
+# and have been deleted under Phase 14 — the umbrella is now sole.
 #
 # ⚠️ DTALite excluded at this tier (Phase 12.5 decision, 2026-05-03).
 #    The bundled path4gmns 0.10.0 DTALite C++ binary caps internal OpenMP
@@ -19,22 +22,31 @@
 #    Extrapolating from la_50k_car observed ~25 h/seed:
 #      chicago_200k_car DTALite ≈ ~100 h/seed (5 seeds = 500 h cumulative)
 #      nyc_500k_car     DTALite ≈ ~250 h/seed (5 seeds = 1,250 h cumulative)
-#    Both structurally exceed any practical Pitzer walltime. Documented
-#    as a path4gmns binary-side scalability ceiling in CHANGELOG Phase 12.5
-#    and discussed in doc/chapters/results.md §5.7. Future work: replace
-#    bundled binary with a multi-thread DTALite build, or evaluate
-#    `path4gmns.find_ue` (pure-Python solver) — see CHANGELOG Phase 12.7.
+#    Both structurally exceed any practical Pitzer walltime. Phase 14
+#    does NOT help DTALite — it computes its own routes via UE/SUE
+#    iteration, doesn't use pre-routed BFS. Documented as a path4gmns
+#    binary-side scalability ceiling in CHANGELOG Phase 12.5 and
+#    doc/chapters/results.md §5.7. Future work: replace bundled binary
+#    with a multi-thread DTALite build, or evaluate `path4gmns.find_ue`
+#    (pure-Python solver) — see CHANGELOG Phase 12.7.
 #
-# 📝 BFS-prep wall (Phase 12+ cache): the SUMO/MATSim adapter pre-routes
-#    every trip via BFS once per (scenario, engine), then hardlinks the
-#    cached prep into all N seed dirs. For chicago_200k:
-#      cold BFS-prep ≈ ~30-40 h per engine
-#      cached mobsim ≈ ~6-12 min per seed
-#    Total: ~30-40 h prep + 5 × cached cells per engine × 2 engines.
-#    Use `cluster/jobs/benchmark_large.sbatch` with --time=7-00:00:00
-#    and --mem=128G. nyc_500k extrapolates to ~80-110 h prep per engine
-#    — uncomfortably close to the 7-day cap; consider --partition=hugemem
-#    if memory becomes the constraint.
+# 📝 BFS-prep wall (Phase 14 canonical_routes cache + parallel BFS):
+#    Phase 14.4 hoisted BFS routing out of each adapter into a single
+#    multiprocessing.Pool pass per scenario, written to
+#    runs/<runspec>/<scenario>/.canonical_routes/ and consumed by both
+#    SUMO and MATSim adapters. Phase 14.12 collapsed MATSim's
+#    find_link_for_* from O(N) → O(1) (the dominant cold-prep cost).
+#    Measured walls:
+#      chicago_200k_car: cold ~6.5 h BFS + 10 cells × ~200-245 s sim
+#                        ≈ ~7.1 h cold-cache total
+#                        ≈ ~37 min warm-cache re-run
+#      nyc_500k_car:     cold ~20 h BFS (projected, 24 workers, ~2.5 M
+#                        SCC links) + 10 cells × ~3-5 min sim
+#                        ≈ ~22 h cold-cache total
+#                        ≈ ~1-2 h warm-cache re-run
+#    See doc/EXPERIMENT_LOG.md 2026-05-19 entry for the Phase 13 vs
+#    Phase 14 cold-vs-cold (~20×) and warm-cache re-run (~228×)
+#    speedup comparison.
 # =============================================================================
 
 name: benchmark_large

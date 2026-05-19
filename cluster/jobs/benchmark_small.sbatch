@@ -7,17 +7,22 @@
 # per-runspec result JSON colliding (the harness names that JSON after
 # the runspec, not the scenario).
 #
-# Wall-clock budget (N=5 repeats, with Phase 12 BFS-prep cache):
-#   Per-scenario worker times — la_50k is the long pole because its
-#   per-engine BFS-prep cost on a 50K-trip × 159K-node network is
-#   ~10-11 h (paid once per engine thanks to caching, then 5 cheap
-#   reps reuse the cached prep). The other workers finish much sooner:
+# Wall-clock budget (N=5 repeats, Phase 14 canonical_routes cache):
+#   Phase 14 collapsed the per-engine BFS pre-routing wall by computing
+#   one shared canonical_routes cache per scenario (multiprocessing.Pool,
+#   16 workers), consumed by both SUMO and MATSim adapters. la_50k SUMO+
+#   MATSim BFS was ~10-11 h per engine pre-Phase-14; Phase 14 reduces it
+#   to ~1-2 h shared across both. The new long pole at the small tier is
+#   DTALite la_50k_car — Phase 14 does not help DTALite (it computes its
+#   own routes via UE/SUE iteration, doesn't use pre-routed BFS), so the
+#   path4gmns 4-thread cap still drives the worker:
 #     chicago_1k_car worker:  ~10 min  (1K trips, small graph)
-#     nyc_10k_car   worker:  ~2-3 h   (SUMO micro × 5 is the long pole)
-#     la_50k_car    worker:  ~21-23 h (SUMO + MATSim BFS prep × 1 each)
-#   Total wall = max(workers) ≈ 23 h. 36 h walltime gives headroom for
-#   slow Pitzer I/O, JVM startup variance, and the la_50k engine runs
-#   themselves which still take a few min each.
+#     nyc_10k_car   worker:  ~2-3 h   (SUMO micro × 5 is the pole here)
+#     la_50k_car    worker:  ~20-22 h (DTALite × 5 seeds × ~4 h each;
+#                                      SUMO+MATSim now ~30 min combined)
+#   Total wall = max(workers) ≈ 22 h. 36 h walltime keeps headroom for
+#   slow Pitzer I/O, JVM startup variance, and any DTALite cell that
+#   wall-clocks against its 4 h per-cell timeout.
 #
 # Resources:
 #   --partition=cpu        : All three engines (SUMO, MATSim, DTALite) are
