@@ -109,3 +109,9 @@ scenarios/*/
 /logs/
 cluster/logs/*.out
 cluster/logs/*.err
+
+# -----------------------------
+# Personal / scratch documents kept in the repo dir for convenience
+# but not part of the shipped artefact
+# -----------------------------
+a personal PDF
