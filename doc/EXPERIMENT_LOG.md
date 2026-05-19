@@ -52,6 +52,42 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-19 — Phase 14 chicago_200k measured; thesis cold-vs-warm speedups pinned
+
+Phase: Version_5 Phase 14 (canonical-routes branch) + Wave 1 (reproducibility-artefact closure)
+Commit: `eb9a737` (Wave 1: LICENSE + LICENSING.md + DATA_MANAGEMENT.md + TAZ paragraph + `tools/generate_scorecard.py`) on `phase-14-canonical-routes`
+Job ID: **9971041** completed (chicago_200k Phase 14 measurement); **9971042** in flight (nyc_500k cold prep, ~6.7 trips/s on 24 workers)
+
+**What happened.** Job 9971041 (chicago_200k_car under Phase 14 with the `.canonical_routes/` cache pre-populated from earlier Phase 14.4–14.12 dev runs) completed cleanly in **~37 minutes wall** (started 2026-05-19 03:44 UTC, completed 04:21 UTC). Full 10-cell matrix: 5 SUMO meso + 5 MATSim meso seeds, all successful, R = 0.9938 EXCELLENT, Q1 byte-identity PASS. This is the **warm-cache re-run** measurement — the cold-cache BFS pass for chicago_200k was measured separately at **6.52 h on 16 workers** (the one-time per-scenario cost).
+
+**Cold-vs-cold speedup (the honest thesis number).**
+
+| | Phase 13 (job 9332478) | Phase 14 (cold cache) |
+|---|---:|---:|
+| BFS prep (one-time, per scenario) | ~141 h (single-threaded, run inline per engine: 245,606 s SUMO + 263,221 s MATSim) | **6.52 h** (one shared 16-worker pass) |
+| Engine sim wall (10 cells, ~200–245 s each) | ~37 min | ~37 min |
+| **Total cold-cache wall** | **141.87 h (5d 21h 51m)** | **~7.14 h** |
+| **Total warm-cache re-run wall** | n/a (no cross-engine cache) | **~37 min (0.62 h)** |
+
+- **Cold-vs-cold**: 141.87 h / 7.14 h ≈ **~20×** (parallel BFS + cross-engine cache-sharing + MATSim `find_link_for_*` O(N)→O(1) combined). Paid once per new scenario.
+- **Re-run benefit**: 141.87 h / 0.62 h ≈ **~228×** (every subsequent parameter sweep / seed re-run / runspec variation skips BFS entirely).
+
+Both numbers are real and tell different stories. The ~20× converts a 6-day blocker into an overnight run (the "can a researcher iterate on this scenario at all?" line). The ~228× makes systematic exploration tractable (every re-run after the first is ~37 min instead of 6 days).
+
+**Cell-level wall observations** (`runs/benchmark_large/chicago_200k_car/`, Phase 14 warm-cache run):
+- SUMO seeds 42–46: 240.6–242.8 s `cell_wall_s` each, 239.6–241.8 s `engine_wall_s` each. Per-cell prep = 1.0–1.5 s (cache hit).
+- MATSim seeds 42–46: 191.2–239.3 s `cell_wall_s`, 190.2–195.9 s `engine_wall_s`. Per-cell prep = 0–44 s (cache hit; seed=42 still pays the index-build cost from Phase 14.12).
+
+**BFS cold-prep rate consistency check.** chicago_200k cold = 200,000 trips / (6.52 h × 3600 s) / 16 workers = **0.53 trips/s/worker**. nyc_500k cold in flight at ~6.7 trips/s / 24 workers = **0.28 trips/s/worker**. The 2× per-worker ratio matches the ~2.5× network-size ratio (chicago 1.07 M SCC links vs nyc projected ~2.5 M). BFS cost scaling linear in `O(N_links_in_SCC)` per trip — measurement internally consistent.
+
+**Phase 14.12 contribution to the 20× cold speedup.** MATSim's `find_link_for_origin`/`find_link_for_destination` were doing O(N) linear scans over ~1 M-link SCC, 2× per trip × 200 K trips = **~64 h** of the pre-Phase-14.12 MATSim cold-prep wall (the dominant component of the 73 h MATSim seed=42 cold cell). The O(N) → O(1) index-table fix (Phase 14.12, commit `0e7f48a`) collapsed that to seconds. Without 14.12 the Phase 14 cold-vs-cold speedup would be in the ~2× range, not ~20×.
+
+**Wave 1 artefacts.** `LICENSE` (Apache 2.0), `doc/LICENSING.md`, `doc/DATA_MANAGEMENT.md`, TAZ ≥10 paragraph in `doc/MODELGEN_AND_MODES.md`, and `tools/generate_scorecard.py` landed in commit `eb9a737`. The scorecard auto-emits at the end of every `execution.run_benchmark` run as `reproducibility_scorecard.md` next to `benchmark_results_*.json`. First field test on the Phase 14 chicago_200k run rendered cleanly: overall PASS, Q1 PASS, R = 0.9938 EXCELLENT.
+
+**Next on the cluster.** nyc_500k_car (job 9971042) is in its true cold BFS prep pass on Cardinal — at 3.3% after ~41 min (16,500 / 500,000 trips), projecting ~21 h for cold prep on a 2.5× larger network. That number will be the real cross-scale validation of the BFS cost model + the basis for Chapter 5's scalability discussion.
+
+---
+
 ### 2026-05-18 — chicago_200k_car cold baseline complete; Phase 14 cycle launched
 
 Phase: Version_5 Phase 13 baseline measurement → Phase 14 (canonical-routes branch) cycle start
