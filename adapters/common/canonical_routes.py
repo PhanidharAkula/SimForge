@@ -19,6 +19,50 @@ Phase 14.5 (this file): serial + parallel BFS + JSONL cache.
 ``workers > 1`` dispatches to ``multiprocessing.Pool``. Parallel
 output is byte-identical to serial output regardless of worker count
 (pinned by TestParallelDeterminism in tests/test_canonical_routes.py).
+
+Parallelism architecture (full detail in doc/PHASE_14_DESIGN.md §2.3):
+
+  This is *task parallelism over trips*, NOT data parallelism over
+  the network. The canonical graph is fully replicated in each
+  worker; only the trip list is partitioned. Workers never exchange
+  information during BFS execution — each one is a self-contained
+  BFS session that happens to be running simultaneously with the
+  others. Specifically:
+
+    - **Replicated graph.** Each worker holds the full SCC-filtered
+      canonical graph in its own heap (~150 MB on chicago_200k,
+      ~250 MB on nyc_500k). At 16 workers that's ~2.4 GB / ~4 GB
+      of RAM, negligible against Cardinal cpu's 503 GB/node.
+    - **Partitioned trips.** The feasibility-filtered trip list,
+      sorted by trip_id, is split into ~1,000 small chunks of
+      ~200 trips each. ``Pool.imap`` dispatches them dynamically;
+      workers grab the next pending chunk when they finish one,
+      giving free load balancing if cores run at slightly different
+      speeds (NUMA effects, neighbouring processes, etc.).
+    - **No worker-to-worker IPC.** The only inter-process
+      communication is main→worker (chunk_in) and worker→main
+      (chunk_out). Workers cannot race on shared state because no
+      shared state exists.
+    - **Determinism reduces to a pure-function argument.** Each
+      ``shortest_path_with_restrictions(origin, dest, adjacency,
+      edge_lookup, forbidden_moves)`` call is a deterministic function
+      of inputs that are bit-identical across workers (all read from
+      the hash-pinned canonical bundle). The merged route dict is
+      therefore bit-identical to a serial run regardless of worker
+      count — ``TestParallelDeterminism`` pins this on
+      chicago_1k_car for workers ∈ {1, 2, 4}.
+    - **`spawn` start method (forced).** We use
+      ``multiprocessing.get_context("spawn")`` rather than the
+      platform default so workers behave identically on macOS (where
+      Python 3.8+ defaults to spawn) and Linux (where the default is
+      fork). Each worker boots a fresh interpreter and rebuilds its
+      state via ``_init_worker(network_path)`` — costs ~1-2 s per
+      worker at startup, irrelevant against the multi-hour BFS work
+      each one will then do.
+
+  See doc/PHASE_14_DESIGN.md §2.3 for the diagram, the rejected
+  alternatives (threads/GIL, shared_memory, network partitioning),
+  and the empirical per-worker efficiency measurement on Cardinal.
 """
 
 from __future__ import annotations

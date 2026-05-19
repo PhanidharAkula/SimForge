@@ -155,10 +155,168 @@ future Phase 14.x.
 
 ### 2.3 Parallel BFS implementation
 
-**Strategy**: `multiprocessing.Pool` with a per-worker initializer that
-loads the graph from disk into worker-local globals. Trips are chunked
-by sorted trip_id; each worker processes its chunk; results merge in
-trip_id order.
+#### 2.3.1 What "parallel" means here — and what it does NOT
+
+This is **task parallelism over trips**, not data parallelism over the
+network. The graph is fully replicated in each worker; the trip list is
+the only thing that gets partitioned. Workers do not exchange any
+information during BFS execution — each one is a self-contained BFS
+session that happens to be running simultaneously with 15 others.
+
+```
+                  ┌──────────────────────────────────────────────┐
+                  │           Main process (orchestrator)         │
+                  │                                                │
+                  │   1. Read network.xml, demand.csv             │
+                  │   2. Sort feasible trips by trip_id           │
+                  │   3. Split into 1,000 chunks of ~200 trips    │
+                  │   4. Pool.imap(_route_chunk, chunks)          │
+                  │                                                │
+                  └──┬──────┬──────┬──────┬─────────┬─────────────┘
+                     │      │      │      │         │
+              pickle │      │      │      │         │   16 workers
+              chunk  ▼      ▼      ▼      ▼         ▼   (one per SBATCH cpu)
+                  ┌──────┐ ┌──────┐ ┌──────┐ ... ┌──────┐
+                  │Worker│ │Worker│ │Worker│     │Worker│
+                  │  1   │ │  2   │ │  3   │     │ 16   │
+                  ├──────┤ ├──────┤ ├──────┤     ├──────┤
+                  │ FULL │ │ FULL │ │ FULL │     │ FULL │
+                  │ COPY │ │ COPY │ │ COPY │     │ COPY │
+                  │  of  │ │  of  │ │  of  │     │  of  │
+                  │ graph│ │ graph│ │ graph│     │ graph│
+                  │~150MB│ │~150MB│ │~150MB│     │~150MB│
+                  ├──────┤ ├──────┤ ├──────┤     ├──────┤
+                  │chunk:│ │chunk:│ │chunk:│     │chunk:│
+                  │trips │ │trips │ │trips │     │trips │
+                  │1–200 │ │201–  │ │401–  │     │      │
+                  │      │ │  400 │ │  600 │     │      │
+                  └──┬───┘ └──┬───┘ └──┬───┘     └──┬───┘
+                     │        │        │           │
+                     │ pickle │ pickle │           │
+              result │ paths  │ paths  │           │
+              list   ▼        ▼        ▼           ▼
+                  ┌──────────────────────────────────────────────┐
+                  │   Main process merges into routes dict       │
+                  │   (preserving submission order via imap)     │
+                  └──────────────────────────────────────────────┘
+```
+
+#### 2.3.2 Three load-bearing properties
+
+**Property 1 — the network is replicated, not partitioned.**
+
+Each worker holds the full SCC-filtered canonical graph in its own
+heap (~150 MB for chicago_200k_car, ~250 MB for nyc_500k_car). We do
+not carve the graph into geographic zones because trips in a 15–20 km
+metro bbox routinely cross the entire network — partitioning would
+either force each worker to handle only intra-zone trips (which would
+exclude most of demand.csv) or require cross-zone messaging
+(introducing synchronisation overhead and breaking the simple
+deterministic story below). Memory cost: 16 × 150 MB ≈ 2.4 GB on
+chicago_200k_car. Cardinal `cpu` nodes provide 503 GB; the
+replication cost is negligible.
+
+**Property 2 — the trip list is what's partitioned.**
+
+The main process reads `demand.csv`, filters to the feasible set,
+sorts by `trip_id`, and splits into 1,000 chunks of ~200 trips each.
+Each chunk is a list of `(trip_id, origin_node, dest_node)` tuples.
+Workers grab chunks dynamically via `Pool.imap` — finishing a chunk
+fast lets the worker pick up the next pending one, which gives
+free load balancing if individual cores run at slightly different
+speeds (NUMA effects, neighbour processes on the same node, etc.).
+
+**Property 3 — workers never exchange information during BFS.**
+
+The only IPC is between main and worker, never worker-to-worker:
+
+- **At worker startup** (once): main pickles the `network_path` string
+  (~50 bytes) and sends it. Worker calls `_init_worker(network_path)`
+  which parses the XML, runs the SCC filter, builds the
+  `forbidden_moves` table, and stashes everything in module-global
+  `_WORKER_STATE`. Cost: ~1–2 seconds per worker, amortised over
+  thousands of trips in that worker's lifetime.
+- **Per chunk** (one round-trip per chunk): main pickles the chunk
+  (~30 KB of tuples), sends to a worker; worker pickles its result
+  (~600 KB of path lists), sends back. Total IPC per chunk
+  ~10–100 µs of pickle/unpickle overhead, dwarfed by the
+  ~2 min of BFS work per chunk.
+- **No shared memory, no message queues, no manager-mediated dicts,
+  no locks.** By construction, workers cannot race.
+
+#### 2.3.3 Why this is provably deterministic
+
+Each trip's BFS output is a pure function of four inputs:
+
+1. `origin` (string node id, from the demand row)
+2. `dest` (string node id, from the demand row)
+3. `adjacency` + `edge_lookup` (loaded from `network.xml` — same bytes per worker)
+4. `forbidden_moves` (built from `network.xml`'s `<turn_restrictions>` block — same per worker)
+
+All four inputs are bit-identical across workers and across runs
+(network.xml is hash-pinned per the V5 manifest; demand.csv has the
+same hash). Therefore `shortest_path_with_restrictions(origin=..., dest=..., adjacency=..., edge_lookup=..., forbidden_moves=...)`
+returns the same `path_nodes` list regardless of which worker called
+it or whether one or sixteen workers are running.
+
+The merge step preserves trip_id ordering because
+`Pool.imap` (not `imap_unordered`) returns chunk results in
+submission order, and we submit chunks in sorted-trip_id order.
+
+`tests/test_canonical_routes.py::TestParallelDeterminism` pins this:
+`workers=1`, `workers=2`, `workers=4` all produce byte-identical
+route dicts on `chicago_1k_car`. The test will catch any future
+refactor that introduces nondeterminism into this chain.
+
+#### 2.3.4 Alternative architectures considered (and why we didn't pick them)
+
+| Approach | Pros | Cons | Verdict |
+|---|---|---|---|
+| **Multiprocessing + replicated graph + trip-partition (current)** | Trivially deterministic; zero synchronisation; small chunks give free load balancing | Replicates graph N times in RAM (~2.4 GB on chicago_200k, 16-way) | ✅ chosen — RAM is abundant at our scale, simplicity wins |
+| **Threading + shared graph** | No graph duplication | Python's GIL serialises CPU-bound work — BFS is a pure-Python loop, so 0× speedup measured | ❌ GIL is the deal-breaker |
+| **`multiprocessing.shared_memory` for the graph** | Single in-RAM copy of the graph | Requires serialising the graph dict into raw bytes + custom view-layer; complicates determinism analysis; saves ~2 GB which we don't need | ❌ overkill for our memory budget |
+| **Network partitioning (geographic zones) + cross-zone messaging** | Saves memory if the graph were enormous (millions of nodes) | Workers must coordinate when a path crosses zone boundaries — introduces synchronisation, breaks the pure-function determinism story, requires substantially more complex code | ❌ unnecessary; our graphs are at most ~80K nodes |
+| **C/Cython extension with shared graph + threads (releasing GIL)** | Could be 5–10× faster per worker; no graph duplication | Requires writing + maintaining native code; loses the cross-platform pure-Python guarantee; build-time complexity | ❌ not warranted yet, future Phase candidate |
+
+#### 2.3.5 The `spawn` vs `fork` choice
+
+We use `multiprocessing.get_context("spawn")` explicitly rather than
+relying on the platform default:
+
+- **fork** (Linux default): the child inherits the parent's address
+  space copy-on-write. Cheap startup, but: doesn't work the same on
+  macOS (Python 3.8+ defaults to spawn on macOS for safety); shares
+  open file descriptors and held locks (subtle deadlock hazards);
+  interacts badly with libraries that aren't fork-safe (some XML
+  parsers, MATSim's JVM, etc.).
+- **spawn** (macOS default, forced on Linux too): each child boots a
+  fresh Python interpreter, re-imports the module, and runs
+  `_init_worker(network_path)` to rebuild its state from disk.
+  Slower startup (~1–2 s per worker) but cross-platform reproducible,
+  no inherited-state surprises.
+
+We pay the ~16–32 s of cumulative startup once per cell, amortised
+over hours of BFS work — completely irrelevant in the wall-time
+accounting, and worth it for the determinism + portability story.
+
+#### 2.3.6 What the user sees vs what's actually happening
+
+The `[bfs] progress` line says e.g.:
+
+```
+[bfs] progress : 87,500/200,000 (43.7%) elapsed 1h 30m  17 trips/s  w=16
+```
+
+The single number "17 trips/s" is the aggregate rate (8.23 trips/s on
+the real Cardinal run, divided across 16 workers ≈ 0.5 trips/s per
+worker). Internally, the 16 workers are independently chewing through
+their own chunks of 200 trips each, each calling
+`shortest_path_with_restrictions` thousands of times against its own
+private copy of the graph. None of them know about the others. The
+single progress counter is just the main process tallying how many
+chunks have returned.
+
+#### 2.3.7 Reference: worker code skeleton
 
 **Worker code skeleton**:
 
@@ -187,25 +345,21 @@ def _route_chunk(trip_chunk: list[tuple[str, str, str]]) -> list[tuple[str, list
     return out
 ```
 
-**Why this is deterministic**:
+**Determinism summary** (full proof in §2.3.3 above):
 
-1. Trips are sorted by trip_id before chunking → each worker gets a
+1. Trips are sorted by `trip_id` before chunking → each worker gets a
    deterministic chunk regardless of `workers` value.
-2. `Pool.map()` preserves input order → output chunks come back in the
-   same order they were submitted.
+2. `Pool.imap` preserves submission order → output chunks come back in
+   the same order they were submitted.
 3. Within a chunk, the worker's serial loop is deterministic (same
-   BFS, same inputs).
+   BFS function, identical replicated inputs).
 4. The merged dict is built by iterating the in-order chunks.
 
-The byte-identity test (`tests/test_canonical_routes.py`) pins this:
-running with `workers=1` and `workers=4` on `chicago_1k_car` must
-produce identical route dicts.
+Pinned by `tests/test_canonical_routes.py::TestParallelDeterminism`.
 
-**Why graph is reloaded per worker rather than fork-inherited**:
-
-`fork()`-inherited globals work on Linux but are unreliable on macOS
-(default `spawn` start method). Loading once per worker (~1-2 sec
-overhead) is platform-portable and amortizes over thousands of trips.
+**Per-worker `_init_worker` rather than fork-inherited globals**:
+See §2.3.5 above — `spawn` is forced for cross-platform consistency,
+worker state is rebuilt from `network.xml` instead of inherited.
 
 ### 2.4 Adapter integration
 

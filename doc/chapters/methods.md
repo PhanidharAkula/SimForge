@@ -1254,7 +1254,80 @@ Phase-14 walls per the Amdahl extrapolation: ~5–8 h chicago_200k_car,
 with the measured-speedup table; see `CHANGELOG.md` Phase 14.9 (post-
 landing) for the full diff.
 
-### 3.8.5 Engineering Implications
+### 3.8.5 Parallelism Architecture (task-parallel, replicated graph)
+
+The Phase 14b implementation uses **task parallelism over trips**, not
+data parallelism over the network. The architectural rationale matters
+for the determinism argument the cross-engine fairness claim depends
+on, so it bears explicit discussion.
+
+The trip list (the feasibility-filtered subset of `demand.csv`,
+sorted by `trip_id`) is split into ~1,000 chunks of ~200 trips each.
+Each chunk is a list of `(trip_id, origin_node, dest_node)` tuples
+distributed dynamically across an OS-process pool sized to the
+SBATCH allocation (`SLURM_CPUS_PER_TASK`, typically 16). Each worker
+process holds a **full replicated copy** of the SCC-filtered canonical
+network in its own heap; we do not partition the graph geographically.
+Workers compute BFS independently on their chunks and return lists of
+`(trip_id, path)` results to the main process via
+`multiprocessing.Pool.imap`. The result preserves submission order,
+so the merged route dict is byte-identical to a serial run regardless
+of the chosen worker count (pinned by
+`tests/test_canonical_routes.py::TestParallelDeterminism`).
+
+This choice was deliberate. Three alternatives were considered and
+rejected:
+
+1. **Threads with a shared graph** — blocked by CPython's GIL on
+   CPU-bound work. Pure-Python BFS loops would see zero measurable
+   speedup, defeating the purpose of the refactor.
+2. **`multiprocessing.shared_memory` for the graph** — would save the
+   ~2.4 GB cost of replicating the chicago_200k graph across 16
+   workers, but complicates the determinism story (custom view-layer
+   over raw bytes) and saves memory the cluster nodes have in
+   abundance (Cardinal `cpu` provides 503 GB per node).
+3. **Geographic network partitioning with cross-zone messaging** —
+   would matter only if the graph were too large to replicate.
+   Introduces synchronisation between workers when a path crosses a
+   zone boundary, breaks the pure-function determinism property, and
+   substantially complicates the implementation. Unnecessary at the
+   network sizes V5 operates on (≤ 80K nodes).
+
+The chosen architecture has three defensible properties:
+
+- **No worker-to-worker communication.** All IPC is between the main
+  process and individual workers (chunk-in, results-out). Workers are
+  isolated by construction; they cannot race on shared state because
+  no shared state exists.
+- **Determinism reducible to a pure-function argument.** Each
+  `shortest_path_with_restrictions(origin, dest, adjacency,
+  edge_lookup, forbidden_moves)` call is a deterministic function of
+  inputs that are bit-identical across workers (read from the
+  hash-pinned canonical bundle). Therefore the merged output is
+  bit-identical to the serial computation, regardless of worker count.
+- **Cross-platform reproducibility via `spawn`.** The implementation
+  explicitly forces `multiprocessing.get_context("spawn")` rather than
+  relying on the platform default (`fork` on Linux, `spawn` on macOS
+  since Python 3.8+). Each worker boots a fresh Python interpreter
+  and rebuilds its state from `network.xml` via the `_init_worker`
+  initializer, paying ~1–2 seconds of startup cost per worker
+  (amortised over hours of BFS work) in exchange for identical
+  behaviour across the developer Mac and the OSC Cardinal Linux
+  cluster.
+
+Empirically measured on Cardinal at 16-way parallelism, the per-worker
+BFS rate is approximately 0.51 trips/s vs the single-thread baseline
+of 0.82 trips/s — a 0.63× per-worker efficiency, attributable to
+memory-bandwidth contention on the shared Xeon Max 9470 socket (each
+worker reading from its own ~150 MB graph copy puts pressure on the
+shared HBM2e + DDR5 hierarchy). The aggregate effect is still ~10×
+total speedup over single-thread on the chicago_200k_car cold prep
+(6.75 h vs 68.16 h measured), which combines with Phase 14a's
+deduplication (eliminating MATSim's second 73 h BFS pass entirely via
+the on-disk JSONL cache hit) to deliver the ~19× job-level speedup
+reported in §3.8.4.
+
+### 3.8.6 Engineering Implications
 
 This phase illustrates a methodology point that the thesis defense
 benefits from: **the fairness contract talks about engine output,
