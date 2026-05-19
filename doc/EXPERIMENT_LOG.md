@@ -36,6 +36,10 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 | **Cardinal benchmark_large chicago_200k_car full wall (Phase 14, warm cache re-run)** | **~37 min** | §3 (2026-05-19 entry) |
 | **Phase 14 cold-vs-cold speedup (chicago_200k_car)** | **~20×** | §3 (2026-05-19 entry) |
 | **Phase 14 warm-cache re-run speedup (chicago_200k_car)** | **~228×** | §3 (2026-05-19 entry) |
+| **Cardinal benchmark_large nyc_500k_car full wall (Phase 14, cold cache, FIRST EVER)** | **12 h 8 min (job 9971042 — 11.16 h shared BFS on 24 workers + ~1 h sim across 10 cells)** | §3 (2026-05-19 nyc entry) |
+| **Phase 14 cold speedup vs Phase 13 projection (nyc_500k_car)** | **~50× (Phase 13 ~600 h projection was structurally unrunnable on Cardinal's 7-day cpu wall)** | §3 (2026-05-19 nyc entry) |
+| **Phase 14 BFS rate cross-scale validation** | **0.53 trips/s/worker (chicago_200k, 16w) vs 0.52 trips/s/worker (nyc_500k, 24w) — within 2 %, confirms linear-in-trips cost model** | §3 (2026-05-19 nyc entry) |
+| **nyc_500k SUMO/MATSim mean-TT ratio (Q4 paradigm-divergence signal)** | **0.037 (−96.3 %) — SUMO completed 35 % vs MATSim 74 % of 500 K trips; strongest paradigm signal in the dataset** | §3 (2026-05-19 nyc entry) |
 | **Cardinal SUMO BFS-prep cold cell (chicago_200k_car, Phase 13)** | **~68 h, then mobsim 243 s** | §3 (2026-05-18 entry) |
 | **Cardinal MATSim BFS-prep cold cell (chicago_200k_car, Phase 13)** | **~68 h, then mobsim 210 s** — collapsed to ~1 s under Phase 14.12 O(N)→O(1) | §3 (2026-05-18, 2026-05-19 entries) |
 | **Cardinal SUMO meso completion rate (chicago_200k_car)** | **116,270 / 200,000 = 58.1 %** — Q4 paradigm signal | §3 (2026-05-18 entry) |
@@ -55,6 +59,48 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 ---
 
 ## 3. Active experiment journal (latest first)
+
+### 2026-05-19 — Phase 14 nyc_500k measured; first-ever 500K-tier cold-cache wall
+
+Phase: Version_5 Phase 14 (canonical-routes branch)
+Commit: `cbc11c0` (HEAD on `phase-14-canonical-routes` at submission)
+Job ID: **9971042** completed cleanly
+
+**What happened.** Job 9971042 (nyc_500k_car under Phase 14, true cold cache — `.canonical_routes/` did not pre-exist on disk) started 2026-05-19 03:44 UTC alongside chicago_200k_car (9971041) and completed at 15:52 UTC. **Total wall: 12 h 8 min.** Full 10-cell matrix: 5 SUMO meso + 5 MATSim meso seeds, all successful. R = 0.9969 EXCELLENT, Q1 byte-identity PASS, scorecard PASS. **First successful 500K-tier benchmark run in SimForge history** — pre-Phase-14 extrapolation projected ~600 h (~25 d), structurally impossible on Cardinal's 7-day cpu wall.
+
+**Cell-level wall observations** (`runs/benchmark_large/nyc_500k_car/`):
+- `[1/10] sumo seed=42`  — cold cell: **40,533.1 s wall (~11.26 h)**, breakdown 360.8 s engine + **~11.16 h BFS-prep on 24 workers**
+- `[2/10]–[5/10] sumo seeds 43-46` — warm cells: 361.6 s / 362.3 s / 364.0 s / 392.4 s (cache hit, prep = 1.5 s each)
+- `[6/10] matsim seed=42` — **373.0 s wall** (48.8 s MATSim-only prep + 324.3 s engine) — **NOT a second cold BFS pass**: Phase 14's canonical_routes cache was shared across engines, so MATSim seed=42 inherited SUMO's BFS work and only paid its own MATSim-specific link-index build cost (Phase 14.12's O(N)→O(1) indices)
+- `[7/10]–[10/10] matsim seeds 43-46` — 341.7 s / 323.8 s / 322.0 s / 325.7 s (cache hit, prep ≈ 1.9 s each)
+
+**Cross-engine cache-sharing in action.** The cell-wall pattern empirically demonstrates Phase 14.4's design intent: the BFS prep is done ONCE per scenario (paid by whichever engine runs seed=42 first, in this case SUMO), then ALL subsequent cells (4 more SUMO seeds + 5 MATSim seeds) consume the cache for ~1.5–48 s each. Without cross-engine sharing, MATSim would have paid its own ~11 h BFS pass on top of SUMO's, doubling the total wall to ~22 h.
+
+**Fairness audit results** (`audit_fairness.txt`):
+- **Q1**: byte-identical feasibility verdict across SUMO + MATSim — both engines: 500,000/500,000 trips feasible, SCC 423,267/423,712 nodes (99.90 % SCC coverage), 1,301,431/1,302,023 links — **PASS**
+- **Q2**: byte-identical SCC-filtered network — both engines emit 423,267 nodes / 1,301,431 links — **PASS**
+- **Q3**: both engines simulated the target 500,000-trip count — **PASS**
+- **Q4 (paradigm-divergence finding — sharper than chicago_200k)**: SUMO completed **N=175,138 (35.0 %)** trips (mean TT 982.7 s, P95 6,239 s); MATSim completed **N=369,353 (73.9 %)** trips (mean TT 26,474.2 s, P95 72,671 s). **SUMO/MATSim mean-TT ratio = 0.037 (−96.3 %)**. NYC's dense Manhattan SCC saturates much harder than Chicago's grid — SUMO's queue model rejects more trips at congested origin-edges (35 % completion vs Chicago's 58 %), while MATSim's hold-and-wait qsim keeps vehicles in queue (7.4 h mean TT). This is the strongest paradigm-divergence signal in the dataset and is the load-bearing Chapter 5 §5.7 result for "why same-input ≠ same-output across mesoscopic engines."
+- **Q5**: 500,000 trips at 100 % AM peak (this scenario is the 6–10 AM AM-only horizon, not 24 h like chicago_200k), 58.7 % school-related (146,641 AM HBSchool chains + 146,641 AM HBW_AM_chained; 0 PM chains because PM is outside horizon)
+
+**Reproducibility** (per-cell R = 1 − σ/μ on travel_time.mean):
+- MATSim meso: 5 seeds, mean TT 26,474.2 s ± small, R ≥ 0.999 (effectively perfect at lastIteration=0)
+- SUMO meso: 5 seeds, mean TT 982.7 s, R = 0.993–0.998 (Good–Excellent; the slight variance comes from SUMO's Krauss-σ sigma)
+- **Overall R (scorecard): 0.9969 EXCELLENT**
+
+**BFS cost model cross-scale validation.** Per-worker BFS throughput:
+- chicago_200k Phase 14: 200,000 trips / (6.52 h × 3600 s) / 16 workers = **0.53 trips/s/worker** on 1,072,312 SCC links
+- nyc_500k Phase 14:    500,000 trips / (11.16 h × 3600 s) / 24 workers = **0.52 trips/s/worker** on 1,301,431 SCC links
+
+Per-worker rates within 2 % despite NYC's 1.21× larger SCC and 2.5× larger trip count. Confirms the BFS cost model: cost scales nearly linearly with trip count, near-constant per-trip at similar network density. The 24-worker parallelism is approximately linearly scalable on this workload. **This validates the Phase 14.5 parallel-Pool design — workers don't saturate or degrade at higher worker count.**
+
+**Speedup vs the Phase 13 projection.** nyc_500k was never run under Phase 13 — extrapolation from chicago_200k's 141 h baseline projected ~600 h (~25 d), which exceeded Cardinal's 7-day cpu wall. Phase 14 turned the unrunnable into 12 h. The "cold-vs-cold" speedup is therefore against the projection, not a measured baseline: 600 h / 12 h ≈ **~50×**.
+
+**Local storage outcome.** Pulled to local Mac via `rsync -avzP --hard-links --exclude='.canonical_routes/' --exclude='.cache/' --exclude='ITERS/' --exclude='output/tmp/'`. Total on disk: **6.4 GB** (vs ~30-40 GB without excludes + hardlinks). The 5 SUMO `net.net.xml` paths share inode 126083068 (one 1.9 GB file backing 5 dir entries — visible via `stat -f '%i'`). No post-pull cleanup needed.
+
+**Artefacts.** `runs/benchmark_large/nyc_500k_car/` contains the result JSON, summary.md, audit_fairness.txt, plots/ (the 10 thesis figures), and `reproducibility_scorecard.md` (generated locally via `python -m tools.generate_scorecard`).
+
+---
 
 ### 2026-05-19 — Phase 14 chicago_200k measured; thesis cold-vs-warm speedups pinned
 
