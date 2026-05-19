@@ -60,6 +60,55 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-19 — SUMO micro pilot prepared for chicago_200k_car (within-engine resolution check)
+
+Phase: post-Phase-14, post-Wave-3 — within-engine resolution-comparison setup
+Commit: HEAD on `phase-14-canonical-routes` after this entry lands
+Job ID: pending submission
+
+**What was prepared.** Two artefacts to enable a single-seed pilot of SUMO microscopic on chicago_200k_car:
+- `runspecs/pilot_chicago_200k_sumo_micro.yaml` — 1-cell runspec (chicago_200k × sumo × micro × seed 42), `timeout_s = 172,800` (48 h).
+- `cluster/jobs/pilot_chicago_200k_sumo_micro.sbatch` — Cardinal sbatch wrapper, `--time=2-00:00:00`, `--mem=128G`, `--cpus-per-task=16`. Runs the runspec, prints engine_wall + decision-gate verdict (GREEN/YELLOW/RED) at the end.
+
+**Why this pilot.** The cross-engine fairness story at the large tier (Chapter 5 §5.6.2) compares SUMO meso vs MATSim qsim — both mesoscopic paradigms. SUMO micro is the within-engine resolution check that answers "how much vehicle-level detail does meso throw away on a 200K-trip bundle?" If the pilot lands cleanly, the full 5-seed micro matrix on chicago_200k becomes a Chapter 5 §5.4 extension (within-SUMO meso-vs-micro comparison at the headline scale, complementing the within-tier comparisons already shipped on chicago_1k + nyc_10k).
+
+**Wall-time projection** (from `doc/SIMULATION_PARADIGMS.md` §6):
+
+| Reference point | Trips | SUMO micro engine_wall | per-trip cost |
+|---|---:|---:|---:|
+| chicago_1k_car (measured) | 1,000 | 343 s | 0.34 s |
+| nyc_10k_car (measured)    | 10,000 | 1,144 s | 0.11 s |
+| **chicago_200k_car (linear extrapolation)** | 200,000 | **~19 h** | 0.34 s assumed |
+| **chicago_200k_car (super-linear, 1.5–2× for congestion)** | 200,000 | **28–38 h** | 0.50–0.69 s assumed |
+
+The super-linear estimate accounts for car-following + lane-change interactions per vehicle per time-step scaling with congestion density (chicago_200k is a much denser regime than chicago_1k on the same network). 48 h sbatch budget provides 1.3–1.7× margin over the upper projection.
+
+**Phase 14 cache state.** The canonical_routes BFS cache for chicago_200k_car already exists on Cardinal at `runs/benchmark_large/chicago_200k_car/.canonical_routes/` (built by job 9971041, SUMO meso seed=42 cold pass, 6.52 h). The pilot will hit that warm cache and pay ~1 s prep instead of 6.52 h — *engine_wall* is the entire cost. This isolates the SUMO micro engine-runtime measurement from any BFS-prep noise.
+
+**Decision gate** (post-pilot):
+
+| Engine wall observed | Verdict | Action |
+|---|---|---|
+| ≤ 30 h | **GREEN** | Bump runspec `repeats: 5`, `timeout_s: actual + 20 % margin`, re-submit as 5-seed sbatch. Becomes Chapter 5 §5.4 extension. |
+| 30 – 48 h | **YELLOW** | 5-seed matrix needs 7-day wall + 5 parallel sbatchs. Doable but expensive in compute. Document the constraint, decide based on remaining Cardinal allocation. |
+| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as D-class deviation in `doc/DEVIATIONS.md` (parallel to D3 5M-tier dropped). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
+
+**Submission command** (on Cardinal, from `~/SimForge`):
+
+```bash
+sbatch cluster/jobs/pilot_chicago_200k_sumo_micro.sbatch
+```
+
+After completion, the sbatch's final block prints the decision-gate verdict automatically. Run a follow-up `rsync` with the standard lean flags to pull the result dir local:
+
+```bash
+rsync -avzP --hard-links --exclude='.canonical_routes/' --exclude='.cache/' --exclude='ITERS/' --exclude='output/tmp/' phanidharakula@cardinal.osc.edu:/users/PMIU0110/phanidharakula/SimForge/runs/pilots/ runs/pilots/
+```
+
+**Expected scorecard outcome at pilot completion.** Single cell, so no R metric (N=1). Q1–Q3 audit will PASS (same fairness contract as the meso runs — the canonical bundle + SCC + feasibility filter are identical). The headline measurement is `engine_wall_s` + `trip_count` for the 200K-trip SUMO micro cell. Cross-checks the SUMO meso baseline at the same scenario (job 9971041): same SCC, same feasibility, same demand — micro should drop more trips than meso (more aggressive car-following + lane-change rejections) but should NOT change the SCC nodes or feasibility verdict.
+
+---
+
 ### 2026-05-19 — Phase 14 nyc_500k measured; first-ever 500K-tier cold-cache wall
 
 Phase: Version_5 Phase 14 (canonical-routes branch)
