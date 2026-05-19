@@ -1,6 +1,6 @@
 # SimForge Test Suite
 
-**~477 tests** across **23 test files** covering adapters, metrics, validation,
+**~626 tests** across **31 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, the cross-engine
 fairness audit, OSM network fetching (mocked), demand generators, and

@@ -208,6 +208,14 @@ python -m evaluation.audit_fairness runs/benchmark_small
 
 # 5. Render the 10 thesis figures
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
+
+# 6. (Optional, Wave 1+) The reproducibility scorecard is auto-emitted by
+#    run_benchmark next to benchmark_results_*.json. Regenerate manually if
+#    needed (e.g., from a run dir copied across hosts):
+python -m tools.generate_scorecard runs/benchmark_small
+# Produces runs/benchmark_small/reproducibility_scorecard.md with provenance
+# hashes + environment + Q1 byte-identity verdict + R = 1 − CV per cell
+# + pass/warn/fail rollup.
 ```
 
 ---

@@ -502,15 +502,24 @@ The adapter functions keep their pre-Phase-14 signature working when
 
 ## 5. Measurement plan
 
-After Phase 14 lands, re-run the benchmark to quantify the speedup:
+Re-run the benchmark to quantify the speedup against the Phase 13 baseline:
 
-1. **Baseline**: the chicago_200k_car job (9332478) currently running.
-   Captures pre-Phase-14 wall on Cardinal Xeon Max 9470.
-2. **Post Phase 14**: re-submit `cluster/jobs/benchmark_large_chicago_200k.sbatch`
-   (after cache invalidation). Compare cold-prep wall.
-3. **Post Phase 14**: re-submit `cluster/jobs/benchmark_large_nyc_500k.sbatch`
-   with the cancelled run's full matrix. Compare against the
-   extrapolated Pitzer pre-Phase-14 baseline (600 h).
+1. **Baseline**: chicago_200k_car job 9332478 completed 2026-05-18 at
+   141.87 h wall on Cardinal Xeon Max 9470 (Phase 13 reference).
+2. **Post Phase 14 (chicago_200k_car)**: job 9971041 measured ~7.14 h
+   cold-cache total (6.52 h BFS prep on 16 workers + ~37 min sim across
+   10 cells), ~37 min warm-cache re-run. Cold-vs-cold speedup ≈ 20×,
+   warm-cache re-run vs Phase 13 cold ≈ 228×.
+3. **Post Phase 14 (nyc_500k_car)**: job 9971042 in flight at time of
+   writing, BFS pass at ~6.7 trips/s on 24 workers projecting ~20 h
+   cold + ~1-2 h sim ≈ ~22 h cold-cache total.
+
+Both scenarios now submit via the single `cluster/jobs/benchmark_large.sbatch`
+umbrella (`--time=2-00:00:00`). The Phase 13.2 per-scenario fallback
+sbatchs (`benchmark_large_chicago_200k.sbatch` + `benchmark_large_nyc_500k.sbatch`)
+were deleted in commit 503bcbf after Phase 14 confirmed both scenarios fit
+comfortably within the umbrella's parallel-on-one-node strategy. See
+`doc/EXPERIMENT_LOG.md` 2026-05-19 entry for the full breakdown.
 
 Numbers go into:
 - `CHANGELOG.md` Phase 14 entry, in a measured-speedup table.

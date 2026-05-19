@@ -8,6 +8,61 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Documentation + sbatch hygiene pass (2026-05-19, post-Wave-1)
+
+Three groups of doc/operational changes landed after Wave 1, all
+documentation- or sbatch-only (no adapter / pipeline behaviour change).
+
+- **`doc/DEVIATIONS.md`** (commit `caadceb`) — 31-item audit
+  of the December 2025 thesis plan vs the shipped codebase: 14 ✓
+  Closed, 11 ~ Deviated with rationale, 6 ≠ Implementation differs.
+  Single reference for the defense Q&A and methods chapter.
+- **`doc/SIMULATION_PARADIGMS.md`** (commit `84ac87c`) — 313-line
+  canonical doc explaining macro/meso/micro: the three resolutions
+  table, per-engine support matrix (SUMO meso+micro, MATSim/DTALite
+  meso-only), why SimForge defaults to meso for cross-engine fairness,
+  empirical cost ratios from benchmark_small (chicago_1k 1.3×,
+  nyc_10k 1.7×), projections for SUMO micro at 200K/500K, defense
+  Q&A pocket explanation. `doc/GLOSSARY.md` Mesoscopic + Microscopic
+  entries cross-reference the long form.
+- **sbatch consolidation** (commit `503bcbf`) — deleted the Phase 13.2
+  per-scenario fallback sbatchs (`benchmark_large_chicago_200k.sbatch`
+  + `benchmark_large_nyc_500k.sbatch`); they were wall-margin insurance
+  for nyc_500k's pre-Phase-14 ~225 h projection against Cardinal's
+  168 h cpu cap. Phase 14 collapsed nyc_500k cold-cache to ~22 h, so
+  the umbrella `benchmark_large.sbatch` parallel-on-one-node strategy
+  is comfortable. Reduced umbrella `--time=7-00:00:00` → `2-00:00:00`
+  (2× margin over the ~22 h worst case). Updated both runspec
+  headers (`benchmark_small.yaml`, `benchmark_large.yaml`) with
+  Phase 14 wall budgets and the cross-engine cache-sharing narrative.
+
+### Audit-driven doc refresh (2026-05-19)
+
+End-to-end documentation sweep to align surface text with Phase 14 +
+Wave 1 reality. Findings + edits:
+
+- `README.md`: test count `~574 → ~626 tests` (4 occurrences across
+  status table, project structure, run instructions, headline);
+  added `tools/generate_scorecard.py` to the post-run pipeline
+  description; added 4 docs to the Documentation table (`LICENSING.md`,
+  `DATA_MANAGEMENT.md`, `DEVIATIONS.md`,
+  `SIMULATION_PARADIGMS.md`, `EXPERIMENT_LOG.md`).
+- `TESTING.md`: headline `~477 tests / 23 files → ~626 tests / 31 files`.
+- `project notes`: extended the active-branch summary from "Phases 5-11" to
+  cover Phase 14 + Wave 1 work (canonical_routes, scorecard, LICENSE).
+- `doc/PHASE_14_DESIGN.md` §5 Measurement Plan: replaced the
+  forward-looking re-submit-the-deleted-sbatchs steps with the actual
+  measured Phase 14 walls (chicago_200k 7.14 h cold / 37 min warm;
+  nyc_500k 22 h cold projected) and the umbrella-sbatch consolidation
+  pointer.
+- `doc/REPRODUCING.md`: added optional step 6 documenting
+  `python -m tools.generate_scorecard <run-dir>`.
+- `help.py` HELP_EVALUATION: added a REPRODUCIBILITY SCORECARD
+  subsection after AUDIT CROSS-ENGINE FAIRNESS.
+- `doc/EXPERIMENT_LOG.md` §1 Headline numbers: updated test-suite
+  count, added Phase 14 measured walls for chicago_200k_car, fixed
+  the "engines researched + ruled out" count (3 → 4 names listed).
+
 ### Wave 1 — Reproducibility-artefact closure pass (2026-05-19)
 
 Adds the artefacts the original thesis plan (§3.6, §3.4, §4.2)

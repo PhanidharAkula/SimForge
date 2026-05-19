@@ -23,8 +23,8 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 | Metric | Value | Source |
 |---|---|---|
 | Engines shipping (Version_5) | 3 (SUMO, MATSim, DTALite) | `adapters/` |
-| Engines researched + ruled out | 3 (LPSim, QarSUMO, POLARIS, CityFlow) | `doc/engines/` |
-| Test suite | 574 passing with all 5 bundles (502 with the 3 tracked); 1 pre-existing arm64 SUMO env fail | §3.1 below |
+| Engines researched + ruled out | 4 (LPSim, QarSUMO, POLARIS, CityFlow) | `doc/engines/` |
+| Test suite | 626 collected; 613 pass, 13 skip on Apple Silicon (arm64 netconvert) | §3.1 below |
 | Reproducibility ceiling | R = 1.0000 across N=5 on MATSim + DTALite at all converged scales; SUMO R = 0.95-0.99 (Good-Excellent) across all tiers | §3.4, §3.6 |
 | Fairness audit | Q1✓ Q2✓ Q3✓ on all 3 scenarios; Q4 paradigm-spread signal; Q5 demand-composition | §3.5, §3.6 |
 | Cross-engine TT alignment (post-Phase-12.5 verified, Pitzer jobs 47237978 + 47248311) | SUMO/MATSim mean-TT ratio: chicago_1k 0.869 (-13.1%), nyc_10k 1.132 (+13.2%), **la_50k 1.046 (+4.6%)** — alignment improves with scale (law of large numbers) | §3.5 |
@@ -32,8 +32,12 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 | Pitzer per-scenario wallclock (chicago_1k, all 4 engines × N=5) | ~12 min (cached) | §3 (2026-05-03 entry) |
 | Pitzer benchmark_small full wall (Phase 12 BFS-prep cache, Pitzer Skylake) | ~17-22 h (la_50k worker dominates; chicago + nyc finish in ~3 min and ~3 h respectively) | §3 (2026-05-03 entry) |
 | **Cardinal benchmark_large chicago_200k_car full wall (Phase 13 baseline, single-thread BFS)** | **141.87 h (job 9332478)** | §3 (2026-05-18 entry) |
-| **Cardinal SUMO BFS-prep cold cell (chicago_200k_car)** | **~68 h, then mobsim 243 s** | §3 (2026-05-18 entry) |
-| **Cardinal MATSim BFS-prep cold cell (chicago_200k_car)** | **~68 h, then mobsim 210 s** | §3 (2026-05-18 entry) |
+| **Cardinal benchmark_large chicago_200k_car full wall (Phase 14, cold cache)** | **~7.14 h (job 9971041 — 6.52 h shared BFS on 16 workers + 37 min sim)** | §3 (2026-05-19 entry) |
+| **Cardinal benchmark_large chicago_200k_car full wall (Phase 14, warm cache re-run)** | **~37 min** | §3 (2026-05-19 entry) |
+| **Phase 14 cold-vs-cold speedup (chicago_200k_car)** | **~20×** | §3 (2026-05-19 entry) |
+| **Phase 14 warm-cache re-run speedup (chicago_200k_car)** | **~228×** | §3 (2026-05-19 entry) |
+| **Cardinal SUMO BFS-prep cold cell (chicago_200k_car, Phase 13)** | **~68 h, then mobsim 243 s** | §3 (2026-05-18 entry) |
+| **Cardinal MATSim BFS-prep cold cell (chicago_200k_car, Phase 13)** | **~68 h, then mobsim 210 s** — collapsed to ~1 s under Phase 14.12 O(N)→O(1) | §3 (2026-05-18, 2026-05-19 entries) |
 | **Cardinal SUMO meso completion rate (chicago_200k_car)** | **116,270 / 200,000 = 58.1 %** — Q4 paradigm signal | §3 (2026-05-18 entry) |
 | **Cardinal MATSim meso completion rate (chicago_200k_car)** | **200,000 / 200,000 = 100 %** | §3 (2026-05-18 entry) |
 | **Cardinal SUMO/MATSim mean-TT ratio at 200K** | **0.645 (−35.5 %)** — biased by SUMO's selection effect on which trips actually started | §3 (2026-05-18 entry) |

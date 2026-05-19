@@ -616,6 +616,17 @@ AUDIT CROSS-ENGINE FAIRNESS:
   parallel-by-scenario sbatch nested, per-scenario worker dir). Use this
   before claiming any cross-engine number in the thesis.
 
+REPRODUCIBILITY SCORECARD (Wave 1+):
+  python -m tools.generate_scorecard <run-dir>
+
+  Emits reproducibility_scorecard.md — one-shot Markdown digest of
+  provenance (git HEAD + OSM PBF hashes + per-bundle hashes),
+  environment (platform + Python + SUMO + Java + dep versions), Q1
+  byte-identity verdict, R = 1 − CV per (scenario, engine, mode) cell
+  with EXCELLENT/GOOD/ACCEPTABLE/POOR rating, and a pass/warn/fail
+  overall rollup. Auto-emitted by run_benchmark next to
+  benchmark_results_*.json; this command regenerates on demand.
+
 COMPARE MICRO vs MESO:
   python -m evaluation.compare_modes <scenario_path>                  # live run
   python -m evaluation.compare_modes --from-benchmark <results.json>  # from existing

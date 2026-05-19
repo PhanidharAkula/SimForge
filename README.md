@@ -27,7 +27,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (10 thesis figures)     |
-| Test Suite                   | ✅ ~574 tests passing (502 with 3 tracked bundles) |
+| Test Suite                   | ✅ ~626 tests (613 pass, 13 arm64-netconvert skips) |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 | Visualization Component (opt-in, separate branch) | ✅ Complete (7 map types — OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
 
@@ -112,6 +112,11 @@ network, and the same trip count, and reports per-engine travel-time
 ratios. See [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md) for the
 canonical interpretation of audit output.
 
+`run_benchmark.py` also auto-emits a one-shot `reproducibility_scorecard.md`
+next to `benchmark_results_*.json`: provenance hashes + environment +
+Q1 byte-identity verdict + R = 1 − CV per cell + pass/warn/fail rollup.
+Regenerate manually with `python -m tools.generate_scorecard <run-dir>`.
+
 ### Generate New Scenarios
 
 ```bash
@@ -162,7 +167,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache + US Census shapefiles (gitignored)
-├── tests/                  # pytest test suite (~574 tests)
+├── tests/                  # pytest test suite (~626 tests across 31 files)
 ├── visualization/          # Opt-in geographic-map renderer (on visualization branch)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
@@ -209,7 +214,7 @@ LPSim, POLARIS, and QarSUMO were evaluated and rejected — see the retrospectiv
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all ~574 tests (502 with just the 3 tracked bundles)
+pytest tests/ -v          # Run all ~626 tests (~613 pass, 13 arm64-netconvert skips on Apple Silicon)
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 
@@ -289,6 +294,11 @@ symmetry).
 | [doc/REPRODUCING.md](doc/REPRODUCING.md)                   | Full reproduction guide for thesis results    |
 | [doc/RESULTS_GUIDE.md](doc/RESULTS_GUIDE.md)               | What each generated figure/table means        |
 | [doc/GLOSSARY.md](doc/GLOSSARY.md)                         | Acronyms and term definitions                 |
+| [doc/SIMULATION_PARADIGMS.md](doc/SIMULATION_PARADIGMS.md) | Macro / meso / micro reference + per-engine support |
+| [doc/LICENSING.md](doc/LICENSING.md)                       | Per-component license declarations            |
+| [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics   |
+| [doc/DEVIATIONS.md](doc/DEVIATIONS.md)   | Plan commitments vs shipped state (31 items) |
+| [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal             |
 | [doc/chapters/methods.md](doc/chapters/methods.md)         | Thesis Chapter 3 — Methods                    |
 | [doc/chapters/experiments.md](doc/chapters/experiments.md) | Thesis Chapter 4 — Experiments                |
 | [doc/chapters/results.md](doc/chapters/results.md)         | Thesis Chapter 5 — Results                    |
