@@ -62,26 +62,40 @@ cd ~/SimForge
 source .venv/bin/activate
 
 # ---------------------------------------------------------------------------
-# Try to make ffmpeg available. Three fallback levels:
-#   1. Cardinal `module load ffmpeg` (likely available)
-#   2. imageio-ffmpeg bundled binary (pip install if missing)
-#   3. Bail with clear message
+# Make ffmpeg available as a binary literally named `ffmpeg` on PATH.
+# matplotlib's FFMpegWriter calls subprocess.Popen(["ffmpeg", ...]) which
+# does an execvp PATH-lookup for the exact literal "ffmpeg" — so just
+# prepending imageio-ffmpeg's directory to PATH is NOT enough because that
+# binary is named `ffmpeg-linux-x86_64-v7.0.2` (with version suffix).
+# Symlink it to a real `ffmpeg` name in a dedicated dir on PATH.
+#
+# Three fallback levels:
+#   1. Cardinal `module load ffmpeg` (real `ffmpeg` binary, no work needed)
+#   2. imageio-ffmpeg bundled binary (symlink to ~/bin/ffmpeg + PATH)
+#   3. Install imageio-ffmpeg via uv then symlink (same as 2)
 # ---------------------------------------------------------------------------
 echo "=== Locating ffmpeg ==="
 if module load ffmpeg 2>/dev/null && command -v ffmpeg >/dev/null 2>&1; then
     echo "  ffmpeg from module:  $(which ffmpeg)"
     echo "  version:             $(ffmpeg -version 2>&1 | head -1)"
-elif python -c "import imageio_ffmpeg" 2>/dev/null; then
-    FFBIN=$(python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())")
-    export PATH="$(dirname $FFBIN):$PATH"
-    echo "  ffmpeg from imageio-ffmpeg: $FFBIN"
 else
-    echo "  ffmpeg not on PATH and imageio-ffmpeg not installed."
-    echo "  Installing imageio-ffmpeg via uv..."
-    uv pip install imageio-ffmpeg
+    if ! python -c "import imageio_ffmpeg" 2>/dev/null; then
+        echo "  imageio-ffmpeg not installed — installing via uv..."
+        uv pip install imageio-ffmpeg
+    fi
     FFBIN=$(python -c "import imageio_ffmpeg; print(imageio_ffmpeg.get_ffmpeg_exe())")
-    export PATH="$(dirname $FFBIN):$PATH"
-    echo "  ffmpeg installed at: $FFBIN"
+    # Symlink to a directory on PATH with the literal name `ffmpeg`.
+    mkdir -p "$HOME/bin"
+    ln -sf "$FFBIN" "$HOME/bin/ffmpeg"
+    export PATH="$HOME/bin:$PATH"
+    # Verify matplotlib + subprocess can both find it.
+    command -v ffmpeg >/dev/null 2>&1 || {
+        echo "  ERROR: ffmpeg symlink failed — animations will fall back to GIF."
+        exit 1
+    }
+    echo "  ffmpeg from imageio-ffmpeg: $FFBIN"
+    echo "  symlinked to:               $HOME/bin/ffmpeg"
+    echo "  version:                    $(ffmpeg -version 2>&1 | head -1)"
 fi
 echo
 
