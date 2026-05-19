@@ -253,53 +253,109 @@ def clean_network(nodes: Dict, links: List) -> tuple:
     return filtered_nodes, filtered_links, reachable
 
 
-def find_link_for_origin(node_id: str, links: List[dict], link_adjacency: dict) -> Optional[str]:
+def build_matsim_link_indices(
+    valid_links: List[dict], link_adjacency: dict,
+) -> Dict[str, object]:
+    """Phase 14.12: pre-build O(1) lookup tables for link finding.
+
+    Replaces a per-trip O(N) linear scan with a one-time O(N) index build
+    plus per-trip O(1) dict lookups. On chicago_200k_car (~1M valid_links,
+    200K trips) the old approach spent ~64 h in find_link_for_*; with
+    these indices it's <1 second. Output is byte-identical because each
+    index stores the *first* match in original ``valid_links`` order,
+    which is exactly what the linear scans returned.
+
+    Returns a dict with five lookup tables + one fallback link id:
+
+    - ``nodes_with_outgoing``: set of node_ids that appear as a from-node
+      in at least one link (i.e., have outgoing edges).
+    - ``origin_links_by_to_first``: node_id -> first link_id where
+      link.to == node_id.
+    - ``origin_links_by_from_filt_first``: node_id -> first link_id where
+      link.from == node_id AND link.to in nodes_with_outgoing (the
+      "second priority" filter of the old find_link_for_origin).
+    - ``origin_links_touching_first``: node_id -> first link_id where
+      link.to == node_id OR link.from == node_id (the fallback).
+    - ``dest_links_by_from_first``: node_id -> first link_id where
+      link.from == node_id (the primary destination priority).
+    - ``dest_links_by_to_first``: node_id -> first link_id where
+      link.to == node_id (the destination fallback).
+    - ``fallback_link_id``: links[0]["id"] when every other lookup misses.
     """
-    Find a link for an origin activity.
+    nodes_with_outgoing = set(link_adjacency.keys())
+
+    origin_links_by_to_first: Dict[str, str] = {}
+    origin_links_by_from_filt_first: Dict[str, str] = {}
+    origin_links_touching_first: Dict[str, str] = {}
+    dest_links_by_from_first: Dict[str, str] = {}
+    dest_links_by_to_first: Dict[str, str] = {}
+
+    for link in valid_links:
+        lid = link["id"]
+        tt = link["to"]
+        ff = link["from"]
+        if tt not in origin_links_by_to_first:
+            origin_links_by_to_first[tt] = lid
+        if tt in nodes_with_outgoing and ff not in origin_links_by_from_filt_first:
+            origin_links_by_from_filt_first[ff] = lid
+        if tt not in origin_links_touching_first:
+            origin_links_touching_first[tt] = lid
+        if ff not in origin_links_touching_first:
+            origin_links_touching_first[ff] = lid
+        if ff not in dest_links_by_from_first:
+            dest_links_by_from_first[ff] = lid
+        if tt not in dest_links_by_to_first:
+            dest_links_by_to_first[tt] = lid
+
+    return {
+        "nodes_with_outgoing": nodes_with_outgoing,
+        "origin_links_by_to_first": origin_links_by_to_first,
+        "origin_links_by_from_filt_first": origin_links_by_from_filt_first,
+        "origin_links_touching_first": origin_links_touching_first,
+        "dest_links_by_from_first": dest_links_by_from_first,
+        "dest_links_by_to_first": dest_links_by_to_first,
+        "fallback_link_id": valid_links[0]["id"] if valid_links else None,
+    }
+
+
+def find_link_for_origin(node_id: str, idx: Dict[str, object]) -> Optional[str]:
+    """O(1) version (Phase 14.12). See ``build_matsim_link_indices`` for
+    the precomputed lookup structure. Preserves byte-identical behavior
+    to the pre-14.12 linear-scan implementation:
+
     In MATSim, the agent departs from the TO-node of the activity link.
     We need a link whose TO-node is our origin AND has outgoing edges.
     """
-    # Build set of nodes with outgoing edges
-    nodes_with_outgoing = set(link_adjacency.keys())
-    
-    # First priority: link ending at origin node (TO=origin) where origin has outgoing edges
+    nodes_with_outgoing = idx["nodes_with_outgoing"]
+    # Priority 1: link ending at origin node (TO=origin) where origin has outgoing edges.
     if node_id in nodes_with_outgoing:
-        for link in links:
-            if link["to"] == node_id:
-                return link["id"]
-    
-    # Second priority: link starting from origin (FROM=origin)
-    # Agent will be at TO-node, but that node should have outgoing edges
-    for link in links:
-        if link["from"] == node_id and link["to"] in nodes_with_outgoing:
-            return link["id"]
-    
-    # Fallback: any link connected to this node
-    for link in links:
-        if link["to"] == node_id or link["from"] == node_id:
-            return link["id"]
-    
-    return links[0]["id"] if links else None
+        link_id = idx["origin_links_by_to_first"].get(node_id)
+        if link_id is not None:
+            return link_id
+    # Priority 2: link starting from origin (FROM=origin), where the TO end has outgoing edges.
+    link_id = idx["origin_links_by_from_filt_first"].get(node_id)
+    if link_id is not None:
+        return link_id
+    # Fallback: any link connected to this node (to or from).
+    link_id = idx["origin_links_touching_first"].get(node_id)
+    if link_id is not None:
+        return link_id
+    return idx["fallback_link_id"]
 
 
-def find_link_for_destination(node_id: str, links: List[dict], link_adjacency: dict) -> Optional[str]:
-    """
-    Find a link for a destination activity.
+def find_link_for_destination(node_id: str, idx: Dict[str, object]) -> Optional[str]:
+    """O(1) version (Phase 14.12). See ``build_matsim_link_indices``.
+
     In MATSim, routing goes from origin TO-node to destination FROM-node.
     So we need a link whose FROM-node is our destination (or TO-node as fallback).
     """
-    _ = link_adjacency  # reserved for future adjacency-based routing
-    # First priority: link starting from destination (FROM=destination)
-    for link in links:
-        if link["from"] == node_id:
-            return link["id"]
-    
-    # Second priority: link ending at destination (TO=destination)
-    for link in links:
-        if link["to"] == node_id:
-            return link["id"]
-    
-    return links[0]["id"] if links else None
+    link_id = idx["dest_links_by_from_first"].get(node_id)
+    if link_id is not None:
+        return link_id
+    link_id = idx["dest_links_by_to_first"].get(node_id)
+    if link_id is not None:
+        return link_id
+    return idx["fallback_link_id"]
 
 
 def build_matsim_vehicles_xml() -> str:
@@ -460,6 +516,20 @@ def build_matsim_plans_xml(
             len(canonical_routes),
         )
 
+    # Phase 14.12: build O(1) link-finding indices once. Pre-14.12, each
+    # of the 200K trips paid two O(N) linear scans over ~1M valid_links
+    # inside find_link_for_origin/find_link_for_destination — accounting
+    # for ~64 h of the 73 h MATSim cold-prep wall on chicago_200k. The
+    # index build below is one O(N) pass; per-trip lookups become O(1).
+    link_indices = build_matsim_link_indices(valid_links, link_adjacency)
+    logger.info(
+        "[matsim] built link-finding indices: %d nodes with outgoing edges, "
+        "%d origin-by-to keys, %d dest-by-from keys",
+        len(link_indices["nodes_with_outgoing"]),
+        len(link_indices["origin_links_by_to_first"]),
+        len(link_indices["dest_links_by_from_first"]),
+    )
+
     missing_link = 0
     restriction_fallbacks = 0
     pre_routed = 0
@@ -482,8 +552,8 @@ def build_matsim_plans_xml(
             except ValueError:
                 depart_seconds = 0
 
-            origin_link = find_link_for_origin(origin, valid_links, link_adjacency)
-            dest_link = find_link_for_destination(dest, valid_links, link_adjacency)
+            origin_link = find_link_for_origin(origin, link_indices)
+            dest_link = find_link_for_destination(dest, link_indices)
 
             # Both endpoints are in the SCC, so a valid link must exist; surface
             # the symmetry violation loudly if somehow it doesn't.

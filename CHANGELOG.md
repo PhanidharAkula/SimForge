@@ -8,6 +8,89 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Phase 14.12: MATSim adapter O(N²) link-find bottleneck (2026-05-18)
+
+**Discovery.** While watching the in-flight Phase 14 re-run on
+Cardinal (job 9954279), spotted MATSim adapter at ~6 trips/s after
+the canonical-routes cache had already been written and loaded.
+That matched Phase 13's pre-Phase-14 rate exactly — so Phase 14
+should have brought it to thousands of trips/s, not the same speed
+as before.
+
+**Root cause.** Two functions in `adapters/matsim/matsim_adapter.py`
+called once per trip (200K calls on chicago_200k_car):
+
+```python
+def find_link_for_origin(node_id, links, link_adjacency):
+    for link in links:                       # O(N) linear scan
+        if link["to"] == node_id: return link["id"]
+    for link in links:                       # again
+        ...
+    for link in links:                       # again
+        ...
+```
+
+`links` has ~1M entries after SCC filter on chicago_200k. Each
+call is ~320 ms in Python. Twice per trip × 200K trips = **~64 h**
+of the 73 h MATSim cold-prep wall on Phase 13. Phase 14a (BFS
+deduplication) only saved the ~9 h of actual BFS time; this O(N²)
+link-find loop dominated everything else.
+
+The MATSim per-trip `[matsim] BFS-prep: N feasible trips routed`
+warning was misleading — it counts processed trips regardless of
+whether BFS or link-find was the actual bottleneck.
+
+**Fix.** One-pass O(N) index build at the top of
+`build_matsim_plans_xml`, then O(1) dict lookups per trip:
+
+```python
+link_indices = build_matsim_link_indices(valid_links, link_adjacency)
+# Returns 5 lookup tables + 1 fallback link id:
+#   - origin_links_by_to_first, origin_links_by_from_filt_first,
+#     origin_links_touching_first
+#   - dest_links_by_from_first, dest_links_by_to_first
+#   - nodes_with_outgoing (set), fallback_link_id (str)
+
+for row in reader:
+    origin_link = find_link_for_origin(origin, link_indices)     # O(1)
+    dest_link   = find_link_for_destination(dest, link_indices)   # O(1)
+    ...
+```
+
+Each index stores the *first* match in original `valid_links`
+iteration order — exactly what the linear scans returned — so
+plans.xml output is byte-identical.
+
+**Measured speedup on chicago_1k_car (M-series Mac):**
+
+| | Phase 14.11 (linear scan) | Phase 14.12 (indexed) |
+|---|---|---|
+| Per lookup | ~320 ms extrapolated to 1M links | **0.1 µs** |
+| 200K trips × 2 lookups (chicago_200k) | **~64 h** | **~36 ms** |
+| Phase 14.12 index build (one-time) | n/a | ~150 ms extrapolated |
+
+**Net effect on chicago_200k_car Phase 14 wall.**
+The job projected as ~7 h pre-discovery but was actually on track
+for ~71 h because of this. After Phase 14.12 the projection holds
+again at ~7 h. For nyc_500k_car the projection improves from
+~106 h to ~20 h.
+
+**Verification (26/26 tests pass):**
+- `tests/test_canonical_routes.py::TestMatsimPlansXmlByteIdentity` (1 test):
+  plans.xml byte-identical with canonical_routes consumed via the
+  new index-based path vs the legacy inline-BFS path.
+- `tests/test_matsim_adapter.py` (25 tests, sweep excluded for speed):
+  all pre-existing MATSim adapter tests pass — function signatures
+  changed but the externally-visible plans.xml output is unchanged.
+
+**Operator note.** Jobs 9954279 (chicago Phase 14) + 9954287 (nyc
+Phase 14) are running the pre-14.12 code and will produce correct
+results, just slowly (chicago ~71 h, nyc ~106 h). Recommended
+action: `scancel` both, `git pull` Phase 14.12, resubmit. The
+canonical-routes JSONL from the current run is content-addressed
+so it survives the cancel — re-run reuses it as a cache hit,
+landing chicago_200k in ~5-10 min total.
+
 ### Phase 14.10: SBATCH visibility — chunk size + non-TTY log capture (2026-05-18)
 
 **Symptom (observed in jobs 9954279 + 9954287 at 22 min elapsed).**
