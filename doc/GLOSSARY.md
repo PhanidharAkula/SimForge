@@ -32,7 +32,7 @@ A US Census Bureau geographic unit of ~4,000 residents. SimForge uses *PUMS* tra
 A thematic map style in which a scalar value (here: per-tract trip count or per-tract mean travel time) is rendered as a fill color on a pre-defined polygon (here: a US Census tract). SimForge's `od_origins` / `od_destinations` / `travel_time` renderers all use the choropleth style with a CityScape-derived 100-step blue→red log palette (origin/destination density) or `RdYlGn_r` (travel time). Light gray (`#dddddd`) marks tracts with no demand. Implementation: `visualization/render/od_choropleth.py` and `visualization/render/travel_time.py`.
 
 ### Cityscape
-The C++ population synthesizer (Schedule-generator branch) that produces `<city>_model.txt` modelgen files. Combines OSM, LandScan, US Census PUMS, and PUMA shapefiles into a streaming text format with `bld`/`hld`/`per` records. SimForge V5+ relies on cityscape's `model_gen/ScheduleGenerator.h:211-233` JWTRNS enum (Phase 5) and its `schedule[0]/[1]` workplace+home tuples (Phases 8-9). Source: <https://github.com/raodj/cityscape/tree/Schedule-generator>.
+The C++ activity-based population synthesizer + city-level digital-twin model generator that produces `<city>_model.txt` modelgen files. Developed by D. M. Rao (Miami University CSE); canonical paper: Rao, "CITYSCAPE: A City-Level Digital Twin Model Generator for Simulation & Analyses," *Proc. 2023 Winter Simulation Conference (WSC)* — cited as `rao2023cityscape` in the bibliography. Combines OSM, LandScan, US Census PUMS, and PUMA shapefiles into a streaming text format with `bld`/`hld`/`per` records. SimForge V5+ relies on cityscape's `model_gen/ScheduleGenerator.h:211-233` JWTRNS enum (Phase 5) and its `schedule[0]/[1]` workplace+home tuples (Phases 8-9). Source: <https://github.com/raodj/cityscape/tree/Schedule-generator>.
 
 ### Coverage diagnostic
 The audit emitted by `evaluation/analyze_benchmark.py` that flags three classes of silent gap: *low-sample cells*, *asymmetric coverage*, and silently-failed cells. See `doc/RESULTS_GUIDE.md` §4.1.
@@ -116,6 +116,9 @@ A non-parametric statistic measuring the largest gap between two empirical distr
 
 ## L
 
+### LandScan
+Oak Ridge National Laboratory's satellite-derived ambient population density raster (~1 km grid resolution). Consumed by *cityscape* ModelGen as the population-density prior over OSM building polygons for synthetic-household allocation. Source: <https://landscan.ornl.gov/>. Cited via `landscan` in the bibliography.
+
 ### Low-sample cell
 A *coverage diagnostic* class flagged when an `(engine, mode)` cell has fewer than 3 successful runs. R-scores in low-sample cells are statistically weak and the diagnostic prints a warning so they are not over-interpreted. MATSim cells are intentionally low-sample (n = 2) because the engine is deterministic.
 
@@ -180,8 +183,11 @@ The 95th percentile of trip durations within a single run. Used as a tail-latenc
 ### PBF (Protocolbuffer Binary Format)
 The OSM project's binary serialization of map data (file extension `.osm.pbf`). Roughly an order of magnitude smaller than the equivalent XML and much faster to parse. SimForge stores *Geofabrik* state-level PBFs in `osm_data/` and slices them to a scenario bounding box with *pyosmium* before handing the slice to osmnx.
 
+### PUMA (Public Use Microdata Area)
+A US Census Bureau geographic unit of ~100,000 residents (2,378 in the contiguous US). PUMAs are the spatial granularity at which *PUMS* records are released — every PUMS person record carries a PUMA code that identifies their general area without revealing exact address. *Cityscape* ModelGen uses the IPUMS-distributed PUMA shapefiles to spatially join PUMS records to OSM regions. Source: <https://usa.ipums.org/usa/volii/2010pumas.shtml>. Cited via `ipums_puma` in the bibliography.
+
 ### PUMS (Public Use Microdata Sample)
-The US Census Bureau dataset of de-identified individual-level census records. SimForge uses PUMS columns *JWMNP* and *JWTRNS* to calibrate demand. Default since the census-calibrated demand became the framework default; pass `--synthetic` to fall back to the gravity model.
+The US Census Bureau dataset of de-identified individual-level census records (American Community Survey 5-year file). SimForge uses PUMS columns *JWMNP* (commute time) and *JWTRNS* (commute mode) to calibrate demand. Default since the census-calibrated demand became the framework default; pass `--synthetic` to fall back to the gravity model. Cited via `uscensus_pums` in the bibliography.
 
 ### pyosmium
 Python bindings for `libosmium` (PyPI package `osmium`, `>=4.0` in `requirements.txt`). SimForge uses `pyosmium.FileProcessor().with_locations()` + `BackReferenceWriter` in `pipeline/network/load_network_from_pbf.py` to extract a bbox-clipped `.osm.xml` slice from a state-level *PBF* without materialising the whole file in memory.

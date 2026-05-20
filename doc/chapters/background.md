@@ -265,6 +265,96 @@ comparison the plan originally needed; the loss of the
 GPU-mesoscopic paradigm (LPSim) is documented as an open future-work
 item (Chapter 6 §6.5.4).
 
+### 2.3.4 Activity-based demand generation: cityscape and contemporaries
+
+A simulator is only as defensible as its demand. The reviewed
+simulator engines (§2.3.1-§2.3.3) all consume per-vehicle or
+per-agent trip records but none of them *produce* those records from
+first principles — demand-side calibration is a distinct upstream
+tooling layer that the cross-simulator benchmarking literature
+typically treats as a black box. SimForge's PUMS-grounded
+schedule-first demand pipeline (Chapter 3 §3.3) makes this layer
+explicit and reproducible. Three contemporary activity-based
+demand-generation tools situate the choice:
+
+**ActivitySim** [ActivitySim 2024], the FHWA-funded open-source
+activity-based travel demand model, is the most widely deployed
+synthetic-population + activity-scheduling framework in U.S.
+metropolitan planning organizations. ActivitySim consumes an MPO's
+existing demographic + zone-system inputs and emits per-person tours
++ trips at the TAZ level. It is *not* directly cross-simulator-
+compatible — its output is calibrated to a specific four-step or
+activity-based model's network representation, not a simulator-
+agnostic schema. Integrating ActivitySim with SimForge would require
+a TAZ-to-OSM-node disaggregation layer, deferred as future work
+(Chapter 6 §6.5).
+
+**MATSim's CEMDAP-style demand generators** (Hörl + Balac population
+synthesizers, distributed as MATSim contrib modules) are tightly
+coupled to MATSim's `plans.xml` format and use a different
+input-data taxonomy than the U.S. ACS PUMS scheme SimForge targets.
+They are mature for European Census data formats (Eurostat,
+INSEE-FR) and have a smaller U.S. footprint.
+
+**Cityscape** [Rao 2023a] is the activity-based population
+synthesizer + city-level digital-twin model generator SimForge
+adopts. Developed in C++ by Prof. Dhananjai Rao's group at Miami
+University (CSE Department; `raodj/cityscape`, Schedule-generator
+branch), cityscape merges OpenStreetMap road + building geometry
+[OSM 2026], LandScan ambient-population density rasters [Oak Ridge
+National Laboratory 2024], U.S. Census ACS PUMS records [U.S. Census
+Bureau 2024] (5-year file), and IPUMS PUMA shapefiles [IPUMS USA
+2024] into a flat-text streaming model with `bld` (building), `hld`
+(household), and `per` (person) records. The Schedule-generator
+branch adds a `RadiusFilterWorkBuildingAssigner` that assigns each
+PUMS-derived person a workplace from the real non-residential OSM
+building set within their PUMS-reported commute time
+(`JWMNP` ± 1 min), subject to per-building office-capacity bounds
+(`offSqFtPer`). The Rao 2023a WSC paper reports ~85 % confidence
+on the Chicago, IL verification case study; a sibling 2023 paper
+[Rao 2023b] applies the same cityscape data-fusion pipeline to
+identify under-served Chicago communities by simulating ~6.3M 2022
+taxi rides, demonstrating the pipeline's reach beyond
+commute-trip generation. The output of cityscape's
+`ScheduleGenerator` is the `modelgen/<city>_model.txt` file
+SimForge's `pipeline/demand/parse_model_file.py` consumes.
+
+The cityscape choice reflects three properties that distinguish it
+from ActivitySim and MATSim contributors for SimForge's purposes:
+
+1. **OSM-anchored, not TAZ-anchored.** Cityscape assigns workplaces
+   to specific OSM building polygons, not aggregated traffic-analysis
+   zones. Disaggregation to the simulator-network node level
+   (`pipeline/demand/parse_model_file.py` step 7) is therefore a
+   direct nearest-OSM-node lookup, not a probabilistic
+   re-disaggregation. This preserves *individual* origin-destination
+   identity rather than just the aggregate distribution.
+
+2. **PUMS-direct, not pre-processed.** Cityscape consumes raw
+   ACS PUMS records and exposes the per-person `JWTRNS` (mode) and
+   `JWMNP` (commute time) fields directly to downstream consumers.
+   SimForge's V5+ pipeline uses these for mode assignment (Phase 5
+   JWTRNS mapping fix) and per-person departure times (Phase 8
+   empirical departure formula) without intermediate calibration
+   layers that would mask the underlying data.
+
+3. **Open and modifiable.** Cityscape is open-source C++ with a
+   modifiable schedule generator. SimForge's V5+ HBSchool chained
+   trip purposes (Phase 9c) extend cityscape's schedule taxonomy
+   via SimForge-side code rather than requiring upstream changes.
+
+The trade-off is that cityscape has no formal published paper at
+the time of SimForge's submission — its provenance is the
+`raodj/cityscape` GitHub repository — and its U.S.-specific
+PUMS/PUMA grounding does not directly transfer to non-U.S. cities
+(deferred as future work in Chapter 6 §6.5). For an international-
+city extension, a Hörl + Balac MATSim-contrib synthesizer would
+be the natural alternative integration target.
+
+The integration is documented end-to-end in `doc/MODELGEN_AND_MODES.md`
+(734 lines, the canonical reference for the demand pipeline) and
+summarized in Chapter 3 §3.3.
+
 ---
 
 ## 2.4 Incompatibilities across simulators

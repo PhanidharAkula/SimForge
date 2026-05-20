@@ -118,5 +118,9 @@ cluster/logs/*.err
 # -----------------------------
 # Personal / scratch documents kept in the repo dir for convenience
 # but not part of the shipped artefact
+# (third-party copyrighted PDFs: do NOT commit;
+#  doc/figures/*.pdf are SimForge-generated and tracked separately)
 # -----------------------------
 a personal PDF
+wsc2023_cityscape.pdf
+esm23.pdf

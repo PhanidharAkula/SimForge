@@ -263,11 +263,58 @@
 
 @misc{uscensus_pums,
   author       = {{U.S. Census Bureau}},
-  title        = {Public Use Microdata Sample ({PUMS})},
+  title        = {Public Use Microdata Sample ({PUMS}): {American Community Survey} 5-year file},
   year         = {2024},
   howpublished = {Online},
   url          = {https://www.census.gov/programs-surveys/acs/microdata.html},
-  note         = {Source for synthetic-population demand calibration in \texttt{pipeline/demand/}}
+  note         = {Source for per-person commute time (JWMNP) and mode (JWTRNS) used by the cityscape ModelGen synthetic-population pipeline; consumed by \texttt{pipeline/demand/generate\_census\_demand.py}}
+}
+
+@inproceedings{rao2023cityscape,
+  author       = {Rao, Dhananjai M.},
+  title        = {{CITYSCAPE}: A City-Level Digital Twin Model Generator for Simulation \& Analyses},
+  booktitle    = {Proceedings of the 2023 Winter Simulation Conference ({WSC})},
+  editor       = {Corlu, C. G. and Hunter, S. R. and Lam, H. and Onggo, B. S. and Shortle, J. and Biller, B.},
+  year         = {2023},
+  address      = {San Antonio, TX, USA},
+  publisher    = {IEEE},
+  note         = {Source paper for the cityscape activity-based population synthesizer SimForge consumes. Combines PUMS, PUMAs, and OpenStreetMap into a digital-twin model; Chicago, IL used as the verification case study with ~85\% confidence. Implementation: \url{https://github.com/raodj/cityscape/tree/Schedule-generator}}
+}
+
+@inproceedings{rao2023taxi,
+  author       = {Rao, Dhananjai M.},
+  title        = {Identifying Under-Served Areas via Simulating Taxi Rides},
+  booktitle    = {Proceedings of the European Simulation and Modelling Conference ({ESM})},
+  year         = {2023},
+  address      = {Toulouse, France},
+  note         = {Downstream application of the cityscape pipeline (\cite{rao2023cityscape}): combines PUMS + PUMAs + OpenStreetMap to identify under-served Chicago communities by simulating ~6.3M 2022 taxi rides. Cited as evidence that cityscape's data fusion supports applications beyond commute-trip generation.}
+}
+
+@misc{landscan,
+  author       = {{Oak Ridge National Laboratory}},
+  title        = {{LandScan} Global Population Database},
+  year         = {2024},
+  howpublished = {Geospatial dataset},
+  url          = {https://landscan.ornl.gov/},
+  note         = {Satellite-derived ambient population density at ~1 km resolution; consumed by cityscape ModelGen as the population-density prior over OSM building polygons for synthetic-household allocation.}
+}
+
+@misc{ipums_puma,
+  author       = {{IPUMS USA}},
+  title        = {{PUMA} (Public Use Microdata Area) shapefiles},
+  year         = {2024},
+  howpublished = {Geospatial dataset, University of Minnesota},
+  url          = {https://usa.ipums.org/usa/volii/2010pumas.shtml},
+  note         = {2,378 contiguous-US PUMA boundaries (~100K residents each) used by cityscape ModelGen to spatially join ACS PUMS records to OSM regions; defines the spatial granularity of synthetic demographic calibration.}
+}
+
+@inproceedings{activitysim,
+  author       = {{Association of Metropolitan Planning Organizations}},
+  title        = {{ActivitySim}: An open platform for activity-based travel modeling},
+  year         = {2024},
+  howpublished = {Open-source travel-demand framework},
+  url          = {https://activitysim.github.io/},
+  note         = {Federal Highway Administration-funded open-source activity-based travel demand model. Cited as a contemporary alternative to cityscape ModelGen in Chapter 2 §2.3.4.}
 }
 
 @misc{tiger2024,
