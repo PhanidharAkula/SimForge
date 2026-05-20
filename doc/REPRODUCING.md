@@ -175,11 +175,15 @@ bundle and is reflected in `manifest.xml`'s SHA-256:
 | 9c | HBSchool_PM chains: symmetric `work → school + school → home`. | same |
 | 10 | Audit-tooling wiring: `evaluation/demand_composition.py` (new), Q5 section in `audit_fairness`, demand-composition table in `analyze_benchmark`. | `evaluation/` |
 
-The committed `chicago_1k_car/manifest.xml` is a V5 bundle (regenerated
-2026-04-30) — its hashes will not match a V4 `generate.py` run. The
-larger tiers (`nyc_10k_car`, `la_50k_car`, `chicago_200k_car_transit`,
-`nyc_500k_car`) are not in the repo and must be regenerated locally
-or on Pitzer with the V5 code path before benchmarking.
+The committed `chicago_1k_car/`, `nyc_10k_car/`, and `la_50k_car/`
+bundles are V5+ (regenerated 2026-04-30 onwards) — their hashes will
+not match a V4 `generate.py` run. The two largest tiers
+(`chicago_200k_car/`, `nyc_500k_car/`) are gitignored and must be
+regenerated locally or on Pitzer/Cardinal with the current code path
+before benchmarking; see `scripts/04_chicago_200k_car.py` and
+`scripts/05_nyc_500k_car.py` for the canonical generation commands
+(or `cluster/jobs/04_chicago_200k_car.sbatch` /
+`cluster/jobs/05_nyc_500k_car.sbatch` for HPC).
 
 ---
 

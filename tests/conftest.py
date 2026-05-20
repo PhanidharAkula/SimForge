@@ -25,8 +25,8 @@ SCENARIOS_DIR = REPO_ROOT / "scenarios"
 _BUNDLED_PREFERENCE = (
     "chicago_1k_car",
     "nyc_10k_car",
-    "la_50k_bike_car_transit",
-    "chicago_200k_car_transit",
+    "la_50k_car",
+    "chicago_200k_car",
     "nyc_500k_car",
 )
 
