@@ -155,11 +155,13 @@ I1) and discussed in §6.4 below.
 
 ## 6.2 Synthesis of empirical findings
 
-Beyond the four C-rows, three empirical findings emerged during the
-build that contribute to the cross-simulator benchmarking literature
-in their own right. They are not new C-rows, but they are not
-incidental either — each surfaces a measurement the cross-simulator
-literature does not typically report.
+Beyond the four C-rows, three headline empirical findings emerged
+during the build (§6.2.1-6.2.3) that contribute to the cross-simulator
+benchmarking literature in their own right, plus a within-engine
+sibling result (§6.2.4) that reinforces the cross-engine paradigm
+finding. They are not new C-rows, but they are not incidental either
+— each surfaces a measurement the cross-simulator literature does not
+typically report.
 
 ### 6.2.1 Phase 14: BFS deduplication makes the large tier tractable
 
@@ -243,20 +245,45 @@ The original §5.6.3 attribution to "JVM build differences" (refuted by §5.6.3.
 
 **Actionable advice for the cross-simulator benchmarking community: cite the container digest, not the version number.** A version pin like *"version 1.26.0"* allows code-version drift if any dependent code (routing layer, bundle generator, adapter glue) changes between measurements; the digest pins everything at a precise moment. The fairness contract (Q1 byte-identity, Q2 same SCC, Q3 same trip count) is platform-invariant because it operates on pre-engine inputs that run in pure Python on identical canonical data.
 
-### 6.2.4 The fairness contract as the connecting tissue
+### 6.2.4 Within-engine paradigm spread: SUMO micro vs meso converges at saturation
 
-All three of the above findings share a structural property: each is
+**Finding** (Chapter 5 §5.4, extended with the chicago_200k_car SUMO micro pilot, Cardinal job 9980007, 2026-05-19/20): within a single engine, the micro vs meso mean-TT gap *narrows* at saturation density, while the wall-time premium *grows monotonically*. The pilot extended the within-engine SUMO comparison from the small tier (1K + 10K) to the large tier (200K), and the trajectory inverted:
+
+| Tier | meso TT | micro TT | mean-TT Δ | wall ratio |
+|---|---:|---:|---:|---:|
+| chicago_1k_car | 268.93 s | 342.14 s | +27.2 % | 1.65 × |
+| nyc_10k_car | 661.6 s | 1143.8 s | +72.9 % | 9.01 × |
+| **chicago_200k_car** | **8746.40 s** | **9430.04 s** | **+7.8 %** | **~124 ×** |
+
+At 1K and 10K the micro/meso TT gap widens with scale, consistent with the intuition that microscopic dynamics capture intersection delays and queue spillback that mesoscopic queue-based mobsim averages out — and that this captured detail accumulates as congestion grows. The 200K data point falsifies that intuition: at saturation, the gap narrows to +7.8 %.
+
+**Mechanism**: the same paradigm structure that produces the §6.2.2 cross-engine divergence at saturation also explains the within-engine convergence. Once origin-edge insertion-refusal dominates the dynamics (the bottleneck behavior controlling network capacity), both SUMO micro and SUMO meso model that behavior the same way — both refuse to insert when the destination edge is at capacity. Lane-level dynamics that micro adds (sub-link car-following, lane changes, gap acceptance) become second-order to the insertion-bound queueing. The two paradigms are interpretively distinct in the free-flow and moderately-congested regimes; they collapse to the same controlling dynamics under saturation.
+
+Trip-completion counts confirm the saturation-bound interpretation: SUMO micro completes 123,735 trips at 200K (61.9 %) vs SUMO meso's 116,270 (58.1 %) — micro completes slightly *more* despite the slower per-trip resolution, because micro models finer headway packing at the insertion bottleneck. MATSim's queue-hold paradigm (no insertion-refusal at network capacity) completes all 200K (100 %), the same paradigm asymmetry that §6.2.2 documents.
+
+**Significance**: SimForge surfaces *two distinct paradigm-spread phenomena* at saturation density:
+1. **Cross-engine** (§6.2.2): SUMO insertion-refusal ↔ MATSim queue-hold produces a 35.5 % mean-TT divergence at chicago_200k, 96.3 % at nyc_500k.
+2. **Within-engine** (§6.2.4, this section): SUMO micro ↔ SUMO meso mean-TT gap shrinks from +27 % at 1K to +7.8 % at 200K as both resolutions become bound by the same insertion-refusal dynamics.
+
+Both findings emerge from the same underlying mechanism (insertion-refusal vs queue-hold at network capacity), but they manifest in different cross-cuts of the engine × mode matrix. The cross-engine finding is paradigm-vs-paradigm; the within-engine finding is resolution-vs-resolution within a single paradigm. Their sibling structure validates the fairness contract's role (§6.2.5): both are *interpretable* as paradigm effects only because Q1-Q3 PASSes on every cell, ruling out input asymmetry.
+
+**Practical implication for cross-simulator benchmarking**: at saturation, **paradigm choice (insertion-refusal vs queue-hold) dominates within-engine resolution choice**. The 124 × wall premium for SUMO micro at chicago_200k purchases a 7.8 % mean-TT delta — a poor fidelity-cost trade at this regime unless the use case specifically requires lane-level dynamics that mean-TT comparisons do not surface. The flat-fidelity / steep-wall trajectory is the within-engine analog of §6.2.2's flat-fidelity-then-paradigm-snap trajectory in the cross-engine direction.
+
+### 6.2.5 The fairness contract as the connecting tissue
+
+All four of the above findings share a structural property: each is
 *interpretable* only because the fairness contract (Q1 byte-identity,
 Q2 same SCC, Q3 same trip count target) is empirically demonstrated.
 Without Q1-Q3, the BFS speedup numbers could be attributed to a
-silently-changing input set; the paradigm-divergence finding could be
-attributed to one engine receiving easier OD pairs; the cross-platform
-finding could be attributed to subtle version drift in the canonical
-bundle. With Q1-Q3 PASS at every tier on every cell, each of the three
-findings is *necessarily* attributable to the mechanism named.
+silently-changing input set; the paradigm-divergence and within-engine
+convergence findings could be attributed to one engine receiving
+easier OD pairs; the cross-platform finding could be attributed to
+subtle version drift in the canonical bundle. With Q1-Q3 PASS at
+every tier on every cell, each of the four findings is *necessarily*
+attributable to the mechanism named.
 
 The fairness contract is therefore not just a C1 implementation
-detail but the *methodological substrate* that lets the three
+detail but the *methodological substrate* that lets the four
 empirical findings stand. This generalizes: any cross-simulator
 benchmarking framework that does not establish input-byte-identity
 before reporting cross-engine numbers is leaving an attribution gap
