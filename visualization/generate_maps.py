@@ -15,10 +15,11 @@ Usage::
         --output doc/figures/maps/chicago_1k_car
 
 The component reports a coverage matrix before doing any work. Maps that
-require data not on disk are skipped (logged, not error). Phase A ships
-``od_origins`` and ``od_destinations``; ``link_load`` / ``travel_time`` /
-``route_diversity`` / ``congestion`` / ``animated_flow`` are listed in
-the coverage matrix but their renderers are Phase B + C.
+require data not on disk are skipped (logged, not error). All seven map
+types are shipped: ``od_origins``, ``od_destinations``, ``link_load``,
+``travel_time``, ``congestion``, ``route_diversity``, ``animated_flow``.
+Use ``--maps all`` to render every type the coverage matrix flags as
+renderable, or pass a comma-separated subset.
 """
 
 from __future__ import annotations
@@ -443,10 +444,6 @@ def main(argv: list[str] | None = None) -> int:
     print(format_coverage_matrix(coverage))
     print()
 
-    if args.dry_run:
-        print("(dry run -- no maps rendered)")
-        return 0
-
     if args.maps == "all":
         requested = list(ALL_MAP_TYPES)
     else:
@@ -456,6 +453,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"ERROR: unknown map types: {unknown}", file=sys.stderr)
             print(f"Known types: {','.join(ALL_MAP_TYPES)}", file=sys.stderr)
             return 2
+
+    if args.dry_run:
+        print("(dry run -- no maps rendered)")
+        return 0
 
     print(f"Output dir: {output_dir}")
     print(f"Rendering: {requested}")
