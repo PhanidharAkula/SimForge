@@ -39,7 +39,7 @@ java -version       # openjdk 17.x or newer
 
 ## Installation
 
-The canonical install path uses `uv` and the **fully-pinned `requirements.lock`** so every machine ends up on byte-identical dep versions (Python 3.13.13 + 42 packages, including `eclipse-sumo==1.26.0`).
+The canonical install path uses `uv` and the **fully-pinned `requirements.lock`** so every machine ends up on byte-identical dep versions (Python 3.13.13 + 35 lockfile-pinned packages + eclipse-sumo installed separately, see below).
 
 ```bash
 git clone <repo-url>
@@ -50,9 +50,17 @@ uv python install 3.13
 uv venv --python 3.13 .venv
 source .venv/bin/activate
 
-# One command resolves every Python dep + SUMO at the locked versions
+# Install the 35 pinned Python deps (numpy, pandas, lxml, matplotlib,
+# osmnx, path4gmns/DTALite, pytest, etc.)
 uv pip install --upgrade pip
 uv pip install -r requirements.lock
+
+# Install SUMO as a separate pinned wheel (NOT in the lockfile because
+# the wheel is platform-specific and SETUP.md historically pointed users
+# to brew/apt for SUMO. Wave 2 container install path uses this exact
+# `pip install eclipse-sumo` pattern; aligning the host install path
+# with it keeps the cross-platform behaviour consistent).
+uv pip install eclipse-sumo==1.26.0
 ```
 
 Then download the MATSim 15.0 JAR (gitignored under `lib/`):
@@ -344,7 +352,8 @@ uv python install 3.13                          # Pitzer modules only offer 3.10
 
 module load openjdk/21.0.3_9                     # for MATSim — Pitzer's lmod requires an explicit version
 uv venv --python 3.13 .venv && source .venv/bin/activate
-uv pip install -r requirements.lock             # 42 packages including SUMO
+uv pip install -r requirements.lock             # 35 pinned Python deps
+uv pip install eclipse-sumo==1.26.0              # SUMO pinned wheel (not in lockfile)
 
 # Ship PBFs + ModelGen from your local machine (from local, not Pitzer):
 rsync -avh osm_data/ pitzer:SimForge/osm_data/

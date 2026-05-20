@@ -183,6 +183,43 @@ the source repo is private. Either:
 - Make the GHCR package public (GitHub repo Settings → Packages → make public)
 - Or authenticate Singularity with a GHCR token (see Apptainer docs)
 
+**`apptainer pull` panics with `index out of range [N] with length N` (Apptainer ≤ 1.4.5)**
+
+Apptainer 1.4.x has an off-by-one bug in `progress_roundtrip.go:75` that
+fires when ALL the OCI layers finish downloading. Stack trace ends with:
+
+```
+panic: runtime error: index out of range [11] with length 11
+github.com/apptainer/apptainer/internal/pkg/client.(*RoundTripper).ProgressComplete(...)
+    github.com/apptainer/apptainer/internal/pkg/client/progress_roundtrip.go:75
+```
+
+The download itself usually succeeds — all blobs are cached — but the
+SIF conversion never starts because of the panic. Two workarounds:
+
+1. **Pull by the immutable short SHA tag, not the branch tag.** For some
+   reason this takes a different code path that avoids the panic:
+
+   ```bash
+   # Fails on Apptainer 1.4.5:
+   apptainer pull docker://ghcr.io/phanidharakula/simforge:phase-14-canonical-routes
+
+   # Works:
+   apptainer pull docker://ghcr.io/phanidharakula/simforge:db8d786
+   ```
+
+   The full git SHA also works. Look up the current tag on the GHCR
+   package page or in `lib/container/manifest.json`.
+
+2. **Retry — sometimes the second pull succeeds.** The first pull
+   populated the cache; the panic happens on the progress-complete code
+   path, not the download. Retrying may skip enough of the affected
+   code to land cleanly. Less reliable than option 1.
+
+Tracked upstream at the Apptainer GitHub issues; fixed in newer
+versions. Cardinal as of 2026-05-20 ships Apptainer 1.4.5; the
+SHA-tag workaround is the operational recommendation.
+
 **`MATSim ClassNotFoundException` inside container**
 
 The JAR path inside the container is `lib/matsim-15.0/matsim-15.0.jar`.
