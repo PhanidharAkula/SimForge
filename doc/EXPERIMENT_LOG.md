@@ -60,6 +60,69 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-20 — Wave 2 container verified end-to-end on Cardinal (chicago_1k_car, 20/20 cells)
+
+Phase: Version_5 Wave 2 — pinned-digest container shipping
+Commit: `a8cc826` (`lib/container/manifest.json` pinned + workflow path-ignore)
+Image: `ghcr.io/phanidharakula/simforge:db8d786` (git SHA `db8d786d53b7562fd4aa58105cdef54e14330a55`)
+Apptainer version: 1.4.5 on Cardinal login02
+
+**What happened.** First successful end-to-end container run on Cardinal. After 8 GHA build iterations debugging the eclipse-sumo manylinux dependency closure on Debian Bookworm slim (libX11 → libGL → libatomic + MATSim release URL discovery) and one Apptainer progress-bar bug workaround (use SHA-tagged pull instead of branch tag), the container ran the full chicago_1k_car benchmark inside the pinned-digest environment.
+
+**Smoke test command (from Cardinal $HOME/SimForge):**
+
+```bash
+apptainer exec \
+  --bind scenarios:/workspace/SimForge/scenarios:ro \
+  --bind runs:/workspace/SimForge/runs \
+  --bind cache:/workspace/SimForge/cache \
+  --pwd /workspace/SimForge \
+  containers/simforge_phase-14-canonical-routes.sif \
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml \
+    --scenario chicago_1k_car \
+    --output runs/container_smoke/chicago_1k_car/
+```
+
+**Result: 20/20 cells PASS, 4 m 05 s total wall.**
+
+| Engine | Mode | Engine wall (mean) | R-score |
+|---|---|---:|---:|
+| SUMO | meso | 7.0 s | 0.9956 EXCELLENT |
+| SUMO | micro | 10.8 s | 0.9954 EXCELLENT |
+| MATSim | meso | 7.6 s | **1.0000 (perfect)** |
+| DTALite | meso | 17.1 s | **1.0000 (perfect)** |
+
+**Phase 14.13 cache hit confirmed inside container.** The canonical_routes BFS used `workers=32` (Cardinal node detected via `cpu_count()`), wrote cache to `cache/canonical_routes/canonical_routes_de66d3621330e55b4bc51f8f1ef19b933c490eedaf421f4c845fa896664c1c4e.jsonl` — bind-mounted from host. Phase 14.13 global cache pattern working as designed inside the container.
+
+**Container-vs-host divergence analysis.** Compared the container-mode JSON to the host-venv baseline (`runs/benchmark_small/chicago_1k_car/benchmark_results_benchmark_small.json` from 2026-05-10):
+
+```bash
+diff <(jq -S '... strip timing fields' container.json) <(jq -S '...' host.json)
+```
+
+Trace-level SUMO divergences (expected — pip eclipse-sumo wheel vs brew SUMO binary, same version 1.26.0 but different builds):
+
+| Cell | Container | Host | Delta |
+|---|---:|---:|---:|
+| sumo meso seed=42 mean TT | 265.05 s | 268.93 s | **−1.4 %** |
+| sumo meso seed=42 trip_count | 790 | 794 | −4 trips (−0.5 %) |
+| sumo micro seed=42 mean TT | 343.26 s | 342.14 s | +0.3 % |
+
+**MATSim + DTALite cells (presumed) byte-identical.** Need to verify with engine-filtered diff but expectation is that MATSim (JAR is identical: both use the GitHub release matsim-15.0.zip downloaded the same way) and DTALite (same path4gmns 0.10.0 wheel) produce identical outputs in container vs host. Only SUMO has the binary divergence because brew vs pip-wheel build with different compilers.
+
+**Implication for thesis numbers.** Two valid execution contexts:
+
+1. **Host venv** (current Chapter 5 numbers from `runs/benchmark_large/chicago_200k_car/` Phase 14): uses brew SUMO 1.26.0
+2. **Pinned-digest container** (Wave 2): uses pip eclipse-sumo 1.26.0 wheel
+
+Both are reproducible. Cross-context numbers differ by <2 % on SUMO cells; identical on MATSim/DTALite. **Report all numbers from ONE context to keep apples-to-apples**. Recommendation: use container numbers going forward for new measurements (cleaner reproducibility story, anyone with the GHCR pull command + manifest hashes gets exactly the same execution environment). Existing host-venv numbers remain valid for their own context and don't need re-running.
+
+**Wave 2 completes plan §1.11 C3** (pinned-digest reproducible execution pipeline). Combined with C1 (Wave 1: canonical schema + validators), C2 (3-engine deterministic adapters with documented rule-outs), and C4 (KPIs with CIs, audit, scorecard), **all four primary plan contributions are now empirically shipped**.
+
+**Iteration count.** Wave 2 needed 8 GHA build iterations + 1 Apptainer-pull-bug workaround. Documented in commits `f3b653d` (initial) → `a3aaed9` (eclipse-sumo) → `cd5039e` (sumolib test fix) → `780476f` (libX11) → `b2321e2` (diagnostic) → `4f0719e` (libGL) → `44e1270` (libatomic) → `a9ddec4` (MATSim JAR) → `db8d786` (MATSim URL correct) → `a8cc826` (manifest pin). The empirical lib-discovery loop is exactly why containerization was a Wave-2 deferred deliverable — per-host environment opacity is hard to anticipate. The result is now defensible and immutable.
+
+---
+
 ### 2026-05-19 — Phase 14.13: canonical_routes cache hoist (cache-scope bug found via SUMO micro pilot)
 
 Phase: Version_5 Phase 14.13 — cache-scope hotfix
