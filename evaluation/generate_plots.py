@@ -238,11 +238,13 @@ def _city_label(city: str) -> str:
 
 
 def _save(name: str, output_dir: Path) -> Path:
-    """Save the current figure as both PNG and PDF, return PNG path."""
+    """Save the current figure as PNG (300 dpi), return its path.
+
+    PNG-only since 2026-05-20: PDF variants were redundant (LaTeX
+    handles raster PNGs fine at the thesis target resolution).
+    """
     png = output_dir / f"{name}.png"
-    pdf = output_dir / f"{name}.pdf"
     plt.savefig(png, dpi=300, bbox_inches='tight')
-    plt.savefig(pdf, bbox_inches='tight')
     plt.close()
     return png
 

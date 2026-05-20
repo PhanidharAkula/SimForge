@@ -225,22 +225,23 @@ auto-regenerates real page numbers at compile time.)*
 ## List of Figures
 
 *(Generated from `doc/figures/` + chapter `Fig X.Y` references.
-All 10 figures are PNG+PDF and committed under version control;
-the LaTeX `\includegraphics` step pulls the PDF variant for
-print-quality output.)*
+All 10 figures are PNG (300 dpi) committed under version control;
+the LaTeX `\includegraphics` step pulls them directly. PDF variants
+were dropped 2026-05-20 — PNG at 300 dpi is sufficient for print
+quality at the thesis target size.)*
 
 | # | Caption | Source |
 |---|---|---|
-| 5.1 | Cross-engine runtime bar chart (mean engine-wall per cell, log scale) | `doc/figures/fig_5_1_runtime_comparison.pdf` |
-| 5.2 | Reproducibility (R) heatmap across the 11-cell `benchmark_small` matrix | `doc/figures/fig_5_2_reproducibility_heatmap.pdf` |
-| 5.3 | Travel-time comparison: cross-engine mean-TT ratios per tier | `doc/figures/fig_5_3_travel_time_comparison.pdf` |
-| 5.4 | Speedup analysis: mesoscopic vs microscopic engine speed-ups | `doc/figures/fig_5_4_speedup_analysis.pdf` |
-| 5.5 | SUMO micro vs meso comparison (1 K + 10 K tiers; large-tier extension in §5.4 text) | `doc/figures/fig_5_5_micro_vs_meso.pdf` |
-| 5.6 | Runtime variability (boxplot of per-seed wall times) | `doc/figures/fig_5_6_runtime_variability.pdf` |
-| 5.7 | P95 tail latency vs mean travel time, faceted by mode | `doc/figures/fig_5_7_p95_tail_latency.pdf` |
-| 5.8 | Trip-count parity across engines (Q3 audit visualization) | `doc/figures/fig_5_8_trip_count_parity.pdf` |
-| 5.9 | Demand composition: HBW + HBSchool purpose breakdown per scenario | `doc/figures/fig_5_9_demand_composition.pdf` |
-| 5.10 | Wall-time vs engine-time breakdown (prep / engine / parse / harness overhead) | `doc/figures/fig_5_10_wall_vs_engine.pdf` |
+| 5.1 | Cross-engine runtime bar chart (mean engine-wall per cell, log scale) | `doc/figures/fig_5_1_runtime_comparison.png` |
+| 5.2 | Reproducibility (R) heatmap across the 11-cell `benchmark_small` matrix | `doc/figures/fig_5_2_reproducibility_heatmap.png` |
+| 5.3 | Travel-time comparison: cross-engine mean-TT ratios per tier | `doc/figures/fig_5_3_travel_time_comparison.png` |
+| 5.4 | Speedup analysis: mesoscopic vs microscopic engine speed-ups | `doc/figures/fig_5_4_speedup_analysis.png` |
+| 5.5 | SUMO micro vs meso comparison (1 K + 10 K tiers; large-tier extension in §5.4 text) | `doc/figures/fig_5_5_micro_vs_meso.png` |
+| 5.6 | Runtime variability (boxplot of per-seed wall times) | `doc/figures/fig_5_6_runtime_variability.png` |
+| 5.7 | P95 tail latency vs mean travel time, faceted by mode | `doc/figures/fig_5_7_p95_tail_latency.png` |
+| 5.8 | Trip-count parity across engines (Q3 audit visualization) | `doc/figures/fig_5_8_trip_count_parity.png` |
+| 5.9 | Demand composition: HBW + HBSchool purpose breakdown per scenario | `doc/figures/fig_5_9_demand_composition.png` |
+| 5.10 | Wall-time vs engine-time breakdown (prep / engine / parse / harness overhead) | `doc/figures/fig_5_10_wall_vs_engine.png` |
 
 **`[FILL — optional]`**: 7 additional geographic-visualization map types (od_origins, od_destinations, link_load per engine, travel_time per engine, congestion, route_diversity, animated_flow) are available in `visualization/output/<scenario>/` if you want to include 1-2 as illustrative figures (recommended: include `animated_flow_matsim_meso.mp4` first-frame as a single PNG for the chicago_200k_car saturation visualization). These are NOT auto-numbered into the Chapter 5 sequence; they would appear as Figures 5.11+ if added.
 

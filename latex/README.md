@@ -24,8 +24,8 @@ latex/
 │   ├── experiments.tex      # 801 lines
 │   ├── results.tex          # 1,421 lines
 │   └── discussion.tex       # 880 lines
-└── figures/                 # 10 figures × {png, pdf} = 20 files
-    └── fig_5_*.{png,pdf}
+└── figures/                 # 10 figures (PNG, 300 dpi)
+    └── fig_5_*.png
 ```
 
 ## Upload to Overleaf (recommended path)
@@ -70,7 +70,7 @@ make distclean  # removes everything including main.pdf
 
 | Status | Item |
 |---|---|
-| ✓ done | Title, body chapters (all 6), abstract, bibliography (29 entries), figures (10 × PNG+PDF), TOC + LOF + LOT auto-generated |
+| ✓ done | Title, body chapters (all 6), abstract, bibliography (29 entries), figures (10 × PNG @ 300 dpi), TOC + LOF + LOT auto-generated |
 | ✓ done | 34 inline citations converted from `[Author Year]` to `\cite{key}` against `references.bib` |
 | **[FILL]** | Title-page committee names + degree type + program + university (`front/titlepage.tex`) |
 | **[FILL]** | Copyright-page thesis-document license choice (`front/copyright.tex`) |
