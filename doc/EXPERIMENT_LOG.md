@@ -60,6 +60,53 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-20 — chicago_200k_car SUMO micro pilot landed (within-engine micro/meso narrows at saturation)
+
+Phase: Wave 2 follow-up — within-engine paradigm-spread measurement at large tier
+Job ID: 9980007 (Cardinal `cpu`, 8 cores, single seed)
+Runspec: `runspecs/pilot_chicago_200k_sumo_micro.yaml`
+Output: `runs/pilots/chicago_200k_sumo_micro/`
+
+**What happened.** First SUMO microscopic simulation at the 200K-trip tier in this project. Pilot submitted to extend §5.4 (Micro vs Meso within SUMO) — which previously only had 1K + 10K data — to the large tier. Job started 2026-05-19 16:37 UTC, completed 2026-05-20 04:11 UTC. Total cell wall **41,610 s = 11h 33m**; engine wall **29,792 s = 8h 16m**; prep + harness overhead **11,818 s ≈ 3.3h**.
+
+**Result.** Single-cell PASS. seed 42 micro stats:
+- Mean TT: **9,430.04 s** (vs 8,746.4 s for SUMO meso seed 42 = **+7.8%**)
+- P95 TT: 39,704 s
+- Trips completed: **123,735 / 200,000 (61.9%)** — slightly more than meso's 116,270 (58.1%) despite the slower per-trip resolution
+
+**Within-engine micro/meso TT ratio across scales:**
+
+| Tier | meso TT | micro TT | ratio | Δ |
+|---|---:|---:|---:|---|
+| chicago_1k_car   |   268.93 s |   342.14 s | 1.272 | +27.2% |
+| nyc_10k_car      |   661.6 s  |  1143.8 s  | 1.729 | +72.9% |
+| **chicago_200k_car** | **8746.40 s** | **9430.04 s** | **1.078** | **+7.8%** |
+
+The 1K→10K trajectory was +27% → +73%, suggesting micro/meso TT gap widens with scale. The 200K data point **inverts that trajectory**: the gap narrows back to +7.8%. Interpretation: at saturation density, origin-edge insertion-refusal dominates the dynamics (the same effect that produces the Q4 SUMO ↔ MATSim 35.5% divergence in §5.6.2). Both mobsim resolutions model insertion-refusal the same way; lane-level dynamics that micro adds become second-order compared to the bottleneck behavior. Practical implication: at saturation, paradigm choice (meso/micro/queue-hold) dominates within-engine resolution choice.
+
+**Wall-time scaling within SUMO (engine_wall_s):**
+
+| Tier | meso wall | micro wall | wall ratio |
+|---|---:|---:|---:|
+| chicago_1k_car    | 9.5 s   | 15.7 s    | 1.65×  |
+| nyc_10k_car       | 19.9 s  | 179.4 s   | 9.01×  |
+| **chicago_200k_car** | **240.9 s** | **29,792 s** | **~124×** |
+
+Wall premium grows monotonically; fidelity benefit (mean-TT delta) narrows at saturation. The 124× cost for a 7.8% TT delta at chicago_200k is a poor fidelity-cost trade unless lane-level dynamics specifically matter for the use case.
+
+**Cross-engine at chicago_200k:**
+
+| Pair | Ratio | Δ |
+|---|---:|---|
+| SUMO meso  / MATSim meso | 0.645 | -35.5% (the original §5.6.2 finding) |
+| SUMO micro / MATSim meso | 0.696 | -30.4% (slightly closer to MATSim, still well below) |
+
+Even at higher resolution, SUMO under-completes vs MATSim because of the insertion-refusal paradigm.
+
+**Updates landed:**
+- §5.4 (Micro vs Meso Trade-off) extended with chicago_200k row; trade-off block updated to note SUMO micro is now feasible at 200K and to flag the saturation-bound narrowing of the mean-TT gap.
+- Fidelity-cost trade-off summary refined: at saturation, micro's value lies in lane-level dynamics not surfaced by mean-TT comparisons.
+
 ### 2026-05-20 — Mac arm64 small-tier rerun + §5.6.3 root-cause reinterpretation (final revision)
 
 Phase: Wave 2 follow-up — chicago_1k_car cross-architecture rerun to attribute the 2.95% MATSim shift

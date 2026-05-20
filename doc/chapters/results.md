@@ -147,12 +147,17 @@ The gap between feasible and completed in SUMO cells is the **simulation outcome
 
 Within-engine micro-vs-meso runtime ratio for SUMO:
 
-| Tier | meso runtime | micro runtime | speedup | mean-TT gap |
+| Tier | meso runtime | micro runtime | wall ratio | mean-TT gap |
 |---|---|---|---|---|
 | chicago_1k_car | 9.50 s | 15.70 s | 1.65 × | +28 % (268.3 → 343.1 s) |
 | nyc_10k_car | 19.90 s | 179.38 s | 9.01 × | +73 % (661.6 → 1143.8 s) |
+| **chicago_200k_car** | **240.9 s** | **29 792 s (≈ 8 h 16 m)** | **~124 ×** | **+7.8 % (8746.4 → 9430.0 s)** |
 
-The mesoscopic speedup grows dramatically with scale: 1.65 × at 1 K is barely noticeable, but 9 × at 10 K is the difference between an interactive run and a coffee-break run. The accompanying fidelity cost (mean TT gap) also grows: from 28 % at 1 K to 73 % at 10 K. Micro captures intersection delays and queue spillback that meso averages out, and this captured detail accumulates as the network becomes more congested at higher trip volumes.
+The wall-time gap grows monotonically and dramatically with scale: 1.65 × at 1 K is barely noticeable, 9 × at 10 K is the difference between an interactive run and a coffee-break run, and at 200 K SUMO micro takes 124 × longer than SUMO meso (8 h 16 m of engine wall vs 4 min on Cardinal `cpu` 8-core, pilot job 9980007 reported 2026-05-19/20). The **fidelity cost (mean TT gap) follows the opposite trajectory — it grows from 1 K → 10 K but then narrows sharply at 200 K**: +28 % at 1 K → +73 % at 10 K → +7.8 % at 200 K. The narrowing at saturation density is paradigmatically interpretable: once origin-edge insertion-refusal dominates the dynamics (the same effect that drives Q4 SUMO ↔ MATSim divergence at scale in §5.6.2), the bottleneck behavior is controlled by queue spillback that both mobsim resolutions model. Sub-link vehicle dynamics — the thing micro adds and meso averages out — matter when traffic is free-flowing or moderately congested but become second-order once the network is at capacity.
+
+The trip-completion counts confirm the saturation-bound interpretation: at 200 K, SUMO micro completes 123,735 trips (61.9 %) vs SUMO meso's 116,270 (58.1 %) — slightly *more* under micro despite the slower per-trip resolution, because micro can model finer headway packing at insertion. MATSim's queue-hold paradigm completes all 200,000 (100 %), the same paradigm asymmetry §5.6.2 documents.
+
+**The practical implication for cross-simulator benchmarking**: at saturation, the paradigm choice (meso/micro/queue-hold) dominates the within-engine resolution choice. A 124 × wall premium for a 7.8 % mean-TT difference is not a good fidelity-cost trade at large-tier scales — unless what you specifically want is the lane-level intersection dynamics that micro models, which neither of the §5.6.2 mean-TT comparisons surface.
 
 ### Fig 5.6 — Runtime variability
 
@@ -170,16 +175,20 @@ The trade-off is summarised:
 
 ```
 Fidelity ▲
-         │  ● SUMO-micro     (highest fidelity; 9× slower than meso at 10K, infeasible at 50K)
+         │  ● SUMO-micro     (highest fidelity; 9× slower than meso at 10K;
+         │                    feasible at 200K — pilot landed 8 h 16 m engine
+         │                    wall — but +7.8% mean-TT delta vs meso at saturation)
          │
          │      ● SUMO-meso  (lower fidelity, scales linearly with trip count)
-         │      ● MATSim     (different mobsim, byte-deterministic; JVM-tax floor)
-         │      ● DTALite    (UE equilibrium; -40% mean TT; super-linear cost; 4-thread cap at 50K)
+         │      ● MATSim     (different mobsim, byte-deterministic; queue-hold
+         │                    completes 100% of trips at saturation)
+         │      ● DTALite    (UE equilibrium; -40% mean TT; super-linear cost;
+         │                    4-thread cap at 50K)
          │
          └──────────────────────────────────────▶ Speed
 ```
 
-At the 1 K tier the absolute runtimes (≤ 22 s for DTALite, ≤ 16 s for SUMO micro) are too small to be a practical concern. The trade-off becomes decisive at the 10 K + tier where SUMO micro becomes a coffee-break run, DTALite becomes a multi-minute run, and at 50 K + the trade-off becomes infeasibility for both SUMO micro and DTALite (under the bundled path4gmns 0.10.0 binary).
+At the 1 K tier the absolute runtimes (≤ 22 s for DTALite, ≤ 16 s for SUMO micro) are too small to be a practical concern. The trade-off becomes decisive at the 10 K tier where SUMO micro becomes a coffee-break run and DTALite becomes a multi-minute run. At the 200 K tier SUMO micro is technically feasible (the chicago_200k_car pilot completed in 8 h 16 m engine wall on Cardinal `cpu` 8-core) but the 124 × wall premium over SUMO meso for a 7.8 % mean-TT delta is a poor fidelity-cost trade — micro's value at this scale lies in lane-level dynamics not surfaced by mean-TT comparisons. At 50 K + the trade-off becomes infeasibility for DTALite (under the bundled path4gmns 0.10.0 binary, §5.7).
 
 ---
 
