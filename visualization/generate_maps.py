@@ -169,6 +169,8 @@ def _render_phase_c(
                 output_path=out, engine="matsim",
                 fps=getattr(args, "anim_fps", 30),
                 sim_seconds_per_frame=getattr(args, "anim_sim_per_frame", 5.0),
+                dot_size=getattr(args, "anim_dot_size", 9.0),
+                dot_alpha=getattr(args, "anim_dot_alpha", 0.85),
                 dpi=args.dpi,
                 scenario_id=args.scenario,
             )
@@ -398,6 +400,19 @@ def main(argv: list[str] | None = None) -> int:
                         help="animated_flow particles mode: how many simulated "
                              "seconds each frame represents (default 5.0). "
                              "Lower = slower-motion video, longer file.")
+    parser.add_argument("--anim-dot-size", type=float, default=9.0,
+                        help="animated_flow particles mode: matplotlib "
+                             "scatter marker size in points^2 (default 9.0, "
+                             "tuned for ≤50K-trip tiers). For 200K+ tiers "
+                             "where each frame has tens of thousands of "
+                             "visible vehicles, reduce to 2.0-4.0 to avoid "
+                             "the crowd-cramming overlap that hides the "
+                             "underlying network topology.")
+    parser.add_argument("--anim-dot-alpha", type=float, default=0.85,
+                        help="animated_flow particles mode: per-dot alpha "
+                             "(default 0.85). For 200K+ tiers consider "
+                             "0.5-0.7 so overlapping vehicles blend into a "
+                             "density signal rather than full-opacity stacks.")
     parser.add_argument("--anim-format", choices=["mp4", "gif", "apng"],
                         default="mp4",
                         help="animated_flow output container: 'mp4' (default — "
