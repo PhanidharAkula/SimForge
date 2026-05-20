@@ -43,12 +43,20 @@ FROM python:3.13-slim-bookworm
 # - libgomp1:                OpenMP runtime for DTALite (path4gmns bundled binary)
 # - libxml2:                 lxml C bindings + SUMO netconvert output
 # - libx11-6 + libxext6 +
-#   libxrender1 + libxcb1:   eclipse-sumo wheel's sumo binary links against
-#                            X11 (FOX GUI toolkit dep) even for headless CLI;
-#                            manylinux_2_28 wheels expect host-provided X libs.
-#                            Without these: "error while loading shared
-#                            libraries: libX11.so.6". Verified empirically
-#                            from GHA build a3aaed9 → cd5039e diagnosis.
+#   libxrender1 + libxcb1 +
+#   libgl1 + libglu1-mesa +
+#   libfontconfig1 +
+#   libfreetype6:            eclipse-sumo wheel's sumo binary links against
+#                            X11 + OpenGL + FOX GUI toolkit even for headless
+#                            CLI use (sumo --version triggers full dynamic
+#                            link resolution before main()). manylinux_2_28
+#                            wheels expect all of these from the host.
+#                            Empirically discovered across GHA builds:
+#                              a3aaed9 → libX11.so.6 missing
+#                              cd5039e → libX11 added, libGL.so.1 missing
+#                              780476f → libGL still missing (apt block added)
+#                            All four sumo CLI binaries (sumo, netconvert,
+#                            duarouter, sumo-gui) link against the same set.
 # - git:                     for `git rev-parse HEAD` in tools/generate_scorecard
 #                            (falls back to "unknown" if no .git tree — safe)
 # - ca-certificates:         TLS verification (pip, OSM downloads)
@@ -63,6 +71,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libxext6 \
         libxrender1 \
         libxcb1 \
+        libgl1 \
+        libglu1-mesa \
+        libfontconfig1 \
+        libfreetype6 \
         git \
         ca-certificates \
         curl \
