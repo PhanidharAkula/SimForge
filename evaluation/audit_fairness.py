@@ -365,9 +365,10 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
-        print(__doc__, file=sys.stderr)
-        return 2
+    if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
+        print(__doc__ or "Usage: python -m evaluation.audit_fairness <run-dir> [seed]",
+              file=sys.stderr)
+        return 0 if (len(sys.argv) >= 2 and sys.argv[1] in ("-h", "--help")) else 2
     base = Path(sys.argv[1])
     seed = int(sys.argv[2]) if len(sys.argv) > 2 else 42
     if not base.is_dir():

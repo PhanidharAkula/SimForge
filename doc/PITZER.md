@@ -317,11 +317,11 @@ gitignored.
 
 ### Per-tier template
 
-The recorded thesis run used [`cluster/jobs/gen_nyc_500k.sbatch`](../cluster/jobs/gen_nyc_500k.sbatch).
+The recorded thesis run used [`cluster/jobs/05_nyc_500k_car.sbatch`](../cluster/jobs/05_nyc_500k_car.sbatch).
 Submit from the repo root:
 
 ```bash
-sbatch cluster/jobs/gen_nyc_500k.sbatch
+sbatch cluster/jobs/05_nyc_500k_car.sbatch
 # Submitted batch job 47063986
 # Outputs land in ./logs/simforge_nyc_500k_<jobid>.{out,err}
 ```
@@ -330,9 +330,9 @@ For a different OSC project, copy and edit `--account` (and `--mail-user`)
 first — `jobs/` is gitignored so your edits stay local:
 
 ```bash
-cp cluster/jobs/gen_nyc_500k.sbatch jobs/
-$EDITOR jobs/gen_nyc_500k.sbatch          # set --account=<your-project>
-sbatch jobs/gen_nyc_500k.sbatch
+cp cluster/jobs/05_nyc_500k_car.sbatch jobs/
+$EDITOR jobs/05_nyc_500k_car.sbatch          # set --account=<your-project>
+sbatch jobs/05_nyc_500k_car.sbatch
 ```
 
 The committed file ships with `--time=08:00:00` to leave headroom over the
@@ -342,8 +342,10 @@ measured 3 h 52 m runtime (see budgets below).
 
 The `stress_test` row is **measured** on JobID 47063986 (Pitzer `cpu`,
 8 cores, 64 GB, NYC @ 20 km radius, `new-york-2026-04-22.osm.pbf`,
-`scripts/05_nyc_500k_car.py`); the annotated stderr with per-step
-breakdowns is at [`cluster/example_runs/nyc_500k_47063986.md`](../cluster/example_runs/nyc_500k_47063986.md).
+`scripts/05_nyc_500k_car.py`) — pre-schedule-first pipeline. The
+schedule-first generator (V5+, current) finishes the same scenario
+in 10-15 min wall on Pitzer; the 4 h budget here is the historical
+gravity-only baseline, kept for sbatch `--time` sizing headroom.
 The smaller tier rows are pre-measurement estimates that assume a mid-size
 US city (~50k SCC nodes); demand-gen scales as O(trips × SCC destination
 nodes), so any tier pointed at a larger graph will run proportionally longer.
@@ -366,7 +368,7 @@ The PBF + osmnx numbers above assume the California PBF (~1.2 GB) — the
 heaviest case. Smaller states finish faster. These are **generation**
 numbers; the actual simulation runs (SUMO / MATSim) are separate
 jobs. Always set `--time` to ≥ 1.5× the relevant row; the committed
-`cluster/jobs/gen_nyc_500k.sbatch` uses `--time=08:00:00` for the
+`cluster/jobs/05_nyc_500k_car.sbatch` uses `--time=08:00:00` for the
 `stress_test` tier (≈ 2× the measured 3 h 52 m runtime).
 
 ### Running the benchmark matrix
@@ -560,7 +562,7 @@ cd $HOME/SimForge && git pull && source .venv/bin/activate
 module load python/3.12 openjdk/21.0.3_9
 
 # Submit / watch
-sbatch ~/jobs/gen_nyc_500k.sbatch
+sbatch ~/jobs/05_nyc_500k_car.sbatch
 squeue --user=$USER
 tail -f ~/SimForge/logs/simforge_nyc_500k_*.out
 

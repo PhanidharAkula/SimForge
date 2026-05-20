@@ -259,7 +259,7 @@ sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 
 The schedule-first census demand generator is **byte-reproducible across architectures** for the simulator-input artefacts. Verified empirically on the `la_50k_car` bundle (50K LA car + transit + bike trips, 06:00–10:00, 10 km radius, seed 42, modelgen file with cityscape schedules):
 
-| File          | Mac (ARM64, Python 3.13, osmnx 2.0.7) | Pitzer (x86_64, Python 3.12, osmnx 2.1.0) | Status |
+| File          | Mac (ARM64, Python 3.13.13, osmnx 2.0.7) | Pitzer (x86_64, Python 3.13.13, osmnx 2.1.0) | Status |
 | ------------- | ------------------------------------- | ----------------------------------------- | ------ |
 | `demand.csv`  | `0af9ea231b2d6efc872be0d5bb4330a5`    | `0af9ea231b2d6efc872be0d5bb4330a5`        | ✅ byte-identical |
 | `signals.xml` | `4388b4eca436be69349ea1fede8e07e5`    | `4388b4eca436be69349ea1fede8e07e5`        | ✅ byte-identical |
