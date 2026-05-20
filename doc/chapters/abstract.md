@@ -53,20 +53,18 @@ a 96.3 % gap at 500 K trips on NYC's bridge-and-corridor topology,
 where SUMO's insertion-refusal model and MATSim's queue-hold model
 engage divergent paradigm-level behaviors that the fairness contract
 makes attributable to mobsim choice rather than input asymmetry.
-Third, a four-regime decomposition of reproducibility drift shows
-that cross-platform variability at a fixed code version is small
-(bit-identical across x86_64 OS/JDK distributions; matches to 4
-sig figs across Mac arm64 ↔ Linux x86_64) while cross-code-version
-variability at fixed platform is larger (~3 % MATSim mean-TT shift
-between Phase 12 and Phase 14.13 implementations, on the same
-canonical bundle). To the best of our awareness of the
-cross-simulator benchmarking literature, this is the first such
-empirical decomposition reported for activity-based mesoscopic
-traffic simulation, and it establishes the pinned-digest container
-as the operational mechanism that freezes the code + bundle +
-toolchain bundle for precise cross-time reproducibility — not as a
-mechanism for closing a (nonexistent) cross-platform floating-point
-gap.
+Third, at a fixed code version the framework is bit-identical across
+every measured platform: 20/20 cells byte-identical between Cardinal
+x86_64 host venv and Cardinal x86_64 container (different OS, JDK
+distribution, and JDK major version); Mac arm64 ↔ Cardinal x86_64
+agreement to 4 sig figs on mean travel time. The 0.2-3 % per-engine
+shifts originally observed in cross-platform comparisons are
+attributable to code-version drift between time-separated
+measurements (Phase 12 ↔ Phase 14.13 routing-layer changes), not to
+floating-point hardware differences. The pinned-digest container is
+therefore load-bearing because it freezes the code + bundle +
+toolchain at a precise git SHA, not because it closes any
+cross-platform numerical gap.
 
 SimForge is open-source under the Apache License 2.0 and available
 at `github.com/PhanidharAkula/SimForge`. The framework, the
