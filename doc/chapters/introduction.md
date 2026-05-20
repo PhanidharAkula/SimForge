@@ -170,6 +170,8 @@ contribution beyond the original C-row list.
 
 ![Fig 1.1 — SimForge at a glance: canonical bundle → multi-adapter → fairness-audit framework](../figures/fig_1_1_simforge_overview.png)
 
+Figure 1.1 visualizes the framework end-to-end. A single canonical scenario bundle (five files; left) is the source of truth that every simulator consumes. Each adapter applies the shared SCC + feasibility filter (highlighted at the top of the data flow) and translates the canonical bundle into engine-native inputs, producing per-engine outputs alongside a `feasibility_report.json` that records what each engine actually simulated. The evaluation layer (right) consumes those outputs and runs the cross-engine fairness audit, the analyzer, the plot generator, and the reproducibility scorecard. The framework's central methodological claim — that cross-engine output differences are *attributable* to engine paradigm rather than to input asymmetry — is structurally enforced by this topology: identical canonical input on the left, identical SCC/feasibility filter applied per engine, and a programmatic audit on the right that verifies the property holds at every cell.
+
 ### 1.4.1 The four delivered C-rows (per plan §1.11)
 
 **C1 — Canonical schema and validators.** A simulator-agnostic

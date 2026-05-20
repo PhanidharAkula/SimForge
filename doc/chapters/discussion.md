@@ -165,6 +165,8 @@ typically report.
 
 ![Fig 6.1 — Two paradigm-spread phenomena: cross-engine (§6.2.2) + within-engine (§6.2.4), same insertion-refusal vs queue-hold mechanism at saturation](../figures/fig_6_1_paradigm_spread.png)
 
+Figure 6.1 visualizes the framework's two distinct paradigm-spread findings side by side. The **left panel** (§6.2.2 cross-engine) plots the SUMO meso / MATSim meso mean-TT ratio across the 5 shipped tiers: at 1 K-50 K trips the ratio sits near parity (within ±5 % at 50 K) but inverts sharply at saturation density — 0.645 at chicago_200k (−35.5 %) and 0.037 at nyc_500k (−96.3 %). The **right panel** (§6.2.4 within-engine) plots the SUMO micro / SUMO meso ratio across 3 tiers: +27 % at 1 K, +73 % at 10 K (the gap *widens* with scale), then narrows back to +7.8 % at 200 K. The arrows highlight the saturation-bound phenomenon in each panel — divergence on the left, convergence on the right. Both findings emerge from the same controlling mechanism: at saturation density, origin-edge insertion-refusal dominates the dynamics for both mobsim paradigms (SUMO) and both resolutions (micro/meso), making paradigm choice (insertion-refusal vs queue-hold) the dominant axis and within-paradigm-resolution choice (micro vs meso) the secondary axis. The two-panel layout makes the structural parallel visible at a glance.
+
 ### 6.2.1 Phase 14: BFS deduplication makes the large tier tractable
 
 **Finding**: pre-Phase-14, the chicago_200k_car benchmark on Cardinal
@@ -237,6 +239,8 @@ demonstrated, the gap is *necessarily* paradigm-attributable.
 ### 6.2.3 Cross-platform reproducibility limits
 
 ![Fig 6.2 — Four reproducibility regimes: cross-platform variability at fixed code is small; cross-code-version drift is the dominant risk](../figures/fig_6_2_reproducibility_regimes.png)
+
+Figure 6.2 stacks the four reproducibility regimes the framework's measurements isolated. **Regime 1** (within single execution context) and **Regime 2** (same CPU architecture, cross-distribution — RHEL+Adoptium-21 ↔ Debian+apt-17 on Cardinal x86_64) both yield bit-identical outputs (the green "BIT-IDENTICAL" verdict on the right of each row). **Regime 3** (cross-CPU-architecture — Mac arm64 ↔ Linux x86_64 at the same code version) matches to 4 sig figs (the blue "≈ BIT-IDENTICAL" verdict), strongly consistent with bit-identity at the precision of the cited Cardinal numbers. Only **Regime 4** (cross-code-version, time-separated comparisons between Pitzer Phase 12 and Cardinal Phase 14.13) produces a measurable 0.2-3 % per-engine drift (the red "0.2-3 % DRIFT" verdict). The vertical stacking is intentional: the regimes are ordered from least-to-most-variable, and the practical implication is that **code-version drift on the same platform is the dominant reproducibility risk** — not platform variability. The pinned-digest container is the operational mechanism that closes Regime 4 (freezes the code+bundle+toolchain at a precise git SHA); the other three regimes are essentially closed at the framework's current design.
 
 **Finding** (Chapter 5 §5.6.3): at a fixed code version, SimForge is bit-identical across every measured platform. The 0.2-3 % shifts originally reported in §5.6.3 (2.95 % MATSim, 0.24 % DTALite) were **code-version drift between time-separated comparisons** (Pitzer Phase 12 ↔ Cardinal Phase 14.13), not cross-platform variability. Two follow-up measurements isolated the axes:
 

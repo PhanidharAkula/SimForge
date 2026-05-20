@@ -196,6 +196,8 @@ At the 1 K tier the absolute runtimes (≤ 22 s for DTALite, ≤ 16 s for SUMO m
 
 ![Fig 5.10 — Wall-time vs engine-time breakdown (prep / engine / parse / harness overhead)](../figures/fig_5_10_wall_vs_engine.png)
 
+Figure 5.10 decomposes per-cell wall time into its four components — adapter prep, engine subprocess, output parse, and harness overhead — to show that the Phase 12+ BFS-prep cache amortises the dominant prep cost across the 5 repeats of each cell. Cells where the cache is warm (repeats 2-5 of each `(scenario, engine, mode)` triple) are dominated by the engine subprocess; the cold first repeat carries the prep cost in the lighter-coloured prep band visible at the bottom of each cluster.
+
 Throughput, defined as `completed_trip_count / engine_runtime_seconds`, on the 11-cell matrix:
 
 | Scenario | Engine | Mode | Throughput (trips/s) |
@@ -247,6 +249,8 @@ Both gaps are *declared and documented*, not silent. The diagnostic prevents ove
 ## 5.6.1 Demand Composition (V5+)
 
 ![Fig 5.9 — Demand composition: HBW + HBSchool purpose breakdown per scenario](../figures/fig_5_9_demand_composition.png)
+
+Figure 5.9 visualizes the per-scenario demand composition the V5+ purpose taxonomy makes legible. Each scenario shows the share of trips in each of the six V5+ purposes (`HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained`). The cross-city differences — particularly LA's substantially higher school-related share — are the empirical signal Q5 of the fairness audit reports per scenario.
 
 Phases 9 and 10 add a six-purpose taxonomy to every row of `demand.csv`:
 `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`,

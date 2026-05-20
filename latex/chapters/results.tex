@@ -462,6 +462,15 @@ path4gmns 0.10.0 binary, §5.7).
 
 \pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_5_10_wall_vs_engine.png}}
 
+Figure 5.10 decomposes per-cell wall time into its four components ---
+adapter prep, engine subprocess, output parse, and harness overhead ---
+to show that the Phase 12+ BFS-prep cache amortises the dominant prep
+cost across the 5 repeats of each cell. Cells where the cache is warm
+(repeats 2-5 of each \texttt{(scenario,\ engine,\ mode)} triple) are
+dominated by the engine subprocess; the cold first repeat carries the
+prep cost in the lighter-coloured prep band visible at the bottom of
+each cluster.
+
 Throughput, defined as
 \texttt{completed\_trip\_count\ /\ engine\_runtime\_seconds}, on the
 11-cell matrix:
@@ -560,6 +569,14 @@ matrix.
 (V5+)}\label{561-demand-composition-v5}
 
 \pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_5_9_demand_composition.png}}
+
+Figure 5.9 visualizes the per-scenario demand composition the V5+
+purpose taxonomy makes legible. Each scenario shows the share of trips
+in each of the six V5+ purposes (\texttt{HBW\_AM}, \texttt{HBW\_PM},
+\texttt{HBSchool\_AM}, \texttt{HBSchool\_PM}, \texttt{HBW\_AM\_chained},
+\texttt{HBW\_PM\_chained}). The cross-city differences --- particularly
+LA\textquotesingle s substantially higher school-related share --- are
+the empirical signal Q5 of the fairness audit reports per scenario.
 
 Phases 9 and 10 add a six-purpose taxonomy to every row of
 \texttt{demand.csv}: \texttt{HBW\_AM}, \texttt{HBW\_PM},

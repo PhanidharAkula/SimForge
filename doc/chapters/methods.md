@@ -6,6 +6,8 @@ This chapter describes the design, implementation, and rationale of **SimForge**
 
 ![Fig 3.1 — SimForge three-layer architecture: pipeline → adapters → evaluation](../figures/fig_3_1_three_layer_architecture.png)
 
+Figure 3.1 organizes the framework as three layers with well-defined inter-layer interfaces. The **pipeline layer** (top) produces the canonical bundle from external data (`pipeline/network/`, `pipeline/demand/`, `pipeline/signals/`, `pipeline/validation/`). The **adapter layer** (middle) consumes the bundle and emits engine-native inputs + invokes the engine + parses outputs — one per shipped engine, plus `adapters/common/` for the shared SCC + feasibility + canonical-routes + vehicle-types modules. The **evaluation layer** (bottom) reads per-engine outputs and produces the fairness audit, headline tables, R-scores + CIs, plots, and the reproducibility scorecard. Each layer is independently testable; the adapter layer is the substitution point for adding a new engine via the three-function contract documented in §3.4.
+
 1. **Input standardization**: Traffic simulators (SUMO, MATSim, DTALite, etc.) use incompatible input formats with different data models, coordinate systems, and semantic interpretations. Direct comparison requires a common input representation.
 
 2. **Execution reproducibility**: Simulation results vary due to hardware differences, software versions, random seed handling, floating-point behavior, and configuration details. A fair comparison requires deterministic, repeatable execution pipelines.
@@ -83,6 +85,8 @@ inline so they are not mistaken for drift.
 ## 3.2 Canonical Data Schema
 
 ![Fig 3.2 — Canonical scenario bundle: 5-file simulator-agnostic schema](../figures/fig_3_2_canonical_bundle_schema.png)
+
+Figure 3.2 shows the five files that compose a canonical scenario bundle, with representative content for each. `network.xml` carries the GMNS-style directed graph (nodes + links + turn restrictions). `demand.csv` carries per-trip records (origin/destination/departure/mode/purpose). `signals.xml` carries traffic-signal phase tables at OSM-tagged junctions. `config.xml` carries the simulation horizon, random seed, and physical units. `manifest.xml` is the integrity manifest — it lists every other file with its SHA-256 hash, so `pipeline/validation/validate_bundle.py` can detect tampering or partial generation before any adapter consumes the bundle. Each shipped bundle lives at `scenarios/<scenario_id>/` and is consumed verbatim by every adapter; the fairness contract requires byte-identical input across engines, which the manifest hashes make verifiable.
 
 ### 3.2.1 Design Principles
 
@@ -380,6 +384,8 @@ def validate_bundle(scenario_path: Path) -> ValidationResult:
 
 ![Fig 3.3 — Scenario generation pipeline: data sources → SimForge transforms → canonical bundle](../figures/fig_3_3_generation_pipeline.png)
 
+Figure 3.3 shows the data-source-to-bundle pipeline. Five external data sources flow into the framework (left column): hash-pinned OSM PBF state extracts from Geofabrik, LandScan ambient-population rasters from ORNL, ACS PUMS 5-year microdata from the U.S. Census Bureau, IPUMS PUMA shapefiles, and the cityscape ModelGen `.txt` file produced by Rao 2023's CITYSCAPE pipeline. Six SimForge pipeline stages (center column) transform these into the canonical bundle (right column): network construction + SCC filtering (3 stages of `pipeline/network/`), signal placement at OSM-tagged junctions (`pipeline/signals/`), and schedule-first census-driven demand generation (2 stages of `pipeline/demand/`). Stage details — including the V5+ Phase 5-9 JWTRNS-fix + per-person JWMNP departures + HBW/HBSchool chained purposes — are documented in §3.3.1 through §3.3.4 below.
+
 ### 3.3.1 Pipeline Architecture
 
 The scenario generation pipeline is a 4-stage process orchestrated by `generate.py` (unified CLI entry point):
@@ -647,6 +653,8 @@ Used when no ModelGen file is available. Generates demand from network topology 
 ## 3.4 Simulator Adapter Layer
 
 ![Fig 3.4 — Three-function adapter contract (prepare / run / parse) across SUMO + MATSim + DTALite](../figures/fig_3_4_adapter_contract.png)
+
+Figure 3.4 lays out the three-function adapter contract as a 3×3 grid: three rows (`prepare_<engine>_inputs`, `run_<engine>`, `parse_<engine>_output`) × three columns (SUMO, MATSim, DTALite). Each cell shows the per-engine function signature; the left labels describe the shared contract semantics and return type. The `prepare_` functions consume the canonical bundle and emit engine-native inputs after applying the shared SCC + feasibility filter and (Phase 14+) consuming canonical_routes. The `run_` functions invoke the engine binary or JVM as a subprocess and return `(success, runtime_s, error_msg)`. The `parse_` functions read engine-native outputs and return travel-time stats — a plain dict for SUMO + MATSim, a richer `DTALiteTripStats` dataclass for DTALite. The contract is pinned by `tests/test_adapter_contract.py` (6 tests = 3 engines × 2 assertions); adding a fourth engine follows the same template.
 
 ### 3.4.1 Adapter Architecture
 
@@ -937,6 +945,8 @@ All run results are serialized to `benchmark_results_<runspec>.json`:
 
 ![Fig 3.6 — Cross-engine fairness audit: Q1-Q5 verification flow](../figures/fig_3_6_fairness_audit_flow.png)
 
+Figure 3.6 walks through the cross-engine fairness audit (`evaluation/audit_fairness.py`) as a vertical flow. Input is a run directory containing per-engine cells. The audit then runs five questions in order, each producing a verdict line in the audit output: **Q1** (mandatory) — byte-identical feasibility verdicts across all engines; **Q2** (mandatory) — byte-identical SCC node + link counts; **Q3** (mandatory) — every engine simulated the same trip-count target; **Q4** (informational) — cross-engine mean-TT comparison (the paradigm-divergence signal that drives §5.6.2); **Q5** (informational) — V5+ demand-composition tally. Q1-Q3 are the *fairness contract* — they must PASS for the cross-engine comparison to be attributable to engine paradigm rather than input asymmetry. Q4 + Q5 are the interpretive readouts that make the fairness-contract guarantee actionable for the chapter-5 paradigm-divergence narrative.
+
 ### 3.6.1 Metric Categories
 
 The evaluation framework measures three orthogonal quality dimensions:
@@ -1133,6 +1143,8 @@ adapter, pipeline, and evaluation packages; the local gate enforces
 
 ![Fig 3.8 — Phase 14 canonical_routes BFS deduplication: 2-adapter independent BFS (BEFORE) vs shared canonical_routes BFS (AFTER), 20× cold speedup at chicago_200k_car](../figures/fig_3_8_phase14_bfs_dedup.png)
 
+Figure 3.8 shows the engineering change Phase 14 introduced. **BEFORE** (left panel): each engine adapter ran its own state-aware BFS over the canonical network — 200,000 trips × 1.5 s per BFS = ~82 h per engine, paid twice (SUMO + MATSim), for a total of ~164 h adapter-prep wall on chicago_200k_car (≈ 96 % of the run time). At the 500K-trip tier the projected wall (~600 h) exceeded the Cardinal `cpu` partition cap and the benchmark was structurally infeasible. **AFTER** (right panel): both adapters consume routes pre-computed by a single shared module (`adapters/common/canonical_routes.compute_canonical_routes()`) that runs a 16-worker parallel BFS over the canonical bundle. Total adapter-prep wall drops to ~7.14 h cold-vs-cold and ~37 min on warm-cache re-runs (Phase 14.13's global `cache/canonical_routes/` directory). nyc_500k_car became feasible and completed in 12 h 8 min on Cardinal. The byte-identity contract that Q1-Q3 of the fairness audit enforces is preserved: per-trip routes are sorted-deterministic and bit-identical to the legacy serial computation, regardless of worker count.
+
 A late-stage thesis-engineering finding worth recording as an
 optimization narrative: measure, identify, fix, re-measure.
 
@@ -1282,6 +1294,8 @@ preserved at `runs/baselines/phase14_chicago_200k_car_job9954279/` and
 ### 3.8.5 Parallelism Architecture (task-parallel, replicated graph)
 
 ![Fig 3.8b — Phase 14 parallel-BFS worker pool: task-parallel over trips, replicated SCC-graph per worker, spawn context, SLURM_CPUS_PER_TASK=16](../figures/fig_3_8b_parallel_bfs_workers.png)
+
+Figure 3.8b zooms into the worker-pool architecture inside `compute_canonical_routes()`. The full feasible-trip list (sorted by `trip_id`) is chunked into ~1,000 lists of ~200 trips each and dispatched via `multiprocessing.get_context("spawn").Pool(workers=N).imap(...)` to `N` worker processes (`N = SLURM_CPUS_PER_TASK = 16` on Cardinal). Each worker boots a fresh Python interpreter (`spawn` context, not `fork`) and rebuilds its state via the `_init_worker` initializer — including loading the SCC-filtered canonical network as a *replicated* in-heap copy (~150 MB per worker). Workers compute BFS independently on their chunks and return `(trip_id, path)` tuples via `Pool.imap`, which preserves submission order; the main process merges the results into a sorted `Dict[trip_id, List[node_id]]` and writes the content-addressable cache file. Two architectural properties matter for the fairness contract: (a) there is no worker-to-worker communication — all IPC is between the main process and individual workers, so workers cannot race on shared state because no shared state exists; and (b) each `shortest_path_with_restrictions(...)` call is a deterministic function of inputs that are bit-identical across workers, so the merged output is bit-identical to a serial computation regardless of worker count. The `tests/test_canonical_routes.py::TestParallelDeterminism` test pins this invariant across worker counts 1, 2, and 4.
 
 The Phase 14b implementation uses **task parallelism over trips**, not
 data parallelism over the network. The architectural rationale matters
@@ -1589,6 +1603,8 @@ in `doc/EXPERIMENT_LOG.md` records the introduction.
 ## 3.11 Wave 2 — Pinned-Digest Container Distribution
 
 ![Fig 3.11 — Wave 2 pinned-digest container distribution chain: Dockerfile → GitHub Actions → GHCR → Apptainer pull → SBATCH](../figures/fig_3_11_container_chain.png)
+
+Figure 3.11 shows the five-stage Wave 2 distribution chain. The **Dockerfile** at the repo root pins the runtime environment (`python:3.13-slim-bookworm` + openjdk-17 + libgomp1 + uv + the 35 lockfile-pinned Python packages + `eclipse-sumo==1.26.0` + the MATSim 15.0 JAR). The **GitHub Actions** workflow (`.github/workflows/build-container.yml`) builds the image on every push to `main` or `phase-14-canonical-routes` and tags it with the git SHA. **GHCR** distributes the resulting image as an immutable digest; the thesis-canonical digest (`db8d786`) is recorded in `lib/container/manifest.json` and verified on Cardinal. **Apptainer pull** materializes the image as a local `.sif` file on Cardinal (with the SHA-tag workaround for the 1.4.5 `progress_roundtrip.go:75` bug). Finally, the **SBATCH wrapper** opts into container execution via `SIMFORGE_USE_CONTAINER=1`, producing bit-identical x86_64 reproduction across machines. The chain is the operational substrate that delivers plan §1.11 C3 — pinned-digest containers as the canonical reproducibility target.
 
 Wave 2 (landed 2026-05-20) added a containerized execution path that
 makes the SimForge framework bit-reproducible across machines. The

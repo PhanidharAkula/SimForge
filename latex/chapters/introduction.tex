@@ -189,6 +189,22 @@ framework\textquotesingle s contribution beyond the original C-row list.
 
 \pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_1_1_simforge_overview.png}}
 
+Figure 1.1 visualizes the framework end-to-end. A single canonical
+scenario bundle (five files; left) is the source of truth that every
+simulator consumes. Each adapter applies the shared SCC + feasibility
+filter (highlighted at the top of the data flow) and translates the
+canonical bundle into engine-native inputs, producing per-engine outputs
+alongside a \texttt{feasibility\_report.json} that records what each
+engine actually simulated. The evaluation layer (right) consumes those
+outputs and runs the cross-engine fairness audit, the analyzer, the plot
+generator, and the reproducibility scorecard. The
+framework\textquotesingle s central methodological claim --- that
+cross-engine output differences are \emph{attributable} to engine
+paradigm rather than to input asymmetry --- is structurally enforced by
+this topology: identical canonical input on the left, identical
+SCC/feasibility filter applied per engine, and a programmatic audit on
+the right that verifies the property holds at every cell.
+
 \subsection{The four delivered C-rows (per plan
 §1.11)}\label{141-the-four-delivered-c-rows-per-plan-111}
 
