@@ -79,6 +79,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         git \
         ca-certificates \
         curl \
+        unzip \
         tini \
  && rm -rf /var/lib/apt/lists/* \
  && java -version
@@ -140,8 +141,32 @@ COPY scripts/       ./scripts/
 COPY canonical/     ./canonical/
 COPY help.py run.py generate.py setup_simforge.py ./
 
-# Engine libs (MATSim JAR ~3 MB, DTALite manifest <1 KB; total <5 MB)
+# Engine libs (only manifest.json files for dtalite + container are tracked
+# in git; the MATSim 15.0 release is downloaded fresh in the next step).
 COPY lib/           ./lib/
+
+# Download MATSim 15.0 runtime + transitive dependency JARs from upstream
+# GitHub release. The matsim-15.0.zip is the canonical distribution
+# (matsim-15.0.jar ~3 MB + libs/*.jar ~100 MB transitive deps). The git
+# tag "matsim-15.0" is immutable on matsim-org/matsim-libs, so the URL
+# is content-stable. Total ~100 MB into lib/matsim-15.0/.
+#
+# Why NOT track in git: the libs/ tree is ~70 JAR blobs totalling ~100 MB.
+# Adding to git permanently bloats the history. Container-build download
+# from immutable release is the standard pattern.
+RUN cd /tmp \
+ && curl -fsSL -o matsim-15.0.zip \
+        https://github.com/matsim-org/matsim-libs/releases/download/matsim-15.0/matsim-15.0.zip \
+ && unzip -q matsim-15.0.zip -d /tmp/matsim-extract \
+ && mkdir -p /workspace/SimForge/lib/matsim-15.0 \
+ && if [ -d /tmp/matsim-extract/matsim-15.0 ]; then \
+        cp -r /tmp/matsim-extract/matsim-15.0/. /workspace/SimForge/lib/matsim-15.0/; \
+    else \
+        cp -r /tmp/matsim-extract/. /workspace/SimForge/lib/matsim-15.0/; \
+    fi \
+ && rm -rf /tmp/matsim-15.0.zip /tmp/matsim-extract \
+ && test -f /workspace/SimForge/lib/matsim-15.0/matsim-15.0.jar \
+ && echo "  ✓ MATSim 15.0 downloaded: $(du -sh /workspace/SimForge/lib/matsim-15.0 | cut -f1) into lib/matsim-15.0/"
 
 # Repo-root docs + license — keeps the image self-describing
 COPY LICENSE README.md CHANGELOG.md SETUP.md TESTING.md CONTRIBUTING.md ./
