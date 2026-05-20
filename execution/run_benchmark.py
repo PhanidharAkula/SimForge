@@ -555,85 +555,30 @@ class BenchmarkHarness:
         ignore_route_errors: bool = True,
         mesoscopic: bool = False
     ) -> tuple[bool, float, Optional[str]]:
+        """Delegates to ``adapters.sumo.sumo_adapter.run_sumo``.
+
+        Kept as a thin method on BenchmarkHarness for API back-compat;
+        the real implementation lives in the adapter to satisfy the
+        three-function adapter contract (`prepare_<engine>_inputs`,
+        `run_<engine>`, `parse_<engine>_output`).
         """
-        Run SUMO simulation.
-        
-        Args:
-            config_path: Path to .sumocfg file
-            timeout_s: Simulation timeout
-            seed: Random seed for SUMO
-            ignore_route_errors: If True, skip vehicles with invalid routes instead of aborting
-            mesoscopic: If True, use mesoscopic simulation (10-100x faster for large scenarios)
-        
-        Returns:
-            Tuple of (success, runtime_seconds, error_message)
-        """
-        # Use absolute path for config
-        config_path = config_path.resolve()
-        cmd = ["sumo", "-c", str(config_path)]
-        
-        if seed is not None:
-            cmd.extend(["--seed", str(seed)])
-        
-        if ignore_route_errors:
-            cmd.extend(["--ignore-route-errors"])
-        
-        if mesoscopic:
-            cmd.extend(["--mesosim"])
-            logger.info("Using mesoscopic simulation mode (faster)")
-        
-        logger.info("Running: %s", ' '.join(cmd))
-        
-        start_time = time.time()
-        try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout_s,
-                cwd=config_path.parent,
-                check=False
-            )
-            runtime = time.time() - start_time
-            
-            if result.returncode != 0:
-                # Extract only actual error lines (not warnings)
-                error_lines = [
-                    line for line in (result.stderr or "").split("\n")
-                    if line.strip().startswith("Error:")
-                ]
-                error_msg = "\n".join(error_lines[:5]) if error_lines else (result.stderr[:500] if result.stderr else "Unknown error")
-                return False, runtime, error_msg
-            
-            return True, runtime, None
-            
-        except subprocess.TimeoutExpired:
-            runtime = time.time() - start_time
-            return False, runtime, f"Timeout after {timeout_s}s"
-        except OSError as e:
-            runtime = time.time() - start_time
-            return False, runtime, str(e)
-    
+        from adapters.sumo.sumo_adapter import run_sumo as _adapter_run_sumo
+        return _adapter_run_sumo(
+            config_path=config_path,
+            timeout_s=timeout_s,
+            seed=seed,
+            ignore_route_errors=ignore_route_errors,
+            mesoscopic=mesoscopic,
+        )
+
     def compute_metrics(self, output_dir: Path) -> dict:
-        """Compute metrics from simulation outputs."""
-        from evaluation.metrics.travel_time import parse_sumo_tripinfo
-        
-        metrics = {}
-        
-        # Parse tripinfo if available
-        tripinfo_path = output_dir / "tripinfo.xml"
-        if tripinfo_path.exists():
-            try:
-                stats = parse_sumo_tripinfo(tripinfo_path)
-                metrics["travel_time"] = {
-                    "mean": stats.mean_travel_time_s,
-                    "p95": stats.p95_travel_time_s,
-                    "trip_count": stats.trip_count
-                }
-            except (OSError, ValueError) as e:
-                logger.warning("Failed to parse tripinfo: %s", e)
-        
-        return metrics
+        """Compute metrics from simulation outputs (SUMO path).
+
+        Delegates to ``adapters.sumo.sumo_adapter.parse_sumo_output``
+        for consistency with the matsim/dtalite adapter contracts.
+        """
+        from adapters.sumo.sumo_adapter import parse_sumo_output
+        return parse_sumo_output(output_dir)
     
     def run_single(
         self,

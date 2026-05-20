@@ -19,6 +19,7 @@ from __future__ import annotations
 import csv
 import logging
 import subprocess
+import time
 from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
@@ -758,3 +759,90 @@ def prepare_sumo_inputs(
     cfg_path.write_text(cfg_content, encoding="utf-8")
 
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Adapter contract: run + parse (matches matsim_adapter / dtalite_adapter)
+# ---------------------------------------------------------------------------
+
+
+def run_sumo(
+    config_path: Path,
+    timeout_s: int = 3600,
+    seed: Optional[int] = None,
+    ignore_route_errors: bool = True,
+    mesoscopic: bool = False,
+) -> Tuple[bool, float, Optional[str]]:
+    """Run a SUMO simulation against a prepared `.sumocfg`.
+
+    Mirrors the three-function adapter contract documented at
+    `doc/chapters/introduction.md` §1.5.4:
+    `prepare_<engine>_inputs / run_<engine> / parse_<engine>_output`.
+    Used by `execution.run_benchmark.BenchmarkHarness.run_sumo` which
+    delegates to this function so behaviour stays in the adapter module.
+
+    Returns (success, runtime_seconds, error_message_or_None).
+    """
+    config_path = Path(config_path).resolve()
+    cmd = ["sumo", "-c", str(config_path)]
+    if seed is not None:
+        cmd.extend(["--seed", str(seed)])
+    if ignore_route_errors:
+        cmd.extend(["--ignore-route-errors"])
+    if mesoscopic:
+        cmd.extend(["--mesosim"])
+        logger.info("Using mesoscopic simulation mode (faster)")
+    logger.info("Running: %s", " ".join(cmd))
+
+    start_time = time.time()
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+            cwd=config_path.parent,
+            check=False,
+        )
+        runtime = time.time() - start_time
+        if result.returncode != 0:
+            error_lines = [
+                line for line in (result.stderr or "").split("\n")
+                if line.strip().startswith("Error:")
+            ]
+            error_msg = (
+                "\n".join(error_lines[:5])
+                if error_lines
+                else (result.stderr[:500] if result.stderr else "Unknown error")
+            )
+            return False, runtime, error_msg
+        return True, runtime, None
+    except subprocess.TimeoutExpired:
+        return False, time.time() - start_time, f"Timeout after {timeout_s}s"
+    except OSError as e:
+        return False, time.time() - start_time, str(e)
+
+
+def parse_sumo_output(output_dir: Path) -> dict:
+    """Parse SUMO output dir into the standard metrics dict.
+
+    Delegates to `evaluation.metrics.travel_time.parse_sumo_tripinfo`
+    and returns the same dict shape as `parse_matsim_output` and
+    `parse_dtalite_output` for cross-engine homogeneity:
+    ``{"travel_time": {"mean": float, "p95": float, "trip_count": int}}``
+    """
+    from evaluation.metrics.travel_time import parse_sumo_tripinfo
+
+    metrics: dict = {}
+    tripinfo_path = Path(output_dir) / "tripinfo.xml"
+    if tripinfo_path.exists():
+        try:
+            stats = parse_sumo_tripinfo(tripinfo_path)
+            metrics["travel_time"] = {
+                "mean": stats.mean_travel_time_s,
+                "p95": stats.p95_travel_time_s,
+                "trip_count": stats.trip_count,
+            }
+        except (OSError, ValueError) as e:
+            logger.warning("Failed to parse tripinfo: %s", e)
+    return metrics
