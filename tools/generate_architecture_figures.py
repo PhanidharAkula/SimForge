@@ -537,6 +537,406 @@ def fig_6_1_paradigm_spread(output_dir):
 
 
 # -----------------------------------------------------------------------------
+# F3 — Canonical 5-file bundle schema (Methods §3.2)
+# -----------------------------------------------------------------------------
+
+
+def fig_3_2_canonical_bundle_schema(output_dir):
+    fig, ax = plt.subplots(figsize=(14, 7))
+    fig.suptitle("Canonical scenario bundle: 5-file simulator-agnostic schema",
+                 fontsize=13, fontweight="bold", y=0.97)
+    ax.set_xlim(0, 14)
+    ax.set_ylim(0, 7)
+    ax.axis("off")
+
+    # Five file boxes laid out in a row across the top
+    file_specs = [
+        ("network.xml", "XML", [
+            "<node id='n0' x=… y=…/>",
+            "<link from='n0' to='n1'",
+            "      length= speed= lanes=/>",
+            "<turn_restriction …/>",
+        ]),
+        ("demand.csv", "CSV", [
+            "trip_id, origin_node_id,",
+            "  destination_node_id,",
+            "  departure_time_s,",
+            "  mode, purpose (V5+)",
+        ]),
+        ("signals.xml", "XML", [
+            "<junction id='n0'>",
+            "  <phase duration='30'",
+            "         state='Gr'/>",
+            "  <phase …/>  …",
+        ]),
+        ("config.xml", "XML", [
+            "<horizon start='25200'",
+            "         end='36000'/>",
+            "<seed value='42'/>",
+            "<units length='m' speed='m/s'/>",
+        ]),
+        ("manifest.xml", "XML", [
+            "<file path='network.xml'",
+            "  sha256='abc…' size=… />",
+            "<file path='demand.csv'",
+            "  sha256='def…' …/>  …",
+        ]),
+    ]
+
+    bx, by, bw, bh = 0.3, 3.3, 2.65, 3.3
+    gap = 0.10
+    for i, (name, ftype, lines) in enumerate(file_specs):
+        x = bx + i * (bw + gap)
+        # File-name header
+        box(ax, x, by + bh - 0.7, bw, 0.6, "",
+            color=C_BUNDLE, edgecolor=C_BORDER)
+        ax.text(x + bw / 2, by + bh - 0.4, name,
+                ha="center", va="center", fontsize=11, fontweight="bold",
+                color=C_TEXT)
+        ax.text(x + bw - 0.15, by + bh - 0.65, ftype,
+                ha="right", va="bottom", fontsize=7.5, style="italic",
+                color="#666")
+        # Content area (white)
+        box(ax, x, by, bw, bh - 0.7, "", color="white")
+        for j, line in enumerate(lines):
+            ax.text(x + 0.13, by + bh - 1.05 - j * 0.45, line,
+                    ha="left", va="top", fontsize=8, family="monospace",
+                    color="#333")
+
+    # Caption box at top noting the manifest verification.
+    # (We don't draw per-file SHA-256 arrows here — they all originate at the
+    # manifest.xml column and target the other 4 headers at the same y, which
+    # renders as a single overlapping horizontal line rather than 4 distinct
+    # arrows. The textual caption + the per-file `<file path=... sha256=...>`
+    # entries shown inside manifest.xml's content box convey the same point
+    # without the visual confusion.)
+    ax.text(7.0, 6.75,
+            "manifest.xml hash-verifies the other 4 files (SHA-256) at validate_bundle time — "
+            "see the <file path=... sha256=.../> entries inside manifest.xml above.",
+            ha="center", va="center", fontsize=9.5, color="#c62828",
+            style="italic",
+            bbox=dict(boxstyle="round,pad=0.4", facecolor="white",
+                      edgecolor="#c62828", linewidth=0.8))
+
+    # Bottom: bundle ID + downstream consumer
+    box(ax, 2.0, 1.30, 10.0, 1.30, "",
+        color=C_BUNDLE, edgecolor=C_BORDER)
+    ax.text(7.0, 2.30,
+            "scenarios/<scenario_id>/  (e.g. chicago_1k_car, nyc_500k_car)",
+            ha="center", va="center", fontsize=11, fontweight="bold",
+            color=C_TEXT)
+    ax.text(7.0, 1.65,
+            "Consumed by every adapter (SUMO / MATSim / DTALite) → fairness contract requires byte-identical input",
+            ha="center", va="center", fontsize=9, style="italic", color="#555")
+
+    # Arrow from the file row down to the bundle box
+    arrow(ax, 7.0, 3.2, 7.0, 2.65, lw=2.0)
+
+    # Bottom caption
+    ax.text(7.0, 0.35,
+            "Field-level validation in pipeline/validation/validate_bundle.py; "
+            "see Chapter 3 §3.2 for full schema.",
+            ha="center", va="center", fontsize=9, style="italic", color="#555")
+
+    return save(fig, "fig_3_2_canonical_bundle_schema", output_dir)
+
+
+# -----------------------------------------------------------------------------
+# F4 — Scenario generation pipeline (Methods §3.3)
+# -----------------------------------------------------------------------------
+
+
+def fig_3_3_generation_pipeline(output_dir):
+    fig, ax = plt.subplots(figsize=(14, 8))
+    fig.suptitle("Scenario generation pipeline: data sources → SimForge transforms → canonical bundle",
+                 fontsize=12.5, fontweight="bold", y=0.97)
+    ax.set_xlim(0, 14)
+    ax.set_ylim(0, 8)
+    ax.axis("off")
+
+    # LEFT column: data sources
+    container(ax, 0.3, 0.7, 3.0, 6.5, "Data sources", color="#eceff1")
+    sources = [
+        ("OSM PBF\n(Geofabrik state extracts)", 6.3),
+        ("LandScan rasters\n(ORNL pop. density)", 5.2),
+        ("ACS PUMS 5-yr\n(US Census Bureau)", 4.1),
+        ("IPUMS PUMA\nshapefiles", 3.0),
+        ("ModelGen .txt\n(cityscape; Rao 2023)", 1.6),
+    ]
+    for label, y in sources:
+        box(ax, 0.5, y - 0.40, 2.6, 0.80, label,
+            color="white", fontsize=8.5, radius=0.03)
+
+    # CENTER column: pipeline stages
+    container(ax, 4.0, 0.7, 5.8, 6.5, "Pipeline stages", color=C_PIPELINE)
+    stages = [
+        ("pipeline/network/load_network_from_pbf.py\n(pyosmium bbox slice)", 6.4),
+        ("pipeline/network/build_network_from_osm.py\n(osmnx → GMNS graph)", 5.4),
+        ("pipeline/network/scc.py\n(Kosaraju largest-SCC filter)", 4.4),
+        ("pipeline/signals/build_signals_default.py\n(OSM has_signal='true' → phase tables)", 3.4),
+        ("pipeline/demand/parse_model_file.py\n(cityscape → buildings + persons + schedules)", 2.4),
+        ("pipeline/demand/generate_census_demand.py\n(schedule-first + gravity fallback)", 1.3),
+    ]
+    for label, y in stages:
+        box(ax, 4.2, y - 0.42, 5.4, 0.85, label,
+            color="white", fontsize=8.5, radius=0.03)
+
+    # Inter-stage arrows in CENTER (vertical flow downward)
+    for y1, y2 in [(6.0, 5.85), (5.0, 4.85), (4.0, 3.85), (3.0, 2.85), (2.0, 1.75)]:
+        arrow(ax, 7.0, y1, 7.0, y2, lw=1.2, color="#999")
+
+    # RIGHT column: canonical bundle output
+    container(ax, 10.5, 0.7, 3.3, 6.5, "Canonical bundle\n(5 files)", color=C_BUNDLE)
+    outs = [
+        ("network.xml", 6.0),
+        ("demand.csv", 4.6),
+        ("signals.xml", 3.3),
+        ("config.xml", 2.0),
+        ("manifest.xml +\nSHA-256", 0.85),
+    ]
+    for name, y in outs:
+        box(ax, 10.7, y - 0.30, 2.9, 0.60, name,
+            color="white", fontsize=9, radius=0.03)
+
+    # Arrows from data sources to relevant pipeline stages
+    arrow(ax, 3.10, 6.3, 4.20, 6.4, lw=0.8, color="#888")  # OSM PBF → load_network
+    arrow(ax, 3.10, 5.2, 4.20, 2.4, lw=0.6, color="#888")  # LandScan → parse_model
+    arrow(ax, 3.10, 4.1, 4.20, 2.4, lw=0.6, color="#888")  # ACS PUMS → parse_model
+    arrow(ax, 3.10, 3.0, 4.20, 2.4, lw=0.6, color="#888")  # IPUMS PUMA → parse_model
+    arrow(ax, 3.10, 1.6, 4.20, 2.4, lw=0.8, color="#888")  # ModelGen → parse_model
+
+    # Arrows from pipeline stages to output files
+    arrow(ax, 9.6, 4.4, 10.7, 6.0, lw=0.8, color="#1976d2")  # SCC + network → network.xml
+    arrow(ax, 9.6, 1.3, 10.7, 4.6, lw=0.8, color="#1976d2")  # demand gen → demand.csv
+    arrow(ax, 9.6, 3.4, 10.7, 3.3, lw=0.8, color="#1976d2")  # signals → signals.xml
+
+    return save(fig, "fig_3_3_generation_pipeline", output_dir)
+
+
+# -----------------------------------------------------------------------------
+# F5 — Adapter contract (3 engines × 3 functions)  (Methods §3.4)
+# -----------------------------------------------------------------------------
+
+
+def fig_3_4_adapter_contract(output_dir):
+    fig, ax = plt.subplots(figsize=(15, 7))
+    fig.suptitle("Three-function adapter contract: uniform prepare / run / parse across all engines",
+                 fontsize=12.5, fontweight="bold", y=0.97)
+    ax.set_xlim(0, 15)
+    ax.set_ylim(0, 7)
+    ax.axis("off")
+
+    engines = ["SUMO", "MATSim", "DTALite"]
+    # Shorter descriptions designed to fit a 4.2-wide label column
+    functions = [
+        ("prepare_<engine>_inputs",
+         "Read canonical bundle →\n"
+         "emit engine-native inputs\n"
+         "(SCC + feasibility filter applied)",
+         "→ ScenarioSummary | Path"),
+        ("run_<engine>",
+         "Subprocess-invoke the engine\n"
+         "binary or JVM",
+         "→ Tuple[bool, float, Optional[str]]"),
+        ("parse_<engine>_output",
+         "Read engine-native output\n"
+         "→ shared travel-time stats",
+         "→ dict (SUMO + MATSim) | DTALiteTripStats"),
+    ]
+
+    # Layout: label column (4.2 wide) + 3 engine columns (3.3 each, gap 0.20)
+    label_x, label_w = 0.3, 4.2
+    header_x = 4.7
+    header_w = 3.3
+    gap = 0.20
+
+    # Header row (engine names)
+    for i, eng in enumerate(engines):
+        x = header_x + i * (header_w + gap)
+        box(ax, x, 5.5, header_w, 0.7,
+            f"adapters/{eng.lower()}/", color=C_ADAPTER,
+            fontsize=11, fontweight="bold")
+
+    # Function rows
+    row_specs = [
+        (functions[0], 4.2),
+        (functions[1], 2.6),
+        (functions[2], 1.0),
+    ]
+    for (fn_name, fn_desc, return_type), y in row_specs:
+        # Left label column (wider)
+        box(ax, label_x, y, label_w, 1.3, "", color=C_PIPELINE)
+        ax.text(label_x + 0.20, y + 1.05, fn_name,
+                ha="left", va="center", fontsize=10, fontweight="bold",
+                color="#37474f")
+        ax.text(label_x + 0.20, y + 0.55, fn_desc,
+                ha="left", va="center", fontsize=8.5, color="#333")
+        ax.text(label_x + 0.20, y + 0.13, return_type,
+                ha="left", va="center", fontsize=8, style="italic",
+                color="#1976d2")
+        # 3 engine columns
+        for i, eng in enumerate(engines):
+            x = header_x + i * (header_w + gap)
+            box(ax, x, y, header_w, 1.3, "", color="white")
+            sig = fn_name.replace("<engine>", eng.lower())
+            ax.text(x + header_w / 2, y + 0.65, f"{sig}(...)",
+                    ha="center", va="center", fontsize=9, family="monospace",
+                    color="#333")
+
+    # Footer note
+    ax.text(7.5, 0.30,
+            "Pinned by tests/test_adapter_contract.py (6 tests, 3 engines × 2 assertions). "
+            "Adding a 4th engine follows the same three-function template.",
+            ha="center", va="center", fontsize=9, style="italic", color="#555")
+
+    return save(fig, "fig_3_4_adapter_contract", output_dir)
+
+
+# -----------------------------------------------------------------------------
+# F8 — Wave 2 container distribution chain (Methods §3.11)
+# -----------------------------------------------------------------------------
+
+
+def fig_3_11_container_chain(output_dir):
+    fig, ax = plt.subplots(figsize=(14, 6))
+    fig.suptitle("Wave 2 pinned-digest container distribution chain: "
+                 "Dockerfile → GHA → GHCR → Apptainer → SBATCH",
+                 fontsize=12.5, fontweight="bold", y=0.97)
+    ax.set_xlim(0, 14)
+    ax.set_ylim(0, 6)
+    ax.axis("off")
+
+    # Five horizontal stages
+    stages = [
+        ("Dockerfile\n(repo root)",
+         "python:3.13-slim-bookworm\n+ openjdk-17 + libgomp1\n+ uv → 35 lockfile pkgs\n+ eclipse-sumo==1.26.0\n+ MATSim 15.0 JAR",
+         "#fce4ec"),
+        ("GitHub Actions\n(build-container.yml)",
+         "On push to main or\nphase-14-canonical-routes\n→ docker build\n→ tag with git SHA",
+         "#fff3e0"),
+        ("GHCR\n(container registry)",
+         "ghcr.io/phanidharakula/\nsimforge:db8d786\n(immutable digest)\nlib/container/manifest.json",
+         "#e3f2fd"),
+        ("Apptainer pull\n(on Cardinal)",
+         "apptainer pull \\\n  simforge_db8d786.sif \\\n  docker://...:db8d786\n(SHA-tag workaround for\n1.4.5 progress bar bug)",
+         "#f1f8e9"),
+        ("SBATCH wrapper\n(opt-in)",
+         "SIMFORGE_USE_CONTAINER=1 \\\nsbatch cluster/jobs/\n  benchmark_large.sbatch\n→ bit-identical x86_64\n  reproduction",
+         "#c8e6c9"),
+    ]
+
+    box_w = 2.55
+    gap = 0.18
+    start_x = 0.2
+    for i, (title, body, color) in enumerate(stages):
+        x = start_x + i * (box_w + gap)
+        # Outer container
+        box(ax, x, 1.0, box_w, 4.0, "", color=color)
+        # Title bar at top
+        ax.text(x + box_w / 2, 4.55, title,
+                ha="center", va="center", fontsize=10, fontweight="bold",
+                color=C_TEXT)
+        # Body (white sub-box)
+        box(ax, x + 0.15, 1.20, box_w - 0.30, 2.95, "",
+            color="white", radius=0.03)
+        ax.text(x + box_w / 2, 2.65, body,
+                ha="center", va="center", fontsize=8.5, family="monospace",
+                color="#333")
+        # Arrow to next stage
+        if i < len(stages) - 1:
+            arrow(ax,
+                  x + box_w + 0.02, 2.9,
+                  x + box_w + gap - 0.02, 2.9,
+                  lw=1.8)
+
+    # Top labels for the stage chain
+    ax.text(7.0, 5.55,
+            "Source-of-truth (Dockerfile + GHA) → Distribution (GHCR digest) → Consumption (Apptainer + SBATCH)",
+            ha="center", va="center", fontsize=9.5, color="#555", style="italic")
+
+    # Bottom note
+    ax.text(7.0, 0.45,
+            "Thesis-canonical image pinned at lib/container/manifest.json (db8d786, 2026-05-19, verified Cardinal). "
+            "See Chapter 3 §3.11 + doc/CONTAINER_USAGE.md.",
+            ha="center", va="center", fontsize=9, style="italic", color="#555")
+
+    return save(fig, "fig_3_11_container_chain", output_dir)
+
+
+# -----------------------------------------------------------------------------
+# F10 — Four reproducibility regimes (Discussion §6.2.3)
+# -----------------------------------------------------------------------------
+
+
+def fig_6_2_reproducibility_regimes(output_dir):
+    fig, ax = plt.subplots(figsize=(14, 8))
+    fig.suptitle("Four reproducibility regimes: cross-platform variability at fixed code is small; "
+                 "cross-code-version variability is the dominant risk",
+                 fontsize=12, fontweight="bold", y=0.97)
+    ax.set_xlim(0, 14)
+    ax.set_ylim(0, 8)
+    ax.axis("off")
+
+    # 4 horizontal rows, each a regime
+    regimes = [
+        ("REGIME 1", "Within single execution context",
+         "Re-runs on same machine, same git SHA, same fixed seed",
+         "R = 1.0000  (MATSim + DTALite; SUMO R ≥ 0.95 due to Krauss-σ)",
+         "BIT-IDENTICAL", C_OK, "#1b5e20", 6.4),
+        ("REGIME 2", "Same CPU architecture, cross-distribution",
+         "Cardinal RHEL host venv (Adoptium OpenJDK 21) ↔\n"
+         "Cardinal Debian container (apt OpenJDK 17)",
+         "20/20 cells byte-identical at chicago_200k + nyc_500k (§5.6.3.1)",
+         "BIT-IDENTICAL", C_OK, "#1b5e20", 4.7),
+        ("REGIME 3", "Cross-CPU-architecture",
+         "Mac arm64 (Apple OpenJDK 17) ↔ Cardinal Sapphire Rapids x86_64",
+         "MATSim 318.774 ↔ 318.77 s   |   DTALite 172.5605 ↔ 172.56 s\n"
+         "(matches to 4 sig figs; consistent with bit-identity, §5.6.3.2)",
+         "≈ BIT-IDENTICAL", C_INFO, "#0d47a1", 3.0),
+        ("REGIME 4", "Cross-code-version (time-separated)",
+         "Pitzer Phase 12 (2026-05-02) ↔ Cardinal Phase 14.13 (2026-05-20)\n"
+         "Phase 14 canonical_routes BFS replaces legacy per-adapter BFS",
+         "MATSim 2.95 % shift   |   DTALite 0.24 % shift   "
+         "(§5.6.3 original measurement, reinterpreted in §5.6.3.3)",
+         "0.2-3 % DRIFT", C_HIGHLIGHT, "#c62828", 1.3),
+    ]
+
+    for regime_id, name, what_varies, result, verdict, color, badge_color, y in regimes:
+        # Container
+        box(ax, 0.3, y, 13.4, 1.45, "", color=color)
+        # Regime ID badge (left)
+        ax.text(0.7, y + 0.72, regime_id,
+                ha="left", va="center", fontsize=10, fontweight="bold",
+                color=badge_color,
+                bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
+                          edgecolor=badge_color, linewidth=1.0))
+        # Title
+        ax.text(2.4, y + 1.15, name,
+                ha="left", va="center", fontsize=11, fontweight="bold",
+                color=C_TEXT)
+        # What varies (sub-line)
+        ax.text(2.4, y + 0.78, what_varies,
+                ha="left", va="center", fontsize=9, style="italic", color="#555")
+        # Empirical result
+        ax.text(2.4, y + 0.32, result,
+                ha="left", va="center", fontsize=8.5, color="#333")
+        # Verdict badge (right)
+        ax.text(12.8, y + 0.72, verdict,
+                ha="right", va="center", fontsize=10, fontweight="bold",
+                color="white",
+                bbox=dict(boxstyle="round,pad=0.4", facecolor=badge_color,
+                          edgecolor=badge_color))
+
+    # Bottom synthesis
+    ax.text(7.0, 0.30,
+            "Practical implication: cite the container digest (pins code+bundle+toolchain), not the version number. "
+            "Cross-platform variability at fixed code is small; cross-code-version drift on the same platform is the real risk.",
+            ha="center", va="center", fontsize=9.5, style="italic", color="#555")
+
+    return save(fig, "fig_6_2_reproducibility_regimes", output_dir)
+
+
+# -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
 
@@ -547,9 +947,14 @@ def main():
     fns = [
         ("F1 SimForge at a glance", fig_1_1_simforge_overview),
         ("F2 Three-layer architecture", fig_3_1_three_layer_architecture),
+        ("F3 Canonical 5-file bundle schema", fig_3_2_canonical_bundle_schema),
+        ("F4 Scenario generation pipeline", fig_3_3_generation_pipeline),
+        ("F5 Adapter contract (3 × 3)", fig_3_4_adapter_contract),
         ("F6 Fairness audit Q1-Q5 flow", fig_3_6_fairness_audit_flow),
         ("F7 Phase 14 BFS dedup", fig_3_8_phase14_bfs_dedup),
+        ("F8 Wave 2 container chain", fig_3_11_container_chain),
         ("F9 Two paradigm spread phenomena", fig_6_1_paradigm_spread),
+        ("F10 Four reproducibility regimes", fig_6_2_reproducibility_regimes),
     ]
     for label, fn in fns:
         out = fn(output_dir)
