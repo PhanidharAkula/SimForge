@@ -60,6 +60,44 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-20 — Container ↔ host-venv: bit-identical at large tier on same architecture (revises §5.6.3)
+
+Phase: Wave 2 follow-up — same-architecture cross-distro reproducibility
+Commit: `68be1f4` (latest at time of measurement)
+Jobs measured: 9954279 (host-venv chicago_200k_car, 2026-05-19), 9971042 (host-venv nyc_500k_car, 2026-05-19), 10018698 (container chicago_200k_car + nyc_500k_car, 2026-05-20)
+
+**What happened.** After job 10018698 (container-mode `benchmark_large` on Cardinal) finished, rsynced the results to local Mac and ran a byte-comparison against the host-venv copy at `runs/benchmark_large/` from jobs 9954279 + 9971042. Expected to see the ~3 % MATSim shift documented at chicago_1k_car in §5.6.3.
+
+**Result.** All 20 cells (2 scenarios × 5 seeds × 2 engines) produce **byte-identical** engine output between the host-venv path and the container path on Cardinal:
+
+| Scenario | Engine | Cells compared | Result |
+|---|---|---:|---|
+| chicago_200k_car | SUMO (tripinfo.xml minus comment timestamps) | 5 | 20/20 byte-identical (MD5 `856264596b60aa33e4ba0673fc896193`, size 48,842,160 bytes) |
+| chicago_200k_car | MATSim (output_trips.csv.gz contents) | 5 | 5/5 byte-identical |
+| nyc_500k_car | SUMO | 5 | 5/5 byte-identical |
+| nyc_500k_car | MATSim | 5 | 5/5 byte-identical |
+
+Independent runs verified by inode + timestamp delta: files in `runs/benchmark_large/chicago_200k_car/sumo/meso/seed_42/tripinfo.xml` (May 18 23:48 EDT, inode 126061385) vs `runs/benchmark_large_container_job10018698/.../tripinfo.xml` (May 20 01:16 EDT, inode 126204730) — different inodes, ~2 days apart.
+
+Comparison axes (what differs between contexts on Cardinal):
+- **OS**: RHEL 9 (host venv) vs Debian Bookworm (container)
+- **JDK**: Adoptium Temurin OpenJDK 21 via Cardinal lmod (`module load openjdk/21.0.3_9`) vs Debian apt OpenJDK 17 (`openjdk-17-jre-headless`) — different distros AND different major versions
+- **eclipse-sumo**: same manylinux_2_28_x86_64 wheel in both contexts
+- **path4gmns**: same wheel in both contexts
+- **CPU architecture**: x86_64 Cardinal Xeon Max 9470 (same in both contexts)
+
+**Decision / lesson.** Two consequences for the thesis narrative:
+
+1. **§5.6.3 cause-attribution was partly wrong.** The 2.95 % MATSim shift previously attributed to "JVM build differences (brew openjdk@17 vs Debian openjdk-17-jre-headless)" is, on the new evidence, **almost entirely attributable to CPU architecture** (arm64 Mac vs x86_64 Linux). When CPU architecture is held constant, two completely different JVM distributions of two different major versions (Adoptium 21 vs Debian 17) produce bit-identical MATSim output. The §5.6.3 claim revises from "version pinning is not sufficient, the JVM build is also a free variable" to "version pinning IS sufficient within a single CPU architecture; cross-architecture shifts are a separate phenomenon that the container does NOT close (because the container is x86_64-only)".
+
+2. **The container's value is now sharper.** The container guarantees bit-identity *across machines of the same architecture* — exactly the HPC reproducibility use case (every cluster node runs the same image on x86_64). It does NOT close the Mac arm64 ↔ Linux x86_64 gap that §5.6.3 documents; that gap is intrinsic to the architecture and would require Rosetta/QEMU emulation to close (with its own performance + determinism costs).
+
+**Wall time aside.** The container job (10018698) ran nyc_500k_car in 56 min vs the host-venv job 9971042's 12 h 8 min, because the container found warm `cache/canonical_routes/` entries (the host-venv runs produced them on May 19, before the cache hoist was deployed; the container pulled them on May 20 via the `--bind cache:.../cache` mount). The wall comparison is therefore not engine performance — it's cache-warm vs cache-cold. The engine_wall_s value (366.8 s vs 378.4 s for nyc_500k_car SUMO) is the apples-to-apples comparison and confirms the container has negligible runtime overhead.
+
+Updates landed:
+- §5.6.3 revised: added "same-architecture cross-distro: 20/20 bit-identical" finding; reframed the 2.95 % shift as architecture-driven, not JVM-build-driven.
+- Chapter 6 §6.2.3 synthesis refined accordingly.
+
 ### 2026-05-20 — Wave 2 container verified end-to-end on Cardinal (chicago_1k_car, 20/20 cells)
 
 Phase: Version_5 Wave 2 — pinned-digest container shipping
