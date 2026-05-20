@@ -1059,7 +1059,7 @@ OUTPUT NAMING:
 DATA SOURCES (cached locally, public-domain US gov):
   cache/census/<fips>/cb_2024_<fips>_tract_500k.{shp,shx,dbf}
                   Cartographic Boundary census tracts (CB 2024, 500k)
-  cache/tiger/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}
+  cache/tiger_roads/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}
                   TIGER/Line primary + secondary roads (2024)
   scenarios/<id>/network.xml + demand.csv
                   canonical bundle (provided by generate.py)
