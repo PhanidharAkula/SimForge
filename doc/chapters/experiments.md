@@ -170,7 +170,7 @@ Used for the canonical 11-cell `benchmark_small` matrix (chicago_1k + nyc_10k + 
 | Cluster         | Ohio Supercomputer Center — Pitzer (RHEL 9, SLURM)               |
 | CPU per node    | Intel Xeon Skylake (40 cores) or Cascade Lake (48 cores), 192 GB |
 | Large-mem nodes | Up to 3 TB RAM (`hugemem` partition)                             |
-| Partitions used | `cpu` (all three engines are CPU-only in Version_5)              |
+| Partitions used | `cpu` (all three shipped engines are CPU-only after the Version_5 LPSim retirement) |
 | Max wall time   | 7 days (`cpu`, `gpu`); 14 days (`longcpu`, restricted)            |
 | Storage         | Home 500 GB, Project (`PMIU0110`) 500 GB, scratch per-job        |
 | Project account | `--account=PMIU0110`                                              |
@@ -181,7 +181,7 @@ Used for the canonical 11-cell `benchmark_small` matrix (chicago_1k + nyc_10k + 
 | Software | Version      | Installation              | Notes               |
 | -------- | ------------ | -------------------------- | ------------------- |
 | Python   | 3.13.x       | `setup_simforge.py`        | Bootstrapper        |
-| SUMO     | 1.26.0       | bundled in `requirements.lock` (`eclipse-sumo` wheel) | Mandatory           |
+| SUMO     | 1.26.0       | `uv pip install eclipse-sumo==1.26.0` (separate from `requirements.lock`; the wheel is manylinux_2_28_x86_64-only and pinned outside the cross-platform lockfile) | Mandatory           |
 | MATSim   | 15.0         | JAR                        | `lib/matsim-15.0/`  |
 | Java     | 17           | Homebrew                   | MATSim runtime      |
 | DTALite  | path4gmns 0.10.0 | bundled in `requirements.lock` (`path4gmns` wheel) | CPU mesoscopic DTA; on Mac needs `brew install libomp` |
@@ -326,7 +326,7 @@ on the bundled chicago_1k_car (Pitzer, all three engines) is recorded in
 | Random seed affecting results | 5 runs per condition with seeds {42, 43, 44, 45, 46}; report mean ± 95 % CI |
 | JVM warm-up affecting MATSim | All runs include the same JVM start cost; comparison is fair-relative; cost amortises < 30 % at 10 K + |
 | OS scheduling noise | Use `perf_counter()`; HPC runs on dedicated nodes; cached cell std < 5 % CV |
-| Adapter conversion errors | 574 unit tests including byte-identical determinism tests |
+| Adapter conversion errors | ~633 unit tests (with all 5 bundles generated) including byte-identical determinism tests |
 | Scenario validation failures | Pre-flight validation check before every run |
 | Trip-count asymmetry across engines | SCC filter at generator + adapter; `feasibility_report.json` audit trail; `audit_fairness` Q1 PASS on all 3 scenarios |
 | MATSim adapter route-format ambiguity | Phase 12.1 fix: `<route type="links">` text content includes start_link + end_link tokens; verified by 0-trip → 1000-trip empirical check |
@@ -355,9 +355,9 @@ on the bundled chicago_1k_car (Pitzer, all three engines) is recorded in
 
 For any researcher to reproduce these experiments:
 
-- [ ] Clone repository (branch `Version_5`).
+- [ ] Clone repository (branch `phase-14-canonical-routes` for the active development tip, or `main` for the thesis-tagged snapshot). The fully reproducible thesis-default container image is pinned at `ghcr.io/phanidharakula/simforge:db8d786` (see §3.11.5).
 - [ ] Install `uv`: `curl -LsSf https://astral.sh/uv/install.sh | sh`.
-- [ ] Provision the canonical environment: `uv python install 3.13 && uv venv --python 3.13 .venv && source .venv/bin/activate && uv pip install -r requirements.lock` (installs Python 3.13.13, all 41 Python deps, AND `eclipse-sumo==1.26.0` + `path4gmns==0.10.0` in one step).
+- [ ] Provision the canonical environment: `uv python install 3.13 && uv venv --python 3.13 .venv && source .venv/bin/activate && uv pip install -r requirements.lock && uv pip install eclipse-sumo==1.26.0` (installs Python 3.13.13, the 35 lockfile-pinned packages including `path4gmns==0.10.0`, then `eclipse-sumo==1.26.0` separately — the eclipse-sumo wheel is manylinux_2_28_x86_64-only and excluded from the cross-platform lockfile). Alternatively pull the pinned container; see §3.11.
 - [ ] Install Java 17+ for MATSim: `brew install openjdk@17` (macOS) / `apt install openjdk-17-jdk` (Linux) / `module load openjdk/21.0.3_9` (Pitzer — explicit version required by lmod). Then download the MATSim JAR per [SETUP.md](../../SETUP.md).
 - [ ] (macOS only, for DTALite OpenMP runtime) `brew install libomp`.
 - [ ] Fetch hash-pinned OSM PBFs: `python tools/download_osm.py` (only required if you plan to *regenerate* bundles; the committed `scenarios/{chicago_1k_car,nyc_10k_car,la_50k_car}/` networks are already built).
@@ -367,4 +367,4 @@ For any researcher to reproduce these experiments:
 - [ ] Analyse: `python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown`.
 - [ ] Audit fairness: `python -m evaluation.audit_fairness runs/benchmark_small`.
 - [ ] Render figures: `python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures`.
-- [ ] Verify: all 574 tests pass (`python -m pytest tests/ -q`). On Apple Silicon arm64, 3 SUMO-dependent tests skip individually due to a known `netconvert` segfault on large networks; this is documented in `tests/conftest.py`.
+- [ ] Verify: all ~633 tests pass (`python -m pytest tests/ -q`) with all 5 generated bundles present. On Apple Silicon arm64, 3 SUMO-dependent tests skip individually due to a known `netconvert` segfault on large networks; this is documented in `tests/conftest.py`.
