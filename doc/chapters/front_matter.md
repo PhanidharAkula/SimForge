@@ -18,7 +18,7 @@ Placeholders marked **`[FILL]`** require user input before submission.
 > below capture the content the title page must include; the
 > template controls the formatting.
 
-**Title**: *"SimForge: A Reproducible Cross-Simulator Testing Framework for Urban Mobility Simulation"*
+**Title**: *"SimForge: A Reproducible, Cross-Simulator Benchmarking Framework for Urban Traffic Simulation"*
 
 A Thesis Presented in Partial Fulfillment of the Requirements for the Degree
 

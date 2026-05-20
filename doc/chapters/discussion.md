@@ -595,8 +595,8 @@ or thesis that builds on the framework.
 
 ## 6.6 Conclusion
 
-This thesis presented SimForge, a reproducible cross-simulator
-testing framework for urban mobility simulation. The four plan
+This thesis presented SimForge, a reproducible, cross-simulator
+benchmarking framework for urban traffic simulation. The four plan
 contributions (canonical schema, deterministic adapters, pinned-digest
 execution, hardware-normalized KPIs) are delivered, with documented
 adjustments to the engine roster and the per-watt + calibration

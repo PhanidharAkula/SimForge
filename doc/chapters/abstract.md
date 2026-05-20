@@ -13,8 +13,8 @@ floating-point, threading, and platform-binary effects. Practitioners
 who must choose a simulator for an actual planning decision have no
 operational way to distinguish these.
 
-This thesis presents **SimForge**, a reproducible cross-simulator
-testing framework for urban mobility simulation that closes this gap
+This thesis presents **SimForge**, a reproducible, cross-simulator
+benchmarking framework for urban traffic simulation that closes this gap
 through four contributions: (C1) a canonical, simulator-agnostic
 input bundle with field-level validation; (C2) byte-deterministic
 adapters for SUMO, MATSim, and DTALite that translate the canonical
@@ -83,7 +83,7 @@ container are intended as a foundation for future cross-simulator
 research that can build on a bit-reproducible benchmark target
 rather than re-deriving fairness from scratch for each comparison.
 
-**Keywords:** urban mobility simulation, cross-simulator benchmarking,
+**Keywords:** urban traffic simulation, cross-simulator benchmarking,
 reproducibility, SUMO, MATSim, DTALite, dynamic traffic assignment,
 agent-based simulation, container reproducibility, scientific
 computing.

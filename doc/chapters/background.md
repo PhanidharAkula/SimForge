@@ -631,7 +631,7 @@ Bazzan and Kl{\"u}gl 2014]. The most critical limitations include:
   cross-simulator study not run inside a pinned-digest container.
 
 Collectively, these limitations underscore the need for a
-reproducible, cross-simulator testing framework that unifies
+reproducible, cross-simulator benchmarking framework that unifies
 methodology, data handling, execution-environment specification, and
 fairness verification — precisely the role that **SimForge** is
 designed to fulfill. The remainder of the thesis (Chapters 3-6)

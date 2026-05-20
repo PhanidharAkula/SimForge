@@ -3,7 +3,7 @@
 ## 1.0 Overview
 
 This chapter motivates the design of SimForge, a reproducible
-cross-simulator testing framework for urban mobility simulation. It
+cross-simulator benchmarking framework for urban traffic simulation. It
 opens with the practical importance of traffic-simulation outputs in
 transportation planning and policy, surveys the structural barriers
 that have prevented fair cross-simulator comparison to date, declares

@@ -94,7 +94,7 @@ make distclean  # removes everything including main.pdf
 
 | Status | Item |
 |---|---|
-| ✓ done | Title (locked: "SimForge: A Reproducible Cross-Simulator Testing Framework for Urban Mobility Simulation"), body chapters (all 6), abstract, bibliography (29 entries), figures (21 × PNG @ 300 dpi), acronyms/notation table, TOC + LOF + LOT auto-generated |
+| ✓ done | Title (locked: "SimForge: A Reproducible, Cross-Simulator Benchmarking Framework for Urban Traffic Simulation"), body chapters (all 6), abstract, bibliography (29 entries), figures (21 × PNG @ 300 dpi), acronyms/notation table, TOC + LOF + LOT auto-generated |
 | ✓ done | 34 inline citations converted from `[Author Year]` to `\cite{key}` against `references.bib` |
 | **[FILL]** | `\thesisschool` = university name + city/state (in `main.tex`) |
 | **[FILL]** | `\advisor`, `\readerone`, `\readertwo` (in `main.tex`) |

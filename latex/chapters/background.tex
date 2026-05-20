@@ -45,8 +45,8 @@ studies but cannot represent individual vehicle interactions.
 
 \textbf{Microscopic models} (1980s--present) reversed the abstraction by
 simulating each vehicle as an independent agent with car-following,
-lane-changing, and gap-acceptance dynamics. The Krauss \cite{krauss1998microscopic}
-and Intelligent Driver Model (IDM) \cite{treiber2000idm}
+lane-changing, and gap-acceptance dynamics. The Krauss {[}Krauss 1998{]}
+and Intelligent Driver Model (IDM) {[}Treiber et al. 2000{]}
 car-following formulations are widely used; SUMO\textquotesingle s
 default behavior model is a stochastic variant of Krauss with a
 configurable σ parameter. Microscopic models capture the rich
@@ -79,7 +79,7 @@ vehicle\textquotesingle s moment-by-moment behavior, a DTA solver
 iteratively computes the network-wide user-equilibrium (UE) flow
 pattern: each OD pair\textquotesingle s demand is assigned to one or
 more paths such that no traveler can unilaterally reduce their travel
-cost by switching paths. DTALite \cite{zhou2014dtalite} is a
+cost by switching paths. DTALite {[}Zhou and Taylor 2014{]} is a
 path-based UE/SUE solver; its outputs are link-level equilibrium flows +
 per-OD path travel times rather than per-vehicle trajectories. The DTA
 paradigm is appropriate for regional studies where long-run equilibrium
@@ -88,7 +88,8 @@ is the question and transient dynamics are not.
 The mesoscopic and hybrid frameworks have benefited from advances in
 high-performance computing, particularly distributed-memory
 architectures and GPU acceleration, enabling city-scale scenarios to run
-in near real-time on modern hardware \cite{cao2022lpsim,chen2020qarsumo}. This technological progression has produced unprecedented
+in near real-time on modern hardware {[}Cao et al. 2022; Chen et al.
+2020{]}. This technological progression has produced unprecedented
 spatial and temporal detail in urban-mobility modeling, while
 simultaneously revealing challenges in cross-simulator compatibility,
 standardization, and reproducibility that this thesis directly
@@ -165,7 +166,8 @@ Chapter 6 §6.5.4.
 \subsection{Engines integrated in the SimForge
 framework}\label{231-engines-integrated-in-the-simforge-framework}
 
-\textbf{SUMO} (Simulation of Urban MObility) \cite{krajzewicz2012sumo} is an open-source microscopic traffic simulator originally
+\textbf{SUMO} (Simulation of Urban MObility) {[}Krajzewicz et al.
+2012{]} is an open-source microscopic traffic simulator originally
 developed at the German Aerospace Center (DLR) and now maintained by the
 Eclipse Foundation. SUMO models detailed vehicle interactions, lane
 changing, and traffic-signal control, and supports both microscopic and
@@ -179,7 +181,8 @@ accumulation. SimForge integrates SUMO via its Python adapter
 (\texttt{adapters/sumo/}) and runs SUMO 1.26.0 from the eclipse-sumo
 PyPI wheel.
 
-\textbf{MATSim} (Multi-Agent Transport Simulation) \cite{horni2016matsim} is a mesoscopic, agent-based framework built around iterative
+\textbf{MATSim} (Multi-Agent Transport Simulation) {[}Horni et al.
+2016{]} is a mesoscopic, agent-based framework built around iterative
 replanning and activity-based demand generation. It emphasizes
 individual traveler behavior and long-term equilibrium modeling under
 feedback. SimForge configures MATSim with \texttt{lastIteration=0} to
@@ -189,7 +192,7 @@ configuration choice is documented in Chapter 3 §3.4.3. SimForge
 integrates MATSim 15.0 via the matsim-15.0-release.zip from the
 matsim-org/matsim-libs GitHub repository.
 
-\textbf{DTALite} \cite{zhou2014dtalite} is a path-based dynamic
+\textbf{DTALite} {[}Zhou and Taylor 2014{]} is a path-based dynamic
 traffic assignment solver distributed in C++ via the path4gmns Python
 wheel {[}Path4GMNS{]}. DTALite\textquotesingle s input format is the
 General Modeling Network Specification (GMNS) {[}Zephyr Foundation{]}, a
@@ -203,7 +206,7 @@ plan\textquotesingle s original "three paradigm" framing required.
 \subsection{Engines considered and ruled
 out}\label{232-engines-considered-and-ruled-out}
 
-\textbf{POLARIS} \cite{auld2016polaris}, developed by Argonne National
+\textbf{POLARIS} {[}Auld et al. 2016{]}, developed by Argonne National
 Laboratory, is a multithreaded agent-based simulator that integrates
 land-use, travel-demand, and behavioral models within a unified
 architecture. POLARIS is designed for detailed policy analysis and
@@ -216,7 +219,7 @@ POLARIS from source on their own hardware. The integration was therefore
 deferred (see \texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md} §2.3 for
 the deep-research diagnostic).
 
-\textbf{LPSim} \cite{cao2022lpsim} introduces a GPU-accelerated
+\textbf{LPSim} {[}Cao et al. 2022{]} introduces a GPU-accelerated
 mesoscopic design that models lane-level traffic flow with extreme
 scalability, claimed capable of simulating millions of vehicle movements
 per second on modern GPUs. SimForge integrated LPSim in Version 4 (Phase
@@ -227,7 +230,7 @@ abandoned in Version 5. The full retrospective is at
 GPU-comparator role LPSim was meant to play in the cross-engine matrix
 is unfilled in the shipped framework.
 
-\textbf{QarSUMO} \cite{chen2020qarsumo} extends SUMO with CUDA-based
+\textbf{QarSUMO} {[}Chen et al. 2020{]} extends SUMO with CUDA-based
 multi-GPU kernels and ghost-zone synchronization, with the goal of
 deterministic parallelism and faster execution on heterogeneous
 computing systems. SimForge research determined that QarSUMO is not
@@ -237,7 +240,7 @@ published cross-engine validations in the QarSUMO literature appear to
 use unpublished binary distributions. The retrospective is at
 \texttt{doc/engines/QARSUMO\_RETROSPECTIVE.md}.
 
-\textbf{CityFlow} \cite{zhang2019cityflow} is a microscopic simulator
+\textbf{CityFlow} {[}Zhang et al. 2019{]} is a microscopic simulator
 designed for reinforcement-learning research, optimized for fast batch
 simulation of small networks. SimForge research determined that CityFlow
 is effectively abandoned (1 commit in the last 12 months, 0 PyPI
@@ -292,7 +295,7 @@ demand pipeline (Chapter 3 §3.3) makes this layer explicit and
 reproducible. Three contemporary activity-based demand-generation tools
 situate the choice:
 
-\textbf{ActivitySim} \cite{activitysim}, the FHWA-funded open-source
+\textbf{ActivitySim} {[}ActivitySim 2024{]}, the FHWA-funded open-source
 activity-based travel demand model, is the most widely deployed
 synthetic-population + activity-scheduling framework in U.S.
 metropolitan planning organizations. ActivitySim consumes an
@@ -317,11 +320,15 @@ format and use a different input-data taxonomy than the U.S. ACS PUMS
 scheme SimForge targets. They are mature for European Census data
 formats (Eurostat, INSEE-FR) and have a smaller U.S. footprint.
 
-\textbf{Cityscape} \cite{rao2023cityscape} is the activity-based population
+\textbf{Cityscape} {[}Rao 2023a{]} is the activity-based population
 synthesizer + city-level digital-twin model generator SimForge adopts.
 Developed in C++ by Prof. Dhananjai Rao\textquotesingle s group at Miami
 University (CSE Department; \texttt{raodj/cityscape}, Schedule-generator
-branch), cityscape merges OpenStreetMap road + building geometry \cite{openstreetmap}, LandScan ambient-population density rasters \cite{landscan}, U.S. Census ACS PUMS records \cite{uscensus_pums} (5-year file), and IPUMS PUMA shapefiles \cite{ipums_puma} into a flat-text streaming model with \texttt{bld} (building),
+branch), cityscape merges OpenStreetMap road + building geometry {[}OSM
+2026{]}, LandScan ambient-population density rasters {[}Oak Ridge
+National Laboratory 2024{]}, U.S. Census ACS PUMS records {[}U.S. Census
+Bureau 2024{]} (5-year file), and IPUMS PUMA shapefiles {[}IPUMS USA
+2024{]} into a flat-text streaming model with \texttt{bld} (building),
 \texttt{hld} (household), and \texttt{per} (person) records. The
 Schedule-generator branch adds a
 \texttt{RadiusFilterWorkBuildingAssigner} that assigns each PUMS-derived
@@ -329,7 +336,7 @@ person a workplace from the real non-residential OSM building set within
 their PUMS-reported commute time (\texttt{JWMNP} ± 1 min), subject to
 per-building office-capacity bounds (\texttt{offSqFtPer}). The Rao 2023a
 WSC paper reports \textasciitilde85 \% confidence on the Chicago, IL
-verification case study; a sibling 2023 paper \cite{rao2023taxi} applies
+verification case study; a sibling 2023 paper {[}Rao 2023b{]} applies
 the same cityscape data-fusion pipeline to identify under-served Chicago
 communities by simulating \textasciitilde6.3M 2022 taxi rides,
 demonstrating the pipeline\textquotesingle s reach beyond commute-trip
@@ -444,7 +451,8 @@ benchmarks}\label{25-existing-mobility-benchmarks}
 
 Previous benchmarking efforts in transportation modeling have primarily
 focused on evaluating individual simulators or conducting small-scale
-bake-offs under limited experimental control \cite{bazzan2014review}. While informative, these studies share several methodological
+bake-offs under limited experimental control {[}Bazzan and Kl\{"u\}gl
+2014{]}. While informative, these studies share several methodological
 limitations that restrict reproducibility and generalizability:
 
 \begin{enumerate}
@@ -458,15 +466,18 @@ limitations that restrict reproducibility and generalizability:
 \item
   They typically omit \emph{seed control}, version pinning, or
   hardware-normalized performance metrics, making results sensitive to
-  environment-specific variability \cite{goodman2016reproducibility,pineau2021reproducibility}.
+  environment-specific variability {[}Goodman et al. 2016; Pineau et al.
+  2021{]}.
 \item
   They rarely include \emph{release-grade artifacts} such as manifests,
   checksums, or container images that would allow other researchers to
-  replicate reported findings exactly \cite{stodden2018empirical,goodman2016reproducibility}.
+  replicate reported findings exactly {[}Stodden et al. 2018; Goodman et
+  al. 2016{]}.
 \item
   They frequently apply \emph{inconsistent or engine-specific tuning
   parameters}, introducing bias in fidelity and runtime comparisons
-  across platforms \cite{krajzewicz2012sumo,horni2016matsim,auld2016polaris,cao2022lpsim,chen2020qarsumo}.
+  across platforms {[}Krajzewicz et al. 2012; Horni et al. 2016; Auld et
+  al. 2016; Cao et al. 2022; Chen et al. 2020{]}.
 \end{enumerate}
 
 In contrast, the SimForge framework presented in this thesis enforces a
@@ -496,8 +507,10 @@ domains}\label{26-benchmark-frameworks-in-adjacent-domains}
 
 Standardized benchmarking has played a transformative role across
 multiple fields of computational research. Frameworks such as
-\textbf{MLPerf} for machine learning \cite{mattson2020mlperf,pineau2021reproducibility}, \textbf{SPEC} for system and processor performance, and
-\textbf{ReproZip} for computational experiment packaging \cite{stodden2018empirical,goodman2016reproducibility} have demonstrated how controlled
+\textbf{MLPerf} for machine learning {[}Mattson et al. 2020; Pineau et
+al. 2021{]}, \textbf{SPEC} for system and processor performance, and
+\textbf{ReproZip} for computational experiment packaging {[}Stodden et
+al. 2018; Goodman et al. 2016{]} have demonstrated how controlled
 inputs, fixed environments, and open reporting protocols accelerate
 scientific progress and ensure comparability. These initiatives
 typically mandate dataset versioning, environment specification, and
@@ -508,7 +521,7 @@ In contrast, the traffic simulation community has lacked a standardized,
 cross-simulator benchmark with equivalent methodological rigor. Studies
 are typically conducted in isolation, relying on bespoke datasets and
 heterogeneous computing setups, which hinders direct comparison and
-long-term reproducibility \cite{bazzan2014review}. The
+long-term reproducibility {[}Bazzan and Kl\{"u\}gl 2014{]}. The
 disparity is particularly visible in the absence of community-standard
 input bundles: where MLPerf specifies the exact ImageNet snapshot to use
 for image-recognition benchmarks, transportation studies typically
@@ -519,7 +532,7 @@ ecosystems, particularly \textbf{MLPerf}\textquotesingle s structured
 reproducibility checklist (closed-division vs open-division submission
 rules, accuracy gates, reference implementations) and the \textbf{FAIR}
 (Findable, Accessible, Interoperable, Reusable) data principles
-\cite{wilkinson2016fair}, which collectively inform the design of the
+{[}Wilkinson et al. 2016{]}, which collectively inform the design of the
 SimForge canonical schema, execution policies, and validation workflows.
 
 Three operational analogs are worth naming explicitly:
@@ -563,7 +576,7 @@ Reproducibility in high-performance computing (HPC) environments remains
 a persistent challenge due to factors such as non-associative
 floating-point arithmetic, nondeterministic thread scheduling, divergent
 random-number streams, and compiler-dependent optimizations
-\cite{krajzewicz2012sumo,cao2022lpsim,pineau2021reproducibility}. Even
+{[}Krajzewicz et al. 2012; Cao et al. 2022; Pineau et al. 2021{]}. Even
 small numerical variations can cascade into macroscopic differences in
 traffic dynamics when running agent-based or mesoscopic simulations at
 scale.
@@ -605,7 +618,8 @@ reproducibility strategy:
 
 These mechanisms align SimForge with emerging best practices for
 deterministic replay, containerized workflows, and verifiable
-computational pipelines in large-scale scientific simulation \cite{goodman2016reproducibility,stodden2018empirical}.
+computational pipelines in large-scale scientific simulation {[}Goodman
+et al. 2016; Stodden et al. 2018{]}.
 
 \subsection{Empirical contribution: cross-platform reproducibility
 limits}\label{271-empirical-contribution-cross-platform-reproducibility-limits}
@@ -638,7 +652,8 @@ analysis pipelines and computational biology workflows{]}.
 
 Despite substantial progress in simulation modeling and high-performance
 computing, several gaps continue to limit the reliability and
-comparability of urban mobility research \cite{goodman2016reproducibility,pineau2021reproducibility,bazzan2014review}. The most critical
+comparability of urban mobility research {[}Goodman et al. 2016; Pineau
+et al. 2021; Bazzan and Kl\{"u\}gl 2014{]}. The most critical
 limitations include:
 
 \begin{itemize}
@@ -646,16 +661,17 @@ limitations include:
   \textbf{Lack of standardized datasets and evaluation protocols}:
   existing studies employ heterogeneous input formats, city networks,
   and calibration procedures, preventing reproducible cross-study
-  validation \cite{krajzewicz2012sumo,horni2016matsim}.
+  validation {[}Krajzewicz et al. 2012; Horni et al. 2016{]}.
 \item
   \textbf{Inconsistent reproducibility documentation}: few simulation
   experiments provide fixed seeds, containerized environments, or
   artifact manifests, making replication and auditability difficult
-  \cite{stodden2018empirical,goodman2016reproducibility}.
+  {[}Stodden et al. 2018; Goodman et al. 2016{]}.
 \item
   \textbf{Absence of a neutral, open benchmark}: there is no established
   framework that allows fair, transparent comparison of major simulators
-  under equivalent workloads and hardware conditions \cite{mattson2020mlperf,wilkinson2016fair}.
+  under equivalent workloads and hardware conditions {[}Mattson et al.
+  2020; Wilkinson et al. 2016{]}.
 \item
   \textbf{Absence of programmatic cross-engine fairness verification}:
   prior cross-simulator studies do not include audit tooling that
@@ -671,7 +687,7 @@ limitations include:
 \end{itemize}
 
 Collectively, these limitations underscore the need for a reproducible,
-cross-simulator testing framework that unifies methodology, data
+cross-simulator benchmarking framework that unifies methodology, data
 handling, execution-environment specification, and fairness verification
 --- precisely the role that \textbf{SimForge} is designed to fulfill.
 The remainder of the thesis (Chapters 3-6) describes how the framework
@@ -684,7 +700,7 @@ the cross-simulator benchmarking community.
 chapter}\label{29-notation-conventions-for-this-chapter}
 
 Citations in this chapter follow the convention of the December 2025
-thesis plan, using author-year style (\cite{krajzewicz2012sumo}
+thesis plan, using author-year style ({[}Krajzewicz et al. 2012{]}
 rather than numbered references) for accessibility and to preserve
 forward-compatibility with the bibliography section (which is maintained
 in BibTeX form for LaTeX-based final assembly). Where a specific
