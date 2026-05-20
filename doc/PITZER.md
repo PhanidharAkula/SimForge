@@ -45,6 +45,17 @@ exceeds laptop patience — none of the three engines requires GPU or
 specialised hardware. See [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md)
 for the GPU-engine abandonment narrative.
 
+> **Container-mode execution (Wave 2, optional).** The host-venv install
+> path documented in §4 below remains the default. For bit-identical
+> reproduction of the thesis numbers across machines, the SBATCH wrappers
+> in `cluster/jobs/` support an opt-in `SIMFORGE_USE_CONTAINER=1` mode that
+> runs every Python step inside the pinned-digest Apptainer image
+> (`ghcr.io/phanidharakula/simforge:db8d786`, verified on Cardinal
+> 2026-05-19). See [`doc/CONTAINER_USAGE.md`](CONTAINER_USAGE.md) for the
+> Apptainer pull workflow + SBATCH env-var pattern. The container is the
+> operational mechanism that closes the cross-platform reproducibility
+> shift documented in Chapter 5 §5.6.3.
+
 ---
 
 ## 2. Hardware and filesystems
@@ -166,7 +177,8 @@ echo 'module load openjdk/21.0.3_9' >> ~/.bashrc     # persist across logins
 uv venv --python 3.13 .venv
 source .venv/bin/activate
 uv pip install --upgrade pip
-uv pip install -r requirements.lock                  # 42 packages including SUMO
+uv pip install -r requirements.lock                  # 35 lockfile-pinned packages
+uv pip install eclipse-sumo==1.26.0                  # SUMO wheel (separate; manylinux_2_28 only)
 
 # 4.6 — download MATSim 15.0 JAR (~65 MB; gitignored)
 mkdir -p lib

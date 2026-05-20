@@ -534,18 +534,22 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
                     ▼
 ┌─────────────────────────────────────────────────┐
 │  GitHub                                           │
-│  Branch: Version_5 (active), main                 │
+│  Branch: phase-14-canonical-routes (active), main │
+│  + GitHub Actions auto-build → GHCR (Wave 2)      │
 └───────────────────┬──────────────────────────────┘
-                    │ git clone
-                    ▼
+                    │ git clone           │ apptainer pull
+                    ▼                     ▼
 ┌─────────────────────────────────────────────────┐
-│  HPC (OSC Pitzer Cluster) — optional              │
-│  48-core Intel Xeon / 192 GB                      │
+│  HPC (OSC Pitzer + Cardinal Clusters) — optional  │
+│  48-core Intel Xeon / 192 GB (Pitzer)             │
+│  256-core Xeon Max 9470 / 503 GB (Cardinal)       │
 │  → OSM PBFs + ModelGen files rsynced from dev box │
 │  → 50K – 500K scenarios (SLURM batch)             │
 │  → Full benchmark matrix at scale                 │
 │  → All three engines (SUMO, MATSim, DTALite) on cpu partition │
+│  → Optional: SIMFORGE_USE_CONTAINER=1 pulls pinned │
+│    digest image for bit-identical reproduction    │
 └──────────────────────────────────────────────────┘
 ```
 
-The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development — only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring).
+The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development — only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring) and [doc/CONTAINER_USAGE.md](CONTAINER_USAGE.md) for the Wave 2 container-mode opt-in.

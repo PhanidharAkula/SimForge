@@ -43,7 +43,7 @@ The dominant paradigms in academic traffic simulation, mapped to SimForge's matr
 
 ## 3. Wallclock estimates at SimForge scenario sizes
 
-Order-of-magnitude estimates. Actual numbers will be measured by the SimForge benchmark matrix; these are the *expected* ranges used to plan time budgets.
+Order-of-magnitude estimates from the plan-era planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k under Phase 14 + Wave 2). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate — see Chapter 6 §6.2.2.
 
 | Scenario | SUMO meso | SUMO micro | MATSim | DTALite (est.) | LPSim (would have been) |
 |---|---|---|---|---|---|

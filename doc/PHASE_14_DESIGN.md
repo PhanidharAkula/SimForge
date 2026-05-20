@@ -577,7 +577,13 @@ large-tier cold prep; verified byte-identity of the produced routes."
 - **Worker count default**: 16 matches the typical SBATCH `--cpus-per-task`
   but might over-parallelize on small bundles. Likely use `min(workers,
   feasible_count // 1000)` to skip the multiprocessing overhead when
-  there are too few trips. Decision pending Phase 14.5 measurement.
+  there are too few trips. **Resolved by deployment (post-Phase-14.7):**
+  the harness uses `SLURM_CPUS_PER_TASK` when set, otherwise falls back
+  to 4 for laptop runs. The small-bundle over-parallelization concern
+  proved unmeasurable in practice — chicago_1k_car prep finishes in
+  seconds even at 16 workers, and large-tier benchmarks (chicago_200k +
+  nyc_500k) saturate the pool. No `min(workers, feasible_count // 1000)`
+  gating was added.
 
 - **Cache eviction**: how to clean stale `canonical_routes_<hash>.jsonl`
   files when bundles are regenerated. For now: human-driven `rm -rf
