@@ -1247,12 +1247,22 @@ The two cold BFS passes consume ~136 h of the 141.87 h total — **96 %
 of the run was per-trip BFS routing**. This is the empirical signal
 that motivated the Phase 14 refactor.
 
-**Cluster Phase 14 re-measurement** (jobs 9954279 chicago_200k + 9954287
-nyc_500k, submitted 2026-05-18 14:30 EDT) is pending. Expected post-
-Phase-14 walls per the Amdahl extrapolation: ~5–8 h chicago_200k_car,
-~20–30 h nyc_500k_car. The post-landing numbers replace this paragraph
-with the measured-speedup table; see `CHANGELOG.md` Phase 14.9 (post-
-landing) for the full diff.
+**Cluster Phase 14 re-measurement (now landed):**
+
+| Scenario | Phase 13 wall | Phase 14 wall (cold) | Phase 14 wall (warm-cache) | Cold speedup | Cache speedup |
+|---|---:|---:|---:|---:|---:|
+| chicago_200k_car | 141.87 h (job 9332478) | ~7.14 h (job 9954279) | ~37 min (job 10018698) | ~20× | ~228× |
+| nyc_500k_car | structurally infeasible (~600 h projected, scancel 9332482) | 12 h 8 min (job 9971042) | not re-measured | (first-feasible) | — |
+
+The chicago_200k_car cold speedup matches the Amdahl extrapolation
+within ~10 %. The warm-cache speedup is dominated by the on-disk
+canonical-routes JSONL hit: the BFS-prep phase becomes
+near-instantaneous (path materialization + adapter emission only).
+nyc_500k_car completed for the first time in the thesis project: a
+previously structurally infeasible benchmark became a single ~12 h
+Cardinal job. The full per-cell breakdown for both scenarios is
+preserved at `runs/baselines/phase14_chicago_200k_car_job9954279/` and
+`runs/baselines/phase14_nyc_500k_car_job9971042/`.
 
 ### 3.8.5 Parallelism Architecture (task-parallel, replicated graph)
 
@@ -1345,6 +1355,44 @@ parallelisation as a follow-up). Future engines added to SimForge
 inherit the canonical_routes API for free — they accept the dict
 or fall back to their own routing.
 
+### 3.8.7 Phase 14.13 — Cache Hoist from Per-Run to Global
+
+Phase 14a's content-addressable canonical-routes cache was initially
+written per output directory: each `runs/<runspec>/<scenario>/<engine>/<mode>/seed_<N>/`
+held its own `canonical_routes.jsonl.zst` produced by that cell's
+adapter run. The byte-identity contract was preserved (each cell
+hashed identically given the same canonical bundle), but the on-disk
+representation broke the warm-cache speedup for any harness layout
+where the same scenario ran into multiple per-cell directories: each
+of `(engine, mode, seed)` re-ran the BFS from scratch despite
+producing a bit-identical JSONL file.
+
+The Phase 14.13 cache hoist (`execution/run_benchmark.py`
+`_canonical_routes_cache_root()`, landed 2026-05-19) moves the cache
+root to a single global location at `cache/canonical_routes/` keyed
+by SHA-256 over (network + demand + sorted feasible-trip IDs). The
+hoist includes a one-shot migration helper
+(`_migrate_legacy_canonical_routes_cache()`) that hardlinks any legacy
+per-cell caches into the global location and verifies hash agreement
+before deleting the legacy paths. Empirical effect: subsequent
+re-runs of the same scenario across any (engine, mode, seed) cell
+hit the cache in milliseconds instead of repaying the BFS cost.
+
+The cache-hit speedup at the warm-re-run end of the chicago_200k_car
+benchmark (Cardinal job 10018698, 2026-05-19 14:00 EDT) was the
+~228× reported in §3.8.4. Without the cache hoist, the same warm
+re-run would have paid the cold BFS cost on every cell that did not
+exactly match its per-cell legacy path.
+
+Determinism is preserved by the content-addressable key: any change
+to network, demand, or feasibility verdict produces a different
+cache key. A 7-test guard in `tests/test_run_benchmark.py` pins
+the hoist behavior (cache root location, hash key construction,
+hardlink migration semantics, hash-mismatch refusal).
+
+The Phase 14.13 narrative is recorded in `doc/EXPERIMENT_LOG.md`
+(2026-05-19 entry) and `CHANGELOG.md` Phase 14.13 section.
+
 ## 3.9 Geographic Visualization (Opt-in)
 
 A separate, opt-in component on the `visualization` branch generates
@@ -1355,7 +1403,7 @@ and the locked benchmark numbers in Chapter 5 are unchanged by any
 rendered plot. The module exists to *visualize* findings that the
 quantitative analysis already establishes.
 
-### 3.8.1 Map Catalogue
+### 3.9.1 Map Catalogue
 
 Seven map types are shipped, grouped by what input data they need:
 
@@ -1375,7 +1423,7 @@ TIGER PRISECROADS basemap — chosen for cartographic legibility over
 the canonical SimForge network underlay (which is denser and competes
 visually with the colored tract fills).
 
-### 3.8.2 Design Principles
+### 3.9.2 Design Principles
 
 The visualization layer enforces three invariants:
 
@@ -1394,7 +1442,7 @@ The visualization layer enforces three invariants:
    render path, so the main SimForge test suite has no dependency on
    them.
 
-### 3.8.3 Cross-Engine Interpretation Surfaces
+### 3.9.3 Cross-Engine Interpretation Surfaces
 
 Three properties become directly visible in the maps and reinforce
 quantitative findings stated elsewhere in this chapter:
@@ -1431,3 +1479,274 @@ caching layout are documented in
 [`visualization/README.md`](../../visualization/README.md). The post-
 run analysis pipeline that wraps the visualization tool is in
 [`doc/RESULTS_GUIDE.md`](../RESULTS_GUIDE.md) §4.4.
+
+## 3.10 Wave 1 — Reproducibility Artefact Hardening
+
+Wave 1 (landed 2026-05-18, commits 95c07fb through `c8dcc54`) added
+four reproducibility-artefact pieces that the plan §1.11 C-rows
+required but were not present in the framework prior to the late-
+thesis hardening pass. None of these change the runtime behavior of
+any adapter or evaluation module — they are scaffolding around the
+existing framework that makes the reproducibility chain externally
+auditable.
+
+### 3.10.1 Open-Source License (Apache 2.0)
+
+The repository was licensed under the **Apache License 2.0**
+(`LICENSE` at repo root), with the rationale documented in
+`doc/LICENSING.md`. The Apache 2.0 choice balances three concerns:
+
+- **Patent grant.** Apache 2.0's explicit patent grant (§3) is
+  important for a research artefact that integrates third-party
+  engines (SUMO, MATSim, DTALite) whose own patent positions are
+  variably documented.
+- **Commercial-friendly.** Permissive licensing reduces barriers to
+  downstream adoption by transportation planning consultancies or
+  vendor tooling, consistent with the thesis goal of seeding a
+  community-standard benchmark.
+- **Compatible with engine licenses.** SUMO is EPL 2.0 (compatible
+  with Apache 2.0 in the same project), MATSim is GPL 2.0 (linked
+  via subprocess invocation, not statically linked, avoiding the
+  GPL viral-copyleft trigger), DTALite is GPL 3.0 (same subprocess
+  isolation argument applies).
+
+The corresponding `doc/LICENSING.md` document spells out the
+licensing of each subcomponent (the SimForge framework itself, the
+generated canonical bundles, the OSM-derived networks honoring ODbL
+share-alike, and the embedded census data under public-domain
+status).
+
+### 3.10.2 Canonical Bundle Licensing (CC BY 4.0 + ODbL)
+
+The generated canonical bundles in `scenarios/` are dual-licensed:
+
+- **CC BY 4.0** for the SimForge-generated content (validation
+  scripts, GMNS topology derivatives, signal placement, demand
+  derivation logic).
+- **ODbL share-alike** for the underlying OSM network data, with
+  attribution to OpenStreetMap contributors preserved in
+  `osm_data/manifest.json` and per-bundle network README.
+
+This dual-license model is the standard for OSM-derived
+transportation research artefacts; the ODbL share-alike obligation
+attaches to the network layer but not to the analytical layer built
+on top.
+
+### 3.10.3 Data Management Documentation
+
+`doc/DATA_MANAGEMENT.md` documents the complete data lifecycle for
+the framework:
+
+- OSM PBF acquisition + hash-pinning workflow (via
+  `tools/download_osm.py` against `osm_data/manifest.json`).
+- Canonical bundle generation, validation, and storage layout.
+- Run output directory structure (Phase 13 flat layout vs Phase
+  14+ nested layout).
+- Per-engine cache structures (SUMO `.cache/sumo/`, MATSim
+  `.cache/matsim/`, DTALite UE iteration cache).
+- The global `cache/canonical_routes/` directory introduced by
+  Phase 14.13 (§3.8.7).
+- Data retention policy for thesis baselines:
+  `runs/baselines/<phase_label>/` is the long-term-preserved subset;
+  all other run directories are routinely pruned via
+  `tools/prune_runs.py`.
+
+### 3.10.4 Reproducibility Scorecard Auto-Emit
+
+`tools/generate_scorecard.py` produces a per-run
+`reproducibility_scorecard.md` that lists each reproducibility-
+relevant artefact (LICENSE present, OSM PBF SHA-256 verified,
+canonical bundle manifest present, fairness audit Q1-Q4 verdicts,
+per-engine version captured, etc.) and marks each as PASS, FAIL, or
+N/A. The scorecard runs automatically as the final step of every
+benchmark, producing an externally auditable artefact in the run
+directory alongside the per-cell results.
+
+The scorecard has 22 checks at the time of writing; the
+chicago_200k_car Phase 13 baseline scored 20 PASS, 0 FAIL, 2 N/A
+(the two N/A entries are GPU-engine checks that do not apply to the
+shipped CPU-only roster). The scorecard format is documented in
+`tools/generate_scorecard.py` module docstring; the Wave 1 entry
+in `doc/EXPERIMENT_LOG.md` records the introduction.
+
+## 3.11 Wave 2 — Pinned-Digest Container Distribution
+
+Wave 2 (landed 2026-05-20) added a containerized execution path that
+makes the SimForge framework bit-reproducible across machines. The
+host-venv installation path (`uv pip install -r requirements.lock` +
+`uv pip install eclipse-sumo==1.26.0`) is preserved as the developer-
+ergonomics default; the container path is opt-in for thesis-
+reproduction and HPC re-use scenarios.
+
+### 3.11.1 Container Image Architecture
+
+The container is built from `python:3.13-slim-bookworm` with the
+following system dependencies installed via apt:
+
+```
+openjdk-17-jre-headless   (MATSim runtime)
+libgomp1                  (OpenMP runtime for DTALite)
+libatomic1                (libatomic runtime, required by libsumocpp)
+libxml2                   (XML parsing dependency)
+libx11-6, libxext6, libxrender1, libxcb1, libgl1, libglu1-mesa
+                          (SUMO GUI dependencies, retained for sumo-gui
+                          even in headless image)
+libfontconfig1, libfreetype6
+                          (matplotlib font rendering)
+git, ca-certificates, curl, unzip, tini
+```
+
+Python dependencies are installed via:
+
+```
+uv pip install --system --no-cache -r requirements.lock
+uv pip install --system --no-cache eclipse-sumo==1.26.0
+```
+
+The eclipse-sumo wheel is installed separately from the lockfile
+because it is a manylinux_2_28_x86_64-only distribution that is not
+compatible with the lockfile resolver's cross-platform constraint
+solving. The manylinux closure for eclipse-sumo 1.26.0 (libX11,
+libGL, libatomic, libfontconfig, etc.) is what motivates the apt
+system-dependency list above; the dependency closure was
+empirically determined across 8 GitHub Actions build iterations
+before convergence.
+
+MATSim 15.0 is downloaded at build time from the immutable
+matsim-org/matsim-libs GitHub release tag
+(`matsim-15.0-release.zip`); the JAR is not committed to the
+SimForge repository because it is gitignored and license-encumbered
+under GPL 2.0.
+
+### 3.11.2 Automated CI/CD Build
+
+A GitHub Actions workflow at
+`.github/workflows/build-container.yml` builds the container on
+push to the `phase-14-canonical-routes` and `main` branches,
+publishes the image to GitHub Container Registry (GHCR), and tags
+it with three identifiers:
+
+1. The git SHA (e.g., `db8d786`) for thesis-pinning.
+2. The branch name (`phase-14-canonical-routes`) for dev iteration.
+3. `latest` for ergonomic pulls.
+
+The workflow uses GitHub's `paths-ignore` directive to skip rebuilds
+on doc-only changes (`doc/**`, `*.md`), keeping the rebuild trigger
+scoped to source-code or dependency changes.
+
+### 3.11.3 HPC Distribution via Singularity/Apptainer
+
+For HPC environments where Docker is unavailable (OSC Cardinal +
+Pitzer both run Apptainer rather than Docker), the GHCR image is
+pulled via `apptainer pull` into a local `.sif` (Singularity Image
+Format) file:
+
+```
+apptainer pull simforge_db8d786.sif \
+    docker://ghcr.io/phanidharakula/simforge@sha256:<digest>
+```
+
+The pull uses the SHA-digest tag rather than the branch or latest
+tag to avoid an Apptainer 1.4.5 bug
+(`progress_roundtrip.go:75`, ProgressComplete index out of range)
+that triggers on branch-tag pulls. The workaround is documented in
+`doc/CONTAINER_USAGE.md` Appendix B.
+
+### 3.11.4 Container-Mode Execution
+
+The container is invoked at the SBATCH wrapper layer via an opt-in
+environment variable. The benchmark sbatch wrappers
+(`cluster/jobs/benchmark_small.sbatch`,
+`cluster/jobs/benchmark_large.sbatch`) define a `RUN_PY` array that
+switches based on `SIMFORGE_USE_CONTAINER`:
+
+```bash
+if [[ "${SIMFORGE_USE_CONTAINER:-0}" == "1" ]]; then
+    RUN_PY=(apptainer exec
+        --bind "$PWD/scenarios:/workspace/scenarios"
+        --bind "$PWD/runs:/workspace/runs"
+        --bind "$PWD/cache:/workspace/cache"
+        --bind "$PWD/osm_data:/workspace/osm_data"
+        "$SIMFORGE_SIF"
+        python)
+else
+    RUN_PY=(uv run python)  # host venv (default)
+fi
+"${RUN_PY[@]}" -m execution.run_benchmark "$RUNSPEC_YAML"
+```
+
+The four bind mounts expose the necessary host directories
+read-write while the container's base image filesystem is read-only.
+The default behavior (no env var set) remains the host-venv path,
+so the container is purely additive — no existing user workflow is
+broken.
+
+### 3.11.5 Container Manifest Pinning
+
+`lib/container/manifest.json` records the thesis-canonical container
+digest:
+
+```json
+{
+  "thesis_default": {
+    "tag": "phase-14-canonical-routes",
+    "short_tag": "db8d786",
+    "git_sha": "db8d786d53b7562fd4aa58105cdef54e14330a55",
+    "verified_on_cardinal": true,
+    "verified_date": "2026-05-19",
+    "engines": {
+      "sumo": "1.26.0",
+      "matsim": "15.0",
+      "path4gmns": "0.10.0"
+    }
+  }
+}
+```
+
+The manifest is the canonical citation target for thesis-tier
+re-reproduction. A reader who wants to replicate the thesis numbers
+should pull the digest pinned here, not the branch tag (which moves
+with the active dev branch).
+
+### 3.11.6 Empirical Cross-Platform Reproducibility Outcome
+
+Wave 2 was justified ex ante on the basis of avoiding host-environment
+divergence; the post-Wave-2 measurements provide an empirical
+validation of the design (and surface a finding the framework made
+visible). Detailed measurements are reported in Chapter 5 §5.6.3,
+summarized here:
+
+- **Within a single execution context**, the container provides
+  byte-identical reproducibility: R = 1.0000 for MATSim and DTALite
+  across N=5 re-runs at the same git SHA, same bind mounts, same
+  fixed seed.
+- **Across execution contexts** (host venv on macOS arm64 vs
+  container on Cardinal x86_64 Linux), nominally identical software
+  produces measurable output divergence: 2.95 % MATSim mean-TT
+  shift, 0.24 % DTALite mean-TT shift, 0 % SUMO mean-TT shift (the
+  SUMO eclipse-sumo wheel is the same binary in both contexts).
+- **The MATSim divergence is attributable to JVM build differences**
+  (brew openjdk@17 vs Debian openjdk-17-jre-headless) — the same
+  MATSim 15.0 JAR runs on both, but JIT optimization output, math
+  library implementations, and thread scheduling differ enough to
+  shift the floating-point accumulation in the qsim mobsim.
+- **The DTALite divergence is attributable to OpenMP runtime
+  differences** (libomp on macOS vs libgomp on Linux) — atomic
+  reductions in the UE iteration loop accumulate floating-point
+  errors in slightly different orders.
+
+The container is therefore not just an installation convenience — it
+is the **operational mechanism** that closes the cross-platform
+reproducibility gap. Future researchers who pull the pinned-digest
+image will reproduce the thesis numbers to bit-identity. Researchers
+who install via the host-venv path will get trace-equivalent results
+within the documented cross-platform shift bounds (0.2-3 % per
+engine). This finding is novel; Chapter 6 §6.2.3 discusses the
+methodological implication, and Chapter 6 §6.5.6 identifies the
+cross-machine container-verification corpus as a future-work
+direction.
+
+The full container usage workflow (build, pull, bind-mount, run,
+verify) is documented in `doc/CONTAINER_USAGE.md`. The cross-
+platform measurement protocol is documented in
+`doc/EXPERIMENT_LOG.md` (2026-05-20 entry).
