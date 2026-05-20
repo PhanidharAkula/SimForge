@@ -405,16 +405,22 @@ comparison is supposed to measure neutrally, biasing the framework's
 core claim. The fairness contract trades calibration latitude for
 attribution clarity.
 
-### 6.4.6 Cross-platform 2.95 % MATSim shift
+### 6.4.6 Code-version drift between time-separated measurements
 
-The §5.6.3 finding is real and exists, not absent. For Chapter 5
-numbers reported from the host venv context, a future replicator
-running in the pinned-digest container will observe trace shifts
-(SUMO ±1.4 %, MATSim +2.95 %, DTALite +0.24 %). The Q1-Q4 fairness
-verdicts remain identical across contexts. The shift bounds the
-cross-context numerical comparability of mean TT values, but does
-not change qualitative findings — the paradigm-divergence narrative,
-the speedup claims, the R scores.
+The §5.6.3 original measurement of a 2.95 % MATSim shift was
+reinterpreted (§5.6.3.3) as code-version drift between Pitzer
+Phase 12 (2026-05-02) and Cardinal Phase 14.13 (2026-05-20), not
+as cross-platform variability. At a fixed code version, Chapter 5
+Tables 5.1 + 5.2 + §5.6.2 numbers are reproducible bit-identically
+on any x86_64 system (§5.6.3.1) and to 4-sig-fig agreement on Mac
+arm64 (§5.6.3.2). The remaining limitation is that any future
+benchmark adding new commits to the routing layer (canonical_routes
+BFS, adapter glue, bundle generator) may produce up to ~3 %
+mean-TT drift even on the same machine + bundle. The pinned-digest
+container is the operational mechanism that prevents this drift; a
+future replicator who pulls `ghcr.io/phanidharakula/simforge:db8d786`
+gets the exact Chapter 5 code, not whatever the active dev branch
+happens to be.
 
 ### 6.4.7 Container mode is opt-in, not default
 
