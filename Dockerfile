@@ -156,7 +156,7 @@ COPY lib/           ./lib/
 # from immutable release is the standard pattern.
 RUN cd /tmp \
  && curl -fsSL -o matsim-15.0.zip \
-        https://github.com/matsim-org/matsim-libs/releases/download/matsim-15.0/matsim-15.0.zip \
+        https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip \
  && unzip -q matsim-15.0.zip -d /tmp/matsim-extract \
  && mkdir -p /workspace/SimForge/lib/matsim-15.0 \
  && if [ -d /tmp/matsim-extract/matsim-15.0 ]; then \
