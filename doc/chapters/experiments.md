@@ -326,7 +326,7 @@ on the bundled chicago_1k_car (Pitzer, all three engines) is recorded in
 | Random seed affecting results | 5 runs per condition with seeds {42, 43, 44, 45, 46}; report mean ± 95 % CI |
 | JVM warm-up affecting MATSim | All runs include the same JVM start cost; comparison is fair-relative; cost amortises < 30 % at 10 K + |
 | OS scheduling noise | Use `perf_counter()`; HPC runs on dedicated nodes; cached cell std < 5 % CV |
-| Adapter conversion errors | ~633 unit tests (with all 5 bundles generated) including byte-identical determinism tests |
+| Adapter conversion errors | ~639 unit tests (with all 5 bundles generated) including byte-identical determinism tests + the three-function adapter-contract regression guard |
 | Scenario validation failures | Pre-flight validation check before every run |
 | Trip-count asymmetry across engines | SCC filter at generator + adapter; `feasibility_report.json` audit trail; `audit_fairness` Q1 PASS on all 3 scenarios |
 | MATSim adapter route-format ambiguity | Phase 12.1 fix: `<route type="links">` text content includes start_link + end_link tokens; verified by 0-trip → 1000-trip empirical check |
@@ -367,4 +367,4 @@ For any researcher to reproduce these experiments:
 - [ ] Analyse: `python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown`.
 - [ ] Audit fairness: `python -m evaluation.audit_fairness runs/benchmark_small`.
 - [ ] Render figures: `python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures`.
-- [ ] Verify: all ~633 tests pass (`python -m pytest tests/ -q`) with all 5 generated bundles present. On Apple Silicon arm64, 3 SUMO-dependent tests skip individually due to a known `netconvert` segfault on large networks; this is documented in `tests/conftest.py`.
+- [ ] Verify: all ~639 tests pass (`python -m pytest tests/ -q`) with all 5 generated bundles present. On Apple Silicon arm64, 3 SUMO-dependent tests skip individually due to a known `netconvert` segfault on large networks; this is documented in `tests/conftest.py`.

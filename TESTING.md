@@ -1,12 +1,13 @@
 # SimForge Test Suite
 
-**~626 tests** across **31 test files** covering adapters, metrics, validation,
+**~639 tests** across **29 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, the cross-engine
-fairness audit, OSM network fetching (mocked), demand generators, and
-real-binary engine smoke tests. The total scales with the number of bundled
-scenarios in `scenarios/` because `test_scenario_data_integrity.py` is
-parametrized over each one.
+fairness audit, OSM network fetching (mocked), demand generators, the
+three-function adapter contract, and real-binary engine smoke tests. The
+total scales with the number of bundled scenarios in `scenarios/` because
+`test_scenario_data_integrity.py` is parametrized over each one (currently
+180 = 36 × 5 bundles).
 
 Pytest configuration lives in `pyproject.toml` (`[tool.pytest.ini_options]`)
 with strict-marker enforcement, `testpaths = ["tests"]`, and `--tb=short`.
@@ -166,10 +167,10 @@ bounds), `HardwareInfo`, `compute_scalability_metrics`, scalability comparison.
 Real-bundle round-trip: a clean scenario passes; a scenario with a bogus
 origin node fails.
 
-### 10. `test_scenario_data_integrity.py` — Data Integrity (216 tests)
+### 10. `test_scenario_data_integrity.py` — Data Integrity (180 tests)
 
 **Critical.** Parametrized over every complete scenario in `scenarios/`. With
-the six currently-bundled scenarios this expands to 216 tests across:
+the five currently-bundled scenarios this expands to 180 tests (36 × 5) across:
 
 | Class                  | What it checks                                                     |
 | ---------------------- | ------------------------------------------------------------------ |
@@ -296,6 +297,20 @@ the cheap counters (`_count_dtalite_demand`, `_count_matsim_persons`,
 `audit_fairness <run-dir>` invocation work whether the run came from
 `run.py` (flat), `run_benchmark.py` (nested), or a parallel-by-scenario
 sbatch wrapper (doubly-nested or per-scenario).
+
+### 22. `test_adapter_contract.py` — Three-function contract regression (6 tests)
+
+Static regression guard that pins the three-function adapter contract
+documented in `doc/chapters/introduction.md` §1.5.4 and
+`doc/engines/THIRD_ENGINE_OPTIONS.md`. Parametrized across SUMO +
+MATSim + DTALite (3 engines × 2 tests = 6). Verifies each adapter
+module exposes `prepare_<engine>_inputs`, `run_<engine>`,
+`parse_<engine>_output` as callables AND that `run_<engine>` returns
+`Tuple[bool, float, Optional[str]]`. Pure-introspection test; no
+binaries or fixtures required. Catches regressions like a future
+engine being added without the contract functions or a refactor that
+moves `run_<engine>` into a class method (the gap fixed in commit
+92a5b3d for SUMO).
 
 ---
 

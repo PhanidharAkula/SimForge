@@ -72,7 +72,7 @@ inline so they are not mistaken for drift.
 | MATSim runtime     | Java (OpenJDK)               | 17+     | JVM for MATSim execution                |
 | DTALite simulator  | DTALite (bundled in [`path4gmns`](https://github.com/jdlph/Path4GMNS)) | 0.10.0+ | CPU mesoscopic Dynamic Traffic Assignment |
 | OpenMP runtime (Mac) | libomp (brew install libomp) | — | DTALite OpenMP runtime on macOS |
-| Testing            | pytest                       | 8.0+    | ~633 tests across all subsystems (with all 5 generated bundles present) |
+| Testing            | pytest                       | 8.0+    | ~639 tests across all subsystems (with all 5 generated bundles present) |
 
 > **Engine selection scope deviation.** The original plan listed five engines (SUMO, MATSim, POLARIS, LPSim, QarSUMO). Per advisor agreement and after exhaustive integration work in Versions 4–5, the matrix narrows to **three primary engines** (SUMO microscopic + mesoscopic, MATSim queue-based agent, DTALite mesoscopic Dynamic Traffic Assignment) chosen for paradigm spread. Three of the originally-proposed engines were systematically evaluated and ruled out: **QarSUMO** dropped in Version_4 Phase A (no usable public source — LLNL/QarSUMO 404, QarSUMO/QarSUMO empty placeholder, Boulmakoul 2023 IEEE HPCS paper produced no runnable code; full retrospective in [`doc/engines/QARSUMO_RETROSPECTIVE.md`](../engines/QARSUMO_RETROSPECTIVE.md)); **LPSim** integrated in Version_4 Phase B but abandoned in Version_5 after the bundled GPU binary crashed at network sizes > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch (full retrospective in [`doc/engines/LPSIM_RETROSPECTIVE.md`](../engines/LPSIM_RETROSPECTIVE.md)); **POLARIS** and **CityFlow** evaluated as alternatives during the third-engine selection but ruled out at criteria (POLARIS license-gated, CityFlow scaling-broken — see [`doc/engines/THIRD_ENGINE_OPTIONS.md`](../engines/THIRD_ENGINE_OPTIONS.md)). DTALite (bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS), Apache 2.0) was selected on three grounds: bounded integration cost (pre-built binary, working CMake), paradigm-spread value (DTA equilibrium is distinct from SUMO microscopic and MATSim queue-based), and CPU-only execution (the full matrix runs on Mac as well as Linux). See [`doc/engines/ENGINE_COMPARISON.md`](../engines/ENGINE_COMPARISON.md) for the full cross-engine comparison and `todo.md` for the rollout history.
 
@@ -1054,7 +1054,7 @@ Extracted fields: `duration` (travel time in seconds) for each completed trip.
 
 ### 3.7.1 Test Suite
 
-The framework includes **~633 tests** with all 5 bundles generated
+The framework includes **~639 tests** with all 5 bundles generated
 (`chicago_1k_car`, `nyc_10k_car`, `la_50k_car`, `chicago_200k_car`,
 `nyc_500k_car`). The base count is roughly 450 tests plus 36
 parametrized integrity tests per bundle in `scenarios/`. Phase 14
@@ -1089,8 +1089,9 @@ of ~574 tests.
 | `test_vehicle_types.py` (V5+ Phase 11) | 19 | Canonical car constants, SUMO/MATSim XML emission, cross-engine equivalence |
 | `test_dtalite_adapter.py`         | 46    | DTALite adapter: writers, settings, demand-driven zoning, determinism, output parsing, end-to-end smoke |
 | `test_engine_smoke.py`            | 4     | Real-binary smoke on SUMO/MATSim/DTALite                |
+| `test_adapter_contract.py` (audit) | 6    | Three-function adapter contract regression guard (prepare/run/parse across SUMO+MATSim+DTALite) |
 
-**All ~633 tests passing** with all 5 bundles generated, as of the
+**All ~639 tests passing** with all 5 bundles generated, as of the
 Phase 14.13 cache-hoist landing (commit `db8d786`, 2026-05-19).
 Marker registry in `pyproject.toml`; shared fixtures in
 `tests/conftest.py`. Line coverage sits at **76 %** across the

@@ -8,6 +8,88 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Heavy stress-test audit — ship-readiness pass (2026-05-20)
+
+End-to-end audit across every code surface (`adapters/`, `pipeline/`,
+`evaluation/`, `execution/`, `visualization/`, `tests/`, top-level
+`help.py`, and all `doc/` markdown). Five-axis check per area:
+structure, static validation, numerical claims, dead-code / orphan
+modules, link integrity. Result: zero behavioral changes, zero
+regressions in 633-test suite; nine surgical fixes for documentation
+drift + one architectural inconsistency (SUMO contract gap).
+
+**Commits in this audit:**
+
+- `ebced15` — `evaluation.audit_fairness` `-h`/`--help` handling
+  added (previously errored as bad positional arg); `doc/PITZER.md`
+  8 references to renamed `gen_nyc_500k.sbatch` → current
+  `05_nyc_500k_car.sbatch`, plus the dead
+  `cluster/example_runs/nyc_500k_47063986.md` reference removed and
+  the historical wall-time paragraph softened; `doc/REPRODUCING.md`
+  stale "42 packages including SUMO" → "35 lockfile-pinned packages
+  + eclipse-sumo==1.26.0 separately" + stale "Pitzer Python 3.12" →
+  "3.13.13"; `doc/figures/` regenerated via
+  `evaluation.generate_plots` (10 figures × PNG+PDF, ~3.3 MB)
+  because Chapter 5 references `fig_5_1` through `fig_5_10` but the
+  directory was empty.
+
+- `fabec07` — `help.py:1062` HELP_VISUALIZATION cache-layout doc
+  said `cache/tiger/<fips>/...` but the actual directory is
+  `cache/tiger_roads/<fips>/...` per writer + reader implementations
+  in `tools/download_tiger_roads.py` and `visualization/data/`.
+
+- `379e0c1` — `visualization/generate_maps.py` module docstring
+  claimed `link_load` / `travel_time` / `route_diversity` /
+  `congestion` / `animated_flow` renderers were "Phase B + C" not
+  yet shipped — refuted by the existence of all 12 artefacts in
+  `visualization/output/chicago_1k_car/`. Updated to describe the
+  seven shipped types. Also moved `--maps` validation to run before
+  `--dry-run`, so `--maps bogus_type --dry-run` now fails fast with
+  exit 2 + "Known types: ..." stderr (was silently exit 0).
+
+- `8751413` — `tests/conftest.py` `_BUNDLED_PREFERENCE` listed
+  `la_50k_bike_car_transit` and `chicago_200k_car_transit`
+  (pre-V5 names that no longer exist). Tests still worked via
+  alphabetical fallback but the preference list was misleading.
+  Updated to current bundle names. Also `doc/REPRODUCING.md`
+  claimed `nyc_10k_car` + `la_50k_car` are "not in the repo" —
+  wrong; both ARE tracked via `.gitignore !scenarios/<name>/`
+  exceptions; only `chicago_200k_car` + `nyc_500k_car` are
+  gitignored. Rewrote paragraph.
+
+- `92a5b3d` — **Three-function adapter contract conformance:**
+  `adapters/sumo/sumo_adapter.py` previously only exposed
+  `prepare_sumo_inputs`. The run + parse functions lived on
+  `BenchmarkHarness` (`execution.run_benchmark`) and in
+  `evaluation.metrics.travel_time.parse_sumo_tripinfo`. This
+  broke the contract documented in `doc/chapters/introduction.md`
+  §1.5.4 ("`prepare_<engine>_inputs`, `run_<engine>`,
+  `parse_<engine>_output` in each adapter module"). Added
+  `run_sumo` + `parse_sumo_output` as module-level functions in
+  the SUMO adapter; `BenchmarkHarness.run_sumo` and
+  `.compute_metrics` now delegate to them (thin wrappers, same
+  signatures, zero behavior change). All three engines now
+  conform: `prepare_*_inputs` + `run_*` + `parse_*_output` at
+  module level, `run_*` all return
+  `Tuple[bool, float, Optional[str]]`.
+
+**Tests added:**
+
+- `tests/test_adapter_contract.py` (+2 parametrized tests × 3
+  engines = 6 tests): static regression guard that pins the
+  three-function contract across SUMO + MATSim + DTALite adapters.
+  Verifies each module exposes `prepare_*_inputs`, `run_*`,
+  `parse_*_output` as callables AND that `run_*` return annotation
+  looks like `Tuple[bool, float, Optional[str]]`. Pure-introspection
+  test, no binaries required. Catches future adapter drift such as
+  moving `run_*` into a class method or another module. Brings
+  total test count from 633 → 639.
+
+**Verification:** 633→639 tests collected; full test suite exit 0;
+all numerical claims (Chapter 5 Tables 5.1+5.2, audit Q4 ratios,
+container manifest digest pin) verified against on-disk JSON.
+Implementation is fully complete and ship-ready.
+
 ### Wave 2 — Containerization shipped (2026-05-19)
 
 Closes the last open ~ deviation in `doc/DEVIATIONS.md` (D10),
