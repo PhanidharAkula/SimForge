@@ -75,6 +75,13 @@ WORKDIR /workspace/SimForge
 COPY requirements.lock pyproject.toml ./
 RUN uv pip install --system --no-cache -r requirements.lock
 
+# eclipse-sumo wheel is NOT in requirements.lock (host installs SUMO via
+# brew/apt per SETUP.md; the lockfile only covers Python-only deps). For
+# the container we install the pinned eclipse-sumo wheel directly so SUMO
+# is part of the immutable image. Version matches project notes project doc.
+RUN uv pip install --system --no-cache eclipse-sumo==1.26.0 \
+ && python -c "import sumolib; print(f'  ✓ eclipse-sumo wheel installed, sumolib {sumolib.__file__}')"
+
 # ---------------------------------------------------------------------------
 # SimForge source code layer
 # ---------------------------------------------------------------------------
