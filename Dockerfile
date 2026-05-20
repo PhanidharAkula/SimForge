@@ -97,9 +97,16 @@ RUN uv pip install --system --no-cache -r requirements.lock
 # and requires either SUMO_HOME setup or explicit sys.path appending.
 # SimForge invokes SUMO as a subprocess (not `import sumolib`), so we
 # verify the binary works, not the Python import.
-RUN uv pip install --system --no-cache eclipse-sumo==1.26.0 \
- && sumo --version 2>&1 | head -1 | grep -q "Eclipse SUMO" \
- && echo "  ✓ eclipse-sumo wheel installed, sumo binary at $(which sumo) ($(sumo --version 2>&1 | head -1))"
+RUN uv pip install --system --no-cache eclipse-sumo==1.26.0 && \
+    if sumo --version 2>&1 | tee /tmp/sumo_version_check | grep -q "Eclipse SUMO"; then \
+        rm /tmp/sumo_version_check; \
+        echo "  ✓ eclipse-sumo wheel installed, sumo at $(which sumo)"; \
+    else \
+        echo "=== sumo --version output ==="; cat /tmp/sumo_version_check; \
+        echo "=== ldd /usr/local/bin/sumo (missing libs) ==="; ldd /usr/local/bin/sumo 2>&1; \
+        echo "=== which other sumo binaries linked the same way ==="; ls -la /usr/local/bin/ | grep -E 'sumo|netconvert|duarouter' | head; \
+        exit 1; \
+    fi
 
 # ---------------------------------------------------------------------------
 # SimForge source code layer
