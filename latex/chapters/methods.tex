@@ -8,6 +8,8 @@ framework for urban traffic simulation. The framework addresses three
 fundamental challenges in simulator comparison that have historically
 hindered fair, reproducible evaluation of traffic simulation engines:
 
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_1_three_layer_architecture.png}}
+
 \begin{enumerate}
 \def\labelenumi{\arabic{enumi}.}
 \item
@@ -167,6 +169,8 @@ rollout history.
 \begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
 
 \section{Canonical Data Schema}\label{32-canonical-data-schema}
+
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_2_canonical_bundle_schema.png}}
 
 \subsection{Design Principles}\label{321-design-principles}
 
@@ -649,6 +653,8 @@ checks (see §3.7.1).
 
 \section{Scenario Generation
 Pipeline}\label{33-scenario-generation-pipeline}
+
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_3_generation_pipeline.png}}
 
 \subsection{Pipeline
 Architecture}\label{331-pipeline-architecture}
@@ -1216,6 +1222,8 @@ Trip purposes (V5+) & \texttt{HBW\_AM} / \texttt{HBW\_PM} (commutes) +
 
 \section{Simulator Adapter Layer}\label{34-simulator-adapter-layer}
 
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_4_adapter_contract.png}}
+
 \subsection{Adapter Architecture}\label{341-adapter-architecture}
 
 Each adapter implements a common operational pattern:
@@ -1726,6 +1734,8 @@ All run results are serialized to
 
 \section{Evaluation Metrics}\label{36-evaluation-metrics}
 
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_6_fairness_audit_flow.png}}
+
 \subsection{Metric Categories}\label{361-metric-categories}
 
 The evaluation framework measures three orthogonal quality dimensions:
@@ -2059,6 +2069,8 @@ every adapter), generation is fully cross-platform reproducible.
 (Phase
 14)}\label{38-canonical-routes-bfs-deduplication-and-parallelization-phase-14}
 
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_8_phase14_bfs_dedup.png}}
+
 A late-stage thesis-engineering finding worth recording as an
 optimization narrative: measure, identify, fix, re-measure.
 
@@ -2271,6 +2283,8 @@ scenarios is preserved at
 
 \subsection{Parallelism Architecture (task-parallel, replicated
 graph)}\label{385-parallelism-architecture-task-parallel-replicated-graph}
+
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_8b_parallel_bfs_workers.png}}
 
 The Phase 14b implementation uses \textbf{task parallelism over trips},
 not data parallelism over the network. The architectural rationale
@@ -2656,6 +2670,8 @@ in \texttt{doc/EXPERIMENT\_LOG.md} records the introduction.
 
 \section{Wave 2 --- Pinned-Digest Container
 Distribution}\label{311-wave-2--pinned-digest-container-distribution}
+
+\pandocbounded{\includegraphics[keepaspectratio]{../figures/fig_3_11_container_chain.png}}
 
 Wave 2 (landed 2026-05-20) added a containerized execution path that
 makes the SimForge framework bit-reproducible across machines. The

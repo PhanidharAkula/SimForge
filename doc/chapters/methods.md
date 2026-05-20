@@ -4,6 +4,8 @@
 
 This chapter describes the design, implementation, and rationale of **SimForge** — a reproducible, cross-simulator benchmarking framework for urban traffic simulation. The framework addresses three fundamental challenges in simulator comparison that have historically hindered fair, reproducible evaluation of traffic simulation engines:
 
+![Fig 3.1 — SimForge three-layer architecture: pipeline → adapters → evaluation](../figures/fig_3_1_three_layer_architecture.png)
+
 1. **Input standardization**: Traffic simulators (SUMO, MATSim, DTALite, etc.) use incompatible input formats with different data models, coordinate systems, and semantic interpretations. Direct comparison requires a common input representation.
 
 2. **Execution reproducibility**: Simulation results vary due to hardware differences, software versions, random seed handling, floating-point behavior, and configuration details. A fair comparison requires deterministic, repeatable execution pipelines.
@@ -79,6 +81,8 @@ inline so they are not mistaken for drift.
 ---
 
 ## 3.2 Canonical Data Schema
+
+![Fig 3.2 — Canonical scenario bundle: 5-file simulator-agnostic schema](../figures/fig_3_2_canonical_bundle_schema.png)
 
 ### 3.2.1 Design Principles
 
@@ -374,6 +378,8 @@ def validate_bundle(scenario_path: Path) -> ValidationResult:
 
 ## 3.3 Scenario Generation Pipeline
 
+![Fig 3.3 — Scenario generation pipeline: data sources → SimForge transforms → canonical bundle](../figures/fig_3_3_generation_pipeline.png)
+
 ### 3.3.1 Pipeline Architecture
 
 The scenario generation pipeline is a 4-stage process orchestrated by `generate.py` (unified CLI entry point):
@@ -639,6 +645,8 @@ Used when no ModelGen file is available. Generates demand from network topology 
 ---
 
 ## 3.4 Simulator Adapter Layer
+
+![Fig 3.4 — Three-function adapter contract (prepare / run / parse) across SUMO + MATSim + DTALite](../figures/fig_3_4_adapter_contract.png)
 
 ### 3.4.1 Adapter Architecture
 
@@ -927,6 +935,8 @@ All run results are serialized to `benchmark_results_<runspec>.json`:
 
 ## 3.6 Evaluation Metrics
 
+![Fig 3.6 — Cross-engine fairness audit: Q1-Q5 verification flow](../figures/fig_3_6_fairness_audit_flow.png)
+
 ### 3.6.1 Metric Categories
 
 The evaluation framework measures three orthogonal quality dimensions:
@@ -1121,6 +1131,8 @@ adapter, pipeline, and evaluation packages; the local gate enforces
 
 ## 3.8 Canonical-Routes BFS Deduplication and Parallelization (Phase 14)
 
+![Fig 3.8 — Phase 14 canonical_routes BFS deduplication: 2-adapter independent BFS (BEFORE) vs shared canonical_routes BFS (AFTER), 20× cold speedup at chicago_200k_car](../figures/fig_3_8_phase14_bfs_dedup.png)
+
 A late-stage thesis-engineering finding worth recording as an
 optimization narrative: measure, identify, fix, re-measure.
 
@@ -1268,6 +1280,8 @@ preserved at `runs/baselines/phase14_chicago_200k_car_job9954279/` and
 `runs/baselines/phase14_nyc_500k_car_job9971042/`.
 
 ### 3.8.5 Parallelism Architecture (task-parallel, replicated graph)
+
+![Fig 3.8b — Phase 14 parallel-BFS worker pool: task-parallel over trips, replicated SCC-graph per worker, spawn context, SLURM_CPUS_PER_TASK=16](../figures/fig_3_8b_parallel_bfs_workers.png)
 
 The Phase 14b implementation uses **task parallelism over trips**, not
 data parallelism over the network. The architectural rationale matters
@@ -1573,6 +1587,8 @@ shipped CPU-only roster). The scorecard format is documented in
 in `doc/EXPERIMENT_LOG.md` records the introduction.
 
 ## 3.11 Wave 2 — Pinned-Digest Container Distribution
+
+![Fig 3.11 — Wave 2 pinned-digest container distribution chain: Dockerfile → GitHub Actions → GHCR → Apptainer pull → SBATCH](../figures/fig_3_11_container_chain.png)
 
 Wave 2 (landed 2026-05-20) added a containerized execution path that
 makes the SimForge framework bit-reproducible across machines. The

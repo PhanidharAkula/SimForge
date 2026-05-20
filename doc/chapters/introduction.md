@@ -168,6 +168,8 @@ the plan's §1.11 C1-C4, and surfaces four empirical findings
 that emerged during the build and form part of the framework's
 contribution beyond the original C-row list.
 
+![Fig 1.1 — SimForge at a glance: canonical bundle → multi-adapter → fairness-audit framework](../figures/fig_1_1_simforge_overview.png)
+
 ### 1.4.1 The four delivered C-rows (per plan §1.11)
 
 **C1 — Canonical schema and validators.** A simulator-agnostic

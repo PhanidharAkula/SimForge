@@ -194,6 +194,8 @@ At the 1 K tier the absolute runtimes (≤ 22 s for DTALite, ≤ 16 s for SUMO m
 
 ## 5.5 Throughput
 
+![Fig 5.10 — Wall-time vs engine-time breakdown (prep / engine / parse / harness overhead)](../figures/fig_5_10_wall_vs_engine.png)
+
 Throughput, defined as `completed_trip_count / engine_runtime_seconds`, on the 11-cell matrix:
 
 | Scenario | Engine | Mode | Throughput (trips/s) |
@@ -243,6 +245,8 @@ Both gaps are *declared and documented*, not silent. The diagnostic prevents ove
 ---
 
 ## 5.6.1 Demand Composition (V5+)
+
+![Fig 5.9 — Demand composition: HBW + HBSchool purpose breakdown per scenario](../figures/fig_5_9_demand_composition.png)
 
 Phases 9 and 10 add a six-purpose taxonomy to every row of `demand.csv`:
 `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`,

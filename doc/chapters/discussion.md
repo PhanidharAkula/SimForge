@@ -163,6 +163,8 @@ finding. They are not new C-rows, but they are not incidental either
 — each surfaces a measurement the cross-simulator literature does not
 typically report.
 
+![Fig 6.1 — Two paradigm-spread phenomena: cross-engine (§6.2.2) + within-engine (§6.2.4), same insertion-refusal vs queue-hold mechanism at saturation](../figures/fig_6_1_paradigm_spread.png)
+
 ### 6.2.1 Phase 14: BFS deduplication makes the large tier tractable
 
 **Finding**: pre-Phase-14, the chicago_200k_car benchmark on Cardinal
@@ -233,6 +235,8 @@ attributed to input asymmetry. With Q1-Q3 PASS empirically
 demonstrated, the gap is *necessarily* paradigm-attributable.
 
 ### 6.2.3 Cross-platform reproducibility limits
+
+![Fig 6.2 — Four reproducibility regimes: cross-platform variability at fixed code is small; cross-code-version drift is the dominant risk](../figures/fig_6_2_reproducibility_regimes.png)
 
 **Finding** (Chapter 5 §5.6.3): at a fixed code version, SimForge is bit-identical across every measured platform. The 0.2-3 % shifts originally reported in §5.6.3 (2.95 % MATSim, 0.24 % DTALite) were **code-version drift between time-separated comparisons** (Pitzer Phase 12 ↔ Cardinal Phase 14.13), not cross-platform variability. Two follow-up measurements isolated the axes:
 
