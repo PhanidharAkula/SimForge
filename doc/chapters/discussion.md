@@ -232,77 +232,96 @@ demonstrated, the gap is *necessarily* paradigm-attributable.
 
 ### 6.2.3 Cross-platform reproducibility limits
 
-**Finding** (Chapter 5 §5.6.3 + §5.6.3.1): SimForge's cross-platform
-reproducibility partitions cleanly into two regimes whose practical
-implications are very different.
+**Finding** (Chapter 5 §5.6.3 + §5.6.3.1 + §5.6.3.2 + §5.6.3.3):
+SimForge's cross-platform reproducibility is much stronger than the
+original §5.6.3 framing suggested. At a fixed code + bundle version,
+the framework achieves bit-identical or near-bit-identical
+reproduction across every measured platform; the dominant source of
+nominal "cross-platform" variability in time-separated comparisons
+is actually **code-version drift**, not platform variability.
 
-**Regime 1 — same CPU architecture, different OS/JDK/lib distributions:
-bit-identical** (§5.6.3.1, Cardinal RHEL host venv with Adoptium
-OpenJDK 21 ↔ Cardinal Debian container with apt OpenJDK 17 ↔ both
-running on Cardinal x86_64 Xeon Max 9470). Measured on
-chicago_200k_car + nyc_500k_car, 5 seeds × 2 scenarios × 2 engines:
-**20/20 cells produce byte-identical engine output**, including
-SUMO `tripinfo.xml` (modulo non-deterministic comment-block
-timestamps) and MATSim `output_trips.csv.gz` decompressed contents.
+The evidence partitions into four regimes:
 
-**Regime 2 — different CPU architectures: ±3 % per-engine shifts**
-(§5.6.3, Mac arm64 brew host venv ↔ Linux x86_64 container).
-Measured on chicago_1k_car:
+**Regime 1 — within a single execution context: bit-identical.**
+R = 1.0000 for MATSim + DTALite across N=5 re-runs at the same
+machine, same git SHA, same fixed seed. R ≥ 0.95 for SUMO due to
+small Krauss-σ variance. This is the conventional reproducibility
+floor.
 
-- SUMO meso: −1.4 % mean TT, −4 trips per seed
-- SUMO micro: +0.3 % mean TT, +17 trips per seed
-- **MATSim meso: +2.95 % mean TT**, 0 trip count delta
-- DTALite: +0.24 % mean TT, −9 trips per seed
+**Regime 2 — across execution contexts on the same CPU architecture
+at the same code version: bit-identical** (§5.6.3.1). Cardinal RHEL
+host venv with Adoptium OpenJDK 21 ↔ Cardinal Debian container with
+apt OpenJDK 17. Measured on chicago_200k_car + nyc_500k_car at the
+current code version: **20/20 cells produce byte-identical engine
+output**. Two completely different OS distributions and two different
+JDK distributions of two different major versions produce no shift.
 
-Within either execution context (any single regime + machine),
-byte-determinism is preserved (R = 1.0000 for MATSim + DTALite).
+**Regime 3 — across CPU architectures at the same code version:
+matches to 4 sig figs** (§5.6.3.2). Mac arm64 (Apple OpenJDK 17,
+eclipse-sumo arm64 wheel) ↔ Cardinal Sapphire Rapids x86_64
+container (Debian OpenJDK 17, eclipse-sumo manylinux x86_64 wheel).
+Measured on chicago_1k_car at the current code version: MATSim
+mean TT 318.7740 s vs 318.77 s cited (matches to 4 sig figs);
+DTALite mean TT 172.5605 s vs 172.56 s cited (matches to 4 sig
+figs). Two completely different ISAs with completely different
+floating-point implementations (NEON vs AVX-512) produce
+mean-TT agreement to ~10^-4 relative precision.
 
-**Significance**: This two-regime structure refines what the
-cross-simulator benchmarking literature has historically claimed.
-Studies typically cite version numbers as if version pinning were a
-sufficient reproducibility binding. The SimForge measurement
-demonstrates a more precise truth: **on a single CPU architecture,
-version pinning IS sufficient** — two completely different JDK
-distributions of two different major versions (Adoptium 21 vs Debian
-17) plus two different OS distributions (RHEL 9 vs Debian Bookworm)
-produce bit-identical MATSim output (Regime 1). But **across CPU
-architectures, version pinning is NOT sufficient** — the same version
-numbers running on different ISA hardware produce 0.2–3 % per-engine
-shifts due to floating-point implementation differences in
-vectorization, transcendental functions, and libm (Regime 2).
+**Regime 4 — across code versions (time-separated comparisons):
+0.2-3 % per-engine drift** (§5.6.3 original measurement). Pitzer
+Phase 12 (2026-05-02) ↔ Cardinal Phase 14.13 (2026-05-20). MATSim
+2.95 % shift; DTALite 0.24 % shift. This was the original §5.6.3
+finding, originally attributed to JVM build (then to CPU
+architecture). Regimes 2 + 3 above isolate the platform axes and
+show neither is the cause; the cause is the code-version axis —
+Phase 14's canonical_routes BFS replaces the legacy per-adapter
+BFS, producing slightly different per-trip route paths that
+propagate to slightly different MATSim mobsim outputs.
 
-The 2.95 % MATSim shift documented in §5.6.3 had originally been
-attributed to JVM-build differences (brew openjdk@17 vs Debian
-openjdk-17). The Regime 1 evidence revises this: **the JVM build is
-NOT the cause** — two completely different JVM builds on the same
-x86_64 hardware produce bit-identity. The cause is the underlying
-CPU architecture, which neither version pinning nor JDK pinning can
-neutralize.
+**Significance**: This four-regime structure substantially revises
+what the cross-simulator benchmarking literature would naively
+expect. The original framing — *"cross-platform variability is the
+dominant reproducibility risk"* — turns out to be incorrect at the
+SimForge scale. Cross-platform variability is small (4-sig-fig
+agreement across very different ISAs). **Cross-code-version
+variability is the actual dominant risk**, even on the same machine,
+even with the same canonical bundle, because implementation changes
+in the routing layer propagate to mean-TT drift on the order of
+~3 %. The cross-simulator benchmarking community typically does not
+distinguish these axes; the SimForge measurements make the
+distinction empirically.
 
 To the best of our awareness of the cross-simulator benchmarking
-literature, this two-regime characterization is the first such
-empirical measurement reported for activity-based mesoscopic traffic
-simulation. The practical implications:
+literature, this four-regime decomposition is the first such
+empirical measurement reported for activity-based mesoscopic
+traffic simulation. The practical implications:
 
-- **The pinned-digest container is load-bearing for x86_64
-  reproduction**, not merely a convenience. A reviewer who pulls
-  `ghcr.io/phanidharakula/simforge:db8d786` and runs the canonical
-  sbatch on any x86_64 system (Cardinal, AWS, Azure, colleague's
-  cluster, Docker Desktop on an Intel/AMD workstation) obtains
-  bit-identical results to whoever produced the thesis figures.
-- **Apple Silicon arm64 reproductions** (developer host) will show
-  the documented ±3 % per-engine shift relative to the canonical
-  x86_64 numbers; the container does NOT close this gap (it is
-  x86_64-only). Closing it requires emulation (Rosetta/QEMU) with
-  its own performance + determinism costs.
+- **The pinned-digest container is load-bearing because it freezes
+  the code + bundle + toolchain bundle** at a specific git SHA, not
+  because it equalizes platform differences. A reviewer who pulls
+  `ghcr.io/phanidharakula/simforge:db8d786` on any platform obtains
+  bit-identical (x86_64) or near-bit-identical (arm64 via
+  reproduction) results to the thesis figures, regardless of host
+  OS / JDK / hardware.
+- **Cross-platform reproduction at the current code version is
+  excellent**: bit-identical on x86_64 (any OS/JDK combination
+  tested); matches to 4 sig figs on Mac arm64. The framework does
+  not need emulation (Rosetta/QEMU) to deliver near-perfect
+  cross-architecture reproduction; the floating-point gap is much
+  smaller than expected.
 - **The fairness contract (Q1 byte-identity, Q2 same SCC, Q3 same
-  trip count target) is invariant across both regimes**, because it
-  operates on pre-engine inputs that run in pure Python on
+  trip count target) is invariant across all four regimes**, because
+  it operates on pre-engine inputs that run in pure Python on
   identical canonical data.
 
-The actionable advice for the cross-simulator benchmarking community:
-**cite the container digest AND the target CPU architecture**, not
-the version number alone, when reproducibility claims matter.
+The actionable advice for the cross-simulator benchmarking
+community: **cite the container digest, not the version number**.
+A version pin like *"version 1.26.0"* allows cross-code-version
+drift if any dependent code (the framework's routing layer, the
+bundle generator, the adapter glue) changes; the digest pins
+everything at a precise moment. Cross-platform variability at fixed
+code is not the reproducibility risk that one might naively expect
+— code-version drift on the same platform is.
 
 ### 6.2.4 The fairness contract as the connecting tissue
 

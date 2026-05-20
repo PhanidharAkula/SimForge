@@ -60,6 +60,70 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 
 ## 3. Active experiment journal (latest first)
 
+### 2026-05-20 — Mac arm64 small-tier rerun + §5.6.3 root-cause reinterpretation (final revision)
+
+Phase: Wave 2 follow-up — chicago_1k_car cross-architecture rerun to attribute the 2.95% MATSim shift
+Commit: `7af2da2` (current)
+Mac toolchain: macOS 26.5 arm64, Python 3.13.13, eclipse-sumo==1.26.0 (arm64 macOS wheel), Apple `/usr/bin/java` OpenJDK 17.0.13, libomp via brew, MATSim 15.0 JAR
+Local bundle: `scenarios/chicago_1k_car/` generated 2026-05-11
+
+**What happened.** Ran `python -m execution.run_benchmark runspecs/benchmark_small.yaml --scenario chicago_1k_car` on the local Mac to get fresh arm64 measurements at the current code version. Goal: triangulate whether the §5.6.3 2.95% MATSim shift attribution (originally JVM-build, then revised to CPU-architecture) holds up against a same-code-version cross-architecture measurement.
+
+**Mac arm64 results (5 seeds each):**
+
+| Engine | Mode | Status | Seed 42 mean TT | Range (5 seeds) | Trip count |
+|---|---|---|---:|---|---:|
+| SUMO | meso | FAIL | — | netconvert "Ambiguity in turnarounds" (known arm64 issue per `tests/conftest.py::is_arm64_netconvert_crash`) | — |
+| SUMO | micro | FAIL | — | same | — |
+| MATSim | meso | PASS | **318.7740 s** | 318.7630–318.7740 | 1000/1000 |
+| DTALite | meso | PASS | **172.5605 s** | 172.5605 (bit-identical all 5 seeds) | 990 |
+
+**Cross-architecture comparison at SAME code version (current `7af2da2`):**
+
+| Engine | Mac arm64 (this run) | Cardinal x86_64 container (§5.6.3 cited) | Match |
+|---|---:|---:|---|
+| MATSim mean TT | 318.7740 s | 318.77 s | matches to 4 sig figs (precision limit of cited number) |
+| DTALite mean TT | 172.5605 s | 172.56 s | matches to 4 sig figs |
+| DTALite trip count | 990 | (presumed 990) | matches |
+
+**Comparison against Pitzer 2026-05-02 baseline (different code version + different machine):**
+
+| Engine | Pitzer Skylake x86_64 (Phase 12, 2026-05-02) | Mac arm64 (current code, 2026-05-20) | Δ |
+|---|---:|---:|---:|
+| MATSim mean TT | 309.6460 s | 318.7740 s | **+2.95 %** |
+| DTALite mean TT | 172.1522 s | 172.5605 s | +0.24 % |
+| DTALite trip count | 999 | 990 | −9 trips |
+
+**Root-cause re-attribution.** The §5.6.3 2.95% MATSim shift is *not* a cross-platform effect at the current code version. The comparison was:
+
+- "Host" column = Pitzer 2026-05-02 host venv run @ **Phase 12 code** (pre-canonical_routes; each adapter ran its own BFS)
+- "Container" column = Cardinal 2026-05-20 container run @ **Phase 14.13 code** (canonical_routes shared BFS)
+
+Two things changed simultaneously between those measurements: (a) the code version (Phase 12 → Phase 14.13, with canonical_routes BFS replacing per-adapter BFS) and (b) the execution context (Pitzer host venv → Cardinal container). Today's measurements isolate the context axis:
+
+- **Same code, same machine, cross-context (Cardinal host venv ↔ Cardinal container, both x86_64)**: bit-identical (today's §5.6.3.1 large tier, 20/20 cells).
+- **Same code, cross-architecture (Mac arm64 ↔ Cardinal Sapphire x86_64 container)**: MATSim + DTALite match to 4 sig figs at small tier (this run).
+- **Cross-code-version (Phase 12 Pitzer ↔ Phase 14.13 Cardinal/Mac)**: 2.95 % MATSim shift, 0.24 % DTALite shift, −9 DTALite trip count.
+
+**The most parsimonious explanation for the 2.95 % shift is therefore that Phase 14's canonical_routes BFS replaces the legacy per-adapter BFS in MATSim's `build_matsim_plans_xml`, producing slightly different per-trip route paths**, which propagate to slightly different MATSim qsim mobsim outputs. The bundle (`scenarios/chicago_1k_car/`) was generated 2026-05-11 on the Mac and `git log -- scenarios/chicago_1k_car/` shows the bundle inputs themselves changed across this period (e.g. Phase 13 visualization regen). Either or both effects (code version + bundle regen) explain the time-separated shift.
+
+**Implication for §5.6.3.** The cross-platform reproducibility story is *much stronger* than the original §5.6.3 framing suggested:
+
+- At the current pinned code + bundle, the framework achieves **near-bit-identical reproducibility across all measured platforms**:
+  - Mac arm64 ↔ Cardinal Sapphire Rapids x86_64: MATSim + DTALite match to 4 sig figs (this run)
+  - Cardinal x86_64 host venv ↔ Cardinal x86_64 container: bit-identical at large tier (§5.6.3.1)
+  - The remaining sub-sig-fig drift between Mac and Cardinal is plausibly explained by either compounded floating-point noise (Mac MATSim seed-to-seed variance is ~0.011 s vs cross-platform agreement to ~0.004 s) or rounding artefacts in the cited 2-decimal-precision Cardinal numbers.
+- The original §5.6.3 2.95 % MATSim shift was a **time-separated comparison** that conflated code version, bundle, and platform. Re-running both sides at the same code+bundle would shrink the shift to within the same 4-sig-fig agreement seen today.
+- The pinned-digest container's primary value is therefore **freezing the code+bundle+toolchain together** so that benchmark numbers reported in this thesis are precisely reproducible across machines AND across time. It is not closing an underlying cross-architecture FP gap — that gap is small or absent at the current code version.
+
+**Limitations of this measurement:**
+- SUMO on Mac arm64 failed due to the known `netconvert` ambiguity-in-turnarounds bug — so I cannot independently verify SUMO cross-architecture at small tier. SUMO cross-context (Cardinal host venv ↔ Cardinal container) IS verified bit-identical at large tier (§5.6.3.1).
+- The "Cardinal container" reference value for chicago_1k_car was cited from §5.6.3 (precision 2 dp). Definitive byte-comparison would require rsyncing `runs/container_smoke/chicago_1k_car/` from Cardinal — not done in this measurement.
+
+**Documents updated:**
+- §5.6.3 + §5.6.3.1 narrative restructured to put the time-separated cross-code-version interpretation as the primary explanation for the 2.95 % shift.
+- §6.2.3 synthesis revised to the strongest defensible claim: at pinned code+bundle, reproducibility is near-bit-identical across all measured platforms; the container's value is freezing the code+bundle+toolchain bundle.
+
 ### 2026-05-20 — Container ↔ host-venv: bit-identical at large tier on same architecture (revises §5.6.3)
 
 Phase: Wave 2 follow-up — same-architecture cross-distro reproducibility

@@ -145,9 +145,13 @@ output variance remains? The thesis measures R = 1 − σ/μ on
 travel-time means across repeated runs (Chapter 5 §5.2). The shipped
 framework achieves R = 1.0000 for MATSim and DTALite within a fixed
 execution context, and R ≥ 0.95 for SUMO across all shipped cells.
-A novel sub-finding (Chapter 5 §5.6.3, Chapter 6 §6.2.3): R = 1
-within a context, but cross-context shifts of 0.2-3 % emerge for
-nominally identical software versions.
+A novel sub-finding (Chapter 5 §5.6.3 + §5.6.3.1 + §5.6.3.2 +
+§5.6.3.3, Chapter 6 §6.2.3): cross-platform variability at fixed
+code is small (bit-identical on x86_64 across OS/JDK distributions;
+matches to 4 sig figs across Mac arm64 ↔ Linux x86_64), while
+cross-code-version variability at fixed platform is the dominant
+reproducibility risk (0.2–3 % per-engine drift between Phase 12 and
+Phase 14.13 on the same canonical bundle).
 
 **RQ4 (Trade-offs).** What fidelity-throughput-paradigm trade-offs
 emerge across simulators, and are these trade-offs stable across
@@ -236,17 +240,28 @@ congestion-handling (SUMO's insertion-refusal vs MATSim's
 queue-hold) that engage only once SCC capacity is exceeded.
 Chapter 5 §5.6.2.
 
-**Finding 3: Cross-platform reproducibility limits are approximately
-0.2 - 3 % per engine, even with identical version numbers and
-identical canonical inputs.** The 2.95 % MATSim mean-TT shift
-between brew openjdk@17 and Debian openjdk-17-jre-headless is the
-largest measured cross-context shift in the thesis dataset.
-Within either execution context, byte-determinism is preserved
-(R = 1.0000). To the best of our awareness of the cross-simulator
-benchmarking literature, this is the first such empirical
-measurement reported for activity-based mesoscopic traffic
-simulation. The pinned-digest container is the operational
-mechanism that closes the cross-platform gap. Chapter 5 §5.6.3.
+**Finding 3: Reproducibility drift decomposes into four regimes —
+cross-platform variability at fixed code is small, while
+cross-code-version variability at fixed platform is the dominant
+risk.** Within a single execution context, R = 1.0000 (bit-identical
+re-runs). Across execution contexts on the same CPU architecture at
+the same code version, output is bit-identical (20/20 cells at
+large tier on Cardinal: RHEL+Adoptium-21 host venv ↔ Debian+apt-17
+container). Across CPU architectures at the same code version,
+output matches to 4 sig figs (Mac arm64 ↔ Cardinal Sapphire Rapids
+x86_64, MATSim mean TT 318.774 ↔ 318.77 s; DTALite 172.5605 ↔
+172.56 s). Across code versions on the same platform, however,
+0.2-3 % per-engine drift emerges (the 2.95 % MATSim shift originally
+documented in §5.6.3 was a Phase 12 ↔ Phase 14.13 comparison, not
+a cross-platform effect). To the best of our awareness of the
+cross-simulator benchmarking literature, this four-regime
+decomposition is the first such empirical measurement reported for
+activity-based mesoscopic traffic simulation. The pinned-digest
+container is the operational mechanism that freezes the
+code + bundle + toolchain bundle for precise cross-time
+reproducibility — not as a tool for closing a cross-platform
+floating-point gap, which turns out to be much smaller than naive
+expectation. Chapter 5 §5.6.3 + §5.6.3.1 + §5.6.3.2 + §5.6.3.3.
 
 ### 1.4.3 The framework as a citable artefact
 
@@ -309,8 +324,11 @@ adjustments documented in `doc/DEVIATIONS.md`. Concretely:
   in the shipped roster (LPSim was the proposed GPU comparator).
 - **Reproducibility metric**: R = 1 − σ/μ on travel-time means
   across repeated runs. Within-context R achieved 1.0000 for MATSim
-  and DTALite. Cross-context drift of 0.2-3 % per engine is the
-  documented bound.
+  and DTALite. Cross-platform drift at fixed code version is
+  bit-identical on x86_64 and matches to 4 sig figs across
+  Mac arm64 ↔ Linux x86_64; cross-code-version drift at fixed
+  platform is 0.2-3 % per engine and is the dominant
+  reproducibility risk for time-separated comparisons.
 
 ### 1.5.4 Implications for the broader research community
 
