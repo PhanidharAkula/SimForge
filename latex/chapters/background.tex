@@ -1,0 +1,699 @@
+\chapter{Background and Related
+Work}\label{chapter-2-background-and-related-work}
+
+\section{Overview}\label{20-overview}
+
+This chapter situates SimForge within the broader context of
+traffic-simulation research, computational-reproducibility practice, and
+cross-tool benchmarking efforts in adjacent computational fields. It
+begins with the historical evolution of traffic simulation paradigms
+(macroscopic, mesoscopic, microscopic, agent-based, dynamic traffic
+assignment), defines the operational vocabulary used throughout the
+thesis, surveys the specific simulators that were considered for
+integration (with both shipped and ruled-out engines documented),
+catalogs the structural incompatibilities that have historically
+prevented fair cross-simulator comparison, reviews the prior benchmark
+efforts in transportation simulation and in adjacent computational
+fields, and closes with a summary of the research gap that SimForge
+addresses.
+
+The chapter aligns with the December 2025 thesis
+plan\textquotesingle s Chapter 2 in scope and citation set, while
+incorporating retrospective updates: the engine roster reflects what was
+actually integrated (SUMO, MATSim, DTALite) versus ruled out (POLARIS,
+LPSim, QarSUMO, CityFlow), and §2.7 includes the cross-platform
+reproducibility finding that the framework empirically measured during
+Wave 2 (Chapter 5 §5.6.3).
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Evolution of traffic
+simulation}\label{21-evolution-of-traffic-simulation}
+
+Traffic simulation has undergone more than six decades of methodological
+evolution, progressing through four major paradigm families that today
+coexist in the simulator ecosystem the thesis benchmarks.
+
+\textbf{Macroscopic models} (1950s--1970s) treated traffic as a
+continuous fluid, with each road link characterized by aggregate
+quantities --- density (vehicles per kilometer), flow (vehicles per
+hour), and average velocity --- related by the fundamental traffic-flow
+equation flow = density × velocity. The Lighthill- Whitham-Richards
+(LWR) kinematic-wave model is the canonical formulation. Macroscopic
+models are computationally cheap and suitable for network-wide capacity
+studies but cannot represent individual vehicle interactions.
+
+\textbf{Microscopic models} (1980s--present) reversed the abstraction by
+simulating each vehicle as an independent agent with car-following,
+lane-changing, and gap-acceptance dynamics. The Krauss \cite{krauss1998microscopic}
+and Intelligent Driver Model (IDM) \cite{treiber2000idm}
+car-following formulations are widely used; SUMO\textquotesingle s
+default behavior model is a stochastic variant of Krauss with a
+configurable σ parameter. Microscopic models capture the rich
+vehicle-level dynamics relevant for intersection-design and
+ITS-evaluation studies, at the cost of substantial per-vehicle
+computational expense.
+
+\textbf{Mesoscopic models} (1990s--present) struck a deliberate balance
+by representing groups of vehicles as packets flowing through per-link
+queue structures, abstracting away lane-level dynamics while preserving
+network-level congestion patterns. The mesoscopic abstraction is
+appropriate for regional planning studies where network-level
+travel-time and throughput are the metrics of interest. SUMO meso,
+MATSim qsim, and DTALite\textquotesingle s underlying formulation all
+sit in the mesoscopic family.
+
+\textbf{Agent-based and activity-based models} (2000s--present) extend
+microscopic and mesoscopic foundations by assigning each traveler a
+daily activity schedule (home → work → shop → home), behavioral
+attributes (mode preferences, value-of-time), and an iterative
+re-planning capability under feedback from network conditions. MATSim is
+the canonical activity-based agent simulator; POLARIS extends the
+paradigm with integrated supply-side land-use and behavioral econometric
+models.
+
+\textbf{Dynamic Traffic Assignment (DTA)} is a distinct paradigm that
+sits algorithmically alongside but operates differently from
+event-driven mobsim. Rather than simulating each
+vehicle\textquotesingle s moment-by-moment behavior, a DTA solver
+iteratively computes the network-wide user-equilibrium (UE) flow
+pattern: each OD pair\textquotesingle s demand is assigned to one or
+more paths such that no traveler can unilaterally reduce their travel
+cost by switching paths. DTALite \cite{zhou2014dtalite} is a
+path-based UE/SUE solver; its outputs are link-level equilibrium flows +
+per-OD path travel times rather than per-vehicle trajectories. The DTA
+paradigm is appropriate for regional studies where long-run equilibrium
+is the question and transient dynamics are not.
+
+The mesoscopic and hybrid frameworks have benefited from advances in
+high-performance computing, particularly distributed-memory
+architectures and GPU acceleration, enabling city-scale scenarios to run
+in near real-time on modern hardware \cite{cao2022lpsim,chen2020qarsumo}. This technological progression has produced unprecedented
+spatial and temporal detail in urban-mobility modeling, while
+simultaneously revealing challenges in cross-simulator compatibility,
+standardization, and reproducibility that this thesis directly
+addresses.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Simulation scope and
+terminology}\label{22-simulation-scope-and-terminology}
+
+This work focuses on \textbf{commute-scale urban traffic simulation},
+where outputs include link-level flow and trip-time statistics at
+minute-level temporal resolution. SimForge targets large metropolitan
+networks (Chicago, New York City, Los Angeles) modeled under realistic
+demand and congestion patterns. For clarity, the following operational
+terms are used throughout the thesis:
+
+\begin{itemize}
+\item
+  \textbf{Microscopic, mesoscopic, and agent-based simulation}:
+  Microscopic models capture individual vehicle dynamics (acceleration,
+  car-following, lane changing); mesoscopic models represent grouped
+  vehicle packets or flow quanta; agent-based models extend these by
+  assigning travel plans and behavioral attributes to individual
+  travelers.
+\item
+  \textbf{Dynamic Traffic Assignment (DTA)}: A path-based equilibrium
+  formulation in which the assignment problem is solved iteratively
+  until the user-equilibrium (or stochastic user-equilibrium) condition
+  is met across all OD pairs. DTALite\textquotesingle s UE solver is a
+  representative instance.
+\item
+  \textbf{Key performance dimensions}: \emph{Fidelity} denotes agreement
+  with observed link counts and trip-time distributions;
+  \emph{scalability} measures runtime or throughput growth relative to
+  the number of simulated agents; and \emph{reproducibility} refers to
+  run-to-run invariance under fixed random seeds and identical
+  configurations. Chapter 5 reports measurements along all three
+  dimensions.
+\item
+  \textbf{Canonical inputs}: A simulator-independent, normalized input
+  bundle (Chapter 3 §3.2) consisting of standardized network, demand,
+  signal, configuration, and manifest files, designed to support direct
+  conversion into the native input formats of multiple engines via
+  deterministic adapters.
+\item
+  \textbf{Fairness contract}: The set of programmatic checks (Chapter 3
+  §3.6.4, audit Q1-Q5) that verify every engine in a cross-simulator
+  comparison received byte-identical inputs derived from the same
+  canonical bundle, simulated the same trip-count target, and is
+  measured under identical execution policies. The contract is the
+  methodological substrate that makes cross-engine output differences
+  attributable to paradigm choice rather than input asymmetry.
+\end{itemize}
+
+These terms are used consistently throughout the thesis and are also
+defined in the glossary at \texttt{doc/GLOSSARY.md}.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Major urban mobility simulation
+systems}\label{23-major-urban-mobility-simulation-systems}
+
+Cross-engine benchmarking demands working knowledge of the simulators
+that constitute the field. This section reviews the eight major
+candidates that were considered during the SimForge build,
+distinguishing the three engines that were integrated and shipped (SUMO,
+MATSim, DTALite) from the five that were considered and ruled out for
+documented reasons (POLARIS, LPSim, QarSUMO, CityFlow, SimMobility). The
+ruleout rationale is detailed in
+\texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md} and discussed further in
+Chapter 6 §6.5.4.
+
+\subsection{Engines integrated in the SimForge
+framework}\label{231-engines-integrated-in-the-simforge-framework}
+
+\textbf{SUMO} (Simulation of Urban MObility) \cite{krajzewicz2012sumo} is an open-source microscopic traffic simulator originally
+developed at the German Aerospace Center (DLR) and now maintained by the
+Eclipse Foundation. SUMO models detailed vehicle interactions, lane
+changing, and traffic-signal control, and supports both microscopic and
+mesoscopic execution modes through a single binary. It is widely used
+for transportation research and supports a broad range of import formats
+(OSM, OpenDRIVE, VISUM, etc.), routing algorithms, and calibration
+tools. SUMO\textquotesingle s lead-developer is open about its
+limitations: limited GPU utilization, single-threaded mobsim per
+default, and a configuration ecosystem with substantial historical
+accumulation. SimForge integrates SUMO via its Python adapter
+(\texttt{adapters/sumo/}) and runs SUMO 1.26.0 from the eclipse-sumo
+PyPI wheel.
+
+\textbf{MATSim} (Multi-Agent Transport Simulation) \cite{horni2016matsim} is a mesoscopic, agent-based framework built around iterative
+replanning and activity-based demand generation. It emphasizes
+individual traveler behavior and long-term equilibrium modeling under
+feedback. SimForge configures MATSim with \texttt{lastIteration=0} to
+suppress the iterative replanning loop and produce a single-pass
+deterministic mobsim output for cross-engine comparison; this
+configuration choice is documented in Chapter 3 §3.4.3. SimForge
+integrates MATSim 15.0 via the matsim-15.0-release.zip from the
+matsim-org/matsim-libs GitHub repository.
+
+\textbf{DTALite} \cite{zhou2014dtalite} is a path-based dynamic
+traffic assignment solver distributed in C++ via the path4gmns Python
+wheel {[}Path4GMNS{]}. DTALite\textquotesingle s input format is the
+General Modeling Network Specification (GMNS) {[}Zephyr Foundation{]}, a
+CSV-based open standard for traffic-network exchange. SimForge
+integrates DTALite as the third engine in Version 5 of the framework,
+after the original LPSim integration was abandoned (see §2.3.2). DTALite
+contributes the user-equilibrium DTA paradigm to the cross-engine
+comparison, providing the methodological breadth that the
+plan\textquotesingle s original "three paradigm" framing required.
+
+\subsection{Engines considered and ruled
+out}\label{232-engines-considered-and-ruled-out}
+
+\textbf{POLARIS} \cite{auld2016polaris}, developed by Argonne National
+Laboratory, is a multithreaded agent-based simulator that integrates
+land-use, travel-demand, and behavioral models within a unified
+architecture. POLARIS is designed for detailed policy analysis and
+scenario testing at the metropolitan scale and has been used in several
+Argonne-affiliated studies. SimForge research determined that POLARIS
+source distribution is currently license-gated: official build
+instructions point to a request-only access portal at Argonne, and no
+major published 2023-2025 paper documents a non-Argonne user building
+POLARIS from source on their own hardware. The integration was therefore
+deferred (see \texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md} §2.3 for
+the deep-research diagnostic).
+
+\textbf{LPSim} \cite{cao2022lpsim} introduces a GPU-accelerated
+mesoscopic design that models lane-level traffic flow with extreme
+scalability, claimed capable of simulating millions of vehicle movements
+per second on modern GPUs. SimForge integrated LPSim in Version 4 (Phase
+B); after multiple integration attempts and a documented spike-test
+failure on Pitzer\textquotesingle s V100 GPU nodes, the integration was
+abandoned in Version 5. The full retrospective is at
+\texttt{doc/engines/LPSIM\_RETROSPECTIVE.md}. The original
+GPU-comparator role LPSim was meant to play in the cross-engine matrix
+is unfilled in the shipped framework.
+
+\textbf{QarSUMO} \cite{chen2020qarsumo} extends SUMO with CUDA-based
+multi-GPU kernels and ghost-zone synchronization, with the goal of
+deterministic parallelism and faster execution on heterogeneous
+computing systems. SimForge research determined that QarSUMO is not
+publicly distributable: the upstream repository returns HTTP 404 to
+anonymous users, no PyPI package or container image exists, and the
+published cross-engine validations in the QarSUMO literature appear to
+use unpublished binary distributions. The retrospective is at
+\texttt{doc/engines/QARSUMO\_RETROSPECTIVE.md}.
+
+\textbf{CityFlow} \cite{zhang2019cityflow} is a microscopic simulator
+designed for reinforcement-learning research, optimized for fast batch
+simulation of small networks. SimForge research determined that CityFlow
+is effectively abandoned (1 commit in the last 12 months, 0 PyPI
+releases, broken on Python 3.12+, and a documented segfault pattern on
+real-world networks larger than \textasciitilde16 intersections) and is
+structurally unfit for metropolitan-scale benchmarks at the scale
+SimForge targets.
+
+\textbf{SimMobility} (MIT) is a heavy in-house Linux-toolchain simulator
+that was considered but estimated to require \textasciitilde5× the
+integration effort of DTALite. The deferral is documented in
+\texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md} §2.4.
+
+\subsection{The shipped paradigm
+coverage}\label{233-the-shipped-paradigm-coverage}
+
+After the substitution and ruleouts, the shipped SimForge framework
+provides three engines covering three distinct simulation paradigms:
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Engine & Paradigm & Language & Cross-engine role \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+SUMO meso & Microscopic queue (FIFO with insertion-refusal) & C++ &
+Time-stepped queue with vehicle-by-vehicle insertion \\
+SUMO micro & Microscopic vehicle dynamics (Krauss car-following) & C++ &
+Full per-vehicle physics (lane-change, gap-acceptance) \\
+MATSim & Activity-based queue (qsim with hold-and-wait) & Java/JVM &
+Agent-based mobsim with iterative re-planning support \\
+DTALite & Dynamic Traffic Assignment (path-based UE) & C++ & Equilibrium
+assignment, no transient dynamics \\
+\end{longtable}
+
+The three-paradigm coverage is sufficient for the cross-engine
+comparison the plan originally needed; the loss of the
+GPU-mesoscopic paradigm (LPSim) is documented as an open future-work
+item (Chapter 6 §6.5.4).
+
+\subsection{Activity-based demand generation: cityscape and
+contemporaries}\label{234-activity-based-demand-generation-cityscape-and-contemporaries}
+
+A simulator is only as defensible as its demand. The reviewed simulator
+engines (§2.3.1-§2.3.3) all consume per-vehicle or per-agent trip
+records but none of them \emph{produce} those records from first
+principles --- demand-side calibration is a distinct upstream tooling
+layer that the cross-simulator benchmarking literature typically treats
+as a black box. SimForge\textquotesingle s PUMS-grounded schedule-first
+demand pipeline (Chapter 3 §3.3) makes this layer explicit and
+reproducible. Three contemporary activity-based demand-generation tools
+situate the choice:
+
+\textbf{ActivitySim} \cite{activitysim}, the FHWA-funded open-source
+activity-based travel demand model, is the most widely deployed
+synthetic-population + activity-scheduling framework in U.S.
+metropolitan planning organizations. ActivitySim consumes an
+MPO\textquotesingle s existing demographic + zone-system inputs and
+emits per-person tours
+
+\begin{itemize}
+\tightlist
+\item
+  trips at the TAZ level. It is \emph{not} directly cross-simulator-
+  compatible --- its output is calibrated to a specific four-step or
+  activity-based model\textquotesingle s network representation, not a
+  simulator- agnostic schema. Integrating ActivitySim with SimForge
+  would require a TAZ-to-OSM-node disaggregation layer, deferred as
+  future work (Chapter 6 §6.5).
+\end{itemize}
+
+\textbf{MATSim\textquotesingle s CEMDAP-style demand generators} (Hörl +
+Balac population synthesizers, distributed as MATSim contrib modules)
+are tightly coupled to MATSim\textquotesingle s \texttt{plans.xml}
+format and use a different input-data taxonomy than the U.S. ACS PUMS
+scheme SimForge targets. They are mature for European Census data
+formats (Eurostat, INSEE-FR) and have a smaller U.S. footprint.
+
+\textbf{Cityscape} \cite{rao2023cityscape} is the activity-based population
+synthesizer + city-level digital-twin model generator SimForge adopts.
+Developed in C++ by Prof. Dhananjai Rao\textquotesingle s group at Miami
+University (CSE Department; \texttt{raodj/cityscape}, Schedule-generator
+branch), cityscape merges OpenStreetMap road + building geometry \cite{openstreetmap}, LandScan ambient-population density rasters \cite{landscan}, U.S. Census ACS PUMS records \cite{uscensus_pums} (5-year file), and IPUMS PUMA shapefiles \cite{ipums_puma} into a flat-text streaming model with \texttt{bld} (building),
+\texttt{hld} (household), and \texttt{per} (person) records. The
+Schedule-generator branch adds a
+\texttt{RadiusFilterWorkBuildingAssigner} that assigns each PUMS-derived
+person a workplace from the real non-residential OSM building set within
+their PUMS-reported commute time (\texttt{JWMNP} ± 1 min), subject to
+per-building office-capacity bounds (\texttt{offSqFtPer}). The Rao 2023a
+WSC paper reports \textasciitilde85 \% confidence on the Chicago, IL
+verification case study; a sibling 2023 paper \cite{rao2023taxi} applies
+the same cityscape data-fusion pipeline to identify under-served Chicago
+communities by simulating \textasciitilde6.3M 2022 taxi rides,
+demonstrating the pipeline\textquotesingle s reach beyond commute-trip
+generation. The output of cityscape\textquotesingle s
+\texttt{ScheduleGenerator} is the
+\texttt{modelgen/\textless{}city\textgreater{}\_model.txt} file
+SimForge\textquotesingle s
+\texttt{pipeline/demand/parse\_model\_file.py} consumes.
+
+The cityscape choice reflects three properties that distinguish it from
+ActivitySim and MATSim contributors for SimForge\textquotesingle s
+purposes:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{OSM-anchored, not TAZ-anchored.} Cityscape assigns workplaces
+  to specific OSM building polygons, not aggregated traffic-analysis
+  zones. Disaggregation to the simulator-network node level
+  (\texttt{pipeline/demand/parse\_model\_file.py} step 7) is therefore a
+  direct nearest-OSM-node lookup, not a probabilistic re-disaggregation.
+  This preserves \emph{individual} origin-destination identity rather
+  than just the aggregate distribution.
+\item
+  \textbf{PUMS-direct, not pre-processed.} Cityscape consumes raw ACS
+  PUMS records and exposes the per-person \texttt{JWTRNS} (mode) and
+  \texttt{JWMNP} (commute time) fields directly to downstream consumers.
+  SimForge\textquotesingle s V5+ pipeline uses these for mode assignment
+  (Phase 5 JWTRNS mapping fix) and per-person departure times (Phase 8
+  empirical departure formula) without intermediate calibration layers
+  that would mask the underlying data.
+\item
+  \textbf{Open and modifiable.} Cityscape is open-source C++ with a
+  modifiable schedule generator. SimForge\textquotesingle s V5+ HBSchool
+  chained trip purposes (Phase 9c) extend cityscape\textquotesingle s
+  schedule taxonomy via SimForge-side code rather than requiring
+  upstream changes.
+\end{enumerate}
+
+The trade-off is that cityscape has no formal published paper at the
+time of SimForge\textquotesingle s submission --- its provenance is the
+\texttt{raodj/cityscape} GitHub repository --- and its U.S.-specific
+PUMS/PUMA grounding does not directly transfer to non-U.S. cities
+(deferred as future work in Chapter 6 §6.5). For an international- city
+extension, a Hörl + Balac MATSim-contrib synthesizer would be the
+natural alternative integration target.
+
+The integration is documented end-to-end in
+\texttt{doc/MODELGEN\_AND\_MODES.md} (734 lines, the canonical reference
+for the demand pipeline) and summarized in Chapter 3 §3.3.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Incompatibilities across
+simulators}\label{24-incompatibilities-across-simulators}
+
+Although major traffic simulators share similar conceptual foundations,
+they diverge sharply in data models, configuration semantics, and
+runtime assumptions. These differences complicate experiment replication
+and make direct cross-simulator benchmarking infeasible without
+standardized data structures or conversion logic.
+
+Key incompatibilities include the following:
+
+\begin{itemize}
+\item
+  \textbf{Network representation.} Each simulator encodes road networks
+  differently. SUMO uses its own XML format (\texttt{.net.xml}) with
+  internal lane-junction representation. MATSim uses
+  \texttt{network.xml} with simpler node/link semantics. DTALite uses
+  GMNS CSVs (\texttt{node.csv} + \texttt{link.csv} +
+  \texttt{movement.csv}). Lane-level attributes, turn permissions, and
+  signal phases are encoded with different granularities and semantic
+  conventions across the three.
+\item
+  \textbf{Demand modeling.} SUMO specifies explicit trip records
+  (origin, destination, departure time) in XML; MATSim uses daily
+  activity plans expressed in \texttt{plans.xml} with home/work/...
+  sequences; DTALite consumes OD matrices in GMNS-format CSV.
+\item
+  \textbf{Signal control.} SUMO and MATSim use different representations
+  for traffic-light systems: SUMO uses flat phase tables
+  (\texttt{*.add.xml} with \texttt{\textless{}tlLogic\textgreater{}}
+  elements), MATSim uses nested hierarchical programs
+  (\texttt{signalSystems.xml} + \texttt{signalGroups.xml} +
+  \texttt{signalControl.xml}), and DTALite encodes turn restrictions via
+  GMNS \texttt{movement.csv} (which path4gmns 0.10.0 does not currently
+  ingest, see \texttt{doc/MODELGEN\_AND\_MODES.md} §9). Each
+  representation has different defaults for offset, cycle length, and
+  green-split assumptions.
+\item
+  \textbf{Temporal and physical units.} SUMO uses seconds and m/s,
+  MATSim uses seconds and m/s with iteration-driven scheduling, DTALite
+  uses minutes and km/h with event-driven solver iterations.
+\item
+  \textbf{Configuration parameters.} Per-engine parameters controlling
+  car-following behavior, route replanning, iteration limits, and
+  random-number seeds differ in naming conventions, ranges, and internal
+  meaning across engines.
+\end{itemize}
+
+These inconsistencies make genuine apples-to-apples evaluation of
+fidelity or performance impossible without a canonical data schema and a
+set of audited converter modules --- precisely the role of
+SimForge\textquotesingle s Chapter 3 §3.2 (canonical schema), §3.4
+(deterministic adapters), and §3.6.4 (programmatic fairness audit).
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Existing mobility
+benchmarks}\label{25-existing-mobility-benchmarks}
+
+Previous benchmarking efforts in transportation modeling have primarily
+focused on evaluating individual simulators or conducting small-scale
+bake-offs under limited experimental control \cite{bazzan2014review}. While informative, these studies share several methodological
+limitations that restrict reproducibility and generalizability:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  They are often tied to a \emph{single simulator\textquotesingle s
+  native input format}, lacking a canonical, simulator-agnostic schema
+  for cross-engine evaluation. A cross-engine claim built on per-engine
+  input conversions cannot rule out the possibility that the conversion
+  itself produced the observed differences.
+\item
+  They typically omit \emph{seed control}, version pinning, or
+  hardware-normalized performance metrics, making results sensitive to
+  environment-specific variability \cite{goodman2016reproducibility,pineau2021reproducibility}.
+\item
+  They rarely include \emph{release-grade artifacts} such as manifests,
+  checksums, or container images that would allow other researchers to
+  replicate reported findings exactly \cite{stodden2018empirical,goodman2016reproducibility}.
+\item
+  They frequently apply \emph{inconsistent or engine-specific tuning
+  parameters}, introducing bias in fidelity and runtime comparisons
+  across platforms \cite{krajzewicz2012sumo,horni2016matsim,auld2016polaris,cao2022lpsim,chen2020qarsumo}.
+\end{enumerate}
+
+In contrast, the SimForge framework presented in this thesis enforces a
+unified canonical data bundle (Chapter 3 §3.2), deterministic adapters
+for each engine (§3.4), a fixed-seed execution policy (§3.5),
+hardware-normalized performance reporting including per-core (§3.6.3),
+and a pinned-digest container distribution mechanism (§3.11). These
+design principles align with best practices in computational
+reproducibility and open benchmarking established in other scientific
+domains (§2.6 below).
+
+A critical methodological contribution of SimForge --- the programmatic
+cross-engine fairness audit (\texttt{evaluation/audit\_fairness.py},
+Chapter 3 §3.6.4) --- has no direct analog in the prior
+transportation-simulation cross-comparison literature. The audit
+verifies Q1 byte-identical feasibility verdicts, Q2 byte-identical SCC
+networks, and Q3 identical simulated trip-count targets across all
+engines in a comparison. Without programmatic Q1-Q3 verification,
+cross-engine TT comparisons (Q4) cannot be attributed cleanly to
+paradigm differences vs input asymmetry --- exactly the gap that has
+limited the interpretive value of prior cross-simulator literature.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Benchmark frameworks in adjacent
+domains}\label{26-benchmark-frameworks-in-adjacent-domains}
+
+Standardized benchmarking has played a transformative role across
+multiple fields of computational research. Frameworks such as
+\textbf{MLPerf} for machine learning \cite{mattson2020mlperf,pineau2021reproducibility}, \textbf{SPEC} for system and processor performance, and
+\textbf{ReproZip} for computational experiment packaging \cite{stodden2018empirical,goodman2016reproducibility} have demonstrated how controlled
+inputs, fixed environments, and open reporting protocols accelerate
+scientific progress and ensure comparability. These initiatives
+typically mandate dataset versioning, environment specification, and
+public result repositories --- practices that have become foundational
+to reproducible computational science.
+
+In contrast, the traffic simulation community has lacked a standardized,
+cross-simulator benchmark with equivalent methodological rigor. Studies
+are typically conducted in isolation, relying on bespoke datasets and
+heterogeneous computing setups, which hinders direct comparison and
+long-term reproducibility \cite{bazzan2014review}. The
+disparity is particularly visible in the absence of community-standard
+input bundles: where MLPerf specifies the exact ImageNet snapshot to use
+for image-recognition benchmarks, transportation studies typically
+describe their inputs in prose and provide no hash-verified artifact.
+
+SimForge draws explicit inspiration from these established benchmarking
+ecosystems, particularly \textbf{MLPerf}\textquotesingle s structured
+reproducibility checklist (closed-division vs open-division submission
+rules, accuracy gates, reference implementations) and the \textbf{FAIR}
+(Findable, Accessible, Interoperable, Reusable) data principles
+\cite{wilkinson2016fair}, which collectively inform the design of the
+SimForge canonical schema, execution policies, and validation workflows.
+
+Three operational analogs are worth naming explicitly:
+
+\begin{itemize}
+\item
+  \textbf{MLPerf\textquotesingle s reference implementations} correspond
+  to SimForge\textquotesingle s per-engine adapter implementations
+  (\texttt{adapters/sumo/}, \texttt{adapters/matsim/},
+  \texttt{adapters/dtalite/}). Each is the canonical way to run that
+  engine in the SimForge framework, and each is byte-deterministic by
+  construction.
+\item
+  \textbf{MLPerf\textquotesingle s accuracy gate} (every submission must
+  hit a minimum accuracy) corresponds to SimForge\textquotesingle s
+  Q1-Q3 fairness audit (every engine must produce byte-identical
+  feasibility verdicts on the same canonical bundle).
+\item
+  \textbf{MLPerf\textquotesingle s submission packaging} (model +
+  dataset + result archive) corresponds to SimForge\textquotesingle s
+  run-output structure (\texttt{benchmark\_results\_*.json} + per-cell
+  \texttt{feasibility\_report.json}
+
+  \begin{itemize}
+  \tightlist
+  \item
+    auto-emitted \texttt{reproducibility\_scorecard.md}).
+  \end{itemize}
+\end{itemize}
+
+The cross-pollination is intentional: the cross-simulator benchmarking
+community can benefit from porting well-validated patterns from adjacent
+fields, and SimForge is a concrete demonstration of that import.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Reproducibility in HPC and scientific
+computing}\label{27-reproducibility-in-hpc-and-scientific-computing}
+
+Reproducibility in high-performance computing (HPC) environments remains
+a persistent challenge due to factors such as non-associative
+floating-point arithmetic, nondeterministic thread scheduling, divergent
+random-number streams, and compiler-dependent optimizations
+\cite{krajzewicz2012sumo,cao2022lpsim,pineau2021reproducibility}. Even
+small numerical variations can cascade into macroscopic differences in
+traffic dynamics when running agent-based or mesoscopic simulations at
+scale.
+
+To mitigate these threats, SimForge adopts a multi-layered
+reproducibility strategy:
+
+\begin{itemize}
+\item
+  \textbf{Containerization.} All simulations can execute within
+  pinned-digest containers (OCI / Singularity), ensuring that
+  dependencies, libraries, and compilers remain consistent across
+  platforms and reruns. The shipped framework provides a
+  \texttt{Dockerfile} at repo root, an automated GitHub Actions workflow
+  publishing to GHCR, and an opt-in Singularity/Apptainer pull workflow
+  for HPC. Chapter 3 §3.11 documents the design; Chapter 5 §5.6.3
+  reports the empirical reproducibility benefit.
+\item
+  \textbf{Seed discipline.} A structured seeding scheme assigns one
+  deterministic seed per unique (city, load, engine, hardware) tuple,
+  with all random-number-generator paths explicitly logged for
+  auditability and replay. The shipped framework uses seeds 42-46 (N=5
+  per cell) as the canonical thesis matrix.
+\item
+  \textbf{Time-step policy.} A uniform canonical \texttt{time\_step} is
+  enforced across all engines; simulator-specific adapters perform up-
+  or down-sampling as needed while preserving a documented temporal
+  mapping.
+\item
+  \textbf{Hash verification.} All inputs and outputs are
+  cryptographically hashed (SHA-256). The OSM PBFs are pinned in
+  \texttt{osm\_data/manifest.json} with SHA-256 digests; canonical
+  bundles are pinned in per-scenario \texttt{manifest.xml} files;
+  container images are pinned by git SHA and by OCI digest in
+  \texttt{lib/container/manifest.json}. Any detected hash mismatch
+  triggers an operator review (the framework does not auto-rerun, but
+  the audit surfaces drift immediately).
+\end{itemize}
+
+These mechanisms align SimForge with emerging best practices for
+deterministic replay, containerized workflows, and verifiable
+computational pipelines in large-scale scientific simulation \cite{goodman2016reproducibility,stodden2018empirical}.
+
+\subsection{Empirical contribution: cross-platform reproducibility
+limits}\label{271-empirical-contribution-cross-platform-reproducibility-limits}
+
+Beyond the design-time reproducibility provisions above, SimForge
+contributes an empirical measurement to the reproducibility literature:
+even with identical version pins and identical canonical inputs,
+nominally identical software produces approximately 0.2 - 3 \%
+per-engine output divergence across execution contexts. The largest
+measured shift in the thesis is a 2.95 \% MATSim mean-TT divergence
+between Homebrew and Debian builds of OpenJDK 17, with the same MATSim
+15.0 JAR and identical \texttt{numberOfThreads=1} /
+\texttt{lastIteration=0} configuration. Chapter 5 §5.6.3 reports the
+measurement; Chapter 6 §6.2.3 discusses the implication: the
+pinned-digest container is the operational mechanism that closes the
+cross-platform gap, providing bit-identical results across machines as
+the canonical citation target. Host-venv installs (the brew + apt path)
+are trace- equivalent but not bit-identical.
+
+To the best of our awareness of the cross-simulator benchmarking
+literature, this 2.95 \% cross-JVM shift is the first such empirical
+measurement reported for activity-based mesoscopic traffic simulation,
+though similar JVM-build-induced numerical drift has been documented in
+other scientific-computing domains {[}for example, high-energy physics
+analysis pipelines and computational biology workflows{]}.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Summary of research gap}\label{28-summary-of-research-gap}
+
+Despite substantial progress in simulation modeling and high-performance
+computing, several gaps continue to limit the reliability and
+comparability of urban mobility research \cite{goodman2016reproducibility,pineau2021reproducibility,bazzan2014review}. The most critical
+limitations include:
+
+\begin{itemize}
+\item
+  \textbf{Lack of standardized datasets and evaluation protocols}:
+  existing studies employ heterogeneous input formats, city networks,
+  and calibration procedures, preventing reproducible cross-study
+  validation \cite{krajzewicz2012sumo,horni2016matsim}.
+\item
+  \textbf{Inconsistent reproducibility documentation}: few simulation
+  experiments provide fixed seeds, containerized environments, or
+  artifact manifests, making replication and auditability difficult
+  \cite{stodden2018empirical,goodman2016reproducibility}.
+\item
+  \textbf{Absence of a neutral, open benchmark}: there is no established
+  framework that allows fair, transparent comparison of major simulators
+  under equivalent workloads and hardware conditions \cite{mattson2020mlperf,wilkinson2016fair}.
+\item
+  \textbf{Absence of programmatic cross-engine fairness verification}:
+  prior cross-simulator studies do not include audit tooling that
+  programmatically verifies input-byte-identity across engines. Without
+  this verification, cross-engine output differences cannot be cleanly
+  attributed to paradigm versus input-interpretation.
+\item
+  \textbf{Unmeasured cross-platform reproducibility limits}: the
+  transportation simulation literature does not typically report
+  empirical measurements of cross-platform numerical drift, even though
+  the drift exists and bounds the reproducibility of any cross-simulator
+  study not run inside a pinned-digest container.
+\end{itemize}
+
+Collectively, these limitations underscore the need for a reproducible,
+cross-simulator testing framework that unifies methodology, data
+handling, execution-environment specification, and fairness verification
+--- precisely the role that \textbf{SimForge} is designed to fulfill.
+The remainder of the thesis (Chapters 3-6) describes how the framework
+is built, what was measured with it, and what the measurements imply for
+the cross-simulator benchmarking community.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Notation conventions for this
+chapter}\label{29-notation-conventions-for-this-chapter}
+
+Citations in this chapter follow the convention of the December 2025
+thesis plan, using author-year style (\cite{krajzewicz2012sumo}
+rather than numbered references) for accessibility and to preserve
+forward-compatibility with the bibliography section (which is maintained
+in BibTeX form for LaTeX-based final assembly). Where a specific
+document or repository URL is more precise than an author-year citation
+(for example, \texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md} or
+\texttt{path4gmns} GitHub URL), the URL is cited inline.
+
+Engine names are written as in the upstream documentation: \emph{SUMO},
+\emph{MATSim}, \emph{DTALite}, \emph{POLARIS}, \emph{LPSim},
+\emph{QarSUMO}, \emph{CityFlow}, \emph{SimMobility}. Cross-references to
+other chapters follow the form \emph{Chapter X §Y.Z}. References to the
+December 2025 thesis plan use the form \emph{plan §X.Y}.

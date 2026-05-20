@@ -526,8 +526,8 @@ Reproducibility in high-performance computing (HPC) environments
 remains a persistent challenge due to factors such as non-associative
 floating-point arithmetic, nondeterministic thread scheduling,
 divergent random-number streams, and compiler-dependent
-optimizations [Krajzewicz et al. 2012; Cao et al. 2022; Studer
-et al. 2019]. Even small numerical variations can cascade into
+optimizations [Krajzewicz et al. 2012; Cao et al. 2022; Pineau
+et al. 2021]. Even small numerical variations can cascade into
 macroscopic differences in traffic dynamics when running agent-based
 or mesoscopic simulations at scale.
 

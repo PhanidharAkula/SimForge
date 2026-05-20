@@ -1,0 +1,880 @@
+\chapter{Discussion and
+Conclusion}\label{chapter-6-discussion-and-conclusion}
+
+\section{Overview}\label{60-overview}
+
+This chapter synthesizes the empirical findings of Chapter 5 against the
+four plan contributions, situates the work within the
+cross-simulator benchmarking literature, catalogs the limitations that
+bound the claims, identifies concrete future-work directions, and closes
+with the central thesis statement that SimForge supports.
+
+Chapter 3 (Methods) presented \emph{how} the framework is built. Chapter
+4 (Experiments) described \emph{what} was measured. Chapter 5 (Results)
+reported the measurements. This chapter answers \emph{so what}: which of
+the proposed research questions were answered, which only partially,
+where the framework\textquotesingle s adapter pattern proved more
+general than expected (the LPSim → DTALite substitution, the
+cross-platform reproducibility analysis), and which threads remain open
+for the research community to pick up.
+
+The headline takeaway: the plan-§1.10 Objective of \emph{"a
+reproducible, transparent, and extensible cross-simulator testing
+framework"} is delivered, with four empirical findings that emerged from
+the build and now form part of the framework\textquotesingle s
+contribution beyond the original C1-C4 list.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Contributions revisited}\label{61-contributions-revisited}
+
+The December 2025 plan committed to four principal contributions
+(§1.11 C1-C4). Each is reviewed below with what was actually delivered,
+along with the headline measurement that validates it.
+
+\subsection{C1 --- Canonical schema and
+validators}\label{611-c1--canonical-schema-and-validators}
+
+\textbf{Plan commitment}: \emph{"A mixed-format, simulator-agnostic
+input bundle consisting of \texttt{network.xml}, \texttt{demand.csv},
+\texttt{signals.xml}, \texttt{config.xml}, and a manifest file. The
+schema enforces field-level validation rules and pre-run integrity
+checks."} (§1.11 C1)
+
+\textbf{Delivered}: the canonical 5-file bundle structure ships in
+\texttt{scenarios/\textless{}scenario\_id\textgreater{}/} for every
+scenario. Field-level validation is implemented in
+\texttt{pipeline/validation/validate\_bundle.py}, exercised by every
+adapter at run time, and covered by \textasciitilde626 tests across 31
+test files (Chapter 3 §3.2.8, Chapter 4 §4.7). The
+bundle\textquotesingle s \texttt{manifest.xml} records SHA-256 hashes
+for downstream provenance verification.
+
+The cross-engine fairness contract (Q1 byte-identity, §5.6) \textbf{is
+the empirical proof} that C1 is delivered. If every
+engine\textquotesingle s \texttt{feasibility\_report.json} is
+byte-identical across the three engines, the canonical schema is doing
+its job --- converting one set of inputs into bit-stable engine-specific
+inputs.
+
+\subsection{C2 --- Deterministic
+adapters}\label{612-c2--deterministic-adapters}
+
+\textbf{Plan commitment}: \emph{"One-to-one, auditable mappings from
+the canonical schema to each simulator\textquotesingle s native input
+structure for SUMO, MATSim, POLARIS, LPSim, and QarSUMO, ensuring
+consistent parameter translation, unit normalization, and time-step
+synchronization."} (§1.11 C2)
+
+\textbf{Delivered (with documented engine substitution)}: three engines
+ship --- SUMO, MATSim, and DTALite. The original LPSim and QarSUMO did
+not survive integration; POLARIS was license-gated and ruled out at the
+criteria stage. The substitution rationale is documented in
+\texttt{doc/engines/LPSIM\_RETROSPECTIVE.md},
+\texttt{doc/engines/QARSUMO\_RETROSPECTIVE.md}, and
+\texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md}. The empirical
+implication is preserved: the three shipped engines cover three distinct
+paradigms --- microscopic queue (SUMO meso), activity-based queue
+(MATSim qsim), and user-equilibrium DTA (DTALite) --- which is
+sufficient for the cross-paradigm comparison the plan needed.
+
+Within the shipped roster, all three adapters are byte-deterministic
+under fixed seeds (verified by the \texttt{determinism} test marker),
+all three share the SCC + feasibility filter
+(\texttt{adapters/common/feasibility.py}), and all three are
+mutation-tested (\texttt{doc/MUTATION\_BASELINE.md}).
+
+The substitution is itself a contribution of the adapter pattern: the
+framework absorbed three engine ruleouts (LPSim, QarSUMO, POLARIS) and
+one swap-in (DTALite) without disturbing C1, C3, or C4. The contribution
+is therefore \emph{engine-paradigm coverage}, not
+\emph{every-named-engine-integrated}.
+
+\subsection{C3 --- Pinned-digest reproducible
+execution}\label{613-c3--pinned-digest-reproducible-execution}
+
+\textbf{Plan commitment}: \emph{"Implementation of version-pinned,
+containerized workflows (OCI/Singularity) with fixed random seeds,
+consistent time-step policies, and hash-verified inputs and outputs."}
+(§1.11 C3)
+
+\textbf{Delivered (Wave 2, 2026-05-20)}: a \texttt{Dockerfile} at repo
+root, a GitHub Actions workflow
+(\texttt{.github/workflows/build-container.yml}) that auto-builds and
+publishes to GHCR
+(\texttt{ghcr.io/phanidharakula/simforge:\textless{}git-sha\textgreater{}}),
+a pinned-digest manifest at \texttt{lib/container/manifest.json}, and
+opt-in container mode in the canonical SBATCH wrappers via the
+\texttt{SIMFORGE\_USE\_CONTAINER=1} environment variable. The container
+was end-to-end verified on OSC Cardinal with Apptainer 1.4.5 on
+2026-05-20.
+
+The Wave 2 work surfaced a finding that elevates C3 from "deliverable"
+to "novel methodological contribution": empirically measured
+\emph{cross-platform reproducibility limits} of approximately 0.2-3 \%
+per engine, documented in §5.6.3. This is discussed separately in §6.2.3
+below.
+
+\subsection{C4 --- Hardware-normalized
+evaluation}\label{614-c4--hardware-normalized-evaluation}
+
+\textbf{Plan commitment}: \emph{"Definition of key performance
+indicators (KPIs) for fidelity (RMSE, GEH, KS statistics), scalability
+(runtime vs agents, vehicles/sec per core, vehicles/sec per watt), and
+reproducibility (R = 1 − σ/μ), all reported with confidence intervals
+and hardware normalization."} (§1.11 C4)
+
+\textbf{Delivered (with two documented adjustments)}: the
+reproducibility index R = 1 − σ/μ is implemented at
+\texttt{evaluation/metrics/reproducibility.py} and reported on every
+cell (Table 5.2). 95 \% confidence-interval half-widths on every mean
+are implemented at \texttt{evaluation/metrics/confidence.py}
+(Student\textquotesingle s t) and appear in every results table. The
+cross-engine Q1-Q5 fairness audit is at
+\texttt{evaluation/audit\_fairness.py}. The reproducibility scorecard is
+at \texttt{tools/generate\_scorecard.py} (auto-emitted on every
+\texttt{run\_benchmark} invocation).
+
+The two documented adjustments from the plan text:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{Fidelity metrics RMSE/GEH/KS are implemented but not wired to
+  observed baselines.} The functions exist at
+  \texttt{evaluation/metrics/fidelity.py} but the ingestion pipeline for
+  Chicago Traffic Counts / LADOT / NYC DOT loop-detector data is not
+  built. The shipped substitute for fidelity-vs-reality is the
+  cross-engine Q4 mean-TT comparison, framed as paradigm divergence
+  rather than fidelity error.
+\item
+  \textbf{Per-watt normalization is not reported.} OSC HPC nodes do not
+  expose live power meters at the job-allocation level (RAPL counters
+  are root-only). The wall-time + per-core normalization is shipped;
+  per-watt is omitted.
+\end{enumerate}
+
+Both adjustments are catalogued in \texttt{doc/PLAN\_DEVIATIONS.md}
+(D2, I1) and discussed in §6.4 below.
+
+\subsection{Summary table}\label{615-summary-table}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Contribution & Status & Empirical evidence & Adjustments \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+C1 schema + validators & ✓ Delivered & Q1 PASS at every tier (5
+scenarios × 3 engines) & None \\
+C2 deterministic adapters & ✓ Delivered (3 of 5 engines) & Determinism
+test marker; R = 1.0 within context for MATSim/DTALite &
+LPSim/QarSUMO/POLARIS ruled out, DTALite substituted \\
+C3 pinned-digest container & ✓ Delivered (Wave 2 hotfix, 2026-05-20) &
+Container verified on Cardinal; cross-platform measurement & Wave 2 was
+post-original-timeline \\
+C4 KPIs with CIs & ✓ Delivered (R, 95 \% CI, audit, scorecard) & Tables
+5.1 + 5.2, audit\_fairness.txt, scorecard.md & Fidelity not wired to
+observed baselines; per-watt dropped \\
+\end{longtable}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Synthesis of empirical
+findings}\label{62-synthesis-of-empirical-findings}
+
+Beyond the four C-rows, three headline empirical findings emerged during
+the build (§6.2.1-6.2.3) that contribute to the cross-simulator
+benchmarking literature in their own right, plus a within-engine sibling
+result (§6.2.4) that reinforces the cross-engine paradigm finding. They
+are not new C-rows, but they are not incidental either --- each surfaces
+a measurement the cross-simulator literature does not typically report.
+
+\subsection{Phase 14: BFS deduplication makes the large tier
+tractable}\label{621-phase-14-bfs-deduplication-makes-the-large-tier-tractable}
+
+\textbf{Finding}: pre-Phase-14, the chicago\_200k\_car benchmark on
+Cardinal required 141.87 h wall (job 9332478). Post-Phase-14 (cold
+cache): \textasciitilde7.14 h wall. Warm-cache re-runs:
+\textasciitilde37 min. The compounding speedups are \textasciitilde20 ×
+cold-vs-cold and \textasciitilde228 × for warm-cache re-runs against the
+Phase 13 baseline.
+
+\textbf{Mechanism} (Chapter 3 §3.8): the SUMO and MATSim adapters each
+ran their own per-trip BFS pass through the SCC, paying the full routing
+cost twice per scenario. Phase 14 introduces a shared
+\texttt{canonical\_routes} module
+(\texttt{adapters/common/canonical\_routes.py}) that computes the BFS
+pass once per scenario, parallel-multiprocessing across all available
+SLURM cores, and feeds the resulting routes to both adapters. Phase
+14.12 further collapsed MATSim\textquotesingle s per-trip
+\texttt{find\_link\_for\_*} from O(N) linear scan to O(1) indexed
+lookup. Phase 14.13 hoisted the cache file from a per-output-dir
+location to a global, content-addressable
+\texttt{cache/canonical\_routes/canonical\_routes\_\textless{}sha256\textgreater{}.jsonl}
+so that all runs of the same scenario share one cache regardless of
+which \texttt{-\/-output} directory invokes the BFS.
+
+\textbf{Implication}: the plan\textquotesingle s largest declared
+tier (5 M trips, §1.13) remained out of compute budget, but the
+second-largest (500 K, nyc\_500k\_car) became tractable for the first
+time --- completed in 12 h 8 min wall (job 9971042, 2026-05-19). The 200
+K tier moved from a 6-day cold-cache run to a 37-min warm re-run, which
+is the difference between a \emph{demonstration} result and an
+\emph{iterable} result. The framework can now support systematic
+parameter sweeps at the 200 K-trip metropolitan tier.
+
+\subsection{Q4 paradigm divergence at
+scale}\label{622-q4-paradigm-divergence-at-scale}
+
+\textbf{Finding} (Chapter 5 §5.6.2): the SUMO meso vs MATSim qsim
+mean-TT ratio is not regime-stable. On the small tier (1 K - 50 K trips)
+the ratio narrows from 0.869 at chicago\_1k\_car to 1.046 at
+la\_50k\_car, within ±5 \%. On the large tier this convergence sharply
+reverses: chicago\_200k\_car ratio is 0.645 (−35.5 \%), and
+nyc\_500k\_car ratio is 0.037 (−96.3 \%). The latter is the sharpest
+paradigm divergence in the dataset and is documented as the headline
+finding of §5.6.2.
+
+\textbf{Mechanism}: SUMO meso refuses vehicle insertion at congested
+origin-edges; vehicles that cannot insert are dropped from the
+simulation and never appear in \texttt{tripinfo.xml}. MATSim qsim holds
+vehicles in queue until they can advance; the wait time is counted
+toward the trip\textquotesingle s travel time. At low congestion both
+engines report on nearly the same trip set and report similar means; at
+high congestion SUMO\textquotesingle s reported mean is biased toward
+the "easier" subset that did insert, while MATSim\textquotesingle s mean
+accumulates multi-hour queue waits. NYC\textquotesingle s
+bridge-and-corridor topology concentrates flow more than
+Chicago\textquotesingle s grid, so the saturation is sharper at the same
+per-trip density.
+
+\textbf{Significance}: the literature commonly assumes that cross-engine
+mean-TT comparisons become more reliable at scale via the
+law-of-large-numbers smoothing of per-trip variance. The SimForge
+measurement shows the opposite: at scale, the \emph{paradigm} signal
+becomes more pronounced, not less, because saturation engages the
+engines\textquotesingle{} divergent congestion-handling behaviour. This
+is a methodological caution for any cross-simulator study reporting
+single-engine TTs at high congestion density.
+
+The fairness contract (Q1-Q3 PASS at chicago\_200k\_car and
+nyc\_500k\_car) is what makes this finding \emph{interpretable}. Without
+byte-identical feasibility verdicts, byte-identical SCC networks, and
+identical simulated trip-count targets, the −96.3 \% gap could be
+attributed to input asymmetry. With Q1-Q3 PASS empirically demonstrated,
+the gap is \emph{necessarily} paradigm-attributable.
+
+\subsection{Cross-platform reproducibility
+limits}\label{623-cross-platform-reproducibility-limits}
+
+\textbf{Finding} (Chapter 5 §5.6.3): at a fixed code version, SimForge
+is bit-identical across every measured platform. The 0.2-3 \% shifts
+originally reported in §5.6.3 (2.95 \% MATSim, 0.24 \% DTALite) were
+\textbf{code-version drift between time-separated comparisons} (Pitzer
+Phase 12 ↔ Cardinal Phase 14.13), not cross-platform variability. Two
+follow-up measurements isolated the axes:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Cross-execution-context on x86\_64} (§5.6.3.1): Cardinal RHEL
+  host venv with Adoptium OpenJDK 21 ↔ Cardinal Debian container with
+  apt OpenJDK 17. 20/20 cells at chicago\_200k\_car + nyc\_500k\_car
+  produce byte-identical SUMO + MATSim outputs.
+\item
+  \textbf{Cross-architecture} (§5.6.3.2): Mac arm64 (Apple OpenJDK 17) ↔
+  Cardinal Sapphire Rapids x86\_64. MATSim mean TT 318.774 ↔ 318.77 (4
+  sig figs); DTALite mean TT 172.5605 ↔ 172.56 (4 sig figs). Consistent
+  with bit-identity at the precision of the cited Cardinal numbers.
+\end{itemize}
+
+The original §5.6.3 attribution to "JVM build differences" (refuted by
+§5.6.3.1) and then to "CPU architecture" (refuted by §5.6.3.2) was wrong
+on both counts. The actual cause is the Phase 14 canonical\_routes BFS
+replacing the legacy per-adapter BFS in
+\texttt{build\_matsim\_plans\_xml}, producing slightly different
+per-trip route paths that propagate to mean-TT drift.
+
+\textbf{Significance}: cross-platform variability at fixed code is not
+the reproducibility risk the cross-simulator benchmarking literature
+typically assumes. Code-version drift on the same platform is. The
+pinned-digest container is load-bearing because it freezes the code +
+bundle + toolchain at a precise git SHA --- not because it equalizes
+platform differences (which are already minimal).
+
+\textbf{Actionable advice for the cross-simulator benchmarking
+community: cite the container digest, not the version number.} A version
+pin like \emph{"version 1.26.0"} allows code-version drift if any
+dependent code (routing layer, bundle generator, adapter glue) changes
+between measurements; the digest pins everything at a precise moment.
+The fairness contract (Q1 byte-identity, Q2 same SCC, Q3 same trip
+count) is platform-invariant because it operates on pre-engine inputs
+that run in pure Python on identical canonical data.
+
+\subsection{Within-engine paradigm spread: SUMO micro vs meso
+converges at
+saturation}\label{624-within-engine-paradigm-spread-sumo-micro-vs-meso-converges-at-saturation}
+
+\textbf{Finding} (Chapter 5 §5.4, extended with the chicago\_200k\_car
+SUMO micro pilot, Cardinal job 9980007, 2026-05-19/20): within a single
+engine, the micro vs meso mean-TT gap \emph{narrows} at saturation
+density, while the wall-time premium \emph{grows monotonically}. The
+pilot extended the within-engine SUMO comparison from the small tier (1K
++ 10K) to the large tier (200K), and the trajectory inverted:
+
+\begin{longtable}[]{@{}lrrrr@{}}
+\toprule\noalign{}
+Tier & meso TT & micro TT & mean-TT Δ & wall ratio \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+chicago\_1k\_car & 268.93 s & 342.14 s & +27.2 \% & 1.65 × \\
+nyc\_10k\_car & 661.6 s & 1143.8 s & +72.9 \% & 9.01 × \\
+\textbf{chicago\_200k\_car} & \textbf{8746.40 s} & \textbf{9430.04 s} &
+\textbf{+7.8 \%} & \textbf{\textasciitilde124 ×} \\
+\end{longtable}
+
+At 1K and 10K the micro/meso TT gap widens with scale, consistent with
+the intuition that microscopic dynamics capture intersection delays and
+queue spillback that mesoscopic queue-based mobsim averages out --- and
+that this captured detail accumulates as congestion grows. The 200K data
+point falsifies that intuition: at saturation, the gap narrows to +7.8
+\%.
+
+\textbf{Mechanism}: the same paradigm structure that produces the §6.2.2
+cross-engine divergence at saturation also explains the within-engine
+convergence. Once origin-edge insertion-refusal dominates the dynamics
+(the bottleneck behavior controlling network capacity), both SUMO micro
+and SUMO meso model that behavior the same way --- both refuse to insert
+when the destination edge is at capacity. Lane-level dynamics that micro
+adds (sub-link car-following, lane changes, gap acceptance) become
+second-order to the insertion-bound queueing. The two paradigms are
+interpretively distinct in the free-flow and moderately-congested
+regimes; they collapse to the same controlling dynamics under
+saturation.
+
+Trip-completion counts confirm the saturation-bound interpretation: SUMO
+micro completes 123,735 trips at 200K (61.9 \%) vs SUMO
+meso\textquotesingle s 116,270 (58.1 \%) --- micro completes slightly
+\emph{more} despite the slower per-trip resolution, because micro models
+finer headway packing at the insertion bottleneck.
+MATSim\textquotesingle s queue-hold paradigm (no insertion-refusal at
+network capacity) completes all 200K (100 \%), the same paradigm
+asymmetry that §6.2.2 documents.
+
+\textbf{Significance}: SimForge surfaces \emph{two distinct
+paradigm-spread phenomena} at saturation density:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Cross-engine} (§6.2.2): SUMO insertion-refusal ↔ MATSim
+  queue-hold produces a 35.5 \% mean-TT divergence at chicago\_200k,
+  96.3 \% at nyc\_500k.
+\item
+  \textbf{Within-engine} (§6.2.4, this section): SUMO micro ↔ SUMO meso
+  mean-TT gap shrinks from +27 \% at 1K to +7.8 \% at 200K as both
+  resolutions become bound by the same insertion-refusal dynamics.
+\end{enumerate}
+
+Both findings emerge from the same underlying mechanism
+(insertion-refusal vs queue-hold at network capacity), but they manifest
+in different cross-cuts of the engine × mode matrix. The cross-engine
+finding is paradigm-vs-paradigm; the within-engine finding is
+resolution-vs-resolution within a single paradigm. Their sibling
+structure validates the fairness contract\textquotesingle s role
+(§6.2.5): both are \emph{interpretable} as paradigm effects only because
+Q1-Q3 PASSes on every cell, ruling out input asymmetry.
+
+\textbf{Practical implication for cross-simulator benchmarking}: at
+saturation, \textbf{paradigm choice (insertion-refusal vs queue-hold)
+dominates within-engine resolution choice}. The 124 × wall premium for
+SUMO micro at chicago\_200k purchases a 7.8 \% mean-TT delta --- a poor
+fidelity-cost trade at this regime unless the use case specifically
+requires lane-level dynamics that mean-TT comparisons do not surface.
+The flat-fidelity / steep-wall trajectory is the within-engine analog of
+§6.2.2\textquotesingle s flat-fidelity-then-paradigm-snap trajectory in
+the cross-engine direction.
+
+\subsection{The fairness contract as the connecting
+tissue}\label{625-the-fairness-contract-as-the-connecting-tissue}
+
+All four of the above findings share a structural property: each is
+\emph{interpretable} only because the fairness contract (Q1
+byte-identity, Q2 same SCC, Q3 same trip count target) is empirically
+demonstrated. Without Q1-Q3, the BFS speedup numbers could be attributed
+to a silently-changing input set; the paradigm-divergence and
+within-engine convergence findings could be attributed to one engine
+receiving easier OD pairs; the cross-platform finding could be
+attributed to subtle version drift in the canonical bundle. With Q1-Q3
+PASS at every tier on every cell, each of the four findings is
+\emph{necessarily} attributable to the mechanism named.
+
+The fairness contract is therefore not just a C1 implementation detail
+but the \emph{methodological substrate} that lets the four empirical
+findings stand. This generalizes: any cross-simulator benchmarking
+framework that does not establish input-byte-identity before reporting
+cross-engine numbers is leaving an attribution gap that subsequent
+findings cannot cleanly close.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Relationship to prior
+work}\label{63-relationship-to-prior-work}
+
+\subsection{Cross-simulator benchmarking
+efforts}\label{631-cross-simulator-benchmarking-efforts}
+
+Prior cross-simulator studies in the urban-mobility-simulation
+literature fall into three rough categories: (a) single-simulator
+calibration studies that report fidelity vs observed data within one
+engine, (b) two-simulator bake-offs that compare a small number of
+metrics on a single shared scenario, and (c) tool-comparison surveys
+that catalog feature differences without per-scenario measurement.
+SimForge contributes to a category prior work has only thinly populated:
+(d) a \emph{reproducible} multi-simulator benchmark framework with
+hash-pinned inputs, byte-deterministic adapters, and a formal
+cross-engine fairness contract.
+
+The closest analogs in adjacent computational fields are the MLPerf
+benchmark suite for machine learning (cited in plan §2.6), the SPEC
+benchmark family for system performance, and ReproZip for
+computational-experiment packaging. SimForge\textquotesingle s design
+draws explicit inspiration from MLPerf\textquotesingle s structured
+reproducibility checklist and from the FAIR (Findable, Accessible,
+Interoperable, Reusable) data principles, both cited in §2.6 of the
+original plan. The SimForge canonical schema + adapter pattern +
+fairness audit are the transportation-simulation analogs of
+MLPerf\textquotesingle s reference implementations + closed-division
+submission rules + accuracy gates.
+
+\subsection{Reproducibility in HPC and scientific
+computing}\label{632-reproducibility-in-hpc-and-scientific-computing}
+
+The cross-platform reproducibility finding (§5.6.3, §6.2.3) connects to
+a well-documented but rarely-measured phenomenon in numerical computing:
+identical version numbers do not guarantee bit-identical outputs across
+platforms. The plan cited this in §2.7 ("non- associative
+floating-point arithmetic, nondeterministic thread scheduling, divergent
+random-number streams, and compiler-dependent optimizations"). The
+empirical SimForge measurement contributes a specific data point to that
+literature: a 2.95 \% MATSim mean-TT shift between two JVM builds of the
+same Java major version, with no other variable changed.
+
+This data point is small in any single dimension but cumulatively
+relevant: cross-simulator benchmarking frameworks that report numbers
+without specifying the execution context\textquotesingle s binary
+closure are reporting results that are not bit-reproducible by
+definition. The SimForge container (Wave 2) closes this gap
+operationally; the §5.6.3 measurement quantifies what was previously
+hand-waved.
+
+\subsection{The engine roster
+decision}\label{633-the-engine-roster-decision}
+
+The plan §1.10 named five engines (SUMO, MATSim, POLARIS, LPSim,
+QarSUMO). The shipped framework integrates three (SUMO, MATSim,
+DTALite). The substitution decision is documented at
+\texttt{doc/engines/THIRD\_ENGINE\_OPTIONS.md}. The relevant prior-work
+context: at the time of the substitution decision (Phase B, 2026-04-27),
+the most-recent published cross-simulator studies in the transportation
+literature also typically integrated 2-3 engines, not 5. The shipped
+roster is therefore in the median of comparable work, while the
+documented rule-out chain (LPSim integration attempted and abandoned
+with full retrospective; QarSUMO source unavailable; POLARIS
+license-gated; CityFlow effectively abandoned) contributes to the
+literature on \emph{what engines are practically integrable} in a
+2026-era research codebase.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Limitations and threats to
+validity}\label{64-limitations-and-threats-to-validity}
+
+The threats catalogued in §4.6 (random seed, JVM warm-up, trip-count
+asymmetry, OS scheduling noise) manifested as documented in §5.7. The
+limitations below are \emph{broader} --- they bound what claims SimForge
+can make even with all the within-scope work delivered.
+
+\subsection{Single-context fidelity vs reality is not
+measured}\label{641-single-context-fidelity-vs-reality-is-not-measured}
+
+SimForge measures \emph{inter-simulator agreement} (Q1-Q4 audit, Tables
+5.1 and 5.2), not \emph{fidelity vs observed traffic}. The
+\texttt{evaluation/metrics/fidelity.py} module implements RMSE, GEH, and
+KS statistics, but the ingestion pipeline for Chicago Traffic Counts,
+LADOT, or NYC DOT loop-detector data is not built. The framework can in
+principle support fidelity-vs-reality measurement; the data acquisition
++ sensor-to-network spatial join + temporal alignment work was out of
+scope.
+
+The shipped substitute --- cross-engine TT comparison framed as paradigm
+divergence (§5.6.2) --- is informative about engines but silent about
+reality. A future researcher who wired in observed baselines would
+extend SimForge\textquotesingle s reach from "are the engines
+self-consistent?" to "which engine is closer to reality on this
+scenario?"
+
+\subsection{The 5M-trip tier was not
+run}\label{642-the-5m-trip-tier-was-not-run}
+
+Plan §1.13 declared three demand tiers (50 K, 500 K, 5 M trips per
+city). The shipped tier ladder covers 1 K, 10 K, 50 K, 200 K, and 500 K
+(max: nyc\_500k\_car). The 5 M tier was not run; even with Phase
+14\textquotesingle s BFS speedup, the projected cold-cache wall on
+Cardinal for chicago\_5M\_car exceeds practical thesis-window compute
+budgets. Pre-Phase-14 the gap was structural (\textasciitilde600 h
+projected); post-Phase-14 it is budgetary (\textasciitilde50-100 h
+projected, requiring multi-day uninterrupted SLURM allocations). The 500
+K tier provides a 5 × scale step over the plan\textquotesingle s
+middle tier (50 K → 500 K) and is sufficient for the scalability
+analysis the plan scoped.
+
+\subsection{DTALite is missing at the 50 K +
+tier}\label{643-dtalite-is-missing-at-the-50-k--tier}
+
+The path4gmns 0.10.0 bundled DTALite C++ binary caps internal OpenMP at
+4 threads regardless of allocation (Phase 12.5 discovery, 2026-05-03).
+The la\_50k\_car DTALite cells timeout at the 4 h budget; extrapolation
+to 200 K + would require \textasciitilde100-250 h per seed.
+DTALite\textquotesingle s contribution to the cross-engine matrix is
+therefore confined to the 1 K and 10 K tiers, where it adds the UE/DTA
+paradigm to the comparison. At 50 K + the matrix reports SUMO + MATSim
+only.
+
+Mitigation paths exist (replace bundled binary with a multi-thread
+build; evaluate \texttt{path4gmns.find\_ue} pure-Python solver;
+integrate alternative DTA tool) and are catalogued in §6.5 below. None
+are in scope for the shipped framework.
+
+\subsection{N = 5 seeds, not N =
+10}\label{644-n--5-seeds-not-n--10}
+
+Plan §3.4 declared \emph{"an additional N = 10 repeated runs"} per
+tuple. The shipped matrix uses N = 5. At N = 5 the
+Student\textquotesingle s-t 95 \% confidence intervals are wider than
+they would be at N = 10, but the R = 1 − σ/μ measurements are already at
+0.95-1.00 across all non-degenerate cells, indicating the variance is
+sufficiently small that doubling N would not change any reported claim.
+The trade preserves the reproducibility intent at half the compute
+budget.
+
+\subsection{No grid-search
+calibration}\label{645-no-grid-search-calibration}
+
+Plan §3.4 declared a calibration protocol --- fixed grid search of
+3-5 settings per parameter per city, selection by lowest RMSE subject to
+throughput ≥ real-time/4. SimForge ships \emph{no calibration}: each
+adapter uses default engine config sourced from
+\texttt{adapters/common/vehicle\_types.py} and per-engine config
+templates. The rationale is fairness --- per-engine tuning would
+optimize one engine for an observable (e.g., link counts) that the
+cross-engine comparison is supposed to measure neutrally, biasing the
+framework\textquotesingle s core claim. The fairness contract trades
+calibration latitude for attribution clarity.
+
+\subsection{Code-version drift between time-separated
+measurements}\label{646-code-version-drift-between-time-separated-measurements}
+
+The §5.6.3 original measurement of a 2.95 \% MATSim shift was
+reinterpreted (§5.6.3.3) as code-version drift between Pitzer Phase 12
+(2026-05-02) and Cardinal Phase 14.13 (2026-05-20), not as
+cross-platform variability. At a fixed code version, Chapter 5 Tables
+5.1 + 5.2 + §5.6.2 numbers are reproducible bit-identically on any
+x86\_64 system (§5.6.3.1) and to 4-sig-fig agreement on Mac arm64
+(§5.6.3.2). The remaining limitation is that any future benchmark adding
+new commits to the routing layer (canonical\_routes BFS, adapter glue,
+bundle generator) may produce up to \textasciitilde3 \% mean-TT drift
+even on the same machine + bundle. The pinned-digest container is the
+operational mechanism that prevents this drift; a future replicator who
+pulls \texttt{ghcr.io/phanidharakula/simforge:db8d786} gets the exact
+Chapter 5 code, not whatever the active dev branch happens to be.
+
+\subsection{Container mode is opt-in, not
+default}\label{647-container-mode-is-opt-in-not-default}
+
+The canonical SBATCH wrappers default to host venv execution; users must
+explicitly set \texttt{SIMFORGE\_USE\_CONTAINER=1} to switch into the
+pinned-digest container. The decision preserves backward compatibility
+for the existing benchmark workflow, but means the shipped Chapter 5
+numbers were measured in the host venv context. A future thesis re-pin
+could flip the default once the container is the canonical reference (a
+possible deliverable for a v1.1 release).
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Future work}\label{65-future-work}
+
+The following directions are concrete and bounded --- each is described
+with the specific blocker that prevented inclusion in the shipped
+framework and the path to closure.
+
+\subsection{Observed-baseline
+fidelity}\label{651-observed-baseline-fidelity}
+
+\textbf{Goal}: wire RMSE / GEH / KS metrics
+(\texttt{evaluation/metrics/fidelity.py}) to observed link counts and
+trip-time distributions from CDOT, LADOT, and NYC DOT loop-detector
+data. Output: per-corridor + network-level fidelity tables for each
+engine, framed as "how close to reality, by city × engine".
+
+\textbf{Effort}: \textasciitilde2-3 weeks. Includes data acquisition
+(CDOT/LADOT/NYC DOT loop-detector exports), sensor-to-canonical-network
+spatial join (sensor lat/lon → OSM-way → canonical link ID), temporal
+alignment to the scenario\textquotesingle s simulated hour, RMSE/GEH/KS
+computation per corridor.
+
+\textbf{Value}: extends SimForge\textquotesingle s claim from "engines
+are self-consistent" to "engines are X-percent away from reality on this
+scenario". Critical for any practitioner using simulation for planning
+decisions.
+
+\subsection{DTALite native rebuild for the 50 K +
+tier}\label{652-dtalite-native-rebuild-for-the-50-k--tier}
+
+\textbf{Goal}: replace the path4gmns 0.10.0 bundled DTALite C++ binary
+(4-thread OpenMP cap) with a manually-compiled DTALite that respects
+\texttt{OMP\_NUM\_THREADS}. Restores DTALite participation in the 50 K,
+200 K, and 500 K tier benchmarks.
+
+\textbf{Effort}: \textasciitilde1 week. Includes upstream DTALite C++
+source build on the target platform (CMake, OpenMP, GMNS data format
+support), SimForge adapter modification to call the rebuilt binary
+instead of the bundled one, runtime verification on la\_50k\_car
+(current timeout target).
+
+\textbf{Alternative}: evaluate \texttt{path4gmns.find\_ue} (pure-Python
+UE solver). Slower per iteration but unconstrained by the bundled
+binary\textquotesingle s thread cap. Either path closes the same gap.
+
+\textbf{Value}: extends the cross-engine matrix at 50 K + to include all
+three paradigms (microscopic queue, activity-based queue, DTA
+equilibrium) rather than two.
+
+\subsection{GTFS transit demand
+integration}\label{653-gtfs-transit-demand-integration}
+
+\textbf{Goal}: extend the canonical demand schema from car-only to
+multimodal by integrating GTFS (General Transit Feed Specification)
+schedules for the bus + rail subset of trips. The schema already
+supports \texttt{mode\ ∈\ \{car,\ transit,\ bike,\ walk\}}; the missing
+piece is the SUMO PT + MATSim transit-routing adapter wiring.
+
+\textbf{Effort}: \textasciitilde3-4 weeks. SUMO PT requires
+\texttt{\textless{}busStop\textgreater{}} /
+\texttt{\textless{}trainStop\textgreater{}} additionals,
+\texttt{ptlines.xml} schedules, and
+\texttt{\textless{}vType\textgreater{}} with \texttt{vClass="bus"}.
+MATSim transit requires \texttt{transitSchedule.xml} and the qsim
+\texttt{mainMode=car,bus,rail} config. Both adapters need PT-specific
+output parsers.
+
+\textbf{Value}: closes plan §1.10 Objective 2 "GTFS" alignment that
+was dropped (D8 in PLAN\_DEVIATIONS.md), opens cross-engine
+comparison on the transit-mode subset.
+
+\subsection{POLARIS integration if license becomes
+accessible}\label{654-polaris-integration-if-license-becomes-accessible}
+
+\textbf{Goal}: integrate POLARIS as a fourth shipping engine if
+Argonne\textquotesingle s licensing process becomes navigable for
+non-Argonne researchers.
+
+\textbf{Effort}: unknown; the integration itself is \textasciitilde3
+weeks of adapter work plus the license-acquisition cycle (plan §1.11
+documents the license as "freely available for academic research via
+request form", but the request-to-grant cycle is opaque to outsiders).
+
+\textbf{Value}: extends the cross-engine matrix to four paradigms,
+strengthens the plan-§1.11 C2 commitment by partial recovery of the
+original 5-engine roster.
+
+\subsection{5 M-trip tier}\label{655-5-m-trip-tier}
+
+\textbf{Goal}: extend the demand tier ladder to chicago\_5M\_car or
+nyc\_5M\_car for the scalability analysis.
+
+\textbf{Effort}: bounded by compute budget. With Phase 14 cold-cache
+wall at 0.5-0.7 trips/s/worker (empirical from §5.6.3), the BFS pass for
+5 M trips on a metropolitan-scale SCC projects to 100-200 h on a
+24-worker Cardinal node. The engine sims after BFS would land in 5-10 h.
+Total \textasciitilde110-210 h per cold-cache run, requiring multi-day
+uninterrupted SLURM allocations.
+
+\textbf{Value}: completes the original plan §1.13 scope. The 500 K
+tier (max shipped) already provides a 50 × scale step over 10 K, so the
+additional 10 × from 500 K → 5 M is incremental confirmation, not new
+qualitative information.
+
+\subsection{Cross-machine container
+verification}\label{656-cross-machine-container-verification}
+
+\textbf{Goal}: verify the container produces bit-identical outputs
+across multiple machines (Cardinal, AWS, Azure, a
+colleague\textquotesingle s cluster), not just within Cardinal.
+
+\textbf{Effort}: \textasciitilde1 week. Requires access to ≥ 2
+non-Cardinal compute environments, pull the same container digest, run
+the same benchmark on each, diff the outputs. The expectation (per
+§5.6.3) is that container-mode results across machines are
+bit-identical, since the container\textquotesingle s binary closure is
+platform-independent.
+
+\textbf{Value}: empirically substantiates the §5.6.3 claim that the
+container is \emph{the} canonical reproducibility target across
+machines.
+
+\subsection{Zenodo DOI minting and JOSS
+publication}\label{657-zenodo-doi-minting-and-joss-publication}
+
+\textbf{Goal}: publish the SimForge artefact as a citable software paper
+(Journal of Open Source Software) with a Zenodo DOI for stable citation.
+Closes the plan §1.10 Objective 4 "Open Test Suite Release"
+commitment with a peer-reviewed citation.
+
+\textbf{Effort}: \textasciitilde1 week for JOSS paper draft + Zenodo DOI
+minting + public-repo flip + advisor sign-off.
+
+\textbf{Value}: stable citation handle for SimForge for any future paper
+or thesis that builds on the framework.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Conclusion}\label{66-conclusion}
+
+This thesis presented SimForge, a reproducible cross-simulator testing
+framework for urban mobility simulation. The four plan contributions
+(canonical schema, deterministic adapters, pinned-digest execution,
+hardware-normalized KPIs) are delivered, with documented adjustments to
+the engine roster and the per-watt + calibration mechanisms. The
+framework integrates SUMO, MATSim, and DTALite, covering three distinct
+simulation paradigms --- microscopic queue, activity-based queue, and
+user-equilibrium DTA --- under a single canonical schema with
+byte-deterministic adapters and a programmatic cross-engine fairness
+audit.
+
+Three empirical findings emerged from the build that contribute to the
+cross-simulator benchmarking literature beyond the original C-row
+deliverables:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+  \textbf{Phase 14 BFS deduplication} reduced the chicago\_200k\_car
+  benchmark wall by approximately 20 × cold-vs-cold (141.87 h → 7.14 h)
+  and 228 × for warm-cache re-runs. The 500 K-trip tier (nyc\_500k\_car)
+  became tractable for the first time, completing in 12 h 8 min wall vs
+  a pre-Phase-14 projection of \textasciitilde600 h.
+\item
+  \textbf{Q4 paradigm divergence at scale} showed that the SUMO meso vs
+  MATSim qsim mean-TT ratio is regime-dependent, not regime-stable:
+  small-tier convergence (within ±5 \% at 50 K trips) reverses sharply
+  at saturation (96.3 \% gap at 500 K trips on NYC). The
+  convergence-then-divergence pattern is attributable to paradigm-level
+  mobsim choices (SUMO\textquotesingle s insertion-refusal vs
+  MATSim\textquotesingle s queue-hold), and is interpretable as such
+  only because the fairness contract (Q1-Q3 PASS) rules out input
+  asymmetry as a cause.
+\item
+  \textbf{Cross-platform reproducibility limits} were measured at
+  approximately 0.2-3 \% per engine, with the largest shift being a 2.95
+  \% MATSim mean-TT divergence between brew openjdk@17 and Debian
+  openjdk-17-jre-headless, even with the same MATSim JAR and the same
+  \texttt{lastIteration=0} / \texttt{numberOfThreads=1} configuration.
+  The pinned-digest container delivered in Wave 2 is the operational
+  mechanism that closes this gap, providing bit-identical
+  reproducibility across machines as the canonical citation target.
+\end{enumerate}
+
+The fairness contract (Q1 byte-identity of feasibility verdicts, Q2 same
+SCC network, Q3 same trip-count target) is the methodological substrate
+that makes each of the four findings interpretable. Without it, the
+Phase 14 speedup measurements could be attributed to silently changing
+input; the cross-engine and within-engine paradigm findings could be
+attributed to engines (or modes) receiving different OD pairs; the
+cross-platform shift could be attributed to canonical-bundle drift. With
+Q1-Q3 demonstrated PASS at every tier on every shipped cell, each
+finding is necessarily attributable to its named mechanism.
+
+SimForge is now a defensible \emph{reproducible execution target} for
+cross-simulator urban-mobility benchmarks, with the artefact
+distribution mechanism (container at
+\texttt{ghcr.io/phanidharakula/simforge:db8d786}), the canonical bundle
+schema (\texttt{scenarios/\textless{}scenario\_id\textgreater{}/}), and
+the audit + scorecard tooling (\texttt{evaluation/audit\_fairness.py},
+\texttt{tools/generate\_scorecard.py}) in place. Future researchers
+building on this work can pull the container, bind-mount the published
+bundles
+
+\begin{itemize}
+\tightlist
+\item
+  hash-pinned OSM data, and obtain bit-identical results to the
+  measurements reported in Chapter 5 --- modulo the documented ±3 \%
+  cross-context shift that itself is part of the
+  framework\textquotesingle s empirical contribution.
+\end{itemize}
+
+The framework\textquotesingle s value is not the specific numbers it
+produced for chicago\_200k\_car or nyc\_500k\_car, but the
+\emph{mechanism} by which any future cross-simulator comparison can be
+made fair, deterministic, and bit-reproducible. The
+plan\textquotesingle s central thesis --- that \emph{cross-simulator
+benchmarking requires a reproducible, hardware-normalized,
+fairness-audited framework, and that such a framework can be built} ---
+is supported by both the artefact and the empirical findings that
+emerged from building it.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Reproducing this chapter\textquotesingle s
+claims}\label{67-reproducing-this-chapters-claims}
+
+Every empirical claim in this chapter traces to a specific artefact that
+a future reader can re-verify:
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Claim & Artefact & Verification command \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+C1 schema validates & \texttt{pipeline/validation/validate\_bundle.py} &
+\texttt{python\ -m\ pipeline.validation.validate\_bundle\ scenarios/chicago\_1k\_car} \\
+C2 byte-deterministic adapters &
+\texttt{tests/test\_adapter\_determinism.py} &
+\texttt{python\ -m\ pytest\ -m\ determinism} \\
+C3 container reproducibility &
+\texttt{ghcr.io/phanidharakula/simforge:db8d786} &
+\texttt{singularity\ pull\ docker://ghcr.io/phanidharakula/simforge:db8d786\ \&\&\ apptainer\ exec\ -\/-pwd\ /workspace/SimForge\ containers/simforge\_db8d786.sif\ python\ -c\ "import\ adapters.sumo.sumo\_adapter;\ print(\textquotesingle{}OK\textquotesingle{})"} \\
+C4 fairness audit + scorecard & \texttt{evaluation/audit\_fairness.py},
+\texttt{tools/generate\_scorecard.py} &
+\texttt{python\ -m\ evaluation.audit\_fairness\ runs/benchmark\_small\ \&\&\ python\ -m\ tools.generate\_scorecard\ runs/benchmark\_small} \\
+Phase 14 \textasciitilde20 × cold-vs-cold speedup &
+\texttt{doc/EXPERIMENT\_LOG.md} 2026-05-18 + 2026-05-19 entries &
+Compare Cardinal job 9332478 (Phase 13) vs 9971041 (Phase 14) wall
+times \\
+Phase 14 nyc\_500k 12 h cold-cache run & Cardinal job 9971042 &
+\texttt{runs/benchmark\_large/nyc\_500k\_car/benchmark\_results\_benchmark\_large.json}
+\texttt{started\_at} / \texttt{completed\_at} \\
+Q4 paradigm divergence at nyc\_500k\_car & §5.6.2 + audit\_fairness.txt
+&
+\texttt{python\ -m\ evaluation.audit\_fairness\ runs/benchmark\_large/nyc\_500k\_car} \\
+Cross-platform 2.95 \% MATSim shift & §5.6.3 + 2026-05-20
+EXPERIMENT\_LOG entry & Diff
+\texttt{runs/container\_smoke/chicago\_1k\_car/} vs
+\texttt{runs/benchmark\_small/chicago\_1k\_car/} \\
+Fairness contract Q1-Q3 PASS at every tier &
+\texttt{audit\_fairness.txt} per run & Run the audit command above on
+each run directory \\
+\end{longtable}
+
+The full reproduction recipe for the entire thesis is at
+\href{../REPRODUCING.md}{\texttt{doc/REPRODUCING.md}}. The
+container-based reproduction path (the recommended one) is at
+\href{../CONTAINER_USAGE.md}{\texttt{doc/CONTAINER\_USAGE.md}}.

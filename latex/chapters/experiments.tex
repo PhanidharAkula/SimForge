@@ -1,0 +1,801 @@
+\chapter{Experiments}\label{chapter-4-experiments}
+
+\section{Experimental Design}\label{41-experimental-design}
+
+\subsection{Research Questions}\label{411-research-questions}
+
+This experimental study addresses the following research questions:
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+RQ & Question & Metric(s) \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+RQ1 & How do travel-time distributions compare across simulators for
+identical inputs? & RMSE, GEH, KS \\
+RQ2 & How does runtime scale with network size and demand volume across
+engines? & Wall-clock, throughput \\
+RQ3 & How consistent are results across repeated runs with different
+random seeds? & \(R = 1 - \sigma/\mu\) \\
+RQ4 & What are the practical trade-offs between fidelity, speed, and
+reproducibility? & Multi-metric analysis \\
+\end{longtable}
+
+\subsection{Independent
+Variables}\label{412-independent-variables}
+
+\textbf{Variable 1: Simulator Engine (4 configurations evaluated)}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Engine & Paradigm & Traffic Model & Hardware \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+SUMO (micro) & Microscopic & Krauss car-following + lane-changing &
+CPU \\
+SUMO (meso) & Mesoscopic & Queue-based link traversal & CPU \\
+MATSim & Mesoscopic & Activity-based, event-driven queues & CPU \\
+DTALite & Mesoscopic & Dynamic Traffic Assignment (UE) & CPU \\
+\end{longtable}
+
+\begin{quote}
+The plan listed five engines (SUMO, MATSim, POLARIS, LPSim,
+QarSUMO). After two integration cycles, the matrix narrows to
+\textbf{three primary engines} chosen for paradigm spread: SUMO
+microscopic (car-following), MATSim queue-based agent simulation, and
+DTALite mesoscopic Dynamic Traffic Assignment. Three of the
+originally-proposed engines were systematically evaluated and ruled out:
+QarSUMO dropped in Version\_4 Phase A (no usable public source), LPSim
+integrated in Version\_4 Phase B and abandoned in Version\_5 (GPU kernel
+SIGSEGV on networks \textgreater{} a few-K nodes), POLARIS and CityFlow
+evaluated as third-engine alternatives and rejected at criteria. Full
+retrospectives in \href{../engines/}{\texttt{doc/engines/}}. The
+canonical 11-cell matrix exercises all four (engine × mode) combinations
+across three scenarios at N = 5 repeats each, and is fully CPU-only ---
+the 1 K tier runs end-to-end on a Mac laptop in under a minute; the 10 K
+and 50 K tiers fit inside a single Pitzer SLURM job
+(\textasciitilde22-23 h wall-clock) with the Phase 12 BFS-prep cache.
+\end{quote}
+
+\textbf{Variable 2: Scenario Scale}
+
+The canonical \texttt{benchmark\_small.yaml} runspec covers
+\textbf{three tiers} spanning two orders of magnitude in trip count. The
+1 K tier is laptop-runnable; the 10 K and 50 K tiers require an HPC node
+for the SUMO micro and DTALite cells. Larger tiers (200 K, 500 K) are
+generated locally via helper scripts and reserved for separate HPC runs.
+
+\begin{longtable}[]{@{}lllll@{}}
+\toprule\noalign{}
+Tier & Trip Count & Helper script & In \texttt{benchmark\_small.yaml} &
+Where it runs \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{Bundled} & \textbf{1,000} &
+\texttt{scripts/01\_chicago\_1k\_car.py} & ✅ & Laptop (Apple
+Silicon) \\
+\textbf{Small} & \textbf{10,000} & \texttt{scripts/02\_nyc\_10k\_car.py}
+& ✅ & Laptop (cached) / cluster \\
+\textbf{Medium} & \textbf{50,000} & \texttt{scripts/03\_la\_50k\_car.py}
+& ✅ & Cluster (Pitzer 36 h walltime) \\
+Large & 200,000 & \texttt{scripts/04\_chicago\_200k\_car.py} & (separate
+runspec) & Cluster \\
+Stress & 500,000 & \texttt{scripts/05\_nyc\_500k\_car.py} & (separate
+runspec) & Cluster (Linux only) \\
+\end{longtable}
+
+\textbf{Variable 3: City Network (3 metropolitan areas in the canonical
+matrix)}
+
+\begin{longtable}[]{@{}llllll@{}}
+\toprule\noalign{}
+City & Bundle & Nodes (in SCC) & Links (in SCC) & SCC \% & Character \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Chicago & \texttt{chicago\_1k\_car} & 19,744 & 58,432 & 98.4 \% & Dense
+grid, mixed use \\
+NYC & \texttt{nyc\_10k\_car} & 33,988 & 105,009 & 99.6 \% &
+Multi-borough mix \\
+LA & \texttt{la\_50k\_car} & 158,690 & 466,518 & 99.8 \% & Sprawling
+freeway-dominated \\
+\end{longtable}
+
+The three scenarios span \textasciitilde8× in node count and
+\textasciitilde8× in link count, while the trip count spans 50× (1K →
+50K). This decouples the \emph{network-size} effect from the
+\emph{demand-density} effect in the scaling analysis (§5.1, §5.5).
+
+\textbf{Why Chicago, NYC, and LA:}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Chicago} --- classic American grid; mix of arterials and
+  residential streets; ModelGen census coverage is most complete. Dense
+  enough to exercise all three engines end-to-end while remaining small
+  enough to ship as a bundled artefact.
+\item
+  \textbf{NYC} --- multi-borough, irregular network topology; tests the
+  engines on a network with mixed grid + organic geometry. The 10 K trip
+  volume crosses the threshold where SUMO micro becomes a coffee-break
+  run (\textasciitilde3 min per seed).
+\item
+  \textbf{LA} --- sprawling freeway-dominated network; largest tested
+  network (\textasciitilde470 K links). The 50 K trip volume tests the
+  engines at the boundary of practical UE convergence (DTALite hits a
+  path4gmns binary-side scaling ceiling at this size --- see §5.7).
+\end{itemize}
+
+\subsection{Dependent Variables}\label{413-dependent-variables}
+
+\textbf{Fidelity (RQ1):}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Metric & Formula & Unit & Interpretation \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Mean travel time & \(\bar{t} = \frac{1}{n}\sum_i t_i\) & seconds &
+Central tendency of trip durations \\
+P95 travel time & 95th percentile of \(\{t_i\}\) & seconds & Tail
+behaviour / worst-case trips \\
+Trip completion rate & \(n_\text{completed} / n_\text{feasible}\) & \% &
+How many feasible trips reached destination \\
+RMSE (cross-simulator) & \(\sqrt{\frac{1}{n}\sum(y_i - \hat{y}_i)^2}\) &
+seconds & Agreement between two simulators \\
+GEH (link-level) & \(\sqrt{\frac{2(M-C)^2}{M+C}}\) & dimensionless &
+Traffic engineering fit metric \\
+KS statistic & \(\sup_x |F_1(x) - F_2(x)|\) & dimensionless &
+Distribution shape comparison \\
+\end{longtable}
+
+\textbf{Scalability (RQ2):}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Metric & Formula & Unit & Interpretation \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Wall-clock runtime & \texttt{perf\_counter()} end -- start & seconds &
+Absolute performance \\
+Throughput & trips\_completed / runtime & trips/sec & Efficiency
+metric \\
+SRT & simulated\_time / wall\_clock\_time & ratio &
+Faster-than-real-time indicator \\
+Peak memory & OS-reported peak RSS & MB & Hardware requirement \\
+\end{longtable}
+
+\textbf{Reproducibility (RQ3):}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Metric & Formula & Range & Interpretation \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Reproducibility index \(R\) & \(1 - \sigma/\mu\) & {[}-∞, 1.0{]} & 1.0 =
+perfectly deterministic \\
+Max deviation & \(\max_i |x_i - \mu|\) & same as KPI & Worst-case
+variability \\
+CV (coefficient of variation) & \(\sigma/\mu\) & {[}0, ∞) & Relative
+variability (lower = better) \\
+\end{longtable}
+
+\subsection{Canonical Experimental
+Matrix}\label{414-canonical-experimental-matrix}
+
+The matrix declared by \texttt{runspecs/benchmark\_small.yaml} (11 cells
+× 5 repeats = \textbf{55 runs total}):
+
+\begin{longtable}[]{@{}lllll@{}}
+\toprule\noalign{}
+Scenario & Engine & Mode & Trips & Repeats \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+chicago\_1k\_car & sumo & mesoscopic & 1,000 & 5 \\
+chicago\_1k\_car & sumo & microscopic & 1,000 & 5 \\
+chicago\_1k\_car & matsim & mesoscopic & 1,000 & 5 \\
+chicago\_1k\_car & dtalite & mesoscopic & 1,000 & 5 \\
+nyc\_10k\_car & sumo & mesoscopic & 10,000 & 5 \\
+nyc\_10k\_car & sumo & microscopic & 10,000 & 5 \\
+nyc\_10k\_car & matsim & mesoscopic & 10,000 & 5 \\
+nyc\_10k\_car & dtalite & mesoscopic & 10,000 & 5 \\
+la\_50k\_car & sumo & mesoscopic & 50,000 & 5 \\
+la\_50k\_car & matsim & mesoscopic & 50,000 & 5 \\
+la\_50k\_car & dtalite & mesoscopic & 50,000 & 5 \\
+\end{longtable}
+
+la\_50k\_car drops SUMO microscopic by design --- at 50 K trips a single
+arm64 SUMO micro run wall-clocks past 4 h, which is impractical for a
+"small tier" matrix and provides little additional paradigm signal
+beyond chicago\_1k + nyc\_10k micro. MATSim and DTALite are
+mesoscopic-only by design.
+
+Every \texttt{feasibility\_report.json} confirms
+\texttt{feasible\_trips} matches the trip count for every adapter
+(verified by Q1 of \texttt{audit\_fairness}), so the four engines
+simulate exactly the same trip set per cell. All three engines are
+CPU-only and the full matrix completes inside a single Pitzer SLURM job
+(\textasciitilde22-23 h with the Phase 12 BFS-prep cache populated by
+the first seed of each scenario × engine pair).
+
+\textbf{Control variables} (held constant across all conditions):
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Parameter & Value & Rationale \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Random seeds & 42, 43, 44, 45, 46 & Reproducible; 5 runs per cell \\
+Demand strategy & Census-calibrated (ModelGen + PUMS) & Consistent
+realistic inputs \\
+Routing & State-aware BFS with OSM turn restrictions & Deterministic,
+version-independent \\
+Time horizon & 1 hour (3,600 s) & Standard morning peak period \\
+MATSim iterations & 1 (\texttt{lastIteration\ =\ 0}, no replanning) &
+Fair comparison with SUMO single-pass mode \\
+DTALite iterations & 5 column-gen + 5 column-update & Standard UE
+convergence \\
+Feasibility filter & SCC-based & Same trip set fed to every engine \\
+\end{longtable}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Scenario Descriptions}\label{42-scenario-descriptions}
+
+\subsection{\texorpdfstring{4.2.1
+\texttt{chicago\_1k\_car}}{4.2.1 chicago\_1k\_car}}\label{421-chicago_1k_car}
+
+\textbf{Generated}: \texttt{python\ scripts/01\_chicago\_1k\_car.py}
+(equivalent to
+\texttt{python\ generate.py\ -\/-city\ chicago\ -\/-trips\ 1000\ -\/-modes\ car\ -\/-seed\ 42})
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Property & Value \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Nodes & 1,245 \\
+Links & 2,862 \\
+Largest SCC & 1,204 nodes (96.7 \%), 2,796 links \\
+Bounding box & 41.842°--41.914° N, -87.678°---87.582° W \\
+Radius from centre & 4 km \\
+Source & OpenStreetMap (cached in \texttt{cache/}) \\
+Total trips & 1,000 \\
+Demand strategy & Census-calibrated (ModelGen) \\
+Mode & 100 \% car \\
+Time window & 0 -- 3,600 s (one-hour morning peak) \\
+Census commuters in bbox & \textasciitilde15,000 -- 25,000 \\
+\end{longtable}
+
+\textbf{Key features}: Dense grid pattern with regular block spacing;
+high intersection density; mixed residential/commercial; multiple
+highway segments (I-90/94, I-290).
+
+\subsection{Larger Tiers (HPC)}\label{422-larger-tiers-hpc}
+
+The 10K -- 500K tiers are generated by
+\texttt{scripts/02\_nyc\_10k\_car.py},
+\texttt{scripts/03\_la\_50k\_car.py},
+\texttt{scripts/04\_chicago\_200k\_car.py}, and
+\texttt{scripts/05\_nyc\_500k\_car.py}. They target NYC, LA, and Chicago
+respectively and run on OSC Pitzer --- see
+\href{../PITZER.md}{\texttt{doc/PITZER.md}} for the operational guide.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Execution Environment}\label{43-execution-environment}
+
+\subsection{Development Environment
+(Local)}\label{431-development-environment-local}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Component & Specification \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Machine & MacBook Pro (Apple Silicon M4 Pro) \\
+CPU & 14 cores (10P + 4E) \\
+RAM & 16 GB \\
+Storage & 1 TB SSD \\
+GPU & Integrated (no discrete NVIDIA) \\
+OS & macOS 14.x \\
+\end{longtable}
+
+\subsection{HPC Environment (OSC
+Pitzer)}\label{432-hpc-environment-osc-pitzer}
+
+Used for the canonical 11-cell \texttt{benchmark\_small} matrix
+(chicago\_1k + nyc\_10k + la\_50k). The 1 K tier alone is
+laptop-runnable; the 10 K and 50 K tiers need HPC because (a) SUMO micro
+at 10 K is a coffee-break run, and (b) DTALite at 10 K + has
+super-linear UE iteration cost. All three primary engines (SUMO, MATSim,
+DTALite) are CPU-only after the LPSim removal in Version\_5. See
+\texttt{doc/PITZER.md} for the operational guide and
+\texttt{cluster/jobs/benchmark\_small.sbatch} for the canonical sbatch
+script (Phase 12.4: \texttt{-\/-mem=128G},
+\texttt{-\/-cpus-per-task=16}, \texttt{-\/-time=36:00:00}).
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Component & Specification \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Cluster & Ohio Supercomputer Center --- Pitzer (RHEL 9, SLURM) \\
+CPU per node & Intel Xeon Skylake (40 cores) or Cascade Lake (48 cores),
+192 GB \\
+Large-mem nodes & Up to 3 TB RAM (\texttt{hugemem} partition) \\
+Partitions used & \texttt{cpu} (all three shipped engines are CPU-only
+after the Version\_5 LPSim retirement) \\
+Max wall time & 7 days (\texttt{cpu}, \texttt{gpu}); 14 days
+(\texttt{longcpu}, restricted) \\
+Storage & Home 500 GB, Project (\texttt{PMIU0110}) 500 GB, scratch
+per-job \\
+Project account & \texttt{-\/-account=PMIU0110} \\
+Internet access & Outbound via NAT on login + compute nodes (PyPI,
+GitHub; Overpass used only as fallback --- primary OSM ingest uses state
+PBFs staged under \texttt{\textasciitilde{}/SimForge/osm\_data/}) \\
+\end{longtable}
+
+\subsection{Software Versions}\label{433-software-versions}
+
+\begin{longtable}[]{@{}llll@{}}
+\toprule\noalign{}
+Software & Version & Installation & Notes \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Python & 3.13.x & \texttt{setup\_simforge.py} & Bootstrapper \\
+SUMO & 1.26.0 & \texttt{uv\ pip\ install\ eclipse-sumo==1.26.0}
+(separate from \texttt{requirements.lock}; the wheel is
+manylinux\_2\_28\_x86\_64-only and pinned outside the cross-platform
+lockfile) & Mandatory \\
+MATSim & 15.0 & JAR & \texttt{lib/matsim-15.0/} \\
+Java & 17 & Homebrew & MATSim runtime \\
+DTALite & path4gmns 0.10.0 & bundled in \texttt{requirements.lock}
+(\texttt{path4gmns} wheel) & CPU mesoscopic DTA; on Mac needs
+\texttt{brew\ install\ libomp} \\
+osmnx & 2.x (\texttt{\textgreater{}=2.0,\textless{}3}) & pip & Parse PBF
+slice → graph, bbox truncate (\texttt{bbox=(W,S,E,N)} tuple) \\
+pyosmium & 4.x & pip (\texttt{osmium}) & Bbox-slice Geofabrik PBFs in
+\texttt{osm\_data/} \\
+lxml & 5.x & pip & XML processing \\
+pandas & 2.x & pip & Demand CSV handling \\
+\end{longtable}
+
+\subsection{Execution Protocol}\label{434-execution-protocol}
+
+For each cell of the 11-cell matrix:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Validation}: \texttt{validate\_bundle.py} verifies hash +
+  referential integrity for the scenario bundle.
+\item
+  \textbf{Conversion}: Adapter writes simulator-specific inputs (network
+  XML, plans/routes, settings) plus a \texttt{feasibility\_report.json}
+  sidecar. Phase 12 BFS-prep cache: the first seed populates a
+  per-engine cache; the remaining 4 seeds hardlink the cached prep into
+  their cell directories (\textasciitilde93 s/seed for cached SUMO meso
+  vs \textasciitilde28,681 s/seed for the cold first seed at la\_50k).
+\item
+  \textbf{Measurement runs}: 5 runs per cell with seeds \{42, 43, 44,
+  45, 46\}.
+\item
+  \textbf{Metric extraction}: Parse simulator outputs → travel-time
+  stats, throughput. SUMO via \texttt{parse\_sumo\_tripinfo}
+  (tripinfo.xml), MATSim via \texttt{parse\_matsim\_output}
+  (output\_trips.csv.gz), DTALite via \texttt{parse\_dtalite\_output}
+  (link\_performance.csv + agent.csv).
+\item
+  \textbf{Result serialisation}:
+  \texttt{runs/benchmark\_small/\textless{}scenario\textgreater{}/benchmark\_results\_benchmark\_small.json}
+  per scenario; the parallel-by-scenario sbatch (Phase 12) produces
+  three independent JSONs that the analyzer + audit\_fairness can read
+  together.
+\end{enumerate}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Measured Results}\label{44-measured-results}
+
+\subsection{Headline numbers (OSC Pitzer Intel Xeon Skylake, 16
+cores per
+worker)}\label{441-headline-numbers-osc-pitzer-intel-xeon-skylake-16-cores-per-worker}
+
+The numbers below come from Pitzer SLURM jobs \texttt{47237978} (initial
+run) + \texttt{47248311} (post-Phase-12.4 re-queue) +
+\texttt{tools/recover\_partial\_summary.py} (Phase 12.5 synthesis for
+la\_50k\_car DTALite cells). See \href{../../CHANGELOG.md}{CHANGELOG.md}
+Phase 12 series for the full diagnostic chain. Chapter 5 (Results)
+reproduces these numbers verbatim from the on-disk JSONs at
+\texttt{runs/benchmark\_small/\textless{}scenario\textgreater{}/benchmark\_results\_benchmark\_small.json}
+--- see §5.1 (Table 5.1), §5.2 (Table 5.2), §5.3 (Fig 5.3 cross-engine
+ratios), §5.7 (DTALite scaling-ceiling discussion).
+
+Compact summary (full 11-cell table is Table 5.1 in Chapter 5):
+
+\begin{longtable}[]{@{}lllll@{}}
+\toprule\noalign{}
+Scenario & SUMO/MATSim mean-TT ratio & SUMO meso runtime & MATSim meso
+runtime & DTALite meso runtime \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+chicago\_1k\_car & 0.869 (-13.1 \%) & 9.50 s & 8.00 s & 22.26 s \\
+nyc\_10k\_car & 1.132 (+13.2 \%) & 19.90 s & 15.24 s & 583.06 s \\
+\textbf{la\_50k\_car} & \textbf{1.046 (+4.6 \%)} & 91.68 s & 52.98 s &
+\emph{did not converge --- see §5.7} \\
+\end{longtable}
+
+\subsection{Fidelity (RQ1)}\label{442-fidelity-rq1}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Cross-engine alignment improves with scale.} SUMO/MATSim
+  mean-TT gap narrows from ±13 \% at 1 K and 10 K → +4.6 \% at 50 K. The
+  convergence is law-of-large-numbers: with more trips, per-trip
+  differences between SUMO\textquotesingle s stricter insertion logic
+  and MATSim\textquotesingle s earlier mobsim release average out. This
+  is the central paradigm-spread finding (§5.3).
+\item
+  \textbf{DTALite UE underestimates travel time vs queue-based mobsim by
+  \textasciitilde40-45 \%} at the scales where it converges
+  (chicago\_1k, nyc\_10k). Expected behaviour: equilibrium assignment
+  ignores transient congestion build-up and dissipation that
+  event-driven mobsim captures.
+\item
+  \textbf{SUMO meso vs SUMO micro disagree by 28-73 \% on mean travel
+  time} (gap grows with scale) --- micro captures intersection delays
+  and queue spillback.
+\end{itemize}
+
+\subsection{Scalability (RQ2)}\label{443-scalability-rq2}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{SUMO meso : MATSim meso runtime ratio} narrows with scale:
+  1.19× at 1 K → 1.31× at 10 K → 1.73× at 50 K (MATSim faster at 50 K;
+  JVM startup amortises).
+\item
+  \textbf{SUMO meso vs SUMO micro speedup} widens with scale: 1.65× at 1
+  K → 9.01× at 10 K (micro becomes a coffee-break run at 10 K).
+\item
+  \textbf{DTALite super-linear cost.} From 22 s (1 K) → 583 s (10 K) is
+  26× cost for 10× trips. Beyond 10 K the path4gmns 0.10.0
+  binary\textquotesingle s 4-thread cap makes it prohibitive ---
+  la\_50k\_car would need \textasciitilde25 h per seed at observed rates
+  (§5.7).
+\item
+  \textbf{MATSim\textquotesingle s per-trip cost amortises the JVM tax
+  rapidly.} \textasciitilde7 s startup + per-trip work; at 50 K, MATSim
+  achieves 944 trips/s --- the highest throughput at any tested tier
+  (§5.5).
+\end{itemize}
+
+\subsection{Reproducibility (RQ3)}\label{444-reproducibility-rq3}
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{MATSim is byte-deterministic at all scales} (R = 1.0000 across
+  all 3 scenarios) with \texttt{lastIteration\ =\ 0}.
+\item
+  \textbf{DTALite is byte-deterministic where it converges} (R = 1.0000
+  at chicago\_1k and nyc\_10k; la\_50k did not converge).
+\item
+  \textbf{SUMO R drops with scale but stays "Good"}: 0.9982 (1 K) →
+  0.9564 (10 K, worst case) → 0.9804 (50 K). CV stays \textless{} 5 \%
+  everywhere. SUMO is \emph{reproducible} in the engineering sense but
+  not byte-deterministic like MATSim and DTALite.
+\end{itemize}
+
+\subsection{Trade-off Analysis
+(RQ4)}\label{445-trade-off-analysis-rq4}
+
+\begin{verbatim}
+Fidelity ▲
+         │  ● SUMO-micro     (highest fidelity; 9× slower than meso at 10K, infeasible at 50K)
+         │
+         │      ● SUMO-meso  (lower fidelity, scales linearly with trip count)
+         │      ● MATSim     (different mobsim, byte-deterministic; JVM-tax floor)
+         │      ● DTALite    (UE equilibrium; -40% mean TT; super-linear cost; 4-thread cap at 50K)
+         │
+         └──────────────────────────────────────▶ Speed
+\end{verbatim}
+
+\textbf{Key trade-off}: The 1 K tier is too small to be practically
+interesting --- all four cells finish in ≤ 22 s. The decisive trade-offs
+surface at 10 K + (SUMO micro becomes coffee-break) and 50 K + (SUMO
+micro infeasible, DTALite hits path4gmns scaling ceiling). The published
+thesis numbers cover all three regimes; future work would extend to 200
+K and 500 K once the path4gmns ceiling is mitigated (§5.7).
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Analysis Methods}\label{45-analysis-methods}
+
+\subsection{Statistical Analysis}\label{451-statistical-analysis}
+
+\textbf{Cross-simulator comparison (RQ1)}
+
+\begin{itemize}
+\tightlist
+\item
+  Paired comparisons: each pair of simulators compared on identical
+  scenarios.
+\item
+  KS test at α = 0.05: determines whether travel-time distributions
+  differ significantly.
+\item
+  GEH acceptance criterion: ≥ 85 \% of links with GEH \textless{} 5.0
+  indicates acceptable fit.
+\end{itemize}
+
+\textbf{Scaling analysis (RQ2)}
+
+\begin{itemize}
+\tightlist
+\item
+  Log-log plot of runtime vs trip count → slope indicates scaling
+  exponent.
+\item
+  Expected: meso slopes ≈ 1.0 (linear), micro slopes ≈ 1.2 -- 1.5
+  (super-linear).
+\end{itemize}
+
+\textbf{Reproducibility analysis (RQ3)}
+
+\begin{itemize}
+\tightlist
+\item
+  Compute \(R\) for each \texttt{(scenario,\ engine,\ mode,\ KPI)}
+  combination.
+\item
+  Report \(R \geq 0.99\) as "effectively deterministic"; flag any
+  \(R < 0.90\) for investigation.
+\end{itemize}
+
+\subsection{Visualisation Plan}\label{452-visualisation-plan}
+
+\texttt{evaluation/generate\_plots.py} emits 10 figures (5.1 -- 5.10).
+See \href{../RESULTS_GUIDE.md}{doc/RESULTS\_GUIDE.md} for the per-figure
+description.
+
+\subsection{Output Formats}\label{453-output-formats}
+
+\texttt{evaluation/analyze\_benchmark.py} emits:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{Console summary} with categorised metrics
+\item
+  \textbf{LaTeX tables} ready for thesis inclusion (\texttt{-\/-latex})
+\item
+  \textbf{Markdown tables} for documentation (\texttt{-\/-markdown})
+\item
+  \textbf{Coverage diagnostic} flagging low-sample / asymmetric /
+  silently-failed cells
+\end{itemize}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ExtensionTok{python} \AttributeTok{{-}m}\NormalTok{ evaluation.analyze\_benchmark runs/benchmark\_small/benchmark\_results\_benchmark\_small.json }\AttributeTok{{-}{-}latex} \AttributeTok{{-}{-}markdown}
+\end{Highlighting}
+\end{Shaded}
+
+\subsection{Cross-engine fairness
+audit}\label{454-cross-engine-fairness-audit}
+
+\texttt{evaluation/audit\_fairness.py} is the methodology check that
+verifies the cross-engine comparison was actually fair before any of its
+results are reported. For each scenario, it compares the inputs each
+engine consumed and the outputs each engine produced, organised as four
+checks:
+
+\begin{longtable}[]{@{}lll@{}}
+\toprule\noalign{}
+Check & What it verifies & Pass condition \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\textbf{Q1} & Cross-engine feasibility verdict & All
+engines\textquotesingle{} \texttt{feasibility\_report.json}
+byte-identical (same \texttt{feasible\_trips}, \texttt{total\_trips},
+\texttt{scc\_nodes}, \texttt{scc\_links}, skip counts) \\
+\textbf{Q2} & Engine input network & All engines emit identical
+SCC-filtered node + link counts (modulo documented OSM-noise drops) \\
+\textbf{Q3} & Trips actually simulated & Each engine simulates exactly
+the cross-engine \texttt{feasible\_trips} count (MATSim plans, DTALite
+demand-volume sum, SUMO routes) \\
+\textbf{Q4} & Cross-engine travel-time spread & Per-engine mean / P95 /
+completion + pairwise mean-TT ratios --- this is the paradigm-spread
+signal \\
+\end{longtable}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\ExtensionTok{python} \AttributeTok{{-}m}\NormalTok{ evaluation.audit\_fairness runs/benchmark\_small}
+\end{Highlighting}
+\end{Shaded}
+
+The audit is read-only and emits a defender-friendly report.
+PASS/WARN/FAIL verdicts on Q1--Q3 are the methodology-section evidence
+that "the engines were given the same problem"; the Q4 ratios are the
+paradigm-spread signal at the heart of the cross-engine comparison.
+Sample audit output on the bundled chicago\_1k\_car (Pitzer, all three
+engines) is recorded in \texttt{doc/EXPERIMENT\_LOG.md} §3.
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Threats to Validity}\label{46-threats-to-validity}
+
+\subsection{Internal Validity}\label{461-internal-validity}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Threat & Mitigation \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Random seed affecting results & 5 runs per condition with seeds \{42,
+43, 44, 45, 46\}; report mean ± 95 \% CI \\
+JVM warm-up affecting MATSim & All runs include the same JVM start cost;
+comparison is fair-relative; cost amortises \textless{} 30 \% at 10 K
++ \\
+OS scheduling noise & Use \texttt{perf\_counter()}; HPC runs on
+dedicated nodes; cached cell std \textless{} 5 \% CV \\
+Adapter conversion errors & \textasciitilde639 unit tests (with all 5
+bundles generated) including byte-identical determinism tests + the
+three-function adapter-contract regression guard \\
+Scenario validation failures & Pre-flight validation check before every
+run \\
+Trip-count asymmetry across engines & SCC filter at generator + adapter;
+\texttt{feasibility\_report.json} audit trail; \texttt{audit\_fairness}
+Q1 PASS on all 3 scenarios \\
+MATSim adapter route-format ambiguity & Phase 12.1 fix:
+\texttt{\textless{}route\ type="links"\textgreater{}} text content
+includes start\_link + end\_link tokens; verified by 0-trip → 1000-trip
+empirical check \\
+path4gmns 0.10.0 4-thread cap on DTALite & Discovered Phase 12.5;
+documented as scaling ceiling (§5.7); affects la\_50k\_car DTALite cells
+only \\
+\end{longtable}
+
+\subsection{External Validity}\label{462-external-validity}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Threat & Mitigation \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Only 1 US city in the stress test & Larger HPC tiers cover NYC at 10K
+and 500K, LA at 50K, Chicago at 200K \\
+Census-calibrated (not real OD) & Documented realism assessment
+(\textasciitilde60 -- 65 \%); exceeds synthetic baselines \\
+No transit routing & Mode is assigned but not routed; acknowledged
+limitation \\
+Single peak hour & Larger tiers cover 24-hour demand patterns \\
+\end{longtable}
+
+\subsection{Construct Validity}\label{463-construct-validity}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule\noalign{}
+Threat & Mitigation \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+GEH not universally accepted & Report multiple metrics (RMSE, KS, GEH)
+for triangulation \\
+Reproducibility index R sensitive to μ & Handle edge cases (μ → 0)
+explicitly; report CV alongside R \\
+Travel time only (no queue lengths) & Focus on trip-level metrics;
+acknowledge this limitation \\
+\end{longtable}
+
+\begin{center}\rule{0.5\linewidth}{0.5pt}\end{center}
+
+\section{Reproducibility
+Checklist}\label{47-reproducibility-checklist}
+
+For any researcher to reproduce these experiments:
+
+\begin{itemize}
+\tightlist
+\item[$\square$]
+  Clone repository (branch \texttt{phase-14-canonical-routes} for the
+  active development tip, or \texttt{main} for the thesis-tagged
+  snapshot). The fully reproducible thesis-default container image is
+  pinned at \texttt{ghcr.io/phanidharakula/simforge:db8d786} (see
+  §3.11.5).
+\item[$\square$]
+  Install \texttt{uv}:
+  \texttt{curl\ -LsSf\ https://astral.sh/uv/install.sh\ \textbar{}\ sh}.
+\item[$\square$]
+  Provision the canonical environment:
+  \texttt{uv\ python\ install\ 3.13\ \&\&\ uv\ venv\ -\/-python\ 3.13\ .venv\ \&\&\ source\ .venv/bin/activate\ \&\&\ uv\ pip\ install\ -r\ requirements.lock\ \&\&\ uv\ pip\ install\ eclipse-sumo==1.26.0}
+  (installs Python 3.13.13, the 35 lockfile-pinned packages including
+  \texttt{path4gmns==0.10.0}, then \texttt{eclipse-sumo==1.26.0}
+  separately --- the eclipse-sumo wheel is
+  manylinux\_2\_28\_x86\_64-only and excluded from the cross-platform
+  lockfile). Alternatively pull the pinned container; see §3.11.
+\item[$\square$]
+  Install Java 17+ for MATSim: \texttt{brew\ install\ openjdk@17}
+  (macOS) / \texttt{apt\ install\ openjdk-17-jdk} (Linux) /
+  \texttt{module\ load\ openjdk/21.0.3\_9} (Pitzer --- explicit version
+  required by lmod). Then download the MATSim JAR per
+  \href{../../SETUP.md}{SETUP.md}.
+\item[$\square$]
+  (macOS only, for DTALite OpenMP runtime)
+  \texttt{brew\ install\ libomp}.
+\item[$\square$]
+  Fetch hash-pinned OSM PBFs: \texttt{python\ tools/download\_osm.py}
+  (only required if you plan to \emph{regenerate} bundles; the committed
+  \texttt{scenarios/\{chicago\_1k\_car,nyc\_10k\_car,la\_50k\_car\}/}
+  networks are already built).
+\item[$\square$]
+  Validate the bundled scenarios:
+  \texttt{python\ -m\ pipeline.validation.validate\_bundle\ scenarios/\{chicago\_1k\_car,nyc\_10k\_car,la\_50k\_car\}}.
+\item[$\square$]
+  Submit the canonical 55-cell benchmark on Pitzer:
+  \texttt{sbatch\ cluster/jobs/benchmark\_small.sbatch}
+  (\textasciitilde22-23 h walltime with Phase 12 BFS-prep cache; uses
+  \texttt{-\/-mem=128G} and \texttt{-\/-cpus-per-task=16} per Phase
+  12.4). On a Mac, run only the 1 K cells:
+  \texttt{python\ -m\ execution.run\_benchmark\ runspecs/benchmark\_small.yaml\ -\/-scenario\ chicago\_1k\_car}.
+\item[$\square$]
+  (If a Pitzer worker is killed before writing its summary JSON, recover
+  from disk:)
+  \texttt{python\ -m\ tools.recover\_partial\_summary\ -\/-runspec\ runspecs/benchmark\_small.yaml\ -\/-scenario\ \textless{}scenario\_id\textgreater{}\ -\/-base-dir\ runs/benchmark\_small/\textless{}scenario\_id\textgreater{}}.
+\item[$\square$]
+  Analyse:
+  \texttt{python\ -m\ evaluation.analyze\_benchmark\ runs/benchmark\_small/benchmark\_results\_benchmark\_small.json\ -\/-latex\ -\/-markdown}.
+\item[$\square$]
+  Audit fairness:
+  \texttt{python\ -m\ evaluation.audit\_fairness\ runs/benchmark\_small}.
+\item[$\square$]
+  Render figures:
+  \texttt{python\ -m\ evaluation.generate\_plots\ runs/benchmark\_small/benchmark\_results\_benchmark\_small.json\ -\/-output\ doc/figures}.
+\item[$\square$]
+  Verify: all \textasciitilde639 tests pass
+  (\texttt{python\ -m\ pytest\ tests/\ -q}) with all 5 generated bundles
+  present. On Apple Silicon arm64, 3 SUMO-dependent tests skip
+  individually due to a known \texttt{netconvert} segfault on large
+  networks; this is documented in \texttt{tests/conftest.py}.
+\end{itemize}

@@ -18,9 +18,7 @@ Placeholders marked **`[FILL]`** require user input before submission.
 > below capture the content the title page must include; the
 > template controls the formatting.
 
-**`[FILL: Thesis Title]`** — recommended: *"SimForge: A Reproducible Cross-Simulator Testing Framework for Urban Mobility Simulation"*
-
-**`[FILL: Subtitle]`** (optional) — recommended: *"Establishing a Fair-Comparison Methodology and Empirical Findings on Paradigm Spread, Reproducibility Limits, and Engineering Scalability"*
+**Title**: *"SimForge: A Reproducible Cross-Simulator Testing Framework for Urban Mobility Simulation"*
 
 A Thesis Presented in Partial Fulfillment of the Requirements for the Degree
 

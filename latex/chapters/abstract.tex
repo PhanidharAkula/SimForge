@@ -1,0 +1,88 @@
+\chapter*{Abstract}\addcontentsline{toc}{chapter}{Abstract}
+
+Urban-mobility simulators inform high-stakes infrastructure decisions in
+transportation planning, congestion management, and policy evaluation,
+yet a foundational methodological gap persists: cross- simulator results
+are not directly comparable because each simulator uses different input
+formats, different execution conventions, and different metric
+definitions. A 10 \% difference in mean travel time between two
+simulators on a nominally identical scenario could reflect genuine
+paradigm-level disagreement or any of several input-interpretation,
+configuration-tuning, version-pinning, floating-point, threading, and
+platform-binary effects. Practitioners who must choose a simulator for
+an actual planning decision have no operational way to distinguish
+these.
+
+This thesis presents \textbf{SimForge}, a reproducible cross-simulator
+testing framework for urban mobility simulation that closes this gap
+through four contributions: (C1) a canonical, simulator-agnostic input
+bundle with field-level validation; (C2) byte-deterministic adapters for
+SUMO, MATSim, and DTALite that translate the canonical bundle into each
+engine\textquotesingle s native input format and apply a shared
+strongly-connected-component + feasibility filter; (C3) a pinned-digest
+container image (\texttt{ghcr.io/phanidharakula/simforge}) published to
+GitHub Container Registry via an automated GitHub Actions workflow,
+providing bit-identical reproducibility across machines; and (C4) a
+programmatic cross-engine fairness audit that verifies byte-identical
+feasibility verdicts (Q1), byte-identical SCC networks (Q2), identical
+simulated trip-count targets (Q3), and a cross-engine mean travel-time
+comparison (Q4), together with a reproducibility index R = 1 − σ/μ and
+95 \% confidence intervals on every reported mean.
+
+The framework integrates three simulator paradigms (microscopic queue
+via SUMO, activity-based queue via MATSim, user-equilibrium dynamic
+traffic assignment via DTALite) and is benchmarked across three U.S.
+metropolitan networks (Chicago, New York City, Los Angeles) at demand
+tiers from 1 K to 500 K trips per scenario. The fairness audit (Q1-Q3)
+PASSes at every shipped tier, empirically demonstrating that the
+canonical-input + deterministic-adapter design isolates engine-paradigm
+differences from input-interpretation differences.
+
+Four empirical findings emerged from the build and contribute to the
+cross-simulator benchmarking literature beyond the original framework
+deliverables. First, a shared canonical-routes BFS module (Phase 14)
+reduced the chicago\_200k\_car benchmark wall by approximately 20 ×
+cold-vs-cold (from 141.87 h to 7.14 h on OSC Cardinal) and 228 × for
+warm-cache re-runs, making the 500 K-trip tier (nyc\_500k\_car)
+tractable for the first time (12 h 8 min wall vs an \textasciitilde600 h
+pre-Phase-14 projection). Second, the SUMO ↔ MATSim mean travel-time
+ratio is regime-dependent: small-tier convergence (within ±5 \% at 50 K
+trips) sharply reverses at saturation, reaching a 96.3 \% gap at 500 K
+trips on NYC\textquotesingle s bridge-and-corridor topology, where
+SUMO\textquotesingle s insertion-refusal model and
+MATSim\textquotesingle s queue-hold model engage divergent
+paradigm-level behaviors that the fairness contract makes attributable
+to mobsim choice rather than input asymmetry. Third, at a fixed code
+version the framework is bit-identical across every measured platform:
+20/20 cells byte-identical between Cardinal x86\_64 host venv and
+Cardinal x86\_64 container (different OS, JDK distribution, and JDK
+major version); Mac arm64 ↔ Cardinal x86\_64 agreement to 4 sig figs on
+mean travel time. The 0.2-3 \% per-engine shifts originally observed in
+cross-platform comparisons are attributable to code-version drift
+between time-separated measurements (Phase 12 ↔ Phase 14.13
+routing-layer changes), not to floating-point hardware differences. The
+pinned-digest container is therefore load-bearing because it freezes the
+code + bundle + toolchain at a precise git SHA, not because it closes
+any cross-platform numerical gap. Fourth --- sibling to the second
+finding in mechanism but orthogonal in axis --- the within-engine SUMO
+micro vs meso mean-TT gap \emph{narrows} at saturation (from +27 \% at 1
+K trips to +7.8 \% at 200 K) while the wall-time premium grows
+monotonically (1.65 × → 9 × → \textasciitilde124 ×). At saturation, both
+mobsim resolutions become bound by the same insertion-refusal dynamics
+that drive the cross-engine divergence; lane-level dynamics that micro
+adds become second-order to the bottleneck behavior. Two paradigm-spread
+phenomena (cross-engine, within-engine) thus emerge from the same
+underlying mechanism, surfaced cleanly only because the fairness
+contract holds.
+
+SimForge is open-source under the Apache License 2.0 and available at
+\texttt{github.com/PhanidharAkula/SimForge}. The framework, the
+canonical bundles, the audit tooling, and the pinned-digest container
+are intended as a foundation for future cross-simulator research that
+can build on a bit-reproducible benchmark target rather than re-deriving
+fairness from scratch for each comparison.
+
+\textbf{Keywords:} urban mobility simulation, cross-simulator
+benchmarking, reproducibility, SUMO, MATSim, DTALite, dynamic traffic
+assignment, agent-based simulation, container reproducibility,
+scientific computing.
