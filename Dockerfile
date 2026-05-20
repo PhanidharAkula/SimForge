@@ -42,6 +42,13 @@ FROM python:3.13-slim-bookworm
 # - openjdk-17-jre-headless: MATSim 15.0 runtime (plan §1.10 commits Java 17+)
 # - libgomp1:                OpenMP runtime for DTALite (path4gmns bundled binary)
 # - libxml2:                 lxml C bindings + SUMO netconvert output
+# - libx11-6 + libxext6 +
+#   libxrender1 + libxcb1:   eclipse-sumo wheel's sumo binary links against
+#                            X11 (FOX GUI toolkit dep) even for headless CLI;
+#                            manylinux_2_28 wheels expect host-provided X libs.
+#                            Without these: "error while loading shared
+#                            libraries: libX11.so.6". Verified empirically
+#                            from GHA build a3aaed9 → cd5039e diagnosis.
 # - git:                     for `git rev-parse HEAD` in tools/generate_scorecard
 #                            (falls back to "unknown" if no .git tree — safe)
 # - ca-certificates:         TLS verification (pip, OSM downloads)
@@ -52,6 +59,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         openjdk-17-jre-headless \
         libgomp1 \
         libxml2 \
+        libx11-6 \
+        libxext6 \
+        libxrender1 \
+        libxcb1 \
         git \
         ca-certificates \
         curl \
@@ -87,8 +98,8 @@ RUN uv pip install --system --no-cache -r requirements.lock
 # SimForge invokes SUMO as a subprocess (not `import sumolib`), so we
 # verify the binary works, not the Python import.
 RUN uv pip install --system --no-cache eclipse-sumo==1.26.0 \
- && sumo --version 2>&1 | head -1 \
- && echo "  ✓ eclipse-sumo wheel installed, sumo binary at $(which sumo)"
+ && sumo --version 2>&1 | head -1 | grep -q "Eclipse SUMO" \
+ && echo "  ✓ eclipse-sumo wheel installed, sumo binary at $(which sumo) ($(sumo --version 2>&1 | head -1))"
 
 # ---------------------------------------------------------------------------
 # SimForge source code layer
