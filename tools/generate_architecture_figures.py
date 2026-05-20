@@ -719,10 +719,12 @@ def fig_3_3_generation_pipeline(output_dir):
 
 
 def fig_3_4_adapter_contract(output_dir):
-    fig, ax = plt.subplots(figsize=(15, 7))
+    fig, ax = plt.subplots(figsize=(16, 7))
     fig.suptitle("Three-function adapter contract: uniform prepare / run / parse across all engines",
                  fontsize=12.5, fontweight="bold", y=0.97)
-    ax.set_xlim(0, 15)
+    # xlim slightly wider than figsize-scaled to give the rightmost column
+    # full rounded-corner + padding room (previously clipped DTALite column)
+    ax.set_xlim(0, 16)
     ax.set_ylim(0, 7)
     ax.axis("off")
 
@@ -937,6 +939,138 @@ def fig_6_2_reproducibility_regimes(output_dir):
 
 
 # -----------------------------------------------------------------------------
+# F11 — canonical_routes parallel-BFS worker architecture (Methods §3.8)
+# -----------------------------------------------------------------------------
+
+
+def fig_3_8b_parallel_bfs_workers(output_dir):
+    fig, ax = plt.subplots(figsize=(15, 10))
+    fig.suptitle("Phase 14 canonical_routes parallel-BFS architecture: "
+                 "task-parallel over trips, replicated SCC-graph per worker",
+                 fontsize=12, fontweight="bold", y=0.975)
+    ax.set_xlim(0, 15)
+    ax.set_ylim(0, 11)
+    ax.axis("off")
+
+    # ── Top input: feasible trip list ──────────────────────────────────────
+    box(ax, 2.0, 9.7, 11.0, 0.95, "",
+        color=C_BUNDLE, edgecolor=C_BORDER)
+    ax.text(7.5, 10.30,
+            "feasible_trip_ids   (e.g. 200,000 trips, sorted by trip_id)",
+            ha="center", va="center", fontsize=11, fontweight="bold",
+            color=C_TEXT)
+    ax.text(7.5, 9.92,
+            "from  adapters/common/feasibility.feasible_trip_ids()   "
+            "(pure function of network + demand + supported_modes)",
+            ha="center", va="center", fontsize=8.5, style="italic", color="#555")
+
+    arrow(ax, 7.5, 9.65, 7.5, 9.05, lw=2.0)
+
+    # ── Chunker + dispatcher (consolidated; contains both the worker-pool ──
+    #    header AND the chunking command so dispatcher arrows don't cross
+    #    any labels on the way down to workers)
+    box(ax, 2.0, 7.3, 11.0, 1.7, "",
+        color=C_HIGHLIGHT, edgecolor="#c62828")
+    ax.text(7.5, 8.65,
+            "Chunk into  ~1,000  lists of  ~200 trips  each",
+            ha="center", va="center", fontsize=10.5, fontweight="bold",
+            color="#c62828")
+    ax.text(7.5, 8.25,
+            "multiprocessing.get_context(\"spawn\").Pool(workers=N).imap(...)",
+            ha="center", va="center", fontsize=9, family="monospace",
+            color="#c62828")
+    ax.text(7.5, 7.80,
+            "Worker pool:  spawn context;  N = SLURM_CPUS_PER_TASK = 16 on Cardinal",
+            ha="center", va="center", fontsize=9.5, fontweight="bold",
+            color="#37474f")
+    ax.text(7.5, 7.50,
+            "(showing 4 workers + ellipsis for clarity; each holds a full replicated SCC-filtered network, ~150 MB / worker)",
+            ha="center", va="center", fontsize=8.5, style="italic", color="#555")
+
+    # ── Worker boxes: 4 visible + ellipsis column for the remaining 12 ────
+    n_visible = 4
+    worker_w = 2.3
+    worker_h = 1.4
+    worker_gap = 0.20
+    ellipsis_w = 1.4
+    total_w = n_visible * worker_w + (n_visible - 1) * worker_gap + ellipsis_w + worker_gap
+    pool_x_start = (15 - total_w) / 2
+    pool_y_top = 6.40
+    pool_y_bottom = pool_y_top - worker_h
+
+    worker_centers = []
+    for i in range(n_visible):
+        wx = pool_x_start + i * (worker_w + worker_gap)
+        box(ax, wx, pool_y_bottom, worker_w, worker_h, "",
+            color=C_ADAPTER, edgecolor=C_BORDER)
+        ax.text(wx + worker_w / 2, pool_y_bottom + worker_h - 0.30,
+                f"Worker {i+1}",
+                ha="center", va="center", fontsize=10, fontweight="bold",
+                color=C_TEXT)
+        ax.text(wx + worker_w / 2, pool_y_bottom + 0.45,
+                "_init_worker:\nload SCC network\n(replicated copy)",
+                ha="center", va="center", fontsize=8, color="#555")
+        worker_centers.append(wx + worker_w / 2)
+
+    # Ellipsis box (representing workers 5-16)
+    ex = pool_x_start + n_visible * (worker_w + worker_gap)
+    box(ax, ex, pool_y_bottom, ellipsis_w, worker_h, "",
+        color="white", edgecolor="#999")
+    ax.text(ex + ellipsis_w / 2, pool_y_bottom + worker_h - 0.30,
+            "…",
+            ha="center", va="center", fontsize=18, fontweight="bold",
+            color="#999")
+    ax.text(ex + ellipsis_w / 2, pool_y_bottom + 0.50,
+            "Workers\n5-16\n(same shape)",
+            ha="center", va="center", fontsize=8, color="#999")
+
+    # Dispatcher arrows (chunker → each worker); start just below the
+    # chunker box bottom edge (y=7.3) and land at worker top
+    for cx in worker_centers + [ex + ellipsis_w / 2]:
+        arrow(ax, 7.5, 7.25, cx, pool_y_top + 0.05, lw=0.8, color="#999")
+
+    # ── Per-worker BFS computation strip ──────────────────────────────────
+    bfs_y_top = 4.30
+    bfs_y_bottom = 3.40
+    box(ax, 0.5, bfs_y_bottom, 14.0, bfs_y_top - bfs_y_bottom, "",
+        color="white", edgecolor="#888")
+    ax.text(7.5, 3.95,
+            "Each worker, per chunk:   for (trip_id, origin_node, dest_node) in chunk:",
+            ha="center", va="center", fontsize=9.5, family="monospace", color="#333")
+    ax.text(7.5, 3.60,
+            "        path = shortest_path_with_restrictions(...);   yield (trip_id, path)",
+            ha="center", va="center", fontsize=9.5, family="monospace", color="#333")
+    # Worker → BFS strip arrows
+    for cx in worker_centers + [ex + ellipsis_w / 2]:
+        arrow(ax, cx, pool_y_bottom, cx, bfs_y_top + 0.05, lw=0.6, color="#bbb")
+
+    # ── Result merge ──────────────────────────────────────────────────────
+    arrow(ax, 7.5, bfs_y_bottom, 7.5, 2.30, lw=1.8)
+    box(ax, 3.0, 1.30, 9.0, 1.00, "",
+        color=C_OK, edgecolor="#1b5e20")
+    ax.text(7.5, 1.95,
+            "Pool.imap merges results in submission order",
+            ha="center", va="center", fontsize=10, fontweight="bold",
+            color="#1b5e20")
+    ax.text(7.5, 1.55,
+            "→ Dict[trip_id, List[node_id]]   "
+            "(written to cache/canonical_routes/<sha>.jsonl.zst, sorted)",
+            ha="center", va="center", fontsize=9, color="#1b5e20",
+            family="monospace")
+
+    # ── Footer notes ──────────────────────────────────────────────────────
+    ax.text(7.5, 0.65,
+            "Pure-function determinism → byte-identical to serial computation regardless of worker count "
+            "(pinned by tests/test_canonical_routes.py::TestParallelDeterminism)",
+            ha="center", va="center", fontsize=9, style="italic", color="#555")
+    ax.text(7.5, 0.25,
+            "Content-addressable cache: cache/canonical_routes/canonical_routes_<sha256>.jsonl.zst → warm re-runs hit instantly (Phase 14.13)",
+            ha="center", va="center", fontsize=9, style="italic", color="#1b5e20")
+
+    return save(fig, "fig_3_8b_parallel_bfs_workers", output_dir)
+
+
+# -----------------------------------------------------------------------------
 # Main
 # -----------------------------------------------------------------------------
 
@@ -955,6 +1089,7 @@ def main():
         ("F8 Wave 2 container chain", fig_3_11_container_chain),
         ("F9 Two paradigm spread phenomena", fig_6_1_paradigm_spread),
         ("F10 Four reproducibility regimes", fig_6_2_reproducibility_regimes),
+        ("F11 Parallel-BFS worker pool", fig_3_8b_parallel_bfs_workers),
     ]
     for label, fn in fns:
         out = fn(output_dir)
