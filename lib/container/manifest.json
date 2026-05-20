@@ -6,10 +6,15 @@
   "images": {
     "thesis_default": {
       "tag": "phase-14-canonical-routes",
-      "digest_sha256": "UNPIN_AFTER_FIRST_BUILD",
-      "git_sha": "UNPIN_AFTER_FIRST_BUILD",
-      "pinned_at": null,
-      "notes": "First tagged image; digest will be filled in after the first GitHub Actions build lands. Used by sbatchs when SIMFORGE_USE_CONTAINER=1 is set without a specific SIMFORGE_CONTAINER_TAG override."
+      "short_tag": "db8d786",
+      "git_sha": "db8d786d53b7562fd4aa58105cdef54e14330a55",
+      "git_sha_url": "https://github.com/PhanidharAkula/SimForge/commit/db8d786d53b7562fd4aa58105cdef54e14330a55",
+      "digest_sha256": "see https://github.com/PhanidharAkula/SimForge/pkgs/container/simforge",
+      "pinned_at": "2026-05-20",
+      "verified_on_cardinal": true,
+      "verified_at": "2026-05-20T00:41:00-04:00",
+      "verified_by": "apptainer 1.4.5; sumo --version → Eclipse SUMO sumo 1.26.0; java -version → openjdk 17.0.19; chicago_1k_car run inside container completed (20/20 cells)",
+      "notes": "First successful GHA build landed 2026-05-19 after 8 iterations of debugging eclipse-sumo manylinux dependency closure on Debian Bookworm slim (libX11, libGL, libatomic, ...) + MATSim 15.0 release URL discovery. See CHANGELOG.md Wave 2 + doc/CONTAINER_USAGE.md for full details. Used by SBATCHs when SIMFORGE_USE_CONTAINER=1 is set without a specific SIMFORGE_CONTAINER_TAG override."
     }
   },
   "pull_commands": {

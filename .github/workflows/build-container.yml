@@ -30,6 +30,7 @@ on:
       - 'cluster/**'
       - 'runspecs/**'
       - 'scripts/**'
+      - 'lib/container/manifest.json'  # metadata only, doesn't change image content
       - '.gitignore'
       - '.gitattributes'
   workflow_dispatch:
