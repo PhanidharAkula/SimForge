@@ -1,0 +1,95 @@
+% =============================================================================
+% Acronyms, Symbols, and Notation — plan-style xltabular layout.
+% Drawn from doc/GLOSSARY.md (current as of 2026-05-20).
+% =============================================================================
+
+\clearpage
+\thispagestyle{plain}
+\section*{Acronyms, Symbols and Notation}
+\phantomsection
+\addcontentsline{toc}{section}{Acronyms, Symbols and Notation}
+
+% --- Acronyms (non-floating, full width) ---
+\noindent\textbf{Acronyms}
+\medskip
+
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{xltabular}{\textwidth}{@{} l X @{}}
+\toprule
+\textbf{Acronym} & \textbf{Definition} \\
+\midrule
+ACS      & American Community Survey (U.S. Census Bureau 5-year file) \\
+BFS      & Breadth-First Search \\
+CI       & Confidence Interval (Student's $t$ 95\,\% half-width unless stated otherwise) \\
+CRS      & Coordinate Reference System \\
+DTA      & Dynamic Traffic Assignment \\
+DTALite  & Dynamic Traffic Assignment {\tiny --} Lite (path-based UE solver bundled in \texttt{path4gmns}) \\
+GEH      & Geoffrey E.\ Havers traffic-count statistic (UK DfT) \\
+GHA      & GitHub Actions \\
+GHCR     & GitHub Container Registry \\
+GMNS     & General Modeling Network Specification (Zephyr Foundation) \\
+HB / NHB & Home-Based / Non-Home-Based trip purpose family \\
+HBSchool & Home-Based School trip purpose (V5+ Phase 9c chained variant) \\
+HBW      & Home-Based Work trip purpose (V5+ Phase 9a peak split) \\
+HPC      & High-Performance Computing \\
+JWMNP    & U.S.\ Census PUMS variable: minutes traveled to work \\
+JWTRNS   & U.S.\ Census PUMS variable: means of transportation to work \\
+KS       & Kolmogorov{\textendash}Smirnov statistic (distribution comparison) \\
+LPSim    & GPU-accelerated parallel mesoscopic traffic simulator (integrated V4 Phase B, abandoned V5) \\
+MATSim   & Multi-Agent Transport Simulation \\
+ODbL     & Open Database License (OpenStreetMap share-alike) \\
+OCI      & Open Container Initiative \\
+OSC      & Ohio Supercomputer Center \\
+OSM      & OpenStreetMap \\
+PCE      & Passenger Car Equivalent (DTALite capacity normalization) \\
+POLARIS  & Argonne agent-based transportation modeling framework (license-gated; ruled out at criteria) \\
+PUMA     & Public Use Microdata Area (U.S.\ Census $\sim$100K-resident geographic unit) \\
+PUMS     & Public Use Microdata Sample (U.S.\ Census Bureau de-identified records) \\
+QarSUMO  & GPU-accelerated SUMO variant (no usable public source; ruled out at criteria) \\
+$R$      & Reproducibility index (defined in Symbols below) \\
+SBATCH   & SLURM batch submission \\
+SCC      & Strongly Connected Component \\
+SHA-256  & Secure Hash Algorithm, 256-bit (integrity hash) \\
+SLURM    & Simple Linux Utility for Resource Management \\
+SUMO     & Simulation of Urban MObility \\
+TAZ      & Traffic Analysis Zone \\
+TIGER    & Topologically Integrated Geographic Encoding and Referencing (U.S.\ Census shapefiles) \\
+UE / SUE & User Equilibrium / Stochastic User Equilibrium (DTA convergence criteria) \\
+\bottomrule
+\end{xltabular}
+
+\bigskip
+
+% --- Symbols / Notation (non-floating, full width) ---
+\noindent\textbf{Symbols}
+\medskip
+
+\setlength{\tabcolsep}{10pt}
+\renewcommand{\arraystretch}{1.1}
+\begin{xltabular}{\textwidth}{@{} l X @{}}
+\toprule
+\textbf{Symbol} & \textbf{Definition} \\
+\midrule
+$T_{\text{sim}}$   & Simulated time advanced by the engine (seconds) \\
+$T_{\text{wall}}$  & Wall-clock runtime (seconds) \\
+$\mathrm{SRT}$     & Simulated-to-real-time ratio, $\mathrm{SRT} = T_{\text{sim}} / T_{\text{wall}}$ (dimensionless) \\
+$X$                & Scalar KPI (e.g., mean travel time, throughput) \\
+$\mu(X)$           & Sample mean of $X$ across $N$ repeats \\
+$\sigma(X)$        & Sample standard deviation of $X$ across $N$ repeats \\
+$R$                & Reproducibility index, $R = 1 - \sigma(X) / \mu(X)$ (dimensionless; $R = 1$ is bit-identical) \\
+$\Delta$           & Absolute difference between two scalar measurements \\
+$\%\Delta$         & Relative change (percent) \\
+$\Delta t$         & Discrete simulation time step (seconds) \\
+$N_{\text{trips}}$ & Number of feasible trips (agents) simulated per cell \\
+$|V|, |E|$         & Number of canonical-network vertices (nodes) and edges (links) \\
+\bottomrule
+\end{xltabular}
+
+\bigskip
+
+% --- Units ---
+\noindent\textbf{Units.}\;
+SI units are used throughout: length in meters (\si{m}), speed in m/s (\si{m\per s}), time in seconds (\si{s}); SLURM walltimes and benchmark runtimes are reported in (s), (min), or (h) at appropriate magnitudes. All simulation times are measured from scenario start ($t_0 = 0$).
+
+\clearpage

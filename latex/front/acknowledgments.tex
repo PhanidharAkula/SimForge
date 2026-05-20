@@ -1,7 +1,15 @@
-\chapter*{Acknowledgments}
-\addcontentsline{toc}{chapter}{Acknowledgments}
+% =============================================================================
+% Acknowledgments — plan-style: \section*{} with \addcontentsline +
+% \phantomsection so it appears in the ToC as a non-numbered entry.
+% =============================================================================
 
-I am deeply grateful to my advisor, \textbf{[FILL: advisor name]}, for \textbf{[FILL: 1--2 specific things the advisor did that mattered most -- e.g., introducing me to cross-simulator benchmarking as a research direction; tolerating $\sim$14 iterations on the canonical schema design; making time for weekly check-ins through the Phase 14 engineering crunch]}.
+\clearpage
+\thispagestyle{plain}
+\section*{Acknowledgments}
+\phantomsection
+\addcontentsline{toc}{section}{Acknowledgments}
+
+I am deeply grateful to my advisor, \textbf{[FILL: advisor name]}, for \textbf{[FILL: 1--2 specific things the advisor did that mattered most --- e.g., introducing me to cross-simulator benchmarking as a research direction; tolerating $\sim$14 iterations on the canonical schema design; making time for weekly check-ins through the Phase 14 engineering crunch]}.
 
 I thank my thesis committee members \textbf{[FILL: name 2]} and \textbf{[FILL: name 3]} for \textbf{[FILL: e.g., their feedback on the plan draft, their patience during the engine roster pivot from LPSim/POLARIS to DTALite]}.
 
@@ -11,7 +19,7 @@ I thank the \textbf{Ohio Supercomputer Center} (OSC) for compute time on the Pit
 
 The pinned-digest container distribution (Wave 2) builds on the \textbf{GitHub Container Registry} + \textbf{GitHub Actions} infrastructure provided free of charge to public repositories. The visualization component depends on data from the \textbf{U.S.\ Census Bureau} (PUMS, TIGER/Line), the \textbf{Oak Ridge National Laboratory} (LandScan), \textbf{IPUMS USA} (PUMA shapefiles), and \textbf{OpenStreetMap contributors} (road and building geometry under ODbL share-alike).
 
-\textbf{[FILL: optional -- colleagues / labmates / friends who provided specific feedback, e.g., ``I thank X for the careful read of the \S5.6.3 cross-platform-reproducibility narrative that caught the JVM-build attribution error'' -- be specific where possible]}.
+\textbf{[FILL: optional --- colleagues / labmates / friends who provided specific feedback]}.
 
 Finally, thanks to \textbf{[FILL: family / partner / personal support people]} for \textbf{[FILL: their patience during the multi-week thesis-writing crunch / etc.]}.
 

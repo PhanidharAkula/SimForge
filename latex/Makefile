@@ -12,16 +12,16 @@ FIG_FILES = $(wildcard figures/*.pdf) $(wildcard figures/*.png)
 all: $(MAIN).pdf
 
 $(MAIN).pdf: $(TEX_FILES) $(BIB_FILES) $(FIG_FILES)
-	latexmk -pdf -bibtex -biber -file-line-error -halt-on-error $(MAIN).tex
+	latexmk -pdf -bibtex -file-line-error -halt-on-error $(MAIN).tex
 
 # Continuous-rebuild mode: re-compile on any .tex/.bib change.
 watch:
-	latexmk -pdf -bibtex -biber -pvc -file-line-error -halt-on-error $(MAIN).tex
+	latexmk -pdf -bibtex -pvc -file-line-error -halt-on-error $(MAIN).tex
 
 # Remove all intermediate files, keep the PDF.
 clean:
 	latexmk -c $(MAIN).tex
-	rm -f *.bbl *.blg *.run.xml *.bcf
+	rm -f *.bbl *.blg
 
 # Remove everything including the final PDF.
 distclean: clean
