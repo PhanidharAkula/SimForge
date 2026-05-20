@@ -58,11 +58,11 @@ simulator the practitioner is already familiar with, which is not the
 basis on which infrastructure investments worth billions of dollars
 per year should be made.
 
-The methodological gap is well-documented. The Transportation
-Research Board has flagged it in surveys of simulation practice
-[TRB 2022]; computational-reproducibility studies in adjacent fields
-(machine learning [Studer et al. 2019], computational biology
-[Goodman et al. 2016]) have identified the same pattern of
+The methodological gap is well-documented. Surveys of agent-based
+transportation modeling have flagged it consistently
+[Bazzan and Kl{\"u}gl 2014]; computational-reproducibility studies in
+adjacent fields (machine learning [Pineau et al. 2021], computational
+biology [Goodman et al. 2016]) have identified the same pattern of
 version-pinning insufficiency that this thesis measures empirically
 for transportation simulation in Chapter 5 §5.6.3. The MLPerf
 benchmark suite has demonstrated in machine learning that
@@ -164,7 +164,7 @@ where the paradigm signal becomes sharpest.
 ## 1.4 Contributions
 
 This thesis delivers four principal contributions, corresponding to
-the plan's §1.11 C1-C4, and surfaces three empirical findings
+the plan's §1.11 C1-C4, and surfaces four empirical findings
 that emerged during the build and form part of the framework's
 contribution beyond the original C-row list.
 
@@ -209,12 +209,14 @@ breakdown), and an auto-emitted reproducibility scorecard
 (`tools/generate_scorecard.py`). Chapter 3 §3.6 details the metric
 implementations; Chapter 5 §5.1 and §5.2 report the measurements.
 
-### 1.4.2 The three empirical findings
+### 1.4.2 The four empirical findings
 
-Beyond the four C-rows, three measurements emerged from the build
+Beyond the four C-rows, four measurements emerged from the build
 that contribute to the cross-simulator benchmarking literature
 in their own right. They are catalogued in Chapter 6 §6.2 and
-summarized here.
+summarized here. Findings 2 and 4 share a structural cause
+(insertion-refusal vs queue-hold dynamics at network saturation,
+the framework's two distinct paradigm-spread phenomena).
 
 **Finding 1: Phase 14 BFS deduplication reduces the large-tier
 benchmark wall by approximately 20 × cold-vs-cold and 228 × for
@@ -250,6 +252,22 @@ load-bearing because it freezes the code + bundle + toolchain at a
 precise git SHA, not because it closes any cross-platform numerical
 gap. Chapter 5 §5.6.3.
 
+**Finding 4: Within-engine micro-vs-meso mean-TT gap narrows at
+saturation while wall-time premium grows monotonically.** Sibling to
+Finding 2 in mechanism but orthogonal in axis: where Finding 2
+documents cross-engine paradigm divergence (SUMO ↔ MATSim), Finding
+4 documents within-engine resolution convergence (SUMO micro ↔ SUMO
+meso). The chicago_200k_car SUMO micro pilot (Cardinal job 9980007,
+2026-05-19/20, 8 h 16 m engine wall) measured mean TT 9,430 s vs SUMO
+meso's 8,746 s — a 7.8 % gap, down from +73 % at 10 K trips and
++27 % at 1 K. At saturation, both mobsim resolutions become bound by
+the same insertion-refusal dynamics that produce Finding 2's
+cross-engine divergence; lane-level dynamics that micro adds become
+second-order. The 124 × wall premium at 200 K is therefore a poor
+fidelity-cost trade unless lane-level dynamics specifically matter
+(which mean-TT comparisons do not surface). Chapter 5 §5.4;
+Chapter 6 §6.2.4.
+
 ### 1.4.3 The framework as a citable artefact
 
 The SimForge framework itself is an open-source artefact distributed
@@ -276,7 +294,7 @@ measurements that demonstrate the framework's claims and surface
 findings the framework makes newly visible. The methodological
 contribution is the framework (canonical schema + deterministic
 adapters + fairness audit + pinned-digest container); the empirical
-contributions are the three findings catalogued in §1.4.2 above.
+contributions are the four findings catalogued in §1.4.2 above.
 
 ### 1.5.2 What this thesis is not
 

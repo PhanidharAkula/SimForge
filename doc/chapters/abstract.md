@@ -39,7 +39,7 @@ audit (Q1-Q3) PASSes at every shipped tier, empirically demonstrating
 that the canonical-input + deterministic-adapter design isolates
 engine-paradigm differences from input-interpretation differences.
 
-Three empirical findings emerged from the build and contribute to
+Four empirical findings emerged from the build and contribute to
 the cross-simulator benchmarking literature beyond the original
 framework deliverables. First, a shared canonical-routes BFS module
 (Phase 14) reduced the chicago_200k_car benchmark wall by
@@ -64,7 +64,17 @@ measurements (Phase 12 ↔ Phase 14.13 routing-layer changes), not to
 floating-point hardware differences. The pinned-digest container is
 therefore load-bearing because it freezes the code + bundle +
 toolchain at a precise git SHA, not because it closes any
-cross-platform numerical gap.
+cross-platform numerical gap. Fourth — sibling to the second finding
+in mechanism but orthogonal in axis — the within-engine SUMO micro
+vs meso mean-TT gap *narrows* at saturation (from +27 % at 1 K trips
+to +7.8 % at 200 K) while the wall-time premium grows monotonically
+(1.65 × → 9 × → ~124 ×). At saturation, both mobsim resolutions
+become bound by the same insertion-refusal dynamics that drive the
+cross-engine divergence; lane-level dynamics that micro adds become
+second-order to the bottleneck behavior. Two paradigm-spread
+phenomena (cross-engine, within-engine) thus emerge from the same
+underlying mechanism, surfaced cleanly only because the fairness
+contract holds.
 
 SimForge is open-source under the Apache License 2.0 and available
 at `github.com/PhanidharAkula/SimForge`. The framework, the

@@ -19,7 +19,7 @@ research community to pick up.
 
 The headline takeaway: the plan-§1.10 Objective of *"a
 reproducible, transparent, and extensible cross-simulator testing
-framework"* is delivered, with three empirical findings that emerged
+framework"* is delivered, with four empirical findings that emerged
 from the build and now form part of the framework's contribution
 beyond the original C1-C4 list.
 
@@ -630,13 +630,14 @@ deliverables:
 
 The fairness contract (Q1 byte-identity of feasibility verdicts,
 Q2 same SCC network, Q3 same trip-count target) is the
-methodological substrate that makes each of the three findings
+methodological substrate that makes each of the four findings
 interpretable. Without it, the Phase 14 speedup measurements could
-be attributed to silently changing input; the Q4 paradigm finding
-could be attributed to engines receiving different OD pairs; the
-cross-platform shift could be attributed to canonical-bundle drift.
-With Q1-Q3 demonstrated PASS at every tier on every shipped cell,
-each finding is necessarily attributable to its named mechanism.
+be attributed to silently changing input; the cross-engine and
+within-engine paradigm findings could be attributed to engines (or
+modes) receiving different OD pairs; the cross-platform shift
+could be attributed to canonical-bundle drift. With Q1-Q3
+demonstrated PASS at every tier on every shipped cell, each
+finding is necessarily attributable to its named mechanism.
 
 SimForge is now a defensible *reproducible execution target* for
 cross-simulator urban-mobility benchmarks, with the artefact

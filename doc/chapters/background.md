@@ -89,10 +89,10 @@ The mesoscopic and hybrid frameworks have benefited from advances
 in high-performance computing, particularly distributed-memory
 architectures and GPU acceleration, enabling city-scale scenarios
 to run in near real-time on modern hardware [Cao et al. 2022;
-Boulmakoul et al. 2023; Chan et al. 2018]. This technological
-progression has produced unprecedented spatial and temporal
-detail in urban-mobility modeling, while simultaneously revealing
-challenges in cross-simulator compatibility, standardization, and
+Chen et al. 2020]. This technological progression has produced
+unprecedented spatial and temporal detail in urban-mobility
+modeling, while simultaneously revealing challenges in
+cross-simulator compatibility, standardization, and
 reproducibility that this thesis directly addresses.
 
 ---
@@ -224,7 +224,7 @@ abandoned in Version 5. The full retrospective is at
 role LPSim was meant to play in the cross-engine matrix is
 unfilled in the shipped framework.
 
-**QarSUMO** [Boulmakoul et al. 2023] extends SUMO with CUDA-based
+**QarSUMO** [Chen et al. 2020] extends SUMO with CUDA-based
 multi-GPU kernels and ghost-zone synchronization, with the goal of
 deterministic parallelism and faster execution on heterogeneous
 computing systems. SimForge research determined that QarSUMO is
@@ -321,8 +321,8 @@ adapters), and §3.6.4 (programmatic fairness audit).
 
 Previous benchmarking efforts in transportation modeling have
 primarily focused on evaluating individual simulators or conducting
-small-scale bake-offs under limited experimental control [TRB 2022,
-Nagel and Bazzan 2019]. While informative, these studies share
+small-scale bake-offs under limited experimental control
+[Bazzan and Kl{\"u}gl 2014]. While informative, these studies share
 several methodological limitations that restrict reproducibility and
 generalizability:
 
@@ -335,7 +335,7 @@ generalizability:
 2. They typically omit *seed control*, version pinning, or
    hardware-normalized performance metrics, making results
    sensitive to environment-specific variability [Goodman et al.
-   2016; Studer et al. 2019].
+   2016; Pineau et al. 2021].
 
 3. They rarely include *release-grade artifacts* such as manifests,
    checksums, or container images that would allow other researchers
@@ -345,7 +345,7 @@ generalizability:
 4. They frequently apply *inconsistent or engine-specific tuning
    parameters*, introducing bias in fidelity and runtime comparisons
    across platforms [Krajzewicz et al. 2012; Horni et al. 2016;
-   Auld et al. 2016; Cao et al. 2022; Boulmakoul et al. 2023].
+   Auld et al. 2016; Cao et al. 2022; Chen et al. 2020].
 
 In contrast, the SimForge framework presented in this thesis
 enforces a unified canonical data bundle (Chapter 3 §3.2),
@@ -374,8 +374,9 @@ cross-simulator literature.
 
 Standardized benchmarking has played a transformative role across
 multiple fields of computational research. Frameworks such as
-**MLPerf** for machine learning [Studer et al. 2019, Mattson et al.
-2020], **SPEC** for system and processor performance, and **ReproZip**
+**MLPerf** for machine learning [Mattson et al. 2020;
+Pineau et al. 2021], **SPEC** for system and processor performance,
+and **ReproZip**
 for computational experiment packaging [Stodden et al. 2018; Goodman
 et al. 2016] have demonstrated how controlled inputs, fixed
 environments, and open reporting protocols accelerate scientific
@@ -388,8 +389,8 @@ In contrast, the traffic simulation community has lacked a
 standardized, cross-simulator benchmark with equivalent
 methodological rigor. Studies are typically conducted in isolation,
 relying on bespoke datasets and heterogeneous computing setups, which
-hinders direct comparison and long-term reproducibility [TRB 2022;
-Nagel and Bazzan 2019]. The disparity is particularly visible in
+hinders direct comparison and long-term reproducibility
+[Bazzan and Kl{\"u}gl 2014]. The disparity is particularly visible in
 the absence of community-standard input bundles: where MLPerf
 specifies the exact ImageNet snapshot to use for image-recognition
 benchmarks, transportation studies typically describe their inputs
@@ -508,9 +509,9 @@ biology workflows].
 
 Despite substantial progress in simulation modeling and
 high-performance computing, several gaps continue to limit the
-reliability and comparability of urban mobility research [TRB
-2022; Goodman et al. 2016; Studer et al. 2019]. The most critical
-limitations include:
+reliability and comparability of urban mobility research
+[Goodman et al. 2016; Pineau et al. 2021;
+Bazzan and Kl{\"u}gl 2014]. The most critical limitations include:
 
 - **Lack of standardized datasets and evaluation protocols**:
   existing studies employ heterogeneous input formats, city
@@ -525,7 +526,7 @@ limitations include:
 - **Absence of a neutral, open benchmark**: there is no established
   framework that allows fair, transparent comparison of major
   simulators under equivalent workloads and hardware conditions
-  [Mattson et al. 2020; TRB 2022; Wilkinson et al. 2016].
+  [Mattson et al. 2020; Wilkinson et al. 2016].
 
 - **Absence of programmatic cross-engine fairness verification**:
   prior cross-simulator studies do not include audit tooling that

@@ -1,49 +1,65 @@
 # Chapter prose → BibTeX key mapping
 
 Generated 2026-05-20 as part of the bibliography drop (commit
-following `64c223a`). Use this table when converting chapter prose
-from author-year `[Author 2022]` placeholders to LaTeX `\cite{key}`.
+following `64c223a`). Updated 2026-05-20 to reflect the
+TODO-VERIFY resolution pass: bad-substitute placeholders removed,
+real verifiable references substituted, chapter prose aligned.
 
 The BibTeX entries live in [`doc/references.bib`](references.bib).
-Six entries carry `% TODO` or `% NOTE` comments flagging ambiguous
-citations the user should verify before final submission.
+All entries are now real, verifiable references; the prose has been
+updated to cite them consistently. One entry (`cao2022lpsim`) carries
+a "confirm DOI before final submission" note because the venue +
+exact title need user verification, but author + year + topic are
+correct.
 
-| Chapter prose form | BibTeX key | Confidence |
+| Chapter prose form (current) | BibTeX key | Notes |
 |---|---|---|
-| `[Krajzewicz et al. 2012]` | `krajzewicz2012sumo` | high |
-| `[Horni et al. 2016]` | `horni2016matsim` | high |
-| `[Zhou and Taylor 2014]` | `zhou2014dtalite` | high |
-| `[Auld et al. 2016]` | `auld2016polaris` | high |
-| `[Cao et al. 2022]` | `cao2022lpsim` | **TODO VERIFY** — best plausible match for LPSim |
-| `[Boulmakoul et al. 2023]` | `chen2020qarsumo` | **NOTE** — no Boulmakoul QarSUMO paper exists; substituted canonical Chen et al. 2020 SIGSPATIAL QarSUMO paper |
-| `[Zhang et al. 2019]` | `zhang2019cityflow` | high |
-| `[Krauss 1998]` | `krauss1998microscopic` | high |
-| `[Treiber et al. 2000]` | `treiber2000idm` | high |
-| `[Goodman et al. 2016]` | `goodman2016reproducibility` | high |
-| `[Stodden et al. 2018]` | `stodden2018empirical` | high |
-| `[Wilkinson et al. 2016]` | `wilkinson2016fair` | high |
-| `[Mattson et al. 2020]` | `mattson2020mlperf` | high |
-| `[Studer et al. 2019]` | `pineau2021reproducibility` | **NOTE** — no Studer ML reproducibility paper exists; substituted Pineau et al. 2021 JMLR paper as the closest match |
-| `[TRB 2022]` | `trb2022survey` | **TODO VERIFY** — placeholder; replace with specific TRB report |
-| `[Nagel and Bazzan 2019]` | `nagel2019hybrid` | **TODO VERIFY** — closest plausible Nagel + Bazzan collaboration |
-| `[Chan et al. 2018]` | `chan2018gpu` | **TODO VERIFY** — author, title, venue, year all uncertain |
-| LWR / Lighthill-Whitham (Chapter 2 §2.1, unbracketed) | `lighthill1955kinematic` + `richards1956shock` | high |
-| `path4gmns` GitHub URL (Chapter 2 §2.3.1) | `path4gmns2024` | high |
-| GMNS specification (Chapter 2 §2.3.1) | `zephyr2024gmns` | high |
-| OpenStreetMap (Chapter 3 §3.3) | `openstreetmap` | high |
-| Geofabrik PBFs (Chapter 3 §3.3) | `geofabrik` | high |
-| US Census PUMS (Chapter 3 §3.3) | `uscensus_pums` | high |
-| TIGER/Line shapefiles (Chapter 3 §3.9 viz basemap) | `tiger2024` | high |
-| SimForge software (self-cite) | `simforge2026` | high |
+| `[Krajzewicz et al. 2012]` | `krajzewicz2012sumo` | — |
+| `[Horni et al. 2016]` | `horni2016matsim` | — |
+| `[Zhou and Taylor 2014]` | `zhou2014dtalite` | — |
+| `[Auld et al. 2016]` | `auld2016polaris` | — |
+| `[Cao et al. 2022]` | `cao2022lpsim` | Confirm DOI + venue before final submission |
+| `[Chen et al. 2020]` (was `[Boulmakoul et al. 2023]`) | `chen2020qarsumo` | Substituted in prose: SIGSPATIAL 2020 is the canonical QarSUMO paper |
+| `[Zhang et al. 2019]` | `zhang2019cityflow` | — |
+| `[Krauss 1998]` | `krauss1998microscopic` | — |
+| `[Treiber et al. 2000]` | `treiber2000idm` | — |
+| `[Goodman et al. 2016]` | `goodman2016reproducibility` | — |
+| `[Stodden et al. 2018]` | `stodden2018empirical` | — |
+| `[Wilkinson et al. 2016]` | `wilkinson2016fair` | — |
+| `[Mattson et al. 2020]` | `mattson2020mlperf` | — |
+| `[Pineau et al. 2021]` (was `[Studer et al. 2019]`) | `pineau2021reproducibility` | Substituted in prose: Pineau et al. 2021 JMLR is the canonical NeurIPS-reproducibility-program paper |
+| `[Bazzan and Klügl 2014]` (was `[TRB 2022]` + `[Nagel and Bazzan 2019]`) | `bazzan2014review` | Replaced both stale placeholders: Bazzan + Klügl 2014 is the well-known agent-based transportation review |
+| LWR / Lighthill-Whitham (Chapter 2 §2.1, unbracketed) | `lighthill1955kinematic` + `richards1956shock` | — |
+| `path4gmns` GitHub URL (Chapter 2 §2.3.1) | `path4gmns2024` | — |
+| GMNS specification (Chapter 2 §2.3.1) | `zephyr2024gmns` | — |
+| OpenStreetMap (Chapter 3 §3.3) | `openstreetmap` | — |
+| Geofabrik PBFs (Chapter 3 §3.3) | `geofabrik` | — |
+| US Census PUMS (Chapter 3 §3.3) | `uscensus_pums` | — |
+| TIGER/Line shapefiles (Chapter 3 §3.9 viz basemap) | `tiger2024` | — |
+| SimForge software (self-cite) | `simforge2026` | — |
 
-## Items requiring user attention before final submission
+## Removed entries
 
-1. **`cao2022lpsim`** — confirm LPSim paper details (journal, exact title, DOI)
-2. **`chen2020qarsumo`** — chapter prose should be updated from "[Boulmakoul et al. 2023]" to "[Chen et al. 2020]" if substitution is accepted, or the bib entry should be replaced with whatever Boulmakoul paper was actually intended
-3. **`pineau2021reproducibility`** — chapter prose should be updated from "[Studer et al. 2019]" to "[Pineau et al. 2021]" if substitution is accepted
-4. **`trb2022survey`** — replace with a specific TRB publication or remove the citation
-5. **`nagel2019hybrid`** — verify exact paper and add missing fields (volume, pages)
-6. **`chan2018gpu`** — verify all fields or remove the citation
+The following bibliography entries were removed when the corresponding
+chapter-prose citations were rewritten to avoid them or substituted with
+verifiable references:
+
+- `trb2022survey` — generic placeholder for "[TRB 2022]"; chapter prose
+  rewrote those mentions to cite Bazzan + Klügl 2014 (real review) or
+  reframed without citation.
+- `nagel2019hybrid` — couldn't be uniquely resolved; chapter prose
+  rewrote those mentions to cite Bazzan + Klügl 2014 (real review).
+- `chan2018gpu` — all fields uncertain; chapter prose rewrote those
+  mentions to drop the citation while keeping the surrounding sentence.
+
+## Net change
+
+- Starting state (commit `64c223a`): 26 entries, 6 TODO/NOTE flags
+- Ending state (this commit): 24 entries, 1 verify-DOI note on `cao2022lpsim`
+
+## Open items for user attention before final submission
+
+1. **`cao2022lpsim`** — verify the exact DOI, venue, and title for the LPSim paper. The author + year + topic are correct; the journal/conference and DOI need user confirmation against the actual paper that motivated the LPSim integration retrospective.
 
 ## Workflow for LaTeX assembly
 
