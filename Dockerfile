@@ -79,8 +79,16 @@ RUN uv pip install --system --no-cache -r requirements.lock
 # brew/apt per SETUP.md; the lockfile only covers Python-only deps). For
 # the container we install the pinned eclipse-sumo wheel directly so SUMO
 # is part of the immutable image. Version matches project notes project doc.
+#
+# Note on sumolib: eclipse-sumo wheel installs the SUMO binaries to
+# /usr/local/bin/ (sumo, netconvert, duarouter, etc.) but does NOT put
+# sumolib on Python sys.path — sumolib lives at site-packages/sumo/tools/sumolib
+# and requires either SUMO_HOME setup or explicit sys.path appending.
+# SimForge invokes SUMO as a subprocess (not `import sumolib`), so we
+# verify the binary works, not the Python import.
 RUN uv pip install --system --no-cache eclipse-sumo==1.26.0 \
- && python -c "import sumolib; print(f'  ✓ eclipse-sumo wheel installed, sumolib {sumolib.__file__}')"
+ && sumo --version 2>&1 | head -1 \
+ && echo "  ✓ eclipse-sumo wheel installed, sumo binary at $(which sumo)"
 
 # ---------------------------------------------------------------------------
 # SimForge source code layer
@@ -123,7 +131,7 @@ RUN python -c "import adapters.sumo.sumo_adapter; print('  ✓ SUMO adapter impo
  && python -c "import evaluation.audit_fairness, evaluation.analyze_benchmark; print('  ✓ evaluation tools OK')" \
  && python -c "import tools.generate_scorecard; print('  ✓ scorecard tool OK')" \
  && python -c "from execution.run_benchmark import BenchmarkHarness; print('  ✓ harness OK')" \
- && python -c "import sumolib; print(f'  ✓ eclipse-sumo wheel: sumolib import OK')" \
+ && sumo --version 2>&1 | head -1 | grep -q "Eclipse SUMO" && echo "  ✓ eclipse-sumo: sumo binary works" \
  && python -c "import path4gmns; print(f'  ✓ path4gmns: {path4gmns.__version__ if hasattr(path4gmns,\"__version__\") else \"installed\"}')" \
  && test -f lib/matsim-15.0/matsim-15.0.jar \
  && echo "  ✓ MATSim 15.0 JAR present" \
