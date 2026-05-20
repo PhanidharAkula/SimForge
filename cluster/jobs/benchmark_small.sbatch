@@ -75,16 +75,46 @@ set -euo pipefail
 shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
-module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
 cd ~/SimForge
-source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim + path4gmns
+
+# ---------------------------------------------------------------------------
+# Wave 2: opt-in pinned-digest container mode (see benchmark_large.sbatch
+# header + doc/CONTAINER_USAGE.md for full notes).
+# ---------------------------------------------------------------------------
+if [ "${SIMFORGE_USE_CONTAINER:-0}" = "1" ]; then
+    TAG="${SIMFORGE_CONTAINER_TAG:-phase-14-canonical-routes}"
+    SIF="containers/simforge_${TAG}.sif"
+    mkdir -p containers
+    if [ ! -f "$SIF" ]; then
+        echo "=== Pulling SimForge container ${TAG} ==="
+        singularity pull "$SIF" "docker://ghcr.io/phanidharakula/simforge:${TAG}" || {
+            echo "FATAL: singularity pull failed for ${TAG}. Check tag availability"
+            echo "       at https://github.com/PhanidharAkula/SimForge/pkgs/container/simforge"
+            exit 1
+        }
+    fi
+    RUN_PY=(singularity exec \
+        --bind "$PWD/scenarios:/workspace/SimForge/scenarios:ro" \
+        --bind "$PWD/runs:/workspace/SimForge/runs" \
+        --bind "$PWD/cache:/workspace/SimForge/cache" \
+        --bind "$PWD/osm_data:/workspace/SimForge/osm_data:ro" \
+        --bind "$PWD/logs:/workspace/SimForge/logs" \
+        --pwd /workspace/SimForge \
+        "$SIF" python)
+    echo "=== Running in pinned-digest container: ${SIF} ==="
+else
+    module load openjdk/21.0.3_9
+    source .venv/bin/activate
+    RUN_PY=(python)
+    echo "=== Running in host venv: $(which python) ==="
+fi
 
 echo "=== Job starting on $(hostname) at $(date) ==="
-echo "Python:    $(which python)"
-echo "SUMO:      $(sumo --version 2>&1 | head -1)"
-echo "Java:      $(java -version 2>&1 | head -1)"
+echo "Python:    $("${RUN_PY[@]}" -c 'import sys; print(sys.executable)' 2>&1 | tail -1)"
+echo "SUMO:      $("${RUN_PY[@]}" -c 'import sumolib; print(sumolib.__version__ if hasattr(sumolib,"__version__") else "installed")' 2>&1 | tail -1)"
+echo "Java:      $(java -version 2>&1 | head -1 || echo 'no host java — container uses its own')"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
-python -c "from adapters.dtalite import is_dtalite_available, find_dtalite_binary; print(f'DTALite:   {find_dtalite_binary() if is_dtalite_available() else \"NOT INSTALLED — run uv pip install path4gmns\"}')"
+"${RUN_PY[@]}" -c "from adapters.dtalite import is_dtalite_available, find_dtalite_binary; print(f'DTALite:   {find_dtalite_binary() if is_dtalite_available() else \"NOT INSTALLED — run uv pip install path4gmns\"}')"
 echo
 
 # ---------------------------------------------------------------------------
@@ -97,7 +127,7 @@ for s in "${SCENARIOS[@]}"; do
         echo "MISSING bundle: scenarios/$s/ — git pull (it should be tracked)."
         exit 1
     fi
-    python -m pipeline.validation.validate_bundle "scenarios/$s"
+    "${RUN_PY[@]}" -m pipeline.validation.validate_bundle "scenarios/$s"
 done
 echo
 
@@ -111,7 +141,7 @@ for s in "${SCENARIOS[@]}"; do
     out="runs/benchmark_small/$s"
     log="logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}_${s}.log"
     echo "  -> $s  (output=$out, log=$log)"
-    python -u -m execution.run_benchmark runspecs/benchmark_small.yaml \
+    "${RUN_PY[@]}" -u -m execution.run_benchmark runspecs/benchmark_small.yaml \
         --scenario "$s" \
         --output   "$out" \
         > "$log" 2>&1 &
@@ -141,17 +171,17 @@ printf '  %s\n' "${RESULTS[@]}"
 echo
 
 echo "--- Markdown summary table ---"
-python -m evaluation.analyze_benchmark "${RESULTS[@]}" --markdown \
+"${RUN_PY[@]}" -m evaluation.analyze_benchmark "${RESULTS[@]}" --markdown \
     | tee runs/benchmark_small/summary.md
 
 echo
 echo "--- Generating thesis figures ---"
-python -m evaluation.generate_plots "${RESULTS[@]}" \
+"${RUN_PY[@]}" -m evaluation.generate_plots "${RESULTS[@]}" \
     --output runs/benchmark_small/plots
 echo
 
 echo "--- Audit cross-engine fairness ---"
-python -m evaluation.audit_fairness runs/benchmark_small \
+"${RUN_PY[@]}" -m evaluation.audit_fairness runs/benchmark_small \
     | tee runs/benchmark_small/audit_fairness.txt
 echo
 

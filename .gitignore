@@ -82,6 +82,11 @@ lib/*
 !lib/dtalite/
 lib/dtalite/*
 !lib/dtalite/manifest.json
+# Wave 2 (containerization): the container manifest tracks the pinned
+# GHCR digest used by thesis-tier runs. Same pattern as lib/dtalite/.
+!lib/container/
+lib/container/*
+!lib/container/manifest.json
 
 # Benchmark output runs (generated data)
 runs/

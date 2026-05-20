@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "description": "Pinned SimForge container image identifiers. Updated when a new thesis-tier benchmark run wants to commit to a specific immutable image digest. The GitHub Actions workflow .github/workflows/build-container.yml publishes images to GHCR on every push; the digests here are the ones that thesis numbers were measured against.",
+  "registry": "ghcr.io",
+  "repository": "phanidharakula/simforge",
+  "images": {
+    "thesis_default": {
+      "tag": "phase-14-canonical-routes",
+      "digest_sha256": "UNPIN_AFTER_FIRST_BUILD",
+      "git_sha": "UNPIN_AFTER_FIRST_BUILD",
+      "pinned_at": null,
+      "notes": "First tagged image; digest will be filled in after the first GitHub Actions build lands. Used by sbatchs when SIMFORGE_USE_CONTAINER=1 is set without a specific SIMFORGE_CONTAINER_TAG override."
+    }
+  },
+  "pull_commands": {
+    "docker":      "docker pull ghcr.io/phanidharakula/simforge:phase-14-canonical-routes",
+    "singularity": "singularity pull docker://ghcr.io/phanidharakula/simforge:phase-14-canonical-routes"
+  },
+  "usage_doc": "doc/CONTAINER_USAGE.md"
+}

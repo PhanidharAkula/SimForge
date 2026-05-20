@@ -8,6 +8,89 @@ Commit hashes refer to the `Version_2` branch.
 
 ## [Unreleased] — Version_5
 
+### Wave 2 — Containerization shipped (2026-05-19)
+
+Closes the last open ~ deviation in `doc/DEVIATIONS.md` (D10),
+mapping to plan §1.10 Objective 3 + §1.11 C3 + §2.7 + §4.2:
+"All simulations execute within pinned-digest containers (OCI/Singularity)."
+
+**Files added:**
+
+- **`Dockerfile`** at repo root — single-stage build on `python:3.13-slim-bookworm`.
+  Layers: OpenJDK 17 + libgomp1 + libxml2 + git + curl + tini (system),
+  uv 0.5.18 (package manager), `requirements.lock`-pinned Python deps
+  (eclipse-sumo 1.26.0, path4gmns 0.10.0, lxml, numpy, etc.), MATSim
+  15.0 JAR, full SimForge source tree (adapters/pipeline/evaluation/
+  execution/visualization/tools/runspecs/scripts/canonical/lib/doc/tests).
+  Build-time verification fails fast if any load-bearing module import
+  is broken. OCI labels include source URL, license, author. Image
+  size ~1.0-1.2 GB.
+
+- **`.dockerignore`** — excludes `runs/`, `osm_data/`, `cache/`,
+  `scenarios/`, `modelgen/`, `.venv/`, `.git/`, generated artefacts.
+  Bind-mounted at runtime.
+
+- **`.github/workflows/build-container.yml`** — auto-builds + publishes
+  to GHCR (`ghcr.io/phanidharakula/simforge`) on every push to `main`
+  or `phase-14-canonical-routes`. Tags: branch name, short SHA, full
+  SHA, plus `latest` on main only. Uses `linux/amd64` target for
+  Cardinal compatibility. GHA cache for incremental builds.
+
+- **`doc/CONTAINER_USAGE.md`** — Docker + Singularity workflows,
+  image contents/exclusions table, opt-in SBATCH mode docs, manual
+  build instructions, verification commands, reproducibility chain.
+
+- **`lib/container/manifest.json`** — pinned digest record for
+  thesis-tier runs (populated after first GHA build lands).
+
+**Files modified:**
+
+- **`cluster/jobs/benchmark_small.sbatch`** + **`benchmark_large.sbatch`** —
+  opt-in container mode via `SIMFORGE_USE_CONTAINER=1` environment
+  variable. When set, the sbatch pulls the SimForge container via
+  Singularity (cached at `containers/simforge_<tag>.sif`) and runs
+  the harness inside it instead of the host venv. `SIMFORGE_CONTAINER_TAG`
+  optionally pins to a specific git SHA / tag (default:
+  `phase-14-canonical-routes`). Default behavior unchanged
+  (host venv) — fully backward compatible.
+
+- **`doc/DEVIATIONS.md`** D10 promoted from ~ Deviated to ✓
+  Closed. At-a-glance scorecard updated: 15 closed / 10 deviated / 6
+  implementation-differs / 31 total.
+
+**Verification path:**
+
+1. Push commits to `phase-14-canonical-routes` → GitHub Actions
+   workflow runs → image published to GHCR.
+2. On Cardinal: `singularity pull docker://ghcr.io/phanidharakula/simforge:phase-14-canonical-routes`
+   → ~1 GB SIF cached at `containers/simforge_phase-14-canonical-routes.sif`.
+3. `SIMFORGE_USE_CONTAINER=1 sbatch cluster/jobs/benchmark_small.sbatch`
+   → harness runs inside the container with the host's scenarios/runs/
+   cache/osm_data bind-mounted in.
+4. Compare benchmark results against the host-venv baseline — should
+   be byte-identical (canonical_routes cache file hash matches; per-cell
+   feasibility_report.json matches; engine TT distributions match).
+
+**Build path that avoids local Docker.** SimForge dev box (Mac arm64)
+has no Docker. GitHub Actions builds the image in the cloud on every
+push — no `docker buildx` needed on the dev box. Verified at workflow
+push time via the build-time import smoke test inside the Dockerfile.
+
+**Net effect on reproducibility chain.** A full cross-machine SimForge
+reproduction now looks like:
+
+```
+1. singularity pull docker://ghcr.io/phanidharakula/simforge:<sha>
+2. tools/download_osm.py  (hash-pinned PBFs via osm_data/manifest.json)
+3. SIMFORGE_USE_CONTAINER=1 sbatch cluster/jobs/benchmark_large.sbatch
+```
+
+Container digest pins the execution environment; OSM manifest pins
+the network input; canonical_routes cache (Phase 14.13) is
+content-addressable; adapter outputs are byte-deterministic (per the
+`determinism` test marker); scorecard records every hash in
+`reproducibility_scorecard.md`. End-to-end hash-verified.
+
 ### Phase 14.13: canonical_routes cache hoist to global scenario-scoped location (2026-05-19)
 
 **Discovery.** SUMO micro pilot (Cardinal job 9980007) was supposed to

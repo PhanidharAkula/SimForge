@@ -1,0 +1,61 @@
+# Dockerignore for SimForge container builds.
+# Keeps the image small + deterministic by excluding host-generated state,
+# external datasets, and build artefacts. Bind-mount these at runtime.
+
+# Generated runtime outputs — never belong in the image
+runs/
+logs/
+
+# Local-only state
+.venv/
+venv/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+.tox/
+
+# Large external datasets — host-managed via tools/download_osm.py + ModelGen
+osm_data/
+modelgen/
+
+# Caches — regeneratable, host-managed
+cache/
+.modelgen_cache.json
+.canonical_routes/
+
+# Large bundles — bind-mount at runtime; the only tracked one is
+# chicago_1k_car (the smoke-test bundle), which we DO include via
+# explicit COPY in the Dockerfile if needed.
+scenarios/
+
+# IDE / editor noise
+.idea/
+.vscode/
+.DS_Store
+*.swp
+*~
+
+# Git internals (we don't need a working git tree inside the container;
+# the scorecard's git rev-parse falls back to "unknown" gracefully)
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# Documentation source not needed in the image (but we DO include the
+# rendered .md docs via explicit COPY in the Dockerfile)
+*.pdf
+2026-*.txt
+
+# Container build artefacts
+Dockerfile
+.dockerignore
+docker-compose*.yml

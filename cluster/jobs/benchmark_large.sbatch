@@ -74,9 +74,51 @@ set -euo pipefail
 shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
-module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
 cd ~/SimForge
-source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
+
+# ---------------------------------------------------------------------------
+# Wave 2: opt-in pinned-digest container mode
+# ---------------------------------------------------------------------------
+# Set SIMFORGE_USE_CONTAINER=1 in the sbatch submit environment to run
+# the harness inside the Singularity-pulled SimForge container instead
+# of the host venv. Closes plan §1.10 Objective 3 / §1.11 C3 / §2.7.
+#
+# Default (host venv):          sbatch cluster/jobs/benchmark_large.sbatch
+# Container mode (latest):      SIMFORGE_USE_CONTAINER=1 sbatch cluster/jobs/benchmark_large.sbatch
+# Container mode (pinned SHA):  SIMFORGE_USE_CONTAINER=1 SIMFORGE_CONTAINER_TAG=<sha> sbatch ...
+#
+# Bind-mounts ensure the host's scenarios/, runs/, cache/, osm_data/,
+# logs/ are visible inside the container. See doc/CONTAINER_USAGE.md.
+# ---------------------------------------------------------------------------
+if [ "${SIMFORGE_USE_CONTAINER:-0}" = "1" ]; then
+    TAG="${SIMFORGE_CONTAINER_TAG:-phase-14-canonical-routes}"
+    SIF="containers/simforge_${TAG}.sif"
+    mkdir -p containers
+    if [ ! -f "$SIF" ]; then
+        echo "=== Pulling SimForge container ${TAG} ==="
+        singularity pull "$SIF" "docker://ghcr.io/phanidharakula/simforge:${TAG}" || {
+            echo "FATAL: singularity pull failed for ${TAG}. Check tag availability"
+            echo "       at https://github.com/PhanidharAkula/SimForge/pkgs/container/simforge"
+            exit 1
+        }
+    fi
+    RUN_PY=(singularity exec \
+        --bind "$PWD/scenarios:/workspace/SimForge/scenarios:ro" \
+        --bind "$PWD/runs:/workspace/SimForge/runs" \
+        --bind "$PWD/cache:/workspace/SimForge/cache" \
+        --bind "$PWD/osm_data:/workspace/SimForge/osm_data:ro" \
+        --bind "$PWD/logs:/workspace/SimForge/logs" \
+        --pwd /workspace/SimForge \
+        "$SIF" python)
+    echo "=== Running in pinned-digest container: ${SIF} ==="
+    echo "    (Wave 2: SIMFORGE_USE_CONTAINER=1 mode active)"
+else
+    module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
+    source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
+    RUN_PY=(python)
+    echo "=== Running in host venv: $(which python) ==="
+    echo "    (set SIMFORGE_USE_CONTAINER=1 to use Wave 2 pinned-digest container instead)"
+fi
 export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK  # Phase 12.4 — defensive even though
                                               # SUMO + MATSim don't use OpenMP at
                                               # the user level. DTALite is excluded
@@ -84,9 +126,9 @@ export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK  # Phase 12.4 — defensive even tho
                                               # cap is not relevant here.
 
 echo "=== Job starting on $(hostname) at $(date) ==="
-echo "Python:    $(which python)"
-echo "SUMO:      $(sumo --version 2>&1 | head -1)"
-echo "Java:      $(java -version 2>&1 | head -1)"
+echo "Python:    $("${RUN_PY[@]}" -c 'import sys; print(sys.executable)' 2>&1 | tail -1)"
+echo "SUMO:      $("${RUN_PY[@]}" -c 'import sumolib; print(sumolib.__version__ if hasattr(sumolib,"__version__") else "installed")' 2>&1 | tail -1)"
+echo "Java:      $(java -version 2>&1 | head -1 || echo 'no host java — container will use its own')"
 echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
 echo "Engines:   SUMO + MATSim (DTALite excluded at this tier — see header / CHANGELOG Phase 12.7)"
 echo
@@ -103,7 +145,7 @@ for s in "${SCENARIOS[@]}"; do
         echo "    rsync -avh --progress scenarios/$s/ pitzer:SimForge/scenarios/$s/"
         exit 1
     fi
-    python -m pipeline.validation.validate_bundle "scenarios/$s"
+    "${RUN_PY[@]}" -m pipeline.validation.validate_bundle "scenarios/$s"
 done
 echo
 
@@ -117,7 +159,7 @@ for s in "${SCENARIOS[@]}"; do
     out="runs/benchmark_large/$s"
     log="logs/${SLURM_JOB_NAME}_${SLURM_JOB_ID}_${s}.log"
     echo "  -> $s  (output=$out, log=$log)"
-    python -u -m execution.run_benchmark runspecs/benchmark_large.yaml \
+    "${RUN_PY[@]}" -u -m execution.run_benchmark runspecs/benchmark_large.yaml \
         --scenario "$s" \
         --output   "$out" \
         > "$log" 2>&1 &
@@ -154,7 +196,7 @@ echo
 # a single positional results file). Phase 12.7: makes the multi-scenario
 # pattern work without manual post-processing.
 echo "--- Merging per-scenario JSONs ---"
-python -c "
+"${RUN_PY[@]}" -c "
 import json
 from pathlib import Path
 files = sorted(Path('runs/benchmark_large').glob('*/benchmark_results_benchmark_large.json'))
@@ -174,17 +216,17 @@ print(f'  merged {len(files)} JSONs -> {out}  ({merged[\"successful_runs\"]} ok 
 echo
 
 echo "--- Markdown summary table ---"
-python -m evaluation.analyze_benchmark runs/benchmark_large/benchmark_results_benchmark_large.json --markdown \
+"${RUN_PY[@]}" -m evaluation.analyze_benchmark runs/benchmark_large/benchmark_results_benchmark_large.json --markdown \
     | tee runs/benchmark_large/summary.md
 
 echo
 echo "--- Generating thesis figures ---"
-python -m evaluation.generate_plots runs/benchmark_large/benchmark_results_benchmark_large.json \
+"${RUN_PY[@]}" -m evaluation.generate_plots runs/benchmark_large/benchmark_results_benchmark_large.json \
     --output runs/benchmark_large/plots
 echo
 
 echo "--- Audit cross-engine fairness ---"
-python -m evaluation.audit_fairness runs/benchmark_large \
+"${RUN_PY[@]}" -m evaluation.audit_fairness runs/benchmark_large \
     | tee runs/benchmark_large/audit_fairness.txt
 echo
 
