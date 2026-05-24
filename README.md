@@ -6,6 +6,20 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 
 ---
 
+## ⚡ Highlights
+
+- **3 heterogeneous engines** unified under one canonical schema — SUMO (micro + meso), MATSim (queue-mobsim), DTALite (CPU mesoscopic DTA) — with a **code-enforced fair-comparison contract**
+- **~25–30× speedup** on BFS pre-routing (~68h → ~5–8h on NYC 500K-trip scenarios) via canonical-route deduplication, 16-way parallelism, and a content-addressed cache
+- **Byte-identical reproducibility** — every run bit-deterministic for a given seed; no live-protocol bindings (no TraCI/Py4J), strictly file-in/file-out
+- **HPC-deployed** across three OSC clusters (Pitzer, Cardinal, Ascend) with cluster-specific SLURM tuning
+- **Scales to ~80K nodes / ~200K directed links** across Chicago, NYC, and LA at five demand tiers (1K → 500K trips)
+- **~70–72% demand realism** (vs. ~20–40% for uniform/gravity baselines), calibrated against US Census PUMS microdata — no paid survey data
+- **~626 tests** including mutation tests, byte-identity determinism guards, and Student's-t 95% CIs on every KPI
+
+> Master's thesis · Miami University · 2024–2026
+
+---
+
 ## 🎯 Project Goals
 
 1. **Standardize inputs**: One canonical format converted to any simulator
