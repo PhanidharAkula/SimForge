@@ -284,8 +284,6 @@ Wave 1 reality. Findings + edits:
   `DATA_MANAGEMENT.md`, `DEVIATIONS.md`,
   `SIMULATION_PARADIGMS.md`, `EXPERIMENT_LOG.md`).
 - `TESTING.md`: headline `~477 tests / 23 files → ~626 tests / 31 files`.
-- `project notes`: extended the active-branch summary from "Phases 5-11" to
-  cover Phase 14 + Wave 1 work (canonical_routes, scorecard, LICENSE).
 - `doc/PHASE_14_DESIGN.md` §5 Measurement Plan: replaced the
   forward-looking re-submit-the-deleted-sbatchs steps with the actual
   measured Phase 14 walls (chicago_200k 7.14 h cold / 37 min warm;
@@ -921,7 +919,7 @@ Locked benchmark numbers are independent of any rendered plot.
 
 **Documentation updates:** new visualization section in
 `doc/ARCHITECTURE.md` §2.6; new §4.5 in `doc/RESULTS_GUIDE.md`; new
-short section in top-level `README.md` and `project notes`; entries added
+short section in top-level `README.md`; entries added
 to `TESTING.md`, `CONTRIBUTING.md`, and `doc/GLOSSARY.md`; reference
 from `doc/chapters/methods.md` step 9 (already documents PUMS
 discretization → departure bursts).

@@ -12,10 +12,6 @@ __pycache__/
 env/
 venv/
 
-# IDEs
-
-project notes
-
 # Build / packaging
 build/
 dist/
