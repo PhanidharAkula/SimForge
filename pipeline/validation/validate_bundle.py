@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-SimForge v0 bundle validator.
+SimForge canonical bundle validator.
 
 Usage:
-    python pipeline/validation/validate_bundle.py scenarios/toy_2x2_grid
+    python pipeline/validation/validate_bundle.py scenarios/chicago_1k_car
 """
 
 import argparse
@@ -17,12 +17,12 @@ def validate_bundle(scenario_root: Path) -> bool:
     """
     Validate a canonical scenario bundle located at scenario_root.
 
-    Expected files (for v0):
+    Expected files:
       - manifest.xml
       - network.xml
       - demand.csv
       - config.xml
-      - (optional) signals.xml
+      - signals.xml
 
     Returns True if the bundle is valid, False otherwise.
     """
@@ -84,15 +84,15 @@ def validate_bundle(scenario_root: Path) -> bool:
                 {"path": file_path, "required": required_flag}
             )
 
-    # For v0: expect exactly one of each primary canonical type
-    for required_type in ("network", "demand", "config"):
+    # Expect exactly one of each primary canonical type
+    for required_type in ("network", "demand", "config", "signals"):
         entries = canonical_files.get(required_type, [])
         if len(entries) == 0:
             errors.append(f"manifest.xml does not define a canonical '{required_type}' file")
         elif len(entries) > 1:
             errors.append(
                 f"manifest.xml defines multiple canonical '{required_type}' files "
-                f"(expected exactly one for v0)"
+                f"(expected exactly one)"
             )
 
     # Check that required files exist on disk
@@ -312,7 +312,7 @@ def main() -> None:
     parser.add_argument(
         "scenario_root",
         type=str,
-        help="Path to scenario directory (e.g., scenarios/toy_2x2_grid)",
+        help="Path to scenario directory (e.g., scenarios/chicago_1k_car)",
     )
     args = parser.parse_args()
 

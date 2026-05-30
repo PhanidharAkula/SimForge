@@ -368,8 +368,9 @@ def parse_model_file(
               Only buildings whose centroid falls inside will be kept.
               If None, all buildings are kept.
         car_only: If True, only keep persons with car-compatible transport
-                  modes (JWTRNS in {1, 2, 11, 12}).  Default True since
-                  SimForge v0 only simulates car traffic.
+                  modes (JWTRNS in {1, 7, 8}: car/truck/van, taxicab, and
+                  motorcycle, all mapped to canonical car). Default True
+                  since SimForge simulates car traffic by default.
                   Ignored if `modes` is provided.
         modes: Optional list of canonical modes to keep (e.g. ["car", "transit"]).
                When provided, overrides `car_only`.  Persons whose JWTRNS

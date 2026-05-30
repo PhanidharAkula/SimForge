@@ -17,7 +17,7 @@ schedules) plus the canonical network.xml, and emits demand.csv with:
                      commute time. Cityscape's schedule field has hard-
                      coded 8 AM / 5 PM times that we deliberately do not
                      use — they would create a thundering herd at 08:00.
-  - Mode           set from PUMS JWTRNS (only car trips for v0)
+  - Mode           set from PUMS JWTRNS (car-only by default; multi-mode when modes=[...] is passed)
 
 The output CSV carries an extra `dest_source` column ({"schedule", "gravity"})
 so per-trip provenance is preserved. Adapters consume the canonical 5-column

@@ -160,7 +160,7 @@ def _configure_osmnx_cache():
 
     Overpass responses are large (tens of MB for a city) and the same bbox is
     often fetched multiple times during development, stress-testing, and CI.
-    Pinning the cache folder to ``<repo>/cache/osm`` makes hits deterministic
+    Pinning the cache folder to ``<repo>/cache`` makes hits deterministic
     across machines and lets us warn the user about slow first-time downloads
     with a concrete path to inspect afterwards.
     """
@@ -211,7 +211,7 @@ def download_osm_network(bbox: BoundingBox, network_type: str = "drive") -> "net
     """
     Download road network from OSM using osmnx.
 
-    Uses osmnx's built-in HTTP cache (pinned to ``<repo>/cache/osm`` via
+    Uses osmnx's built-in HTTP cache (pinned to ``<repo>/cache`` via
     :func:`_configure_osmnx_cache`). A first-time download for a ~1km urban bbox
     takes roughly 10-30s; a cached fetch is typically <1s. We log both the
     cache location and the elapsed time so users can tell which path ran.
