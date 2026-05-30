@@ -4,8 +4,7 @@
 #
 # Largest tier; the canonical scalability stress test. Under the
 # schedule-first pipeline expect ~10–15 minutes on a Pitzer `cpu` compute
-# node (vs the ~4 hour gravity-only baseline that produced JobID 47063986
-# — see cluster/example_runs/nyc_500k_47063986.md for the historical run).
+# node (vs the ~4 hour gravity-only baseline that produced JobID 47063986).
 # The 8 hour wall-clock here is generous headroom.
 #
 # Edit before submitting on a different OSC project:
