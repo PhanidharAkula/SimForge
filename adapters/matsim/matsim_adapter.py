@@ -26,7 +26,6 @@ import logging
 
 from adapters.common import feasibility as _feasibility
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

@@ -79,10 +79,10 @@ trip_1,n1,n4,28800,car
 <!-- MATSim plans.xml -->
 <population>
   <person id="person_trip_1">
-    <plan selected="yes">
-      <activity type="home" link="l_near_n1" end_time="08:00:00"/>
+    <plan>
+      <activity type="h" link="l_near_n1" end_time="08:00:00"/>
       <leg mode="car"/>
-      <activity type="work" link="l_near_n4"/>
+      <activity type="w" link="l_near_n4"/>
     </plan>
   </person>
 </population>
@@ -229,8 +229,8 @@ MATSim produces:
 ## Execution
 
 ```bash
-# Run MATSim (requires Java)
-java -Xmx4g -cp matsim.jar org.matsim.run.Controler config.xml
+# Run MATSim (requires Java; MATSim 15 uses RunMatsim, not Controler)
+java -Xmx4g -cp matsim.jar org.matsim.run.RunMatsim config.xml
 
 # Or using MATSim's built-in runner
 matsim run config.xml
@@ -241,15 +241,14 @@ matsim run config.xml
 | Component | Requirement              |
 | --------- | ------------------------ |
 | Java      | JDK 11+ (17 recommended) |
-| MATSim    | 14.0+                    |
+| MATSim    | 15.0                     |
 | Memory    | 4GB+ for 50K agents      |
 
 ## Installation
 
 ```bash
-# Download MATSim release
-wget https://github.com/matsim-org/matsim-libs/releases/download/v14.0/matsim-14.0.zip
-unzip matsim-14.0.zip
+# Download the pinned MATSim 15.0 JAR (see SETUP.md for the exact asset
+# URL; upstream renamed the 15.0 release asset).
 
 # Or via Maven for custom builds
 ```

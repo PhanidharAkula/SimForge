@@ -171,11 +171,10 @@ def compute_canonical_routes(
         absent and a single JSONL named ``canonical_routes_<hash>.jsonl``
         is written/read.
     progress:
-        Whether to emit progress updates. When ``True`` and stdout is
-        a TTY, uses the project's ``StickyProgress`` if available;
-        otherwise falls back to periodic ``print(... flush=True)``
-        every ``_PROGRESS_EVERY_NON_TTY`` trips so SBATCH logs show
-        live progress.
+        Whether to emit progress updates. When ``True``, a structured
+        heartbeat is logged via ``logger.warning`` on a wall-clock
+        interval (``_PROGRESS_INTERVAL_S``, 60 s) so both interactive
+        and SBATCH logs show live progress.
 
     Returns
     -------
