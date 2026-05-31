@@ -152,7 +152,7 @@ CITIES = {
         "default_radius_km": 2.0,
         "model_file": "modelgen/chicago_model.txt",
         "pbf_file": "osm_data/illinois-2026-04-22.osm.pbf",
-        "description": "Chicago urban core — The Loop and surrounding neighbourhoods",
+        "description": "Chicago urban core: The Loop and surrounding neighbourhoods",
     },
     "nyc": {
         "name": "New York City, NY",
@@ -184,7 +184,7 @@ VALID_MODES = {"car", "transit", "bike", "walk"}
 
 PRESETS = {
     "chicago_1k_car": {
-        "description": "Chicago — 1K car trips, 7–8 AM (smallest tier; test fixture)",
+        "description": "Chicago: 1K car trips, 7–8 AM (smallest tier; test fixture)",
         "city": "chicago",
         "trips": 1_000,
         "modes": ["car"],
@@ -194,7 +194,7 @@ PRESETS = {
         "seed": 42,
     },
     "nyc_10k_car": {
-        "description": "NYC — 10K car trips, 7–9 AM",
+        "description": "NYC: 10K car trips, 7–9 AM",
         "city": "nyc",
         "trips": 10_000,
         "modes": ["car"],
@@ -204,7 +204,7 @@ PRESETS = {
         "seed": 42,
     },
     "la_50k_car": {
-        "description": "LA — 50K car trips, 6–10 AM",
+        "description": "LA: 50K car trips, 6–10 AM",
         "city": "la",
         "trips": 50_000,
         "modes": ["car"],
@@ -214,7 +214,7 @@ PRESETS = {
         "seed": 42,
     },
     "chicago_200k_car": {
-        "description": "Chicago — 200K car trips, 24-hour",
+        "description": "Chicago: 200K car trips, 24-hour",
         "city": "chicago",
         "trips": 200_000,
         "modes": ["car"],
@@ -224,7 +224,7 @@ PRESETS = {
         "seed": 42,
     },
     "nyc_500k_car": {
-        "description": "NYC — 500K car trips, 6–10 AM (largest tier; HPC scale)",
+        "description": "NYC: 500K car trips, 6–10 AM (largest tier; HPC scale)",
         "city": "nyc",
         "trips": 500_000,
         "modes": ["car"],
@@ -342,7 +342,7 @@ def show_list():
     city_stats = scan_data.get("cities", {})
 
     print("\n" + "=" * 65)
-    print("  SimForge — Available Cities & Presets")
+    print("  SimForge: Available Cities & Presets")
     print("=" * 65)
 
     print("\n  SUPPORTED CITIES:")
@@ -443,13 +443,13 @@ def generate_scenario(
     use_census = model_path.exists() and not synthetic
 
     if not use_census and not synthetic:
-        logger.warning("Census model file not found: %s — falling back to synthetic",
+        logger.warning("Census model file not found: %s, falling back to synthetic",
                        model_path)
 
     # Time description
     time_desc = f"{_seconds_to_hhmm(start_time)}–{_seconds_to_hhmm(end_time)}"
     modes_desc = "+".join(modes)
-    description = (f"{city_info['name']} — {trips:,} {modes_desc} trips, "
+    description = (f"{city_info['name']}: {trips:,} {modes_desc} trips, "
                    f"{time_desc}, r={radius_km}km")
 
     print("\n" + "=" * 60)
@@ -536,12 +536,12 @@ def generate_scenario(
         else:
             note = f"fallback (PBF not found at osm_data/{pbf_path.name if pbf_path else '?'})"
         progress.print_above(f"           source: Overpass API ⚠ ({note})")
-        progress.print_above(f"                   NOT hash-pinned — bundle won't be byte-reproducible")
+        progress.print_above(f"                   NOT hash-pinned, bundle won't be byte-reproducible")
         effective_pbf = None
     else:
         size_mb = pbf_path.stat().st_size / 1e6
         progress.print_above(f"           source: osm_data/{pbf_path.name} "
-                             f"({size_mb:.0f} MB, local PBF — hash-pinned)")
+                             f"({size_mb:.0f} MB, local PBF, hash-pinned)")
         effective_pbf = pbf_path
     progress.set_label(f"OSM network ({radius_km:.1f} km)")
     t_step = time.time()
@@ -594,13 +594,13 @@ def generate_scenario(
         demand_label = "census via ModelGen"
         model_size_mb = model_path.stat().st_size / 1e6
         demand_source = (f"modelgen/{model_path.name} "
-                         f"({model_size_mb:.0f} MB, PUMS microdata — hash-pinned)")
+                         f"({model_size_mb:.0f} MB, PUMS microdata, hash-pinned)")
     else:
         demand_label = "synthetic via gravity model"
         demand_source = "no input file (gravity model samples origins/destinations)"
-    progress.print_above(f"\n▶ Step 4/4: Demand — {demand_label}")
+    progress.print_above(f"\n▶ Step 4/4: Demand: {demand_label}")
     progress.print_above(f"           source: {demand_source}")
-    progress.set_label(f"Demand — {demand_label}")
+    progress.set_label(f"Demand: {demand_label}")
     t_step = time.time()
     if use_census:
         # Always use the dict-based filter (`modes=`). Previously the dispatch
