@@ -18,7 +18,6 @@ import hashlib
 import json
 import os
 import shutil
-import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -752,7 +751,7 @@ class BenchmarkHarness:
                     tripinfo_path = None
         
         # Determine status
-        status = "success" if success else ("timeout" if "Timeout" in (error or "") else "failed")
+        status = "success" if success else ("timeout" if "timeout" in (error or "").lower() else "failed")
 
         return RunResult(
             scenario=scenario_id,
