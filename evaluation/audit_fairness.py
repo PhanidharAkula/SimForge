@@ -209,13 +209,25 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
         # Use .get(...) so reports written before mode-aware feasibility shipped
         # (without `skipped_unsupported_mode`) still compare cleanly — they
         # default to 0 alongside fresh reports' 0 for car-only bundles.
-        same = all(
+        counts_same = all(
             reports[eng].get(k, 0) == reports[first_eng].get(k, 0)
             for eng in reports for k in keys
         )
+        # True byte-identity: the skipped-trip-ID *sets* must match, not just
+        # the counts. The shared deterministic feasibility filter guarantees
+        # this, so we verify it rather than assume it.
+        ref_ids = sorted(reports[first_eng].get("skipped_trip_ids", []))
+        ids_same = all(
+            sorted(reports[eng].get("skipped_trip_ids", [])) == ref_ids
+            for eng in reports
+        )
+        same = counts_same and ids_same
         mark = "PASS" if same else "FAIL"
         print(f"  [{mark}] feasibility verdicts byte-identical across "
               f"{', '.join(sorted(reports))}")
+        if counts_same and not ids_same:
+            print("         (counts match but the skipped_trip_ids sets differ: "
+                  "engines pruned different trips)")
 
     # --------------------------------------------------------------- Q2
     print("\n--- Q2: Same network across all engines? ---")
@@ -259,14 +271,14 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
         print(f"  {eng:8} emits: {n} nodes, {l} links")
     if len(net) >= 2:
         node_counts = {n for n, _ in net.values()}
-        link_counts = {l for _, l in net.values()}
         if len(node_counts) == 1:
             print(f"  [PASS] node counts identical across {', '.join(sorted(net))}")
         else:
             deltas = ", ".join(f"{e}={n}" for e, (n, _) in net.items())
             print(f"  [WARN] node counts differ: {deltas}")
-            print( "         (DTALite drops 0 self-loops + 0 sub-meter edges from MATSim's SCC,")
-            print( "         and SUMO's .net.xml junction count includes internal lane junctions)")
+            print( "         (DTALite may drop self-loops and sub-meter edges in its GMNS")
+            print( "         conversion; SUMO's .net.xml junction count includes internal")
+            print( "         lane junctions)")
 
     # --------------------------------------------------------------- Q3
     print("\n--- Q3: Are all engines actually simulating that trip count? ---")

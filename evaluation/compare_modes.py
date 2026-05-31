@@ -2,7 +2,7 @@
 Compare microscopic vs mesoscopic simulation modes.
 
 This script runs the same scenario in both modes and computes
-fidelity metrics to quantify the accuracy-performance trade-off.
+comparison metrics to quantify the accuracy-performance trade-off.
 
 Usage:
     python -m evaluation.compare_modes scenarios/chicago_1k_car
@@ -302,7 +302,7 @@ def compare_modes(
         if micro_result.mean_travel_time_s > 0:
             diff = abs(meso_result.mean_travel_time_s - micro_result.mean_travel_time_s)
             result.travel_time_mape = (diff / micro_result.mean_travel_time_s) * 100
-            result.travel_time_rmse = diff  # Simplified RMSE (single value)
+            result.travel_time_rmse = diff  # absolute mean-TT difference (not a true RMSE)
     
     return result
 

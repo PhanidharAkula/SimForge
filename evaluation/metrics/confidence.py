@@ -15,7 +15,7 @@ For N independent draws from an approximately-normal population,
 where t_{α/2, df} is the two-tailed Student's t critical value. We hard-code
 the table for α = 0.05 (95 % confidence) rather than depend on scipy, both
 to keep `requirements.lock` minimal and to make the math auditable in the
-thesis appendix. For N > 30 we fall back to the normal-distribution Z = 1.960
+thesis appendix. For N > 31 we fall back to the normal-distribution Z = 1.960
 limit, which differs from t_{29} by ≤ 5 %.
 
 Edge cases:

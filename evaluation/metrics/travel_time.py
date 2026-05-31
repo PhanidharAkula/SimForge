@@ -3,7 +3,7 @@ from __future__ import annotations
 """
 Evaluation metrics for trip-level outputs (e.g., SUMO tripinfo.xml).
 
-For v0 we focus on:
+We focus on:
 
 - mean travel time
 - 95th percentile travel time
