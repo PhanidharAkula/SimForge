@@ -429,7 +429,7 @@ Examples:
         engines = [e for e in ALL_ENGINES if check_engine_installed(e)]
     
     if not engines:
-        print("❌ No engines available. Install SUMO or MATSim.")
+        print("❌ No engines available. Install SUMO, MATSim, or DTALite.")
         return 1
     
     # Determine modes to run

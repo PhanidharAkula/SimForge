@@ -342,7 +342,7 @@ Short version:
 
 ```bash
 ssh pitzer
-cd ~ && git clone -b Version_5 https://github.com/PhanidharAkula/SimForge.git
+cd ~ && git clone -b release https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
 
 # Install uv (manages Python + venv; user-space, no admin)

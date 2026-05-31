@@ -9,7 +9,7 @@
 # Build (local Docker, x86_64 target, Cardinal compatibility):
 #   docker buildx build --platform linux/amd64 -t simforge:latest .
 #
-# Build (GitHub Actions): auto-built on every push to phase-14-canonical-routes
+# Build (GitHub Actions): auto-built on every push to release
 # via .github/workflows/build-container.yml; published to
 # ghcr.io/phanidharakula/simforge:<branch> and :<sha>.
 #

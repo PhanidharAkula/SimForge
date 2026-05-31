@@ -27,11 +27,15 @@ seaborn>=0.12
 # Visualization component (visualization/), choropleth renderer reads
 # US Census Bureau Cartographic Boundary tract shapefiles via pyshp.
 # Pure-Python ESRI shapefile reader; no native deps. Used only by
-# `python -m visualization.generate_maps --style choropleth`.
+# `python -m visualization.generate_maps`.
 pyshp>=2.3,<4
 
 # Testing
 pytest
+
+# SUMO engine (CPU microscopic + mesoscopic). The eclipse-sumo wheel
+# bundles the netconvert/sumo binaries, so no separate brew/apt install.
+eclipse-sumo==1.26.0
 
 # DTALite engine (CPU mesoscopic Dynamic Traffic Assignment).
 # Bundled binary ships inside the path4gmns package, no separate install.
@@ -43,10 +47,8 @@ path4gmns>=0.10.0,<1
 # ==============================================
 # These are installed separately - NOT via pip:
 #
-# SUMO (Simulation of Urban MObility)
-#   - macOS: brew install sumo
-#   - Linux: apt install sumo sumo-tools
-#   - Download: https://sumo.dlr.de/docs/Downloads.php
+# SUMO is now a pip package (eclipse-sumo wheel, pinned above); the
+# brew/apt/download routes are no longer required.
 #
 # MATSim (Multi-Agent Transport Simulation)
 #   - Java JAR file, not a pip package

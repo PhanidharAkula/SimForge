@@ -287,9 +287,9 @@ def print_next_steps(has_java: bool, has_sumo: bool, has_libomp: bool = True):
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 {CYAN}Analyze results (canonical 3-step post-benchmark pipeline):{RESET}
-  python -m evaluation.analyze_benchmark runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json
+  python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
   python -m evaluation.audit_fairness    runs/benchmark_small
-  python -m evaluation.generate_plots    runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json
+  python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_benchmark_small.json
 
 {CYAN}Run tests:{RESET}
   python -m pytest tests/ -v --tb=short

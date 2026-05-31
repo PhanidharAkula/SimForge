@@ -22,13 +22,13 @@ If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install pa
 
 ## Development workflow
 
-### 1. Branch from `Version_5`
+### 1. Branch from `release`
 
-`main` tracks the released thesis snapshot. `Version_5` is the active development branch (succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases, JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
+`main` tracks the released thesis snapshot. `release` is the active branch (succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases, JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
 
 ```bash
-git checkout Version_5
-git pull origin Version_5
+git checkout release
+git pull origin release
 git checkout -b your-feature-branch
 ```
 
