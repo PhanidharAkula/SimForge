@@ -201,7 +201,6 @@ def fig_3_1_three_layer_architecture(output_dir):
 
     # Layer geometry — non-overlapping, with explicit inter-layer gap for arrows
     LAYER_H = 2.2
-    LAYER_GAP = 0.6
     layer_specs = [
         ("PIPELINE LAYER", "(canonical-bundle generation)", 6.5, C_PIPELINE,
          ["pipeline/network/\n(OSM → GMNS → SCC)",
@@ -1054,7 +1053,7 @@ def fig_3_8b_parallel_bfs_workers(output_dir):
             color="#1b5e20")
     ax.text(7.5, 1.55,
             "→ Dict[trip_id, List[node_id]]   "
-            "(written to cache/canonical_routes/<sha>.jsonl.zst, sorted)",
+            "(written to cache/canonical_routes/<sha>.jsonl, sorted)",
             ha="center", va="center", fontsize=9, color="#1b5e20",
             family="monospace")
 
@@ -1064,7 +1063,7 @@ def fig_3_8b_parallel_bfs_workers(output_dir):
             "(pinned by tests/test_canonical_routes.py::TestParallelDeterminism)",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
     ax.text(7.5, 0.25,
-            "Content-addressable cache: cache/canonical_routes/canonical_routes_<sha256>.jsonl.zst → warm re-runs hit instantly (Phase 14.13)",
+            "Content-addressable cache: cache/canonical_routes/canonical_routes_<sha256>.jsonl → warm re-runs hit instantly (Phase 14.13)",
             ha="center", va="center", fontsize=9, style="italic", color="#1b5e20")
 
     return save(fig, "fig_3_8b_parallel_bfs_workers", output_dir)

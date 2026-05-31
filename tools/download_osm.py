@@ -89,8 +89,8 @@ def resolve_one(key: str, entry: dict, force: bool) -> bool:
         print(f"  [{key}] FAILED — downloaded file hash does not match manifest")
         print(f"    expected: {expected_sha}")
         print(f"    actual:   {actual}")
-        print(f"    (Geofabrik's '-latest' rotates daily. If the upstream file has")
-        print(f"     changed, regenerate the manifest with the new hash and commit it.)")
+        print("    (Geofabrik's '-latest' rotates daily. If the upstream file has")
+        print("     changed, regenerate the manifest with the new hash and commit it.)")
         return False
 
     print(f"  [{key}] OK ({human(dest.stat().st_size)})")

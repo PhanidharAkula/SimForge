@@ -2,7 +2,7 @@
 # Wipe regenerable caches.
 #
 # Default: Python bytecode only (safe, regenerates instantly on next import).
-# --all:   also drops the OSM Overpass cache (next benchmark re-fetches; slow).
+# --all:   also drops cache/ (Overpass responses, canonical routes, census/events; slow to refetch).
 
 set -euo pipefail
 
@@ -16,7 +16,7 @@ for arg in "$@"; do
     -h|--help)
       echo "Usage: tools/clean.sh [--all]"
       echo "  (no args)  wipe Python bytecode (__pycache__, *.pyc, .pytest_cache)"
-      echo "  --all      additionally wipe cache/ (OSM Overpass HTTP cache)"
+      echo "  --all      additionally wipe cache/ (regenerable: Overpass, routes, census)"
       exit 0
       ;;
     *)
@@ -42,7 +42,7 @@ if [ "$WIPE_OSM" -eq 1 ]; then
   if [ -d "cache" ]; then
     OSM_FILES=$(find cache -type f 2>/dev/null | wc -l | tr -d ' ')
     rm -rf cache
-    echo "Removed cache/ (${OSM_FILES} OSM response file(s)) — next fetch will hit Overpass"
+    echo "Removed cache/ (${OSM_FILES} cached file(s)); next run regenerates"
   else
     echo "cache/ already absent"
   fi

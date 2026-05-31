@@ -45,7 +45,6 @@ import platform
 import statistics
 import subprocess
 import sys
-import xml.etree.ElementTree as ET
 from collections import defaultdict
 from importlib import metadata
 from pathlib import Path
