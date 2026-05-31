@@ -185,7 +185,7 @@ PROJECT STRUCTURE (alphabetical, repo root):
   runspecs/           Benchmark configuration files (YAML)
   scenarios/          Generated canonical data bundles
   scripts/            5 ready-to-use generation scripts (01–05)
-  tests/              Test suite (pytest, ~574 tests across 24 files
+  tests/              Test suite (pytest, ~639 tests across 29 files
                       with all 5 bundles generated; ~502 with just the 3
                       tracked bundles. +36 per parametrized integrity tests
                       per bundle in scenarios/)
@@ -769,16 +769,16 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships ~574 tests across 24 files when all 5 bundles are
+SimForge ships ~639 tests across 29 files when all 5 bundles are
 generated (chicago_1k_car + nyc_10k_car + la_50k_car tracked, plus
 chicago_200k_car + nyc_500k_car generated locally via the scripts/).
 The count is 394 base + 36 parametrized per bundle in `scenarios/`,
 so:
-  • 0 bundles in scenarios/        → 394 tests
-  • 3 tracked bundles only         → 394 + 3×36 = 502 tests
-  • all 5 bundles generated        → 394 + 5×36 = 574 tests
-The 502-test minimum suite runs in ~3-4 min on arm64 (~22 s on a Linux
-box where SUMO doesn't crash); the 574-test full sweep takes ~14 min
+  • 0 bundles in scenarios/        → 459 tests
+  • 3 tracked bundles only         → 459 + 3×36 = 567 tests
+  • all 5 bundles generated        → 459 + 5×36 = 639 tests
+The 567-test minimum suite runs in ~3-4 min on arm64 (~22 s on a Linux
+box where SUMO doesn't crash); the 639-test full sweep takes ~14 min
 on M-series Mac because the integrity tests parse the much larger
 200K/500K network.xml files.
 
@@ -813,7 +813,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m integration
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (24 files / ~574 tests with all 5 bundles in scenarios/;
+TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
 ~502 with just the 3 tracked bundles. Alphabetical):
 
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
@@ -877,7 +877,7 @@ WHAT THE OUTPUT LOOKS LIKE:
   Default, per-file rollup rows + sticky progress bar:
     tests/test_feasibility.py    PASSED
     tests/test_engine_smoke.py   SKIPPED
-    [████████████░░░░░░░░░░░░░░] 50%  ✓ 287  ✗ 0  ⠼  test 287/574  elapsed 1m 30s
+    [████████████░░░░░░░░░░░░░░] 50%  ✓ 320  ✗ 0  ⠼  test 320/639  elapsed 1m 30s
 
   With -v, per-test ✓/✗/⊘ rows:
     ✓ tests/test_feasibility.py::test_drops_outside_scc

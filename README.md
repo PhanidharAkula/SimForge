@@ -14,7 +14,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 - **HPC-deployed** across three OSC clusters (Pitzer, Cardinal, Ascend) with cluster-specific SLURM tuning
 - **Scales to ~80K nodes / ~200K directed links** across Chicago, NYC, and LA at five demand tiers (1K → 500K trips)
 - **~70–72% demand realism** (vs. ~20–40% for uniform/gravity baselines), calibrated against US Census PUMS microdata, no paid survey data
-- **~626 tests** including mutation tests, byte-identity determinism guards, and Student's-t 95% CIs on every KPI
+- **~639 tests** including mutation tests, byte-identity determinism guards, and Student's-t 95% CIs on every KPI
 
 > Master's thesis · Miami University · 2024–2026
 
@@ -41,7 +41,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (10 thesis figures)     |
-| Test Suite                   | ✅ ~626 tests (613 pass, 13 arm64-netconvert skips) |
+| Test Suite                   | ✅ ~639 tests (626 pass, 13 arm64-netconvert skips) |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
 | Visualization Component (opt-in, separate branch) | ✅ Complete (7 map types, OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
 
@@ -181,7 +181,7 @@ SimForge/
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache + US Census shapefiles (gitignored)
-├── tests/                  # pytest test suite (~626 tests across 31 files)
+├── tests/                  # pytest test suite (~639 tests across 29 files)
 ├── visualization/          # Opt-in geographic-map renderer (on visualization branch)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
@@ -228,7 +228,7 @@ LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the retrospectives 
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all ~626 tests (~613 pass, 13 arm64-netconvert skips on Apple Silicon)
+pytest tests/ -v          # Run all ~639 tests (~626 pass, 13 arm64-netconvert skips on Apple Silicon)
 pytest tests/ -v -k sumo  # SUMO-related tests only
 ```
 

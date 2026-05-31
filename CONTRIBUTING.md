@@ -13,7 +13,7 @@ git clone <repo-url>
 cd SimForge
 python setup_simforge.py        # creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
-python -m pytest tests/ -q      # ~574 tests should pass with all 5 bundles (~502 with the 3 tracked)
+python -m pytest tests/ -q      # ~639 tests should pass with all 5 bundles (~567 with the 3 tracked)
 ```
 
 If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install path.
@@ -34,7 +34,7 @@ git checkout -b your-feature-branch
 
 ### 2. Write the test first
 
-The ~574-test suite (with all 5 bundles, ~502 with just the 3 tracked) is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The ~639-test suite (with all 5 bundles, ~567 with just the 3 tracked) is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |
