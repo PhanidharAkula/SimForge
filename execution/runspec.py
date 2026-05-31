@@ -13,11 +13,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Optional
-import json
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 class SimulationMode(str, Enum):
@@ -117,25 +112,6 @@ class RunSpec:
             )
         return cls._from_dict(data, path)
     
-    @classmethod
-    def from_json(cls, path: Path) -> "RunSpec":
-        """Load runspec from JSON file."""
-        if not path.is_file():
-            raise FileNotFoundError(
-                f"Runspec file not found: {path}\n"
-                f"  See runspecs/ directory for example files."
-            )
-        with open(path, encoding="utf-8") as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError as e:
-                raise ValueError(
-                    f"Failed to parse JSON runspec at {path}: {e}\n"
-                    f"  Check for trailing commas or unquoted strings."
-                ) from e
-        
-        return cls._from_dict(data, path)
-    
     KNOWN_ENGINES = {"sumo", "matsim", "dtalite"}
 
     @classmethod
@@ -196,81 +172,5 @@ class RunSpec:
         path = Path(path)
         if path.suffix in (".yaml", ".yml"):
             return cls.from_yaml(path)
-        elif path.suffix == ".json":
-            return cls.from_json(path)
         else:
             raise ValueError(f"Unknown runspec format: {path.suffix}")
-    
-    def to_yaml(self, path: Path) -> None:
-        """Save runspec to YAML file."""
-        try:
-            import yaml
-        except ImportError as exc:
-            raise ImportError("PyYAML required: pip install pyyaml") from exc
-        
-        data = self._to_dict()
-        with open(path, "w", encoding="utf-8") as f:
-            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
-    
-    def to_json(self, path: Path) -> None:
-        """Save runspec to JSON file."""
-        data = self._to_dict()
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2)
-    
-    def _to_dict(self) -> dict:
-        """Convert runspec to dictionary."""
-        return {
-            "name": self.name,
-            "description": self.description,
-            "output_dir": self.global_output_dir,
-            "runs": [
-                {
-                    "scenario_id": r.scenario_id,
-                    "scenario_path": r.scenario_path,
-                    "engine": r.engine,
-                    "environment": r.environment,
-                    "mode": r.mode.value,  # microscopic or mesoscopic
-                    "repeats": r.repeats,
-                    "seed": r.seed,
-                    "seed_increment": r.seed_increment,
-                    "timeout_s": r.timeout_s,
-                    "output_dir": r.output_dir,
-                    "engine_options": r.engine_options
-                }
-                for r in self.runs
-            ]
-        }
-
-
-def create_example_runspec(output_path: Path) -> RunSpec:
-    """Create an example runspec for reference."""
-    spec = RunSpec(
-        name="example_benchmark",
-        description="Example benchmark specification",
-        global_output_dir="runs",
-        runs=[
-            RunConfig(
-                scenario_id="chicago_1k_car",
-                scenario_path="scenarios/chicago_1k_car",
-                engine="sumo",
-                environment="local_cpu",
-                repeats=3,
-                seed=42,
-                mode=SimulationMode.MESOSCOPIC,
-            ),
-            RunConfig(
-                scenario_id="nyc_10k_car",
-                scenario_path="scenarios/nyc_10k_car",
-                engine="sumo",
-                environment="local_cpu",
-                repeats=3,
-                seed=42,
-                mode=SimulationMode.MESOSCOPIC,
-            ),
-        ]
-    )
-    
-    spec.to_yaml(output_path)
-    logger.info("Created example runspec: %s", output_path)
-    return spec
