@@ -62,6 +62,11 @@ The ~639-test suite (with all 5 bundles, ~567 with just the 3 tracked) is the on
 | `test_turn_restrictions.py`            | 17    | V5+ Phase 7, OSM restriction parser, BFS, DTALite movement.csv |
 | `test_vehicle_types.py`                | 19    | V5+ Phase 11, canonical car constants, cross-engine equivalence |
 | `test_confidence.py`                   | 18    | Student's-t 95% CI core + edge cases                         |
+| `test_adapter_contract.py`             | 6     | Three-function adapter contract regression                   |
+| `test_canonical_routes.py`             | 11    | Phase 14 shared parallel-BFS route cache                     |
+| `test_generate_scorecard.py`           | 22    | Scorecard renderer (`tools/generate_scorecard`)              |
+| `test_recover_partial_summary.py`      | 6     | Partial-summary recovery from interrupted runs               |
+| `test_visualization.py`                | 13    | Visualization component (loaders, coverage, CLI)             |
 
 If you change adapter behaviour, run the determinism tests *and* the relevant adapter tests, the determinism tests catch silent file-format regressions that the adapter unit tests miss.
 
