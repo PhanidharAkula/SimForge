@@ -44,7 +44,7 @@ def render_travel_time_choropleth(
     """
     bbox = network.bbox
     if bbox is None:
-        raise ValueError("Empty network — cannot render choropleth")
+        raise ValueError("Empty network: cannot render choropleth")
     if state_fips is None:
         state_fips = detect_state_for_bbox(bbox)
     if state_fips is None:
@@ -160,7 +160,7 @@ def render_travel_time_choropleth(
     cbar.ax.tick_params(labelsize=9)
 
     if title is None:
-        title = f"Mean travel time by origin tract — {engine}  —  N={demand.trip_count:,}"
+        title = f"Mean travel time by origin tract: {engine}  ·  N={demand.trip_count:,}"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
 
     fig.tight_layout(pad=0.8)

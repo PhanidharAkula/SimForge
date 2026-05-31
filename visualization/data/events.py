@@ -68,7 +68,7 @@ def parse_matsim_vehicle_traversals(
                     for vid, records in data.items()
                 }
             except (json.JSONDecodeError, ValueError) as e:
-                logger.warning("Traversals cache corrupt at %s: %s — re-parsing",
+                logger.warning("Traversals cache corrupt at %s: %s, re-parsing",
                                cache_fp, e)
 
     open_intervals: dict[tuple[str, str], float] = {}  # (vehicle, link) -> enter_time
@@ -147,7 +147,7 @@ def parse_matsim_throughput(
                 return {int(k): {l: int(c) for l, c in v.items()}
                         for k, v in data.items()}
             except (json.JSONDecodeError, ValueError) as e:
-                logger.warning("Events cache corrupt at %s: %s — re-parsing",
+                logger.warning("Events cache corrupt at %s: %s, re-parsing",
                                cache_fp, e)
 
     bins: dict[int, dict[str, int]] = defaultdict(lambda: defaultdict(int))

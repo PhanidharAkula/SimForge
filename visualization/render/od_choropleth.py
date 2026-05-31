@@ -143,7 +143,7 @@ def render_od_choropleth(
 
     bbox = network.bbox
     if bbox is None:
-        raise ValueError("Empty network — cannot render choropleth")
+        raise ValueError("Empty network: cannot render choropleth")
 
     if state_fips is None:
         state_fips = detect_state_for_bbox(bbox)
@@ -218,7 +218,7 @@ def render_od_choropleth(
         from visualization.data.tiger_roads import is_state_cached, load_roads_in_bbox
         if not is_state_cached(state_fips):
             logger.warning(
-                "TIGER roads not cached for state %s — basemap skipped. Run:\n"
+                "TIGER roads not cached for state %s, basemap skipped. Run:\n"
                 "  python -m tools.download_tiger_roads --state %s",
                 state_fips, state_fips,
             )
@@ -251,7 +251,7 @@ def render_od_choropleth(
     cbar.outline.set_linewidth(0.5)
 
     if title is None:
-        title = f"Trip {side} density by census tract  —  N={demand.trip_count:,}"
+        title = f"Trip {side} density by census tract  ·  N={demand.trip_count:,}"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
 
     fig.tight_layout(pad=0.8)

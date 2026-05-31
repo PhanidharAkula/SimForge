@@ -19,9 +19,9 @@ from pathlib import Path
 from visualization.data.bundle import bundle_paths
 
 
-# All known map types. Phase A ships od_origins + od_destinations only;
-# the rest are placeholders so the dry-run report mentions them with
-# the right "generatable when" criteria.
+# All known map types. All seven are implemented; this tuple also drives
+# the dry-run availability matrix, which reports each one's "generatable
+# when" criteria against the data actually on disk.
 ALL_MAP_TYPES: tuple[str, ...] = (
     "od_origins",        # Phase A — bundle only
     "od_destinations",   # Phase A — bundle only
@@ -48,7 +48,7 @@ class CellArtifacts:
     has_tripinfo: bool = False              # SUMO only
     has_matsim_trips: bool = False          # MATSim output_trips.csv.gz
     has_dtalite_link_perf: bool = False     # DTALite link_performance.csv
-    has_event_output: bool = False          # MATSim events.xml.gz / SUMO events output
+    has_event_output: bool = False          # MATSim events.xml.gz (only engine with the event stream)
 
     @property
     def has_any_output(self) -> bool:

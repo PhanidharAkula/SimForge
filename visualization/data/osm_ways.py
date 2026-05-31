@@ -68,22 +68,22 @@ def load_way_geometries(
             logger.info("OSM ways cache covers %d/%d needed; re-extracting full set",
                         len(needed_way_ids) - len(missing), len(needed_way_ids))
         except (json.JSONDecodeError, KeyError, TypeError) as e:
-            logger.warning("OSM ways cache corrupt at %s: %s — re-extracting", cache_fp, e)
+            logger.warning("OSM ways cache corrupt at %s: %s, re-extracting", cache_fp, e)
 
     if pbf_path is None:
         pbf_path = detect_pbf_for_scenario(scenario_id)
     if pbf_path is None or not pbf_path.is_file():
-        logger.warning("No OSM PBF found for scenario %s — link curves unavailable",
+        logger.warning("No OSM PBF found for scenario %s, link curves unavailable",
                        scenario_id)
         return {}
 
     try:
         import osmium
     except ImportError:
-        logger.warning("pyosmium not installed — install via `uv pip install osmium`")
+        logger.warning("pyosmium not installed: install via `uv pip install osmium`")
         return {}
 
-    logger.info("Parsing OSM ways from %s (extracting %d needed) — slow first time...",
+    logger.info("Parsing OSM ways from %s (extracting %d needed), slow first time...",
                 pbf_path, len(needed_way_ids))
 
     way_geoms: dict[int, list[tuple[float, float]]] = {}

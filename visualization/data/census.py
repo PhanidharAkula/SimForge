@@ -116,7 +116,9 @@ def load_tracts_in_bbox(
     field_idx = {name: i for i, name in enumerate(fields)}
 
     tracts: list[TractPolygon] = []
+    total_shapes = 0
     for shape_rec in sf.shapeRecords():
+        total_shapes += 1
         shape = shape_rec.shape
         rec = shape_rec.record
         if not shape.points:
@@ -150,6 +152,6 @@ def load_tracts_in_bbox(
     sf.close()
     logger.info(
         "Loaded %d tracts from state %s (bbox-filtered from %d shapes)",
-        len(tracts), state_fips, sum(1 for _ in shapefile.Reader(str(shp_path)).shapes()),
+        len(tracts), state_fips, total_shapes,
     )
     return tracts

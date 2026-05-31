@@ -10,10 +10,11 @@ canonical network. Two modes:
 
 Both reuse the same renderer with a different metric + colormap.
 
-DTALite is the only engine whose adapter writes ready-made link-level
-output (``link_performance.csv``). SUMO and MATSim could in principle
-be supported by parsing tripinfo route fields or events.xml.gz
-respectively; that's a larger lift and is deferred to a future phase.
+All three engines support ``link_load`` (volume): SUMO and MATSim link
+volumes are reconstructed from their completed-trip route link
+sequences, while DTALite reads ready-made volumes from
+``link_performance.csv``. ``congestion`` (speed ratio) is DTALite-only,
+since it is the one engine whose per-link output includes mean speed.
 """
 
 from __future__ import annotations
@@ -53,7 +54,7 @@ def render_link_metric(
         Bundle network providing geometry (from/to node coords).
     links : list[LinkPerformance]
         Per-link metrics from one engine.
-    metric : "volume" | "speed_ratio" | "mean_speed_kmh"
+    metric : "volume" | "speed_ratio"
         Which field to color by. ``volume`` for link_load,
         ``speed_ratio`` for congestion (1.0 = freeflow, 0.0 = standstill).
     output_path : Path
@@ -72,7 +73,7 @@ def render_link_metric(
         Linear interpolation of line width from min metric to max.
     """
     if not links:
-        raise ValueError(f"No link data — engine '{engine}' has no link_performance.csv")
+        raise ValueError(f"No link data: engine '{engine}' has no link_performance.csv")
 
     # Pick metric value per link.
     def metric_val(lp: LinkPerformance) -> float:
@@ -80,8 +81,6 @@ def render_link_metric(
             return lp.volume
         if metric == "speed_ratio":
             return lp.speed_ratio
-        if metric == "mean_speed_kmh":
-            return lp.mean_speed_kmh
         raise ValueError(f"Unknown metric: {metric}")
 
     # Build link_id -> (volume) lookup. Engine ID prefix conventions:
@@ -203,7 +202,6 @@ def render_link_metric(
         labels = {
             "volume": "vehicles per link",
             "speed_ratio": "speed / free-flow",
-            "mean_speed_kmh": "mean speed (km/h)",
         }
         cbar.set_label(labels.get(metric, metric), fontsize=10)
         cbar.outline.set_linewidth(0.5)
@@ -221,9 +219,9 @@ def render_link_metric(
         sp.set_visible(False)
 
     if title is None:
-        kind = {"volume": "load", "speed_ratio": "congestion",
-                "mean_speed_kmh": "speed"}.get(metric, metric)
-        title = f"Link {kind} — {engine}  —  {len(active_segs):,} active links"
+        kind = {"volume": "load",
+                "speed_ratio": "congestion"}.get(metric, metric)
+        title = f"Link {kind}: {engine}  ·  {len(active_segs):,} active links"
     ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
     fig.text(
         0.5, 0.015,

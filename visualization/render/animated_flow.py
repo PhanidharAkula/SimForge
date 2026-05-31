@@ -138,7 +138,7 @@ def render_flowing_particles(
     from matplotlib.collections import LineCollection
 
     if not traversals:
-        raise ValueError("Empty traversals — no vehicles to animate")
+        raise ValueError("Empty traversals: no vehicles to animate")
 
     link_polys = _build_link_polylines(network, use_osm_curves, scenario_id)
     arc_cache: dict[str, tuple[list[float], float]] = {}
@@ -363,7 +363,7 @@ def render_animated_flow(
         polylines from the cache for proper curved rendering.
     """
     if not time_bin_loads:
-        raise ValueError("No time-bin loads — empty events?")
+        raise ValueError("No time-bin loads: empty events?")
 
     import matplotlib  # lazy
     matplotlib.use("Agg")

@@ -120,7 +120,7 @@ def _render_map(
         return _render_phase_c(map_type, coverage, output_dir, args)
 
     logger.warning(
-        "[%s] not yet implemented; coverage matrix shows when this becomes generatable",
+        "[%s] unhandled map type (not in any phase group); this is an internal error",
         map_type,
     )
     return None
@@ -132,7 +132,7 @@ def _render_phase_c(
     output_dir: Path,
     args: argparse.Namespace,
 ) -> Path | None:
-    """Phase C renderers: route_diversity (and future animated_flow)."""
+    """Phase C renderers: route_diversity and animated_flow."""
     from visualization.data.bundle import load_network
 
     net_path = coverage.bundle_files.get("network")
@@ -151,7 +151,6 @@ def _render_phase_c(
             )
             return None
         cell = sorted(matsim_cells, key=lambda c: c.seed)[0]
-        from visualization.data.bundle import load_network
         network = load_network(net_path)
         events_path = cell.cell_dir / "output" / "output_events.xml.gz"
 
@@ -416,7 +415,7 @@ def main(argv: list[str] | None = None) -> int:
                              "density signal rather than full-opacity stacks.")
     parser.add_argument("--anim-format", choices=["mp4", "gif", "apng"],
                         default="mp4",
-                        help="animated_flow output container: 'mp4' (default — "
+                        help="animated_flow output container: 'mp4' (default: "
                              "smallest, needs ffmpeg + a video player), "
                              "'gif' (universal, embeds in markdown/HTML "
                              "directly, but largest file), 'apng' (full-color, "
@@ -478,7 +477,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if out is None:
             print(f"  [SKIP]  {map_type:<20s}  (renderer returned None)")
-            skipped.append((map_type, "renderer not yet implemented"))
+            skipped.append((map_type, "renderer returned None (inputs unavailable)"))
             continue
         print(f"  [OK]    {map_type:<20s}  {out}")
         rendered.append(out)
