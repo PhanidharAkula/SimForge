@@ -60,7 +60,7 @@ output = "coverage.xml"
 
 # ---------------------------------------------------------------------------
 # Mutation testing, see doc/MUTATION_BASELINE.md for the procedure.
-# Kept narrow on purpose: only the [1.0.0] cross-engine-fairness modules.
+# Kept narrow on purpose: only the cross-engine-fairness modules.
 # ---------------------------------------------------------------------------
 [tool.mutmut]
 paths_to_mutate = "adapters/common/feasibility.py,pipeline/network/scc.py"

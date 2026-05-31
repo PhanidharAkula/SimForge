@@ -521,16 +521,6 @@ Examples:
     mode_w = max(len(m) for m in modes)
     cell_idx_w = len(str(total_runs))
 
-    def _fmt_dur(seconds: float) -> str:
-        s = int(seconds)
-        if s < 60:
-            return f"{s}s"
-        m, s = divmod(s, 60)
-        if m < 60:
-            return f"{m}m {s:02d}s"
-        h, m = divmod(m, 60)
-        return f"{h}h {m:02d}m"
-
     # Sticky progress bar from the shared pipeline.progress.StickyProgress
     # module. TTY-only with a heartbeat spinner, flicker-free in-place
     # updates, ✓N ✗N counters in the tail. Suppressed silently when
