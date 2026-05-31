@@ -93,13 +93,13 @@ def _display_path(p: Path) -> str:
 
 
 # =============================================================================
-# Toolchain capture — recorded into generation_metadata.json so any bundle
+# Toolchain capture, recorded into generation_metadata.json so any bundle
 # carries the exact code+dep stack that produced it. Critical for cross-machine
-# reproducibility audits — minor osmnx releases have observably altered network
+# reproducibility audits, minor osmnx releases have observably altered network
 # extraction in the past, so the bundle must say which version it was built on.
 # =============================================================================
 
-# (module name, distribution name) — the second is for importlib.metadata when
+# (module name, distribution name), the second is for importlib.metadata when
 # the import-time __version__ attribute isn't exposed (pyosmium is the case).
 _TOOLCHAIN_PACKAGES = (
     ("osmnx", "osmnx"),
@@ -478,7 +478,7 @@ def generate_scenario(
     # cleanly above the sticky bar. Pre-V11.1 capture was gated on
     # --verbose, which meant default-mode WARNING records (e.g.
     # "Dropping degenerate edge ...") went straight to stderr and
-    # collided with the bar's no-newline redraws — producing mangled
+    # collided with the bar's no-newline redraws, producing mangled
     # `░░░░  ⠦  0%  step 1/4 ... elapsed 3m 07sWARNING ...` lines.
     # The level threshold below decides what passes through:
     #   default  → WARNING+ (errors still surface, no INFO firehose)
@@ -551,7 +551,7 @@ def generate_scenario(
     step_times["Network"] = time.time() - t_step
     # Source provenance: PBF is already announced in the pre-step
     # `source: ...` line (above), so the ✓ line stays clean. Overpass
-    # fallback IS worth surfacing on the ✓ line — it's a divergence
+    # fallback IS worth surfacing on the ✓ line, it's a divergence
     # from what we announced (the default-mode path expected PBF) and
     # the operator should see ⚠ explicitly.
     src = net.get("osm_source", {})
@@ -671,7 +671,7 @@ def generate_scenario(
         print(f"    {name:<{name_w}}  {_fmt_dur(dt):<{dur_w}}  ({pct:5.1f}%)")
 
     print("\n  Artifacts:")
-    art_w = len("manifest.xml")  # 12 — widest filename in the block
+    art_w = len("manifest.xml")  # 12, widest filename in the block
     print(f"    {'network.xml':<{art_w}}  {net['node_count']:,} nodes / "
           f"{net['link_count']:,} links")
     print(f"    {'signals.xml':<{art_w}}  {sig['signal_count']:,} controllers")
@@ -802,7 +802,7 @@ Census limit:      ~500K car trips per city without --allow-oversample
                         help="Allow more trips than raw census commuters "
                              "(resamples origins)")
 
-    # Network source — three mutually-exclusive modes:
+    # Network source, three mutually-exclusive modes:
     #   default            : require osm_data/<pbf>, fail hard if missing
     #   --allow-overpass   : prefer PBF if present; fall back to Overpass if missing
     #   --force-overpass   : always use Overpass, ignore PBF even when present

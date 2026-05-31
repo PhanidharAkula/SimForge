@@ -8,12 +8,12 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 
 ## ⚡ Highlights
 
-- **3 heterogeneous engines** unified under one canonical schema — SUMO (micro + meso), MATSim (queue-mobsim), DTALite (CPU mesoscopic DTA) — with a **code-enforced fair-comparison contract**
+- **3 heterogeneous engines** unified under one canonical schema, SUMO (micro + meso), MATSim (queue-mobsim), DTALite (CPU mesoscopic DTA), with a **code-enforced fair-comparison contract**
 - **~25–30× speedup** on BFS pre-routing (~68h → ~5–8h on NYC 500K-trip scenarios) via canonical-route deduplication, 16-way parallelism, and a content-addressed cache
-- **Byte-identical reproducibility** — every run bit-deterministic for a given seed; no live-protocol bindings (no TraCI/Py4J), strictly file-in/file-out
+- **Byte-identical reproducibility**, every run bit-deterministic for a given seed; no live-protocol bindings (no TraCI/Py4J), strictly file-in/file-out
 - **HPC-deployed** across three OSC clusters (Pitzer, Cardinal, Ascend) with cluster-specific SLURM tuning
 - **Scales to ~80K nodes / ~200K directed links** across Chicago, NYC, and LA at five demand tiers (1K → 500K trips)
-- **~70–72% demand realism** (vs. ~20–40% for uniform/gravity baselines), calibrated against US Census PUMS microdata — no paid survey data
+- **~70–72% demand realism** (vs. ~20–40% for uniform/gravity baselines), calibrated against US Census PUMS microdata, no paid survey data
 - **~626 tests** including mutation tests, byte-identity determinism guards, and Student's-t 95% CIs on every KPI
 
 > Master's thesis · Miami University · 2024–2026
@@ -43,7 +43,7 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | Metrics & Plots              | ✅ Complete (10 thesis figures)     |
 | Test Suite                   | ✅ ~626 tests (613 pass, 13 arm64-netconvert skips) |
 | Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
-| Visualization Component (opt-in, separate branch) | ✅ Complete (7 map types — OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
+| Visualization Component (opt-in, separate branch) | ✅ Complete (7 map types, OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
 
 Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
 
@@ -53,8 +53,8 @@ Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via th
 
 ### Prerequisites
 
-- **uv** (manages Python + the venv) — `curl -LsSf https://astral.sh/uv/install.sh | sh`
-- **Java 17+** (only for MATSim runs) — `brew install openjdk@17` on macOS
+- **uv** (manages Python + the venv), `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- **Java 17+** (only for MATSim runs), `brew install openjdk@17` on macOS
 
 Everything else (Python 3.13, all Python packages, **SUMO including the binary**) is locked in [`requirements.lock`](requirements.lock) and installed in one step below.
 
@@ -72,7 +72,7 @@ source .venv/bin/activate
 # One command pulls every Python dep + SUMO at the locked versions
 uv pip install -r requirements.lock
 
-# Download the hash-pinned OSM PBFs (~2.1 GB across IL/NY/CA — the state-level
+# Download the hash-pinned OSM PBFs (~2.1 GB across IL/NY/CA, the state-level
 # extracts used for chicago, nyc, and la scenarios). Skipped if already present.
 python tools/download_osm.py
 
@@ -120,7 +120,7 @@ python -m evaluation.audit_fairness    runs/benchmark_small
 python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
-The middle step (`audit_fairness`) is the cross-engine fairness check —
+The middle step (`audit_fairness`) is the cross-engine fairness check,
 verifies that all engines saw the same trip set, the same SCC-filtered
 network, and the same trip count, and reports per-engine travel-time
 ratios. See [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md) for the
@@ -141,7 +141,7 @@ python generate.py --preset chicago_200k_car    # 200K car, Chicago, 24h
 python generate.py --preset nyc_500k_car        # 500K car, NYC, 6–10 AM
 ```
 
-All five presets generate **car-only** demand because SimForge's three engine adapters (SUMO, MATSim, DTALite) currently only simulate car traffic — see [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md) §5 for adapter mode handling and §8 for the future-work pathway to multi-modal simulation.
+All five presets generate **car-only** demand because SimForge's three engine adapters (SUMO, MATSim, DTALite) currently only simulate car traffic, see [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md) §5 for adapter mode handling and §8 for the future-work pathway to multi-modal simulation.
 
 The numbered files in `scripts/` (`01_chicago_1k_car.py` … `05_nyc_500k_car.py`) are thin wrappers that call the **same** `generate_scenario()` with the same hardcoded kwargs as the preset above. They accept `--verbose` / `-v` only; the `--preset` form remains preferred when you need other overrides (`--output`, `--seed`, `--city`, `--modes`, `--synthetic`, OSM source mode).
 
@@ -172,7 +172,7 @@ SimForge/
 ├── scripts/                # Per-tier scenario generation (01_chicago_1k_car.py … 05_nyc_500k_car.py)
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py,
 │                           # env_report.py, inspect_network.py,
-│                           # analyze_scenarios.py — see `python help.py analyzer`,
+│                           # analyze_scenarios.py, see `python help.py analyzer`,
 │                           # download_census_tracts.py + download_tiger_roads.py
 │                           # for the visualization-branch shapefile cache)
 ├── runspecs/               # Benchmark configurations (YAML)
@@ -211,7 +211,7 @@ SimForge/
 | MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml |
 | DTALite | path4gmns 0.10+ (DTALiteClassic)| CPU mesoscopic Dynamic Traffic Assignment (UE) | node.csv + link.csv + demand.csv + settings.{csv,yml} |
 
-LPSim, POLARIS, and QarSUMO were evaluated and rejected — see the retrospectives in [`doc/engines/`](doc/engines/).
+LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the retrospectives in [`doc/engines/`](doc/engines/).
 
 > **DTALite ships inside `path4gmns`.** Pip-installable, CPU-only, runs on Mac (arm64/x86_64), Linux x86_64, and Windows. The pinned version is in [`lib/dtalite/manifest.json`](lib/dtalite/manifest.json). On macOS the bundled binary needs OpenMP: `brew install libomp`.
 
@@ -254,13 +254,13 @@ Data Sources → Generation Pipeline → Canonical Bundle → Adapter Layer → 
 
 **Key design decisions:**
 
-- **State-aware BFS routing at conversion time** (V5+) — deterministic, version-independent routes that respect OSM-extracted turn restrictions
-- **MATSim `lastIteration=0`** — single-pass execution for fair cross-simulator comparison
-- **SHA-256 manifest** — integrity verification before every simulation run
-- **Census-calibrated demand** — population-weighted origins, real commute times, V5+ per-person empirical departures from PUMS JWMNP (~70–72 % realism after Phases 5-10)
-- **OSM-grounded signal placement** (V5+) — signals only at nodes carrying `highway=traffic_signals`, replacing the pre-V5 `degree ≥ 4` heuristic
-- **Modelgen-grounded trip purposes** (V5+) — HBW (AM + PM) commutes plus parent-with-kid HBSchool chains derived from cityscape `schedule[0,1]` + AGEP + OSM `building.kind`; six-purpose taxonomy on `demand.csv`
-- **Cross-engine vehicle parameter alignment** (V11+) — single canonical car description in `adapters/common/vehicle_types.py` consumed by all three adapters; SUMO `length+minGap` ≡ MATSim effective `length` ≡ DTALite PCE 1.0, regression-pinned by `tests/test_vehicle_types.py`
+- **State-aware BFS routing at conversion time** (V5+), deterministic, version-independent routes that respect OSM-extracted turn restrictions
+- **MATSim `lastIteration=0`**, single-pass execution for fair cross-simulator comparison
+- **SHA-256 manifest**, integrity verification before every simulation run
+- **Census-calibrated demand**, population-weighted origins, real commute times, V5+ per-person empirical departures from PUMS JWMNP (~70–72 % realism after Phases 5-10)
+- **OSM-grounded signal placement** (V5+), signals only at nodes carrying `highway=traffic_signals`, replacing the pre-V5 `degree ≥ 4` heuristic
+- **Modelgen-grounded trip purposes** (V5+), HBW (AM + PM) commutes plus parent-with-kid HBSchool chains derived from cityscape `schedule[0,1]` + AGEP + OSM `building.kind`; six-purpose taxonomy on `demand.csv`
+- **Cross-engine vehicle parameter alignment** (V11+), single canonical car description in `adapters/common/vehicle_types.py` consumed by all three adapters; SUMO `length+minGap` ≡ MATSim effective `length` ≡ DTALite PCE 1.0, regression-pinned by `tests/test_vehicle_types.py`
 
 For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md).
 
@@ -269,7 +269,7 @@ For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECT
 ## 🗺️ Geographic Visualization (opt-in)
 
 A standalone visualization component on the `visualization` branch
-renders **7 map types** from any bundle / benchmark run — OD demand
+renders **7 map types** from any bundle / benchmark run, OD demand
 choropleths on US Census tracts, per-engine link load + congestion +
 travel time, cross-engine route diversity, and MATSim-driven flow
 animations (mp4/gif/apng). The main SimForge code paths do not import
@@ -313,9 +313,9 @@ symmetry).
 | [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics   |
 | [doc/DEVIATIONS.md](doc/DEVIATIONS.md)   | Plan commitments vs shipped state (31 items) |
 | [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal             |
-| [doc/chapters/methods.md](doc/chapters/methods.md)         | Thesis Chapter 3 — Methods                    |
-| [doc/chapters/experiments.md](doc/chapters/experiments.md) | Thesis Chapter 4 — Experiments                |
-| [doc/chapters/results.md](doc/chapters/results.md)         | Thesis Chapter 5 — Results                    |
+| [doc/chapters/methods.md](doc/chapters/methods.md)         | Thesis Chapter 3, Methods                    |
+| [doc/chapters/experiments.md](doc/chapters/experiments.md) | Thesis Chapter 4, Experiments                |
+| [doc/chapters/results.md](doc/chapters/results.md)         | Thesis Chapter 5, Results                    |
 | [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                    |
 | `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules               |
 | [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types) |

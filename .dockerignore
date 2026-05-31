@@ -2,7 +2,7 @@
 # Keeps the image small + deterministic by excluding host-generated state,
 # external datasets, and build artefacts. Bind-mount these at runtime.
 
-# Generated runtime outputs — never belong in the image
+# Generated runtime outputs, never belong in the image
 runs/
 logs/
 
@@ -22,16 +22,16 @@ coverage.xml
 .ruff_cache/
 .tox/
 
-# Large external datasets — host-managed via tools/download_osm.py + ModelGen
+# Large external datasets, host-managed via tools/download_osm.py + ModelGen
 osm_data/
 modelgen/
 
-# Caches — regeneratable, host-managed
+# Caches, regeneratable, host-managed
 cache/
 .modelgen_cache.json
 .canonical_routes/
 
-# Large bundles — bind-mount at runtime; the only tracked one is
+# Large bundles, bind-mount at runtime; the only tracked one is
 # chicago_1k_car (the smoke-test bundle), which we DO include via
 # explicit COPY in the Dockerfile if needed.
 scenarios/

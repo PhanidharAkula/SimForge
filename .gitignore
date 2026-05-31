@@ -64,15 +64,15 @@ temp/
 # OSM Overpass API cache (regenerated on demand)
 cache/
 
-# OSM PBF snapshots — large binary data, tracked via osm_data/manifest.json
+# OSM PBF snapshots, large binary data, tracked via osm_data/manifest.json
 # (download with: python tools/download_osm.py)
 osm_data/*.osm.pbf
 
 # External libraries / downloaded JARs (see SETUP.md for install).
 # Use `lib/*` (not `lib/`) so we can re-include per-engine manifest.json
-# files — git doesn't allow re-including paths under a fully-excluded parent.
+# files, git doesn't allow re-including paths under a fully-excluded parent.
 lib/*
-# DTALite version pin needs to be tracked — same role osm_data/manifest.json
+# DTALite version pin needs to be tracked, same role osm_data/manifest.json
 # plays for PBFs. (LPSim manifest was deleted in Version_5; see
 # doc/engines/LPSIM_RETROSPECTIVE.md.)
 !lib/dtalite/
@@ -89,10 +89,10 @@ runs/
 
 # Generated scenario bundles. Three reference bundles are tracked so a fresh
 # clone can run tests and the bundled adapters without first generating data:
-#   - chicago_1k_car  (~1 MB)   — smallest, used as the test fixture
-#   - nyc_10k_car     (~36 MB)  — small commute tier
-#   - la_50k_car      (~140 MB) — medium tier; cross-platform reproducibility ref
-# Two larger tiers are NOT tracked — their network.xml / signals.xml files
+#   - chicago_1k_car  (~1 MB), smallest, used as the test fixture
+#   - nyc_10k_car     (~36 MB), small commute tier
+#   - la_50k_car      (~140 MB), medium tier; cross-platform reproducibility ref
+# Two larger tiers are NOT tracked, their network.xml / signals.xml files
 # individually exceed GitHub's 100 MB hard limit and would bloat clones.
 # Regenerate them with the corresponding scripts/ entry point:
 #   - chicago_200k_car  → scripts/04_chicago_200k_car.py

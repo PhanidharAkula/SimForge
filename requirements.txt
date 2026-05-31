@@ -24,7 +24,7 @@ pandas
 matplotlib>=3.5
 seaborn>=0.12
 
-# Visualization component (visualization/) — choropleth renderer reads
+# Visualization component (visualization/), choropleth renderer reads
 # US Census Bureau Cartographic Boundary tract shapefiles via pyshp.
 # Pure-Python ESRI shapefile reader; no native deps. Used only by
 # `python -m visualization.generate_maps --style choropleth`.
@@ -34,7 +34,7 @@ pyshp>=2.3,<4
 pytest
 
 # DTALite engine (CPU mesoscopic Dynamic Traffic Assignment).
-# Bundled binary ships inside the path4gmns package — no separate install.
+# Bundled binary ships inside the path4gmns package, no separate install.
 # On macOS the bundled binary needs the OpenMP runtime: `brew install libomp`.
 path4gmns>=0.10.0,<1
 

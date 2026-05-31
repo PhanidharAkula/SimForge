@@ -17,12 +17,12 @@ markers = [
     "integration: tests that exercise multiple subsystems end-to-end",
     "requires_sumo: tests that require the SUMO `netconvert` / `sumo` binaries",
     "requires_java: tests that require Java + the MATSim JAR",
-    "requires_gpu: tests that require an NVIDIA GPU (registered for future GPU engine work; no test currently uses it — LPSim was the original consumer, see doc/engines/LPSIM_RETROSPECTIVE.md)",
+    "requires_gpu: tests that require an NVIDIA GPU (registered for future GPU engine work; no test currently uses it, LPSim was the original consumer, see doc/engines/LPSIM_RETROSPECTIVE.md)",
     "determinism: tests that verify byte-identical adapter outputs across re-runs",
 ]
 
 # ---------------------------------------------------------------------------
-# Coverage — see requirements-dev.txt for the pytest-cov pin.
+# Coverage, see requirements-dev.txt for the pytest-cov pin.
 # Run locally with:
 #   python -m pytest --cov=adapters --cov=evaluation --cov=pipeline
 # Coverage floor is 70 % (enforced via --cov-fail-under=70 when running with coverage).
@@ -59,7 +59,7 @@ exclude_lines = [
 output = "coverage.xml"
 
 # ---------------------------------------------------------------------------
-# Mutation testing — see doc/MUTATION_BASELINE.md for the procedure.
+# Mutation testing, see doc/MUTATION_BASELINE.md for the procedure.
 # Kept narrow on purpose: only the [1.0.0] cross-engine-fairness modules.
 # ---------------------------------------------------------------------------
 [tool.mutmut]

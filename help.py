@@ -152,22 +152,22 @@ INTERACTIVE MENU (default when run from a terminal):
                                       q:      quit (from the menu)
 
   Falls back automatically to a numbered-input menu (with /<word>
-  search) if curses can't initialise — e.g. on dumb terminals.
+  search) if curses can't initialise, e.g. on dumb terminals.
 
 PASTE-SAFE TEXT MODE (any topic name, any environment):
   python help.py setup              Install and bootstrap
-  python help.py generate           Data generation entry point — generate.py
-  python help.py run                Simulation execution entry point — run.py
+  python help.py generate           Data generation entry point, generate.py
+  python help.py run                Simulation execution entry point, run.py
   python help.py scripts            Built-in preset scripts
-  python help.py cities             Supported cities, census limits — live data
+  python help.py cities             Supported cities, census limits, live data
   python help.py modes              Travel modes reference
-  python help.py adapters           Simulator adapters — SUMO, MATSim, DTALite
+  python help.py adapters           Simulator adapters, SUMO, MATSim, DTALite
   python help.py metrics            Evaluation metrics
   python help.py evaluation         Analysis, fairness audit, plot generation
   python help.py schema             Canonical schema format reference
   python help.py benchmark          Benchmark harness and runspecs
   python help.py tests              Test suite reference
-  python help.py analyzer           tools/analyze_scenarios.py — bundle analyzer
+  python help.py analyzer           tools/analyze_scenarios.py, bundle analyzer
   python help.py visualization      Geographic map renderer (7 map types, opt-in)
   python help.py troubleshooting    Common issues and fixes
 
@@ -194,7 +194,7 @@ PROJECT STRUCTURE (alphabetical, repo root):
                       download_census_tracts.py + download_tiger_roads.py
                       for the visualization-branch shapefile cache)
   visualization/      Opt-in geographic-map renderer (visualization branch
-                      — generate_maps.py CLI + 7 map types)
+                     generate_maps.py CLI + 7 map types)
 
   Top-level files:
   generate.py         Unified scenario generator (start here)
@@ -254,7 +254,7 @@ OSM SOURCE FLAGS (mutually exclusive):
 
 OUTPUT FLAGS:
   --verbose                Show pipeline INFO logs (osmnx, demand, signals).
-                           Default: WARNING and above only — clean per-step
+                           Default: WARNING and above only, clean per-step
                            ✓ rows + sticky progress bar. With --verbose the
                            bar stays visible and INFO logs are routed above
                            it cleanly.
@@ -304,12 +304,12 @@ FLAGS:
 
 ENGINE / MODE COMPATIBILITY:
   SUMO supports both meso and micro. MATSim and DTALite are mesoscopic
-  only. Cells with an unsupported (engine, mode) pair are skipped — not
+  only. Cells with an unsupported (engine, mode) pair are skipped, not
   silently re-run as meso. The startup banner prints which pairs were
   skipped and why.
 
   --engine sumo,matsim,dtalite --mode meso,micro --repeats 3 across 2
-  scenarios is 8 valid cells × 3 reps = 24 runs (NOT 36 — the 4 invalid
+  scenarios is 8 valid cells × 3 reps = 24 runs (NOT 36, the 4 invalid
   matsim/micro and dtalite/micro pairs are skipped).
 
 OUTPUT FORMAT:
@@ -318,20 +318,20 @@ OUTPUT FORMAT:
   Scenario dividers (▶ scenario_name) group cells visually.
   Sticky progress bar at the bottom (TTY only) shows overall %,
   ✓N ✗N counters, elapsed clock, and a Braille spinner heartbeat
-  (~8 fps) so long-running cells don't look stuck. (No ETA — SimForge
+  (~8 fps) so long-running cells don't look stuck. (No ETA, SimForge
   cells are wildly heterogeneous, so a running-mean ETA swings between
   unhelpful extremes; the percentage + counter + elapsed carry the
   same information without misleading you.)
 
-  TWO TIMING NUMBERS — what they mean and why both:
+  TWO TIMING NUMBERS, what they mean and why both:
     wall   = full per-cell wall clock: adapter prep (canonical → engine
              format, including the per-trip BFS pre-routing the SUMO/MATSim
              adapters do) + engine subprocess + output parsing.
-             Per-cell wall times sum to the harness "Wall time" total —
+             Per-cell wall times sum to the harness "Wall time" total,
              this is the answer to "how long did this benchmark take?".
     engine = engine subprocess only (mobsim / DTA iteration / queue net).
              What Chapter 5 runtime tables cite, since the engine paradigm
-             is what the thesis benchmarks — not the Python adapter cost.
+             is what the thesis benchmarks, not the Python adapter cost.
              Same number as before any wall/engine split.
 
   Failed cells are listed first in the summary (with cleaned-up errors:
@@ -339,9 +339,9 @@ OUTPUT FORMAT:
   word-boundary truncation), then per-cell wall + engine 95 % CIs.
 
   JSON fields per result entry:
-    cell_wall_s    — full per-cell wall (NEW)
-    engine_wall_s  — engine subprocess (NEW; alias of wall_time_s on success)
-    runtime_s      — back-compat: engine on success, full wall on failure;
+    cell_wall_s, full per-cell wall (NEW)
+    engine_wall_s, engine subprocess (NEW; alias of wall_time_s on success)
+    runtime_s, back-compat: engine on success, full wall on failure;
                      downstream tools (analyze_benchmark, generate_plots)
                      still key off this so thesis figures don't drift.
 
@@ -435,15 +435,15 @@ CENSUS MODE MAPPING (cityscape Schedule-generator branch / ACS PUMS 2021):
    8 Motorcycle                            > car
    9 Bicycle                               > bike
   10 Walked                                > walk
-  11 Worked from home                      > home (excluded — no trip)
-  12 Other method                          > home (excluded — no trip)
-  -1 N/A — not a worker (cityscape's "bb" sentinel)
+  11 Worked from home                      > home (excluded, no trip)
+  12 Other method                          > home (excluded, no trip)
+  -1 N/A, not a worker (cityscape's "bb" sentinel)
 
   Single source of truth: pipeline/demand/parse_model_file.py:200
   See doc/MODELGEN_AND_MODES.md §2 + §4 for cityscape provenance and the
   per-city per-code histograms.
 
-SIMULATOR SUPPORT — what SimForge currently wires up (vs engine capability):
+SIMULATOR SUPPORT, what SimForge currently wires up (vs engine capability):
   SUMO:    car only                    (engine supports PT/bike/walk via
                                         busStop/ptlines/vClass; not wired up)
   MATSim:  car only                    (engine supports full multi-modal;
@@ -493,7 +493,7 @@ SUMO NOTES:
     mesoscopic model; omit for the default microscopic simulation.
 
 PREREQUISITES:
-  SUMO:    bundled in requirements.lock (eclipse-sumo wheel) — `uv pip install -r requirements.lock` puts `sumo`, `netconvert`, `sumo-gui` directly in `.venv/bin/`. Verify: `sumo --version`.
+  SUMO:    bundled in requirements.lock (eclipse-sumo wheel), `uv pip install -r requirements.lock` puts `sumo`, `netconvert`, `sumo-gui` directly in `.venv/bin/`. Verify: `sumo --version`.
   MATSim:  Download JAR to lib/matsim-15.0/, requires Java 17+
   DTALite: `uv pip install path4gmns` (binary ships in the package).
            On Mac: `brew install libomp` for the OpenMP runtime.
@@ -542,15 +542,15 @@ HELP_SCHEMA = """
                                V5+ adds two informational columns:
                                `dest_source` (schedule|gravity provenance)
                                and `purpose` (HBW_AM/PM, HBSchool_AM/PM,
-                               HBW_*_chained — 4-step taxonomy from
+                               HBW_*_chained, 4-step taxonomy from
                                Phase 9). Adapters consume the canonical
                                5-column subset by name and ignore the
                                provenance columns.
 3. signals.xml              -- Fixed-time traffic signal phases at every
                                OSM-tagged `highway=traffic_signals` node
-                               in the bbox (1.4-4.8% of nodes — chicago
+                               in the bbox (1.4-4.8% of nodes, chicago
                                2.79%, nyc 4.80%, la 1.35% empirically;
-                               placeholder 90s 2-phase cycle template —
+                               placeholder 90s 2-phase cycle template,
                                placement is real, timing is synthetic).
                                See doc/SCENARIO_GENERATION.md
                                §"Step 2: Traffic Signals" for full provenance.
@@ -578,15 +578,15 @@ ANALYZE BENCHMARK:
   python -m evaluation.analyze_benchmark <results.json> --latex --markdown
 
   Produces:
-    Summary               — engine-level aggregates (success rate, avg runtime, R)
-    Coverage diagnostic   — flags low-sample (n<3), asymmetric, silently-failed cells
-    Demand Composition    — per-scenario V5+ trip-purpose breakdown
+    Summary, engine-level aggregates (success rate, avg runtime, R)
+    Coverage diagnostic, flags low-sample (n<3), asymmetric, silently-failed cells
+    Demand Composition, per-scenario V5+ trip-purpose breakdown
                             (HBW_AM/PM, HBSchool_AM/PM, HBW_*_chained)
                             from each bundle's canonical demand.csv;
                             silently omitted for pre-V5 bundles missing
                             the `purpose` column.
-    Table 5.1 — Runtime comparison (engine x city x mode)
-    Table 5.2 — Reproducibility analysis (R-scores + Adj TT column*)
+    Table 5.1, Runtime comparison (engine x city x mode)
+    Table 5.2, Reproducibility analysis (R-scores + Adj TT column*)
 
   --latex       emit LaTeX tables (ready for thesis inclusion)
   --markdown    emit Markdown tables (for docs / GitHub)
@@ -603,11 +603,11 @@ AUDIT CROSS-ENGINE FAIRNESS:
   same problem and was measured the same way. Four fairness questions
   per scenario plus one informational composition section:
 
-    Q1 — same trip set across engines (feasibility verdict byte-identical)
-    Q2 — same network across engines (SCC node + link counts match)
-    Q3 — same trip count actually simulated (per-engine output count)
-    Q4 — cross-engine travel-time spread (mean / P95 / pairwise ratios)
-    Q5 — demand composition (V5+ trip-purpose breakdown)
+    Q1, same trip set across engines (feasibility verdict byte-identical)
+    Q2, same network across engines (SCC node + link counts match)
+    Q3, same trip count actually simulated (per-engine output count)
+    Q4, cross-engine travel-time spread (mean / P95 / pairwise ratios)
+    Q5, demand composition (V5+ trip-purpose breakdown)
          informational, not a fairness gate. Reads the canonical bundle's
          demand.csv `purpose` column; pre-V5 bundles emit a one-line
          skip and the section is omitted from output.
@@ -619,7 +619,7 @@ AUDIT CROSS-ENGINE FAIRNESS:
 REPRODUCIBILITY SCORECARD (Wave 1+):
   python -m tools.generate_scorecard <run-dir>
 
-  Emits reproducibility_scorecard.md — one-shot Markdown digest of
+  Emits reproducibility_scorecard.md, one-shot Markdown digest of
   provenance (git HEAD + OSM PBF hashes + per-bundle hashes),
   environment (platform + Python + SUMO + Java + dep versions), Q1
   byte-identity verdict, R = 1 − CV per (scenario, engine, mode) cell
@@ -639,17 +639,17 @@ GENERATE THESIS PLOTS:
   python -m evaluation.generate_plots <results.json> [--output DIR] [--clean]
 
   Generates (PNG + PDF):
-    Fig 5.1  — Engine runtime comparison (grouped bar: city x engine)
-    Fig 5.2  — Reproducibility heatmap (engine x city R-scores)
-    Fig 5.3  — Travel time comparison (mean +/- std by engine)
-    Fig 5.4  — Speedup vs MATSim baseline
-    Fig 5.5  — Micro vs Meso engine runtime comparison
-    Fig 5.6  — Engine runtime variability (boxplot)
-    Fig 5.7  — P95 tail latency comparison
-    Fig 5.8  — Trip-count parity (engine-internal drop reasons)
-    Fig 5.9  — Demand composition (V5+ trip-purpose taxonomy: HBW + HBSchool
+    Fig 5.1, Engine runtime comparison (grouped bar: city x engine)
+    Fig 5.2, Reproducibility heatmap (engine x city R-scores)
+    Fig 5.3, Travel time comparison (mean +/- std by engine)
+    Fig 5.4, Speedup vs MATSim baseline
+    Fig 5.5, Micro vs Meso engine runtime comparison
+    Fig 5.6, Engine runtime variability (boxplot)
+    Fig 5.7, P95 tail latency comparison
+    Fig 5.8, Trip-count parity (engine-internal drop reasons)
+    Fig 5.9, Demand composition (V5+ trip-purpose taxonomy: HBW + HBSchool
                + chains; reads canonical demand.csv `purpose` column)
-    Fig 5.10 — Per-cell wall time breakdown (Phase 11.6+: engine subprocess
+    Fig 5.10, Per-cell wall time breakdown (Phase 11.6+: engine subprocess
                vs adapter prep; needs cell_wall_s / engine_wall_s in JSON)
 
   Default output: plots/ next to the results JSON file.
@@ -698,18 +698,18 @@ BUILT-IN RUNSPECS:
   benchmark_large.yaml   chicago_200k_car + nyc_500k_car, mesoscopic only,
                          3 engines x 2 scenarios x 5 reps = 30 runs.
                          Per-run timeout 3600 s for 200K, 7200 s for 500K
-                         (HPC tier — submit via cluster/jobs/benchmark_large.sbatch;
+                         (HPC tier, submit via cluster/jobs/benchmark_large.sbatch;
                          bundles are gitignored, rsync from your dev box first).
 
 OUTPUT FORMAT:
   Banner with the matrix dimensions (Runspec, Scenarios, Engines, Modes,
   Repeats, Total). Pre-validation block (each unique bundle once).
   Scenario dividers (▶ scenario_id) group cells visually. Per-cell rows:
-  [N/total] engine mode seed=N ✓ wall (engine) — same dual-time format
+  [N/total] engine mode seed=N ✓ wall (engine), same dual-time format
   as run.py (full per-cell wall + engine subprocess in parens; see
   python help.py run for the wall-vs-engine rationale and JSON field
   names). Sticky progress bar at the bottom (TTY only) shows %, ✓N ✗N
-  counters, elapsed clock, Braille spinner heartbeat. (No ETA — see
+  counters, elapsed clock, Braille spinner heartbeat. (No ETA, see
   python help.py run for rationale.)
   Final summary mirrors run.py: Wall time + ✓ Completed + ✗ Failed +
   Failed cells (with cleaned-up errors) + Per-cell wall time breakdown
@@ -742,7 +742,7 @@ OUTPUT SHAPE (Phase 12+):
   parallel-by-scenario sbatch produced. The `.cache/` dir holds
   prepare_*_inputs output once per (scenario, engine); per-cell dirs
   receive hardlinks rather than re-running BFS. The cache invalidates
-  automatically when the bundle's manifest.xml SHA changes — no manual
+  automatically when the bundle's manifest.xml SHA changes, no manual
   `rm -rf .cache` needed when you regenerate a scenario.
 
   Pre-Phase-12.2 runs may have a doubly-nested
@@ -787,8 +787,8 @@ Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 helpers live in tests/conftest.py.
 
 RUN COMMANDS:
-  python -m pytest                                    # Full suite — per-FILE rollup rows
-  python -m pytest -v                                 # Verbose — per-TEST ✓/✗/⊘ rows
+  python -m pytest                                    # Full suite, per-FILE rollup rows
+  python -m pytest -v                                 # Verbose, per-TEST ✓/✗/⊘ rows
   python -m pytest -v -x                              # Verbose, stop on first failure
   python -m pytest tests/test_feasibility.py          # One file
   python -m pytest tests/test_feasibility.py -v       # One file, verbose
@@ -805,7 +805,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
   requires_sumo   Needs sumo / netconvert on PATH
   requires_java   Needs Java 17+ and the MATSim JAR
   requires_gpu    Needs an NVIDIA GPU (registered for future GPU engine
-                  work; no test currently uses it — LPSim was the
+                  work; no test currently uses it, LPSim was the
                   original consumer, see doc/engines/LPSIM_RETROSPECTIVE.md)
 
   Filter examples:
@@ -823,7 +823,7 @@ TEST FILES (24 files / ~574 tests with all 5 bundles in scenarios/;
                                         (Phase 12+ mode-segmented + back-compat)
                                         + _discover_modes + synthetic-run-dir test
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
-  test_demand_composition.py      (7)   V5+ Phase 10 — `purpose` column tally,
+  test_demand_composition.py      (7)   V5+ Phase 10, `purpose` column tally,
                                         AM/PM peak split, chain-leg counter,
                                         pre-V5 graceful no-op
   test_demand_generators.py       (21)  Uniform / gravity / peak-hour
@@ -835,7 +835,7 @@ TEST FILES (24 files / ~574 tests with all 5 bundles in scenarios/;
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
   test_matsim_adapter.py          (26)  MATSim helpers + end-to-end + sweep,
                                         + Phase 12.1 route-text format pin
-                                        (~10 min on M-series Mac — see
+                                        (~10 min on M-series Mac, see
                                         TESTING.md §3 for the -k escape)
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
@@ -844,7 +844,7 @@ TEST FILES (24 files / ~574 tests with all 5 bundles in scenarios/;
                                         + AM_PURPOSES/PM_PURPOSES disjointness
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_reproducibility_metrics.py (15)  R-score core + edge cases
-  test_run_benchmark.py           (12)  V5+ Phase 12 — BenchmarkHarness
+  test_run_benchmark.py           (12)  V5+ Phase 12, BenchmarkHarness
                                         explicit-output flag, prep-cache hot/cold
                                         + bundle-hash invalidation, scoped_base
                                         collapse (Phase 12.2)
@@ -856,11 +856,11 @@ TEST FILES (24 files / ~574 tests with all 5 bundles in scenarios/;
                                           3 tracked → 108 tests (3×36)
                                           5 generated → 180 tests (5×36)
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep
-  test_turn_restrictions.py       (17)  V5+ Phase 7 — OSM restriction parser,
+  test_turn_restrictions.py       (17)  V5+ Phase 7, OSM restriction parser,
                                         forbidden-move builder, state-aware
                                         BFS, DTALite movement.csv writer
   test_validator.py               (2)   Bundle pass + corruption fail
-  test_vehicle_types.py           (19)  V5+ Phase 11 — canonical car constants,
+  test_vehicle_types.py           (19)  V5+ Phase 11, canonical car constants,
                                         SUMO/MATSim XML emission, cross-engine
                                         equivalence (length+gap == effective)
 
@@ -874,23 +874,23 @@ test_scenario_data_integrity.py classes (7, parametrized over every scenario):
   TestSignalsIntegrity    Signal junction references exist in the network
 
 WHAT THE OUTPUT LOOKS LIKE:
-  Default — per-file rollup rows + sticky progress bar:
+  Default, per-file rollup rows + sticky progress bar:
     tests/test_feasibility.py    PASSED
     tests/test_engine_smoke.py   SKIPPED
     [████████████░░░░░░░░░░░░░░] 50%  ✓ 287  ✗ 0  ⠼  test 287/574  elapsed 1m 30s
 
-  With -v — per-test ✓/✗/⊘ rows:
+  With -v, per-test ✓/✗/⊘ rows:
     ✓ tests/test_feasibility.py::test_drops_outside_scc
     ⊘ tests/test_engine_smoke.py::test_sumo_real_binary  (SUMO binaries not on PATH)
     ✗ tests/test_x.py::test_y  (AssertionError: expected 5 got 6)
 
-  With --cov — a coverage table is appended below the Summary block:
+  With --cov, a coverage table is appended below the Summary block:
     Name                              Stmts   Miss  Cover   Missing
     adapters/common/feasibility.py       94      8    91%   42-49
     ...
     TOTAL                              2847    677    76%
 
-  With -p no:sticky_progress — plain pytest output (dots, file headers,
+  With -p no:sticky_progress, plain pytest output (dots, file headers,
   short test summary info, etc.). Useful when piping to a log file or
   diagnosing the plugin itself.
 
@@ -997,7 +997,7 @@ Standalone, opt-in renderer for seven geographic map types: two
 bundle-only OD choropleths, three per-engine maps (link load,
 congestion, travel time), and two cross-engine maps (route diversity,
 MATSim-driven flow animation). Lives on the `visualization` branch
-and is not imported by main SimForge code paths — locked benchmark
+and is not imported by main SimForge code paths, locked benchmark
 numbers are independent of any rendered plot.
 
 ONE-TIME SETUP (cache the public-domain US Census shapefiles):
@@ -1080,7 +1080,7 @@ CROSS-ENGINE INTERPRETATION (full notes in visualization/README.md):
 
 WHEN TO USE:
   After a benchmark run, when you want to *see* what the cross-engine
-  numbers describe — link_load makes the SimForge BFS contract
+  numbers describe, link_load makes the SimForge BFS contract
   visible; route_diversity shades the DTALite UE divergence; the OD
   choropleths show demand-realism evidence (HBW + HBSchool chains
   spatially distributed across tracts); animated_flow communicates the
@@ -1144,7 +1144,7 @@ HELP_TROUBLESHOOTING = """
         python tools/download_osm.py
       The committed scenarios/chicago_1k_car/ bundle runs without this step.
 
-10. "Pytest passes nothing visible — I see only dots"
+10. "Pytest passes nothing visible, I see only dots"
    -> Add -v for one line per test:
         python -m pytest tests/test_feasibility.py -v
       Add -vv for full assertion diffs on failures.
@@ -1206,7 +1206,7 @@ ACTIVATE THE VENV (REQUIRED IN EVERY NEW SHELL):
   If you see 'command not found: python', the venv is not active.
 
 EXTERNAL DEPENDENCIES:
-  SUMO 1.26+        Bundled in requirements.lock (eclipse-sumo wheel — same
+  SUMO 1.26+        Bundled in requirements.lock (eclipse-sumo wheel, same
                     binary on macOS arm64 and Linux x86_64). Installed by
                     `uv pip install -r requirements.lock`. Verify: sumo --version
   Java 17+          macOS:  brew install openjdk@17
@@ -1225,7 +1225,7 @@ VERIFY THE INSTALL (full sanity check):
   python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
   python -m execution.run_benchmark runspecs/benchmark_small.yaml            # ~40-100 min on M-series Mac
 
-MANUAL INSTALL (if setup_simforge.py fails — see SETUP.md):
+MANUAL INSTALL (if setup_simforge.py fails, see SETUP.md):
   python3.10+ -m venv .venv
   source .venv/bin/activate
   pip install --upgrade pip
@@ -1251,7 +1251,7 @@ OPERATOR UTILITIES (tools/):
   tools/clean.sh --all                 Also drops cache/ (Overpass HTTP cache)
   tools/inspect_network.py <dir>       Link length distribution + degenerate-edge report
   tools/env_report.py                  Toolchain + dep + binary versions (parity check)
-  tools/analyze_scenarios.py [name…]   Tabular bundle analyzer — see python help.py analyzer
+  tools/analyze_scenarios.py [name…]   Tabular bundle analyzer, see python help.py analyzer
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle
@@ -1325,7 +1325,7 @@ TOPIC_GROUPS = [
     ("Analysis & tools", [
         ("metrics", "Evaluation metric definitions"),
         ("evaluation", "audit_fairness + analyze_benchmark + plots"),
-        ("analyzer", "tools/analyze_scenarios.py — bundle analyzer"),
+        ("analyzer", "tools/analyze_scenarios.py, bundle analyzer"),
         ("visualization", "Geographic map renderer (7 map types, opt-in)"),
     ]),
     ("Troubleshooting", [
@@ -1363,7 +1363,7 @@ def _colors_enabled() -> bool:
     return sys.stdout.isatty()
 
 
-# ANSI escape codes — emitted only when `_colors_enabled()` is True at
+# ANSI escape codes, emitted only when `_colors_enabled()` is True at
 # render time (checked inside `_c()` and `_input_prompt()`).
 _C_RESET = "\033[0m"
 _C_BOLD = "\033[1m"
@@ -1436,7 +1436,7 @@ def _render_menu(layout) -> str:
     lines: list[str] = []
     bar = "═" * 68
     lines.append(_c(bar, _C_CYAN))
-    lines.append(_c("                    SimForge — Interactive Help",
+    lines.append(_c("                    SimForge, Interactive Help",
                     _C_BOLD + _C_CYAN))
     lines.append(_c(bar, _C_CYAN))
     lines.append("")
@@ -1491,7 +1491,7 @@ def _search(query: str, resolver: dict[str, str]) -> None:
         else:
             header = f"  {n_topics} topics match '/{query}':"
         print(_c(header, _C_BOLD))
-        # Pad the plain key first, then apply colour — otherwise the f-string
+        # Pad the plain key first, then apply colour, otherwise the f-string
         # `:<28` width counts the ANSI bytes too and the columns wobble.
         key_w = max(len(k) for k, _ in matches) + 4
         for key, n in matches:
@@ -1596,7 +1596,7 @@ def _safe_addstr(stdscr, y: int, x: int, text: str, attr: int = 0) -> None:
     try:
         stdscr.addstr(y, x, text, attr)
     except curses.error:
-        # Last-column-on-last-row writes raise on some terminals — harmless.
+        # Last-column-on-last-row writes raise on some terminals, harmless.
         pass
 
 
@@ -1606,7 +1606,7 @@ def _curses_draw_menu(stdscr, items: list[dict], selected: int,
     stdscr.erase()
     h, w = stdscr.getmaxyx()
 
-    title = "  SimForge — Interactive Help"
+    title = "  SimForge, Interactive Help"
     title_attr = (curses.color_pair(1) | curses.A_BOLD) if has_colors \
                  else curses.A_REVERSE
     _safe_addstr(stdscr, 0, 0, title.ljust(w - 1), title_attr)
@@ -1617,7 +1617,7 @@ def _curses_draw_menu(stdscr, items: list[dict], selected: int,
         if row >= h - 2:
             break
         if item["type"] == "group":
-            # Blank line above each group except the first one — gives
+            # Blank line above each group except the first one, gives
             # the menu visible breathing room between categories.
             if not first_group:
                 row += 1
@@ -1677,35 +1677,35 @@ def _classify_line(line: str) -> str:
     """Best-effort syntax-highlight kind for a help-content line.
 
     Used by the topic viewer to choose a curses attribute. Pattern
-    matching is intentionally conservative — we'd rather under-highlight
+    matching is intentionally conservative, we'd rather under-highlight
     a line than miscolour real text. Categories:
 
-      ``rule``    — line of ``=`` or ``-`` characters (decorative
+      ``rule``, line of ``=`` or ``-`` characters (decorative
                     horizontal bar)
-      ``title``   — short, mostly uppercase line *between* rules (e.g.
+      ``title``, short, mostly uppercase line *between* rules (e.g.
                     "DATA GENERATION (generate.py)")
-      ``header``  — section heading like ``QUICK START:`` or
+      ``header``, section heading like ``QUICK START:`` or
                     ``REQUIRED FLAGS:`` (uppercase + trailing colon)
-      ``command`` — example invocation (starts with ``python``, ``$``,
+      ``command``, example invocation (starts with ``python``, ``$``,
                     ``sumo``, ``java``, ``pip``, ``uv``, ``brew``,
                     or ``git`` after stripping leading whitespace)
-      ``normal``  — everything else
+      ``normal``, everything else
     """
     stripped = line.strip()
     if not stripped:
         return "blank"
-    # Decorative rules first — they're the easiest to spot.
+    # Decorative rules first, they're the easiest to spot.
     if len(stripped) >= 4 and all(c == "=" for c in stripped):
         return "rule"
     if len(stripped) >= 4 and all(c == "-" for c in stripped):
         return "rule"
-    # Section header like "QUICK START:" — uppercase letters with optional
+    # Section header like "QUICK START:", uppercase letters with optional
     # spaces / numbers, ending in a colon.
     if stripped.endswith(":") and len(stripped) <= 60:
         body = stripped[:-1].replace(" ", "").replace("/", "").replace("-", "")
         if body and body.isupper() and any(c.isalpha() for c in body):
             return "header"
-    # Command example — common shell prefixes, after lstripping.
+    # Command example, common shell prefixes, after lstripping.
     cmd_prefixes = ("python ", "python3 ", "$ ", "$\t", "sumo ", "java ",
                     "pip ", "uv ", "brew ", "git ", "pytest ", "make ")
     if stripped.startswith(cmd_prefixes):
@@ -1722,7 +1722,7 @@ def _classify_line(line: str) -> str:
 
 def _curses_show_topic(stdscr, title: str, content: str,
                        has_colors: bool) -> None:
-    """Scrollable topic view. Esc returns the caller (menu) — and
+    """Scrollable topic view. Esc returns the caller (menu), and
     because we erase the screen on every menu redraw, the topic content
     leaves no residue behind.
 
@@ -1848,7 +1848,7 @@ def _curses_main(stdscr) -> int:
             item = items[selected]
             content = _resolve_content(item["key"])
             _curses_show_topic(stdscr, item["label"], content, has_colors)
-            # On return, loop redraws the menu — Esc-to-back leaves no
+            # On return, loop redraws the menu, Esc-to-back leaves no
             # topic residue because curses owns the entire screen and
             # the next _curses_draw_menu() call calls stdscr.erase().
         elif ch in (27, ord("q"), ord("Q")):

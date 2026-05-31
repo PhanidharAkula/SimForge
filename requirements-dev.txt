@@ -1,5 +1,5 @@
 # ==============================================
-# SimForge — Development / test dependencies
+# SimForge, Development / test dependencies
 # ==============================================
 # Runtime deps come from requirements.txt. Anything below is only needed
 # for running the test suite, measuring coverage, or bootstrapping the

@@ -24,7 +24,7 @@ If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install pa
 
 ### 1. Branch from `Version_5`
 
-`main` tracks the released thesis snapshot. `Version_5` is the active development branch (succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases — JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
+`main` tracks the released thesis snapshot. `Version_5` is the active development branch (succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases, JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
 
 ```bash
 git checkout Version_5
@@ -41,7 +41,7 @@ The ~574-test suite (with all 5 bundles, ~502 with just the 3 tracked) is the on
 | `test_adapter_determinism.py`          | 8     | Byte-identical re-runs across all adapters                   |
 | `test_sumo_adapter.py`                 | 4     | SUMO adapter input/output shape                              |
 | `test_matsim_adapter.py`               | 26    | MATSim adapter (incl. Phase 12.1 route-text format pin)      |
-| `test_dtalite_adapter.py`              | 46    | DTALite adapter — writers, settings, demand-driven zoning, determinism, output parsing |
+| `test_dtalite_adapter.py`              | 46    | DTALite adapter, writers, settings, demand-driven zoning, determinism, output parsing |
 | `test_fidelity_metrics.py`             | 21    | RMSE, GEH, KS                                                |
 | `test_metrics_travel_time.py`          | 2     | tripinfo.xml parser                                          |
 | `test_reproducibility_metrics.py`      | 15    | R-score, edge cases (μ → 0)                                  |
@@ -57,13 +57,13 @@ The ~574-test suite (with all 5 bundles, ~502 with just the 3 tracked) is the on
 | `test_engine_smoke.py`                 | 4     | Real-binary SUMO/MATSim/DTALite smoke (skip if missing)      |
 | `test_audit_fairness.py`               | 40    | Q1–Q5 audit + 5-layout detector (Phase 12+ mode-segmented + back-compat) |
 | `test_run_benchmark.py`                | 12    | Phase 12+: BenchmarkHarness explicit-output, prep-cache hot/cold, bundle-hash invalidation, Phase 12.2 scoped_base collapse |
-| `test_demand_composition.py`           | 7     | V5+ Phase 10 — `purpose` column tally, AM/PM split, chain legs |
+| `test_demand_composition.py`           | 7     | V5+ Phase 10, `purpose` column tally, AM/PM split, chain legs |
 | `test_parse_model_file.py`             | 27    | ModelGen parser + V5 Phase 5 JWTRNS + Phase 9 HBSchool helpers |
-| `test_turn_restrictions.py`            | 17    | V5+ Phase 7 — OSM restriction parser, BFS, DTALite movement.csv |
-| `test_vehicle_types.py`                | 19    | V5+ Phase 11 — canonical car constants, cross-engine equivalence |
+| `test_turn_restrictions.py`            | 17    | V5+ Phase 7, OSM restriction parser, BFS, DTALite movement.csv |
+| `test_vehicle_types.py`                | 19    | V5+ Phase 11, canonical car constants, cross-engine equivalence |
 | `test_confidence.py`                   | 18    | Student's-t 95% CI core + edge cases                         |
 
-If you change adapter behaviour, run the determinism tests *and* the relevant adapter tests — the determinism tests catch silent file-format regressions that the adapter unit tests miss.
+If you change adapter behaviour, run the determinism tests *and* the relevant adapter tests, the determinism tests catch silent file-format regressions that the adapter unit tests miss.
 
 ### 3. Run the canonical stress test
 
@@ -74,7 +74,7 @@ python -m execution.run_benchmark runspecs/benchmark_small.yaml
 python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
-If the numbers move, file the new numbers as a new `CHANGELOG.md` entry — do not silently shift the published table.
+If the numbers move, file the new numbers as a new `CHANGELOG.md` entry, do not silently shift the published table.
 
 ### 4. Open a pull request
 
@@ -97,7 +97,7 @@ PR description should include:
 
 ### File-based execution only
 
-SimForge adapters are intentionally file-based: input XMLs in, output XMLs/JSONs out. **Do not introduce TraCI, Py4J, or other live-protocol bindings** — they break byte-identical determinism and complicate the audit trail. If you need runtime interaction, write the events to disk and parse them post-hoc.
+SimForge adapters are intentionally file-based: input XMLs in, output XMLs/JSONs out. **Do not introduce TraCI, Py4J, or other live-protocol bindings**, they break byte-identical determinism and complicate the audit trail. If you need runtime interaction, write the events to disk and parse them post-hoc.
 
 ### Determinism is non-negotiable
 
@@ -109,7 +109,7 @@ Every adapter run with the same `(scenario, seed)` MUST produce byte-identical o
 
 ### Errors that should crash, do crash
 
-Don't add try/except around `pipeline/`, `adapters/`, or `evaluation/` code paths to "make it more robust". A silent failure in the adapter is the worst possible outcome — it produces a `benchmark_results_<runspec>.json` with subtly wrong numbers that look fine. Crash loudly; the harness will record the failure in the `runs[]` summary.
+Don't add try/except around `pipeline/`, `adapters/`, or `evaluation/` code paths to "make it more robust". A silent failure in the adapter is the worst possible outcome, it produces a `benchmark_results_<runspec>.json` with subtly wrong numbers that look fine. Crash loudly; the harness will record the failure in the `runs[]` summary.
 
 ---
 
@@ -118,13 +118,13 @@ Don't add try/except around `pipeline/`, `adapters/`, or `evaluation/` code path
 The minimum surface area for a new adapter `adapters/<engine>/`:
 
 1. **`<engine>_adapter.py`** with the standard methods:
-   - `convert(scenario_dir, output_dir)` — write engine-native input files + `feasibility_report.json`.
-   - `run(scenario_dir, output_dir, seed)` — invoke the engine and write its output XMLs.
-   - `parse(output_dir)` — return the canonical metric dict.
-2. **`cli.py`** — thin argparse wrapper for one-off invocation.
+   - `convert(scenario_dir, output_dir)`, write engine-native input files + `feasibility_report.json`.
+   - `run(scenario_dir, output_dir, seed)`, invoke the engine and write its output XMLs.
+   - `parse(output_dir)`, return the canonical metric dict.
+2. **`cli.py`**, thin argparse wrapper for one-off invocation.
 3. **A determinism test** added to `tests/test_adapter_determinism.py`.
 4. **A unit test file** `tests/test_<engine>_adapter.py` mirroring the SUMO/MATSim style.
-5. **`feasibility_report.json` parity** — your adapter MUST drop trips outside the SCC and record the drop in the report. This is what makes cross-engine comparison fair.
+5. **`feasibility_report.json` parity**, your adapter MUST drop trips outside the SCC and record the drop in the report. This is what makes cross-engine comparison fair.
 
 Update `runspecs/benchmark_small.yaml` and `evaluation/analyze_benchmark.py`'s engine list once the adapter is green.
 
@@ -144,7 +144,7 @@ Bundles larger than 1K should **not** be committed to the repo. Add the scenario
 
 ## Documentation changes
 
-The doc set is intentionally consolidated — please don't introduce new top-level `.md` files without a discussion. The current layout:
+The doc set is intentionally consolidated, please don't introduce new top-level `.md` files without a discussion. The current layout:
 
 | Audience            | File                              | Scope                                             |
 | ------------------- | --------------------------------- | ------------------------------------------------- |
@@ -163,7 +163,7 @@ The doc set is intentionally consolidated — please don't introduce new top-lev
 | Thesis              | `doc/chapters/experiments.md`     | Chapter 4                                         |
 | Thesis              | `doc/chapters/results.md`         | Chapter 5                                         |
 
-Documentation that duplicates information in another file is technical debt — link, don't restate. If a number appears in two places, only one of them is right after the next change.
+Documentation that duplicates information in another file is technical debt, link, don't restate. If a number appears in two places, only one of them is right after the next change.
 
 ---
 
@@ -176,7 +176,7 @@ Open a GitHub issue with:
 3. The output of `python -c "import sys, platform; print(sys.version, platform.platform())"` plus `sumo --version` and `java -version`.
 4. The commit hash from `git rev-parse HEAD`.
 
-Determinism bugs are highest priority — if `python -m pytest tests/test_adapter_determinism.py` fails on your machine but passes in CI, that is a P0.
+Determinism bugs are highest priority, if `python -m pytest tests/test_adapter_determinism.py` fails on your machine but passes in CI, that is a P0.
 
 ---
 

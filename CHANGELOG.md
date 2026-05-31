@@ -6,9 +6,9 @@ The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.
 
 Commit hashes refer to the `Version_2` branch.
 
-## [Unreleased] — Version_5
+## [Unreleased], Version_5
 
-### Heavy stress-test audit — ship-readiness pass (2026-05-20)
+### Heavy stress-test audit, ship-readiness pass (2026-05-20)
 
 End-to-end audit across every code surface (`adapters/`, `pipeline/`,
 `evaluation/`, `execution/`, `visualization/`, `tests/`, top-level
@@ -20,7 +20,7 @@ drift + one architectural inconsistency (SUMO contract gap).
 
 **Commits in this audit:**
 
-- `ebced15` — `evaluation.audit_fairness` `-h`/`--help` handling
+- `ebced15`, `evaluation.audit_fairness` `-h`/`--help` handling
   added (previously errored as bad positional arg); `doc/PITZER.md`
   8 references to renamed `gen_nyc_500k.sbatch` → current
   `05_nyc_500k_car.sbatch`, plus the dead
@@ -33,31 +33,31 @@ drift + one architectural inconsistency (SUMO contract gap).
   because Chapter 5 references `fig_5_1` through `fig_5_10` but the
   directory was empty.
 
-- `fabec07` — `help.py:1062` HELP_VISUALIZATION cache-layout doc
+- `fabec07`, `help.py:1062` HELP_VISUALIZATION cache-layout doc
   said `cache/tiger/<fips>/...` but the actual directory is
   `cache/tiger_roads/<fips>/...` per writer + reader implementations
   in `tools/download_tiger_roads.py` and `visualization/data/`.
 
-- `379e0c1` — `visualization/generate_maps.py` module docstring
+- `379e0c1`, `visualization/generate_maps.py` module docstring
   claimed `link_load` / `travel_time` / `route_diversity` /
   `congestion` / `animated_flow` renderers were "Phase B + C" not
-  yet shipped — refuted by the existence of all 12 artefacts in
+  yet shipped, refuted by the existence of all 12 artefacts in
   `visualization/output/chicago_1k_car/`. Updated to describe the
   seven shipped types. Also moved `--maps` validation to run before
   `--dry-run`, so `--maps bogus_type --dry-run` now fails fast with
   exit 2 + "Known types: ..." stderr (was silently exit 0).
 
-- `8751413` — `tests/conftest.py` `_BUNDLED_PREFERENCE` listed
+- `8751413`, `tests/conftest.py` `_BUNDLED_PREFERENCE` listed
   `la_50k_bike_car_transit` and `chicago_200k_car_transit`
   (pre-V5 names that no longer exist). Tests still worked via
   alphabetical fallback but the preference list was misleading.
   Updated to current bundle names. Also `doc/REPRODUCING.md`
-  claimed `nyc_10k_car` + `la_50k_car` are "not in the repo" —
+  claimed `nyc_10k_car` + `la_50k_car` are "not in the repo",
   wrong; both ARE tracked via `.gitignore !scenarios/<name>/`
   exceptions; only `chicago_200k_car` + `nyc_500k_car` are
   gitignored. Rewrote paragraph.
 
-- `92a5b3d` — **Three-function adapter contract conformance:**
+- `92a5b3d`, **Three-function adapter contract conformance:**
   `adapters/sumo/sumo_adapter.py` previously only exposed
   `prepare_sumo_inputs`. The run + parse functions lived on
   `BenchmarkHarness` (`execution.run_benchmark`) and in
@@ -90,7 +90,7 @@ all numerical claims (Chapter 5 Tables 5.1+5.2, audit Q4 ratios,
 container manifest digest pin) verified against on-disk JSON.
 Implementation is fully complete and ship-ready.
 
-### Wave 2 — Containerization shipped (2026-05-19)
+### Wave 2, Containerization shipped (2026-05-19)
 
 Closes the last open ~ deviation in `doc/DEVIATIONS.md` (D10),
 mapping to plan §1.10 Objective 3 + §1.11 C3 + §2.7 + §4.2:
@@ -98,7 +98,7 @@ mapping to plan §1.10 Objective 3 + §1.11 C3 + §2.7 + §4.2:
 
 **Files added:**
 
-- **`Dockerfile`** at repo root — single-stage build on `python:3.13-slim-bookworm`.
+- **`Dockerfile`** at repo root, single-stage build on `python:3.13-slim-bookworm`.
   Layers: OpenJDK 17 + libgomp1 + libxml2 + git + curl + tini (system),
   uv 0.5.18 (package manager), `requirements.lock`-pinned Python deps
   (eclipse-sumo 1.26.0, path4gmns 0.10.0, lxml, numpy, etc.), MATSim
@@ -108,33 +108,33 @@ mapping to plan §1.10 Objective 3 + §1.11 C3 + §2.7 + §4.2:
   is broken. OCI labels include source URL, license, author. Image
   size ~1.0-1.2 GB.
 
-- **`.dockerignore`** — excludes `runs/`, `osm_data/`, `cache/`,
+- **`.dockerignore`**, excludes `runs/`, `osm_data/`, `cache/`,
   `scenarios/`, `modelgen/`, `.venv/`, `.git/`, generated artefacts.
   Bind-mounted at runtime.
 
-- **`.github/workflows/build-container.yml`** — auto-builds + publishes
+- **`.github/workflows/build-container.yml`**, auto-builds + publishes
   to GHCR (`ghcr.io/phanidharakula/simforge`) on every push to `main`
   or `phase-14-canonical-routes`. Tags: branch name, short SHA, full
   SHA, plus `latest` on main only. Uses `linux/amd64` target for
   Cardinal compatibility. GHA cache for incremental builds.
 
-- **`doc/CONTAINER_USAGE.md`** — Docker + Singularity workflows,
+- **`doc/CONTAINER_USAGE.md`**, Docker + Singularity workflows,
   image contents/exclusions table, opt-in SBATCH mode docs, manual
   build instructions, verification commands, reproducibility chain.
 
-- **`lib/container/manifest.json`** — pinned digest record for
+- **`lib/container/manifest.json`**, pinned digest record for
   thesis-tier runs (populated after first GHA build lands).
 
 **Files modified:**
 
-- **`cluster/jobs/benchmark_small.sbatch`** + **`benchmark_large.sbatch`** —
+- **`cluster/jobs/benchmark_small.sbatch`** + **`benchmark_large.sbatch`**,
   opt-in container mode via `SIMFORGE_USE_CONTAINER=1` environment
   variable. When set, the sbatch pulls the SimForge container via
   Singularity (cached at `containers/simforge_<tag>.sif`) and runs
   the harness inside it instead of the host venv. `SIMFORGE_CONTAINER_TAG`
   optionally pins to a specific git SHA / tag (default:
   `phase-14-canonical-routes`). Default behavior unchanged
-  (host venv) — fully backward compatible.
+  (host venv), fully backward compatible.
 
 - **`doc/DEVIATIONS.md`** D10 promoted from ~ Deviated to ✓
   Closed. At-a-glance scorecard updated: 15 closed / 10 deviated / 6
@@ -149,13 +149,13 @@ mapping to plan §1.10 Objective 3 + §1.11 C3 + §2.7 + §4.2:
 3. `SIMFORGE_USE_CONTAINER=1 sbatch cluster/jobs/benchmark_small.sbatch`
    → harness runs inside the container with the host's scenarios/runs/
    cache/osm_data bind-mounted in.
-4. Compare benchmark results against the host-venv baseline — should
+4. Compare benchmark results against the host-venv baseline, should
    be byte-identical (canonical_routes cache file hash matches; per-cell
    feasibility_report.json matches; engine TT distributions match).
 
 **Build path that avoids local Docker.** SimForge dev box (Mac arm64)
 has no Docker. GitHub Actions builds the image in the cloud on every
-push — no `docker buildx` needed on the dev box. Verified at workflow
+push, no `docker buildx` needed on the dev box. Verified at workflow
 push time via the build-time import smoke test inside the Dockerfile.
 
 **Net effect on reproducibility chain.** A full cross-machine SimForge
@@ -180,7 +180,7 @@ hit the warm canonical_routes cache built by chicago_200k_car job
 9971041 (the 6.52 h cold BFS pass). Instead it paid its own **3 h 13 m
 cold BFS pass** (27 workers, 17 trips/s). Root cause: the canonical_routes
 cache was being written to `<output_dir>/.canonical_routes/`, scoped
-by the harness's `_scoped_base(scenario_id)` — i.e. per-output-dir.
+by the harness's `_scoped_base(scenario_id)`, i.e. per-output-dir.
 chicago_200k_car job 9971041 wrote to
 `runs/benchmark_large/chicago_200k_car/.canonical_routes/`; the pilot
 ran with `--output runs/pilots/chicago_200k_sumo_micro/`, found no
@@ -194,7 +194,7 @@ deduplication. All runs of the same scenario hit the same cache file
 regardless of `--output` dir.
 
 The change is in the harness caller (`execution/run_benchmark.py`),
-not in `adapters/common/canonical_routes.py` — the function signature
+not in `adapters/common/canonical_routes.py`, the function signature
 accepts an arbitrary `cache_root`, the bug was the caller passing a
 per-output-dir path. The new caller path:
 
@@ -207,7 +207,7 @@ Includes a one-time migration: on first lookup for a scenario, any
 existing per-output-dir cache file is `rename()`d (atomic, O(directory
 entry)) into the global location. Operator sees a `[bfs] migrated   :`
 log line. Cross-filesystem rename failures log a warning but don't
-block the BFS — a cache miss triggers recompute (correct, just slow).
+block the BFS, a cache miss triggers recompute (correct, just slow).
 
 **Layout** (matches existing `cache/<type>/[<scope>/]<filename>` pattern
 used by `cache/census/`, `cache/tiger_roads/`, `cache/osm_ways/`,
@@ -230,7 +230,7 @@ cache/canonical_routes/
   each output dir.
 
 **What this does NOT recover.** Job 9980007's 3 h 13 m of already-spent
-cold BFS prep — that's gone. The fix prevents it from happening again.
+cold BFS prep, that's gone. The fix prevents it from happening again.
 
 **Tests.** 6 new tests in `tests/test_run_benchmark.py::TestCanonicalRoutesCacheRoot`
 and `::TestLegacyCanonicalRoutesCacheMigration` covering: cache-root
@@ -240,7 +240,7 @@ has the same content-hash, no-collateral-damage on non-canonical_routes
 files in the legacy dir.
 
 **Backward compatibility.** `adapters/common/canonical_routes.py` is
-unchanged — its `cache_root` parameter still accepts any path. Tests
+unchanged, its `cache_root` parameter still accepts any path. Tests
 in `tests/test_canonical_routes.py` continue to pass `cache_root=tmp_path`
 and remain valid. Only the harness caller changed.
 
@@ -249,11 +249,11 @@ and remain valid. Only the harness caller changed.
 Three groups of doc/operational changes landed after Wave 1, all
 documentation- or sbatch-only (no adapter / pipeline behaviour change).
 
-- **`doc/DEVIATIONS.md`** (commit `caadceb`) — 31-item audit
+- **`doc/DEVIATIONS.md`** (commit `caadceb`), 31-item audit
   of the December 2025 thesis plan vs the shipped codebase: 14 ✓
   Closed, 11 ~ Deviated with rationale, 6 ≠ Implementation differs.
   Single reference for the defense Q&A and methods chapter.
-- **`doc/SIMULATION_PARADIGMS.md`** (commit `84ac87c`) — 313-line
+- **`doc/SIMULATION_PARADIGMS.md`** (commit `84ac87c`), 313-line
   canonical doc explaining macro/meso/micro: the three resolutions
   table, per-engine support matrix (SUMO meso+micro, MATSim/DTALite
   meso-only), why SimForge defaults to meso for cross-engine fairness,
@@ -261,7 +261,7 @@ documentation- or sbatch-only (no adapter / pipeline behaviour change).
   nyc_10k 1.7×), projections for SUMO micro at 200K/500K, defense
   Q&A pocket explanation. `doc/GLOSSARY.md` Mesoscopic + Microscopic
   entries cross-reference the long form.
-- **sbatch consolidation** (commit `503bcbf`) — deleted the Phase 13.2
+- **sbatch consolidation** (commit `503bcbf`), deleted the Phase 13.2
   per-scenario fallback sbatchs (`benchmark_large_chicago_200k.sbatch`
   + `benchmark_large_nyc_500k.sbatch`); they were wall-margin insurance
   for nyc_500k's pre-Phase-14 ~225 h projection against Cardinal's
@@ -297,35 +297,35 @@ Wave 1 reality. Findings + edits:
   count, added Phase 14 measured walls for chicago_200k_car, fixed
   the "engines researched + ruled out" count (3 → 4 names listed).
 
-### Wave 1 — Reproducibility-artefact closure pass (2026-05-19)
+### Wave 1, Reproducibility-artefact closure pass (2026-05-19)
 
 Adds the artefacts the original thesis plan (§3.6, §3.4, §4.2)
 committed to but the codebase hadn't yet shipped. All five are
-documentation or one-shot summary tooling — no adapter or pipeline
+documentation or one-shot summary tooling, no adapter or pipeline
 behaviour changes, no impact on benchmark numbers.
 
-- **`LICENSE`** — Apache 2.0 license text at repo root with
+- **`LICENSE`**, Apache 2.0 license text at repo root with
   "Copyright 2025-2026 Phanidhar Akula". Closes plan §3.6
   open-source-licensing commitment.
-- **`doc/LICENSING.md`** — per-component license declaration:
+- **`doc/LICENSING.md`**, per-component license declaration:
   SimForge code (Apache 2.0), canonical bundles (CC BY 4.0), OSM
   derivatives (ODbL with share-alike obligation on `network.xml`),
   eclipse-sumo wheel (EPL 2.0), MATSim runtime JAR (per-release
   GPL/MIT/Apache), path4gmns/DTALite (Apache 2.0), PUMS (US Federal
   public domain), TIGER/Cartographic Boundary (US Federal public
   domain).
-- **`doc/DATA_MANAGEMENT.md`** — data-sources table, no-PII
+- **`doc/DATA_MANAGEMENT.md`**, data-sources table, no-PII
   declaration (PUMS aggregation upstream + synthetic trip records
   with provenance), storage/access tiers (public GitHub +
   university-authenticated HPC), 12-month retention window for
   run outputs, end-to-end reproducibility chain. Closes
   plan §3.6 line-by-line.
-- **`doc/MODELGEN_AND_MODES.md` §1** — added TAZ ≥10 trip
+- **`doc/MODELGEN_AND_MODES.md` §1**, added TAZ ≥10 trip
   suppression paragraph documenting that the plan's
   re-identification safeguard is enforced upstream by US Census
-  PUMS (≥10-person cell threshold) and inherited by SimForge — no
+  PUMS (≥10-person cell threshold) and inherited by SimForge, no
   additional filter needed at `demand.csv`-emit time.
-- **`tools/generate_scorecard.py` (NEW)** — one-shot
+- **`tools/generate_scorecard.py` (NEW)**, one-shot
   reproducibility-scorecard emitter. Reads
   `benchmark_results_<runspec>.json` + each cell's
   `feasibility_report.json` + `osm_data/manifest.json` + per-scenario
@@ -334,7 +334,7 @@ behaviour changes, no impact on benchmark numbers.
   Q1 cross-engine byte-identity verdict, R = 1 − CV per
   (scenario, engine, mode) cell, and a pass/warn/fail overall
   rollup. Auto-emitted at the end of every
-  `python -m execution.run_benchmark` run (guarded — scorecard
+  `python -m execution.run_benchmark` run (guarded, scorecard
   failure never blocks the benchmark) alongside the existing
   `benchmark_results_*.json`. Test coverage: 22 tests in
   `tests/test_generate_scorecard.py`.
@@ -344,7 +344,7 @@ behaviour changes, no impact on benchmark numbers.
 **Discovery.** While watching the in-flight Phase 14 re-run on
 Cardinal (job 9954279), spotted MATSim adapter at ~6 trips/s after
 the canonical-routes cache had already been written and loaded.
-That matched Phase 13's pre-Phase-14 rate exactly — so Phase 14
+That matched Phase 13's pre-Phase-14 rate exactly, so Phase 14
 should have brought it to thousands of trips/s, not the same speed
 as before.
 
@@ -368,7 +368,7 @@ deduplication) only saved the ~9 h of actual BFS time; this O(N²)
 link-find loop dominated everything else.
 
 The MATSim per-trip `[matsim] BFS-prep: N feasible trips routed`
-warning was misleading — it counts processed trips regardless of
+warning was misleading, it counts processed trips regardless of
 whether BFS or link-find was the actual bottleneck.
 
 **Fix.** One-pass O(N) index build at the top of
@@ -389,7 +389,7 @@ for row in reader:
 ```
 
 Each index stores the *first* match in original `valid_links`
-iteration order — exactly what the linear scans returned — so
+iteration order, exactly what the linear scans returned, so
 plans.xml output is byte-identical.
 
 **Measured speedup on chicago_1k_car (M-series Mac):**
@@ -411,7 +411,7 @@ again at ~7 h. For nyc_500k_car the projection improves from
   plans.xml byte-identical with canonical_routes consumed via the
   new index-based path vs the legacy inline-BFS path.
 - `tests/test_matsim_adapter.py` (25 tests, sweep excluded for speed):
-  all pre-existing MATSim adapter tests pass — function signatures
+  all pre-existing MATSim adapter tests pass, function signatures
   changed but the externally-visible plans.xml output is unchanged.
 
 **Operator note.** Jobs 9954279 (chicago Phase 14) + 9954287 (nyc
@@ -419,10 +419,10 @@ Phase 14) are running the pre-14.12 code and will produce correct
 results, just slowly (chicago ~71 h, nyc ~106 h). Recommended
 action: `scancel` both, `git pull` Phase 14.12, resubmit. The
 canonical-routes JSONL from the current run is content-addressed
-so it survives the cancel — re-run reuses it as a cache hit,
+so it survives the cancel, re-run reuses it as a cache hit,
 landing chicago_200k in ~5-10 min total.
 
-### Phase 14.10: SBATCH visibility — chunk size + non-TTY log capture (2026-05-18)
+### Phase 14.10: SBATCH visibility, chunk size + non-TTY log capture (2026-05-18)
 
 **Symptom (observed in jobs 9954279 + 9954287 at 22 min elapsed).**
 Two cosmetic-but-irritating issues with the Phase 14.7 design under
@@ -431,7 +431,7 @@ the SBATCH non-TTY environment:
 1. **No progress lines for ~4 hours.** `_compute_parallel` chunked
    work as one big slab per worker (`chunks = workers`). With
    `chunk_size = 12,500` trips per chunk at 1.226 s/trip, the first
-   chunk didn't return until ~4 hours in — by which point ~25 % of
+   chunk didn't return until ~4 hours in, by which point ~25 % of
    work was already done. Progress emitter only fires on chunk
    return, so nothing visible to the operator for ~4 hours.
 
@@ -440,7 +440,7 @@ the SBATCH non-TTY environment:
    redirected to file → non-TTY), the log capture handler was never
    installed. WARNING-level records fell back to Python's default
    stderr handler. Result: `[bfs]` heartbeats in `.err`, cell-tape
-   rows in `.out` — readers had to grep two files.
+   rows in `.out`, readers had to grep two files.
 
 **Fixes (two small commits-worth of change, both in this entry):**
 
@@ -449,7 +449,7 @@ the SBATCH non-TTY environment:
     `chunk_size = max(100, n // target_chunks)`. For chicago_200k
     that's 200 trips × 1,000 chunks; for nyc_500k it's 500 × 1,000.
     Each chunk takes ~2-10 minutes single-thread, so chunks return
-    every ~10-40 seconds at 16-way parallelism — plenty of granularity
+    every ~10-40 seconds at 16-way parallelism, plenty of granularity
     for the 60s rate-limited heartbeat without IPC overhead becoming
     significant (~140 KB pickle per chunk, ~1ms each).
   - Better load balancing as a side-effect: many small chunks let
@@ -459,7 +459,7 @@ the SBATCH non-TTY environment:
     ~4 h wall, that's ~240 progress lines (~1/min). At nyc_500k's
     ~25 h wall, ~1,500 lines. Both sparse enough to read line-by-line.
   - `last_progress_at` initialized to `-inf` so the **first** chunk
-    return always emits a heartbeat — operator sees an "alive +
+    return always emits a heartbeat, operator sees an "alive +
     on track" signal within minutes instead of waiting a full
     rate-limit interval.
 - `pipeline/progress.py:StickyProgress.__init__`:
@@ -479,12 +479,12 @@ WARNING  [bfs] done       : 1,000 routes in 10s  (91 trips/s, workers=4)
 WARNING  [bfs] cached     : 1,000 routes -> canonical_routes_de66d3....jsonl
 ```
 
-First progress emits at 3s (first chunk return) — previously waited
+First progress emits at 3s (first chunk return), previously waited
 until end. The 60s rate limit doesn't suppress the very first emission
 because `last_progress_at = -inf`.
 
 23/23 tests pass (`test_canonical_routes.py` + `test_run_benchmark.py`).
-Byte-identity guards remain green — chunking strategy changes
+Byte-identity guards remain green, chunking strategy changes
 *how* work is dispatched, not *what* gets computed.
 
 **Operator note.** Jobs 9954279 (chicago Phase 14) and 9954287 (nyc
@@ -508,7 +508,7 @@ run preserves the BFS work already in-flight but produces logs in
 the old split-file format. The benchmark *result* is unaffected
 either way.
 
-### Phase 14.8: Phase 13 baseline measured on Cardinal — chicago_200k_car (2026-05-18)
+### Phase 14.8: Phase 13 baseline measured on Cardinal, chicago_200k_car (2026-05-18)
 
 **Job 9332478 completed cleanly** at 2026-05-18 14:09:09 EDT after **5d 21h 51m 58s (141.87 h)** of wall on Cardinal `cpu` partition (Xeon Max 9470, 16 cores allocated, single core used for BFS; MaxRSS 23.28 GB out of 72 GB). This is the **pre-Phase-14 baseline** the canonical-routes refactor measures against.
 
@@ -525,7 +525,7 @@ either way.
 | [7/10] | matsim | 43 | ~210 s | ~210 s | (cached) |
 | [8/10]–[10/10] | matsim | 44–46 | ~210 s each | ~210 s each | (cached) |
 
-**~136 h of the 141.87 h total (~96 %) was per-trip BFS routing** — the redundancy Phase 14a (deduplication) eliminates and Phase 14b (parallel) further compresses.
+**~136 h of the 141.87 h total (~96 %) was per-trip BFS routing**, the redundancy Phase 14a (deduplication) eliminates and Phase 14b (parallel) further compresses.
 
 **Fairness audit (Q1-Q5) all passed.** The Q4 finding is the headline result for Chapter 5:
 
@@ -533,7 +533,7 @@ either way.
 - MATSim completed **N = 200,000** trips (mean TT 13,555.8 s, P95 40,734 s)
 - **SUMO/MATSim mean-TT ratio = 0.645 (−35.5 %)**
 
-SUMO meso's queue model refuses vehicle insertion at congested origin-edges → 41.9 % of trips never start → mean TT biased toward the easier 58.1 % that *did* start. MATSim's queue-based mobsim holds vehicles in queue until they can advance → all 200,000 complete. Same canonical bundle, same SCC, same feasibility set, same SimForge-BFS-pre-routed paths — divergent mobsim behavior. The 35.5 % gap is the measurement, not a bug.
+SUMO meso's queue model refuses vehicle insertion at congested origin-edges → 41.9 % of trips never start → mean TT biased toward the easier 58.1 % that *did* start. MATSim's queue-based mobsim holds vehicles in queue until they can advance → all 200,000 complete. Same canonical bundle, same SCC, same feasibility set, same SimForge-BFS-pre-routed paths, divergent mobsim behavior. The 35.5 % gap is the measurement, not a bug.
 
 **Reproducibility** (Tables 5.1 / 5.2 ready):
 
@@ -544,15 +544,15 @@ SUMO meso's queue model refuses vehicle insertion at congested origin-edges → 
 
 MATSim virtually perfectly deterministic at `lastIteration=0`; SUMO meso has small seed-driven variance in completion rate at 200K (not visible at 1K-10K scales).
 
-**Demand realism** (Q5): 50/50 AM/PM split (full-day scenario), **55.8 % school-related trips** (27,929 AM HBSchool + 27,929 AM chain partners, 27,858 + 27,858 PM equivalents) — Phase 9b/9c chain mechanism producing the symmetric structure it was designed for.
+**Demand realism** (Q5): 50/50 AM/PM split (full-day scenario), **55.8 % school-related trips** (27,929 AM HBSchool + 27,929 AM chain partners, 27,858 + 27,858 PM equivalents), Phase 9b/9c chain mechanism producing the symmetric structure it was designed for.
 
 **Projection holds.** Pre-run wall estimate: ~137 h. Measured: 141.87 h. Within 3.6 % → the BFS-per-trip cost model is calibrated; Phase 14's ~5-8 h projection for the same workload inherits that confidence.
 
-**Phase 14 cycle launched same day.** Jobs **9954279** (chicago_200k_car re-run under Phase 14, cache wiped beforehand) and **9954287** (nyc_500k_car first attempt — pre-Phase-14 was structurally infeasible) submitted to Cardinal `cpu` at ~14:30 EDT 2026-05-18. Expected wall: ~5-8 h chicago, ~20-30 h nyc. When they land, the measured speedup goes into a Phase 14.9 addendum below.
+**Phase 14 cycle launched same day.** Jobs **9954279** (chicago_200k_car re-run under Phase 14, cache wiped beforehand) and **9954287** (nyc_500k_car first attempt, pre-Phase-14 was structurally infeasible) submitted to Cardinal `cpu` at ~14:30 EDT 2026-05-18. Expected wall: ~5-8 h chicago, ~20-30 h nyc. When they land, the measured speedup goes into a Phase 14.9 addendum below.
 
 Full per-day journal: `doc/EXPERIMENT_LOG.md` 2026-05-18 entry.
 
-### Phase 14.7: Output polish — unified sticky bar, structured BFS logs (2026-05-12)
+### Phase 14.7: Output polish, unified sticky bar, structured BFS logs (2026-05-12)
 
 **Symptom.** Phase 14.5's output mixed three different progress styles
 in the same SBATCH log: SUMO's `\r`-mangled in-line ProgressBar
@@ -601,7 +601,7 @@ unified visual.
     helper produces the column-aligned progress line; called from
     both `_compute_serial` and `_compute_parallel` paths.
   - Rate-limited by wall clock (`_PROGRESS_INTERVAL_S = 10s`) instead
-    of trip count — gives stable cadence on any hardware speed.
+    of trip count, gives stable cadence on any hardware speed.
   - Added `_fmt_dur(seconds)` and `_fmt_int(n)` helpers for consistent
     formatting matching `pipeline/progress.py:_fmt_dur`.
   - Removed unused `import sys`.
@@ -638,7 +638,7 @@ shared BFS are identical to the legacy in-adapter BFS, per trip_id).
 | 4 | 11.3 | 2.41× |
 | 8 |  6.6 | 4.12× |
 
-Sub-linear scaling on the 1K bundle is expected — the per-worker
+Sub-linear scaling on the 1K bundle is expected, the per-worker
 init cost (~1-2 s parsing the network) doesn't amortize over only
 1000 trips. At the 200K/500K cluster scale, with init amortized over
 12.5K-31K trips per worker, Amdahl predicts ~12-14× speedup at 16
@@ -658,13 +658,13 @@ run lands.
 
 #### Sub-commits
 
-**14.0 — design + contract tests.** `doc/PHASE_14_DESIGN.md` records
+**14.0, design + contract tests.** `doc/PHASE_14_DESIGN.md` records
 the motivation, API, cache format, parallel strategy, determinism
 invariants, and per-commit plan. `tests/test_canonical_routes.py`
 pins 9 contract tests; all skip at this commit (module doesn't exist
 yet) so each subsequent commit unblocks a subset.
 
-**14.1 — serial canonical_routes module + JSONL cache.**
+**14.1, serial canonical_routes module + JSONL cache.**
 `adapters/common/canonical_routes.py` (446 lines): runs state-aware
 BFS over the SCC-filtered network, returns
 `Dict[trip_id, List[node_id]]`. JSONL cache content-addressed by
@@ -672,11 +672,11 @@ SHA-256(network || demand || sorted feasible_trip_ids); header line
 records expected count for truncation detection; atomic write via
 temp file + os.replace. `TestSerialAPI` (4 tests), `TestCache`
 (2 tests), `TestByteIdentityVsLegacy` (1 test) all pass on this
-commit. The byte-identity test is the load-bearing invariant —
+commit. The byte-identity test is the load-bearing invariant,
 proves the new BFS produces paths byte-identical to the legacy
 inline BFS, per trip_id.
 
-**14.2 — SUMO adapter consumes canonical_routes.**
+**14.2, SUMO adapter consumes canonical_routes.**
 `build_sumo_routes_xml` gains optional `canonical_routes` kwarg.
 When provided, the function skips its inline state-aware BFS pass
 and looks up path_nodes from the dict. When None (legacy /
@@ -684,14 +684,14 @@ standalone CLI), behavior is unchanged. New test
 `TestSumoRoutesXmlByteIdentity` proves routes.rou.xml is byte-
 identical with vs without canonical_routes.
 
-**14.3 — MATSim adapter consumes canonical_routes.** Same refactor
+**14.3, MATSim adapter consumes canonical_routes.** Same refactor
 for `build_matsim_plans_xml` / `prepare_matsim_inputs`. The
 turn-restrictions parse is gated on `using_shared_routes=False` so
 we don't pay the parse cost when the harness already pre-computed.
 New test `TestMatsimPlansXmlByteIdentity` proves plans.xml is byte-
 identical with vs without canonical_routes.
 
-**14.4 — harness wires shared BFS pass.**
+**14.4, harness wires shared BFS pass.**
 `BenchmarkHarness.__init__` initializes `self._canonical_routes_cache`
 keyed by bundle_hash so within a single harness call, a (scenario,
 bundle) pair pays the BFS exactly once across SUMO + MATSim. New
@@ -701,7 +701,7 @@ dict to both adapter prep functions; DTALite is skipped (UE
 assignment computes its own paths). 4 cache-management tests
 updated with stub for the new helper.
 
-**14.5 — multiprocessing.Pool in canonical_routes.** `workers > 1`
+**14.5, multiprocessing.Pool in canonical_routes.** `workers > 1`
 dispatches to `multiprocessing.get_context("spawn").Pool` with one
 big chunk per worker. `_init_worker` loads the network + SCC filter
 + forbidden_moves once per worker into module-global `_WORKER_STATE`;
@@ -730,11 +730,11 @@ The byte-identity chain from Phase 14.0 holds end-to-end:
    (sorted by trip_id throughout).
 
 `audit_fairness` Q1 (same trip set), Q2 (same SCC), and Q3
-(simulated count = feasibility target) are unaffected — Phase 14
+(simulated count = feasibility target) are unaffected, Phase 14
 does not change the feasibility filter, the SCC filter, or the
 adapter output schemas, just removes a hot computation duplication.
 
-### Phase 14.0: Canonical routes + parallel BFS — design + skeleton tests (2026-05-12)
+### Phase 14.0: Canonical routes + parallel BFS, design + skeleton tests (2026-05-12)
 
 **Motivation.** The Phase 13 benchmark run on Cardinal (jobs 9332478,
 9332482) made an unmodeled cost visible: BFS routing in the SUMO and
@@ -757,12 +757,12 @@ Two compounding causes of the cost:
 
 **Phase 14 plan.** Two compounding optimizations:
 
-- **14a — canonical routes**: extract the BFS into
+- **14a, canonical routes**: extract the BFS into
   `adapters/common/canonical_routes.py`; both adapters consume a shared
   `dict[trip_id, list[node_id]]` instead of running their own BFS. JSONL
   cache keyed by SHA-256(network || demand || feasible set) survives
   across cells, seeds, and runs.
-- **14b — parallel BFS**: `multiprocessing.Pool` across trips with
+- **14b, parallel BFS**: `multiprocessing.Pool` across trips with
   deterministic merge by sorted trip_id. ~12-15× expected speedup at
   16-worker concurrency.
 
@@ -775,10 +775,10 @@ Expected combined effect on Cardinal cold prep:
 
 **Files added (this commit, 14.0):**
 
-- `doc/PHASE_14_DESIGN.md` — full design (motivation, module API,
+- `doc/PHASE_14_DESIGN.md`, full design (motivation, module API,
   cache format, parallel strategy, determinism invariants, risk +
   safety, measurement plan, implementation breakdown by sub-commit).
-- `tests/test_canonical_routes.py` — 9 contract tests pinning the API
+- `tests/test_canonical_routes.py`, 9 contract tests pinning the API
   before implementation lands. All tests skip on this commit with
   reason "Phase 14 in progress" because
   `adapters.common.canonical_routes` doesn't exist yet. Each subsequent
@@ -793,7 +793,7 @@ preserves `audit_fairness` Q1/Q3 across the refactor.
 ### Phase 13.1: benchmark_large memory bump + dedicated nyc_500k sbatch (2026-05-11)
 
 **Symptom.** `cluster/jobs/benchmark_large.sbatch` requested
-`--mem=128G` against Pitzer cpu nodes that have 192 G physical —
+`--mem=128G` against Pitzer cpu nodes that have 192 G physical,
 ~60 G of headroom left unallocated on every node. The script's own
 header warned the parallel-by-scenario pattern was "only marginally"
 inside the 7-day cap for nyc_500k (~165–225 h vs the 168 h
@@ -835,7 +835,7 @@ unknown 500K MATSim qsim peak.
 
 ### Phase 13: Geographic visualization component (2026-05-11)
 
-**Scope.** Adds `visualization/` — a standalone, opt-in module for
+**Scope.** Adds `visualization/`, a standalone, opt-in module for
 rendering seven map types from SimForge bundles and benchmark results.
 Runs on a separate branch (`visualization`); none of the main
 SimForge code paths import it, so the main workflow incurs no startup
@@ -846,16 +846,16 @@ SimForge's canonical bundle + benchmark JSON.
 
 | Map | Inputs | Engine specificity |
 |---|---|---|
-| `od_origins` | Bundle + cached US Census tracts + TIGER roads | — (cross-engine, demand only) |
-| `od_destinations` | (same) | — |
+| `od_origins` | Bundle + cached US Census tracts + TIGER roads |, (cross-engine, demand only) |
+| `od_destinations` | (same) | n/a |
 | `link_load` | Per-cell engine output (any of SUMO/MATSim/DTALite) | per `(engine, mode)` |
 | `congestion` | Per-cell DTALite `link_performance.csv` | DTALite only |
 | `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` |
 | `route_diversity` | Cell output from ≥ 2 engines | cross-engine |
 | `animated_flow` | MATSim `output_events.xml.gz` | MATSim only |
 
-`animated_flow` ships with two render modes (`particles` —
-one moving dot per vehicle on curved OSM polylines; `throughput` —
+`animated_flow` ships with two render modes (`particles`,
+one moving dot per vehicle on curved OSM polylines; `throughput`,
 5-min link-load snapshots) and three output containers (`mp4`, `gif`
 with one-shot playback, `apng`).
 
@@ -874,24 +874,24 @@ defaults to `visualization/output/<scenario>/` (gitignored).
 
 **Files added:**
 
-- `visualization/generate_maps.py` — CLI entry point + per-phase
+- `visualization/generate_maps.py`, CLI entry point + per-phase
   render dispatch (Phase A / B / C helpers).
-- `visualization/coverage.py` — `ScenarioCoverage`, `CellArtifacts`,
+- `visualization/coverage.py`, `ScenarioCoverage`, `CellArtifacts`,
   bundle + run-dir discovery, `map_generatable()` reasoning.
-- `visualization/data/{bundle,census,events,osm_ways,results,tiger_roads}.py` —
+- `visualization/data/{bundle,census,events,osm_ways,results,tiger_roads}.py`,
   pure loaders (no matplotlib import). Lazy shapefile / shapely /
   pyosmium use.
-- `visualization/render/{basemap,od_choropleth,link_load,travel_time,route_diversity,animated_flow}.py` —
+- `visualization/render/{basemap,od_choropleth,link_load,travel_time,route_diversity,animated_flow}.py`,
   one file per map type. Matplotlib-only.
-- `tools/download_census_tracts.py`, `tools/download_tiger_roads.py` —
+- `tools/download_census_tracts.py`, `tools/download_tiger_roads.py`,
   one-shot downloaders for the cached US Census shapefiles
   (`cache/census/<fips>/`, `cache/tiger/<fips>/`). Skip if hashes
   already match.
-- `tests/test_visualization.py` — 13 tests covering loaders, coverage
+- `tests/test_visualization.py`, 13 tests covering loaders, coverage
   matrix, CLI dispatch + dry-run + bogus-map rejection, and an
   end-to-end render smoke test (skips when census shapefiles aren't
   cached).
-- `visualization/README.md` — component-level doc with the full map
+- `visualization/README.md`, component-level doc with the full map
   catalogue, CLI reference, data sources, defaults, and the three
   cross-engine interpretation notes.
 
@@ -900,7 +900,7 @@ findings that previously lived only in `audit_fairness` output and the
 methods chapter:
 
 - *SUMO and MATSim `link_load` look identical, DTALite doesn't*. Direct
-  visual proof of the fair-comparison contract — when routes are held
+  visual proof of the fair-comparison contract, when routes are held
   constant via SimForge BFS, spatial traffic structure is identical;
   any cross-engine TT difference is engine-internal mobsim behaviour.
 - *`animated_flow` shows departure bursts*. PUMS JWMNP is integer-
@@ -928,7 +928,7 @@ discretization → departure bursts).
 
 **Decision.** The Phase 12.5 finding (path4gmns 0.10.0 DTALite C++ binary
 caps at 4 OpenMP threads) extrapolates to ~100 h per seed for chicago_200k
-and ~250 h per seed for nyc_500k — structurally exceeding any practical
+and ~250 h per seed for nyc_500k, structurally exceeding any practical
 Pitzer walltime even on the 7-day `cpu` partition. Three mitigation paths
 were considered:
 
@@ -939,7 +939,7 @@ were considered:
 | C. Custom UE solver in SimForge | unknown | 2-4 weeks | High |
 | **D. Drop DTALite at 200K+, document as ceiling** | n/a | 0 | Low |
 
-**Picked D.** Same pattern as la_50k_car (Phase 12.5) — honest representation
+**Picked D.** Same pattern as la_50k_car (Phase 12.5), honest representation
 that path4gmns 0.10.0 cannot drive UE at this scale on a single node. SUMO +
 MATSim cross-engine alignment continues to be the reportable signal at the
 200K+ tier, consistent with the +4.6 % la_50k headline finding (results.md
@@ -947,20 +947,20 @@ MATSim cross-engine alignment continues to be the reportable signal at the
 
 **Files changed:**
 
-- `runspecs/benchmark_large.yaml` — dropped 2 DTALite cells (chicago_200k +
+- `runspecs/benchmark_large.yaml`, dropped 2 DTALite cells (chicago_200k +
   nyc_500k); 6 cells → 4 cells. Header updated with Phase 12.7 rationale.
-- `cluster/jobs/benchmark_large.sbatch` — `--mem=96G → 128G` (Phase 12.4
+- `cluster/jobs/benchmark_large.sbatch`, `--mem=96G → 128G` (Phase 12.4
   parity), `--time=96:00:00 → 7-00:00:00` (cpu partition max for cold BFS-prep
   at 500K), removed stale "wall-time exceeded" warning (Phase 12 cache
   resolved it), removed DTALite preflight check (not used at this tier),
   added inline JSON-merge step before `analyze_benchmark` so the multi-
   scenario pattern works without manual post-processing.
-- `doc/chapters/results.md` §5.7 — updated the "No claim about 200K+ tier"
+- `doc/chapters/results.md` §5.7, updated the "No claim about 200K+ tier"
   paragraph to specifically cite the Phase 12.7 decision and clarify that
   SUMO + MATSim alignment is the reportable signal at this tier.
 
 **Future re-introduction.** When path4gmns ships a fix (or we replace the
-binary), restoring DTALite at 200K+ is a one-line runspec change — just
+binary), restoring DTALite at 200K+ is a one-line runspec change, just
 re-add the 2 dropped cells. No other code paths assume DTALite presence
 at this tier.
 
@@ -983,7 +983,7 @@ cells. FAILURE cells continue to use the synthesized timeout from the
 runspec.
 
 **Priority order in `recover_scenario`:**
-1. Harness log (most accurate — actual wall + engine times).
+1. Harness log (most accurate, actual wall + engine times).
 2. Synthesized timeout (when cell failed with a timeout error).
 3. Zero (fallback when no log + no timeout).
 
@@ -991,12 +991,12 @@ The tool's per-cell log line now includes `(log)` or `(disk)` to flag
 where each runtime value came from.
 
 **Tests added (`tests/test_recover_partial_summary.py:TestParseHarnessLog`):**
-- `test_parses_success_cells` — wall + engine seconds extracted.
-- `test_parses_failure_cells_with_error_message` — error after `✗ FAIL`.
-- `test_strips_FAIL_prefix_from_error` — trims literal "FAIL" from message.
-- `test_count` — ignores non-cell-tape lines.
-- `test_missing_log_returns_empty_dict` — graceful no-op.
-- `test_handles_alternate_seeds` — multiple seeds parse independently.
+- `test_parses_success_cells`, wall + engine seconds extracted.
+- `test_parses_failure_cells_with_error_message`, error after `✗ FAIL`.
+- `test_strips_FAIL_prefix_from_error`, trims literal "FAIL" from message.
+- `test_count`, ignores non-cell-tape lines.
+- `test_missing_log_returns_empty_dict`, graceful no-op.
+- `test_handles_alternate_seeds`, multiple seeds parse independently.
 
 6/6 pass; runs in 0.0 s.
 
@@ -1020,7 +1020,7 @@ regardless of `OMP_NUM_THREADS` or SLURM cpu allocation. Verified by:
   `_Z23g_number_of_CPU_threadsv` (`g_number_of_CPU_threads()`) that
   determines parallelism.
 - Live `ssh <node> 'top'` while DTALite was running with
-  `export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK` set — process at
+  `export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK` set, process at
   ~382% CPU (4 threads), unchanged.
 
 At 4 threads, each label-correcting (Bellman-Ford SP) pass over la_50k_car's
@@ -1040,11 +1040,11 @@ extracts metrics via the same `parse_sumo_tripinfo` /
 `parse_matsim_output` / `parse_dtalite_output` parsers the harness
 uses, and synthesizes cells where artifacts are missing. For a
 synthesized DTALite cell, the `error_message` becomes
-`"DTALITE timeout after <runspec timeout_s>s (synthesized — cell did not complete; see CHANGELOG for context)"`,
+`"DTALITE timeout after <runspec timeout_s>s (synthesized, cell did not complete; see CHANGELOG for context)"`,
 recording the timeout we *attempted* (14400s = 4h for la_50k_car
 in the Phase 12.4 runspec) so the JSON is honest about what was
 tried, not zero. Output JSON is schema-compatible with the harness's
-own `BenchmarkResult.save()` — `evaluation/analyze_benchmark` and
+own `BenchmarkResult.save()`, `evaluation/analyze_benchmark` and
 `evaluation/audit_fairness` consume it identically.
 
 **Resulting la_50k_car summary** (10 ✓ + 5 ✗):
@@ -1068,7 +1068,7 @@ external DTALite compiled with proper thread support).
 
 **Side observation worth pinning.** The `cluster/jobs/benchmark_small.sbatch`
 comment claiming "DTALite uses OpenMP and benefits from the extra cores
-via `number_of_cpu_processors` in settings.yml" is **wrong** — that
+via `number_of_cpu_processors` in settings.yml" is **wrong**, that
 setting doesn't exist in path4gmns 0.10.0's settings.csv schema (no
 `[cpu]` section in the binary's string table). The comment was
 aspirational. Phase 12.5 leaves the comment unchanged for now since
@@ -1083,7 +1083,7 @@ parallel-by-scenario) was OOM-killed at 17h15m elapsed (out of 36 h
 walltime) with MaxRSS 67 G against a 64 G `--mem` cap. Per-scenario
 result JSONs for chicago_1k_car (~03:25) and nyc_10k_car (~05:13) were
 already written and survived. la_50k_car finished SUMO × 5 + MATSim ×
-5 cleanly (Phase 12.1 + Phase 12 cache both confirmed working — 50.2s
+5 cleanly (Phase 12.1 + Phase 12 cache both confirmed working, 50.2s
 MATSim engine time, 93s cached SUMO seeds), then DTALite seed=42 hit
 the per-cell `timeout_s=3600` cap. The OOM fired during the next
 DTALite cell as path4gmns loaded the 50 k OD × 470 k link C++ side
@@ -1093,31 +1093,31 @@ under accumulated 3-worker-resident memory.
 
 1. **`--mem=64G` was sized for the SUMO+MATSim peak** (per old
    sbatch comment: "≤ 20 GB; 64 GB has headroom"). DTALite's
-   path4gmns C++ side wasn't accounted for — it holds the full
+   path4gmns C++ side wasn't accounted for, it holds the full
    network + OD matrix + per-iteration shortest-path trees, which
    for la_50k pushes the worker to ~30-40 GB by itself. With three
    parallel workers still resident, the cap was always going to bite
    somewhere in DTALite's la_50k phase.
 2. **`timeout_s=3600` (1 h) for DTALite la_50k** was set to match
    the 1 h DTALite cell of nyc_10k_car. But nyc_10k has 10 k OD
-   pairs and la_50k has 50 k OD pairs — UE iteration cost is roughly
+   pairs and la_50k has 50 k OD pairs, UE iteration cost is roughly
    linear in OD count, so 1 h was always too tight by ~5×. (The 1 h
    cap fired against a thrashing process under memory pressure, not
-   a healthy convergence — but even with healthy memory, 1 h would
+   a healthy convergence, but even with healthy memory, 1 h would
    have been marginal.)
 
 **Fix.** Two-line patch:
 
-- `runspecs/benchmark_small.yaml:62` — la_50k_car DTALite
+- `runspecs/benchmark_small.yaml:62`, la_50k_car DTALite
   `timeout_s: 3600` → `timeout_s: 14400` (4 h). Aligns with the
   ~5× scaling vs nyc_10k and gives healthy convergence room.
-- `cluster/jobs/benchmark_small.sbatch:52` — `#SBATCH --mem=64G` →
+- `cluster/jobs/benchmark_small.sbatch:52`, `#SBATCH --mem=64G` →
   `#SBATCH --mem=128G`. Pitzer cpu nodes have 192 G physical so 128 G
   leaves headroom; killed the OS-swap thrashing path that masked the
   real DTALite runtime.
 
 The DTALite adapter default (`adapters/dtalite/dtalite_adapter.py:727`,
-`timeout_s=3600`) is **unchanged** — it stays a sensible default for
+`timeout_s=3600`) is **unchanged**, it stays a sensible default for
 small scenarios; the runspec overrides per-cell as needed.
 
 **Re-queue cost** (with Phase 12 BFS-prep cache + Phase 12.2
@@ -1132,7 +1132,7 @@ restructured layout + new caps):
 
 **Other sbatch files audited but not patched:**
 - `01-05_*.sbatch` (single-scenario alternatives) and
-  `benchmark_large.sbatch` were not touched — they aren't in the
+  `benchmark_large.sbatch` were not touched, they aren't in the
   active recovery path. `benchmark_large.sbatch` will need the same
   treatment before queuing the 200k/500k tier; tracked as future
   Phase 12.5.
@@ -1152,7 +1152,7 @@ between SUMO completion and any further log line. Process was at
 sustained 100% CPU with growing CPU time (98 s in 99 s wall) and
 `network.xml` + `feasibility_report.json` written into the cache, but
 no progress signal. py-spy dump revealed it was running
-`shortest_path_with_restrictions` from `build_matsim_plans_xml` —
+`shortest_path_with_restrictions` from `build_matsim_plans_xml`,
 silently routing all 219,525 feasible trips through the Python BFS
 one at a time.
 
@@ -1183,7 +1183,7 @@ nyc_10k) stay quiet. Larger scenarios get one progress line per
 ```
 
 For la_50k_car (~219 k trips) that's ~22 lines spread over the
-prep window — enough to estimate ETA without spamming the log.
+prep window, enough to estimate ETA without spamming the log.
 
 **Verification.** `test_matsim_adapter.py` 26/26 pass with no
 behaviour change to the route XML output (the new lines only emit
@@ -1201,10 +1201,10 @@ runs/<runspec>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/
 The `<scenario>/<scenario>/` doubling came from two sources both
 adding the scenario name: the sbatch passes
 ``--output runs/<runspec>/<scenario>/`` per worker (so per-scenario
-JSONs land in their own subdirs and don't race — Phase 12 Bug 1 fix),
+JSONs land in their own subdirs and don't race, Phase 12 Bug 1 fix),
 and the harness's `run_single` builds per-cell paths as
 ``<output_base>/<scenario_id>/<engine>/<mode>/seed_<N>/``. Functionally
-fine — `audit_fairness`'s 5th layout ("Layout C") handles it — but
+fine, `audit_fairness`'s 5th layout ("Layout C") handles it, but
 visually ugly and an extra path component for no benefit.
 
 **Fix.** New `BenchmarkHarness._scoped_base(scenario_id)` helper:
@@ -1232,7 +1232,7 @@ finished run dir by hand.
 named "Layout C" in `audit_fairness._find_cell_dir`) is still detected
 as a back-compat fallback. Any pre-Phase-12.2 run that produced
 `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/` paths is still
-audit-able as-is — no need to restructure existing data unless you
+audit-able as-is, no need to restructure existing data unless you
 want the cleaner layout for visual hygiene.
 
 **Manual restructure for existing runs (optional).** Per-scenario
@@ -1251,16 +1251,16 @@ After this `runs/benchmark_small/<SCENARIO>/` matches the new layout
 that any future runs would produce.
 
 **Tests added (`tests/test_run_benchmark.py:TestPreparedCache`):**
-- `test_scoped_base_collapses_when_output_matches_scenario` — pins
+- `test_scoped_base_collapses_when_output_matches_scenario`, pins
   the parallel-by-scenario collapse.
-- `test_scoped_base_inserts_scenario_when_output_is_shared` — pins
+- `test_scoped_base_inserts_scenario_when_output_is_shared`, pins
   that multi-scenario shared output_base still inserts scenario_id.
-- `test_cache_dir_collapses_in_per_scenario_output` — pins the
+- `test_cache_dir_collapses_in_per_scenario_output`, pins the
   cache-dir variant of the same logic.
 
 52/52 tests in `test_run_benchmark.py` + `test_audit_fairness.py` pass.
 
-### Phase 12.1: MATSim route-text format fix (2026-05-02) — CRITICAL
+### Phase 12.1: MATSim route-text format fix (2026-05-02), CRITICAL
 
 **Symptom.** Every MATSim run completed in normal wall time and reported
 `status="success"`, but `output_trips.csv.gz` had ZERO trip rows
@@ -1270,7 +1270,7 @@ that any future runs would produce.
 WARN DefaultTurnAcceptanceLogic:58 Cannot move vehicle person_t82 from link l1502 to link l28738
 ```
 
-— one warning per agent. Mean travel time computed by `parse_matsim_output`
+one warning per agent. Mean travel time computed by `parse_matsim_output`
 was 0 (chicago_1k_car) or `~26 s` from a handful of teleport-fallback
 trips (nyc_10k_car). The R-score across 5 reps trivially evaluated to
 1.0000 because the stddev of zero (or near-zero) trip counts is zero;
@@ -1278,7 +1278,7 @@ this read in analyze_benchmark as "perfect determinism" but was actually
 "perfect breakage". Phase 11.6's `engine_wall_s` numbers for MATSim were
 *real* JVM time but reflected a mobsim that immediately gave up.
 
-**Root cause — wrong text content for `<route type="links">`.**
+**Root cause, wrong text content for `<route type="links">`.**
 SimForge's `build_matsim_plans_xml` emitted:
 
 ```xml
@@ -1287,7 +1287,7 @@ SimForge's `build_matsim_plans_xml` emitted:
 </route>
 ```
 
-— treating the text content as the *interior* of the route (i.e.
+treating the text content as the *interior* of the route (i.e.
 excluding `start_link` and `end_link`). MATSim 15 / population_v6
 expects the **FULL** link sequence in the text content, with
 `start_link` as the first token and `end_link` as the last:
@@ -1299,7 +1299,7 @@ expects the **FULL** link sequence in the text content, with
 ```
 
 (Format confirmed against MATSim's own `output_plans.xml.gz` after
-running with the BFS-pre-routing disabled — MATSim's router emits
+running with the BFS-pre-routing disabled, MATSim's router emits
 this redundant idiom.) When SimForge omitted `start_link` and
 `end_link` from the text, MATSim's mobsim ended up with a route
 disjoint from where the agent physically was, and
@@ -1325,16 +1325,16 @@ and writes the entire list as the route text, while *also* setting
 **Impact on existing thesis data.** Every MATSim cell in every prior
 benchmark run is invalid as a travel-time / trip-count source. The
 *runtime* numbers (engine wall) are still meaningful (MATSim really did
-spend that time in mobsim), but the trip outputs are not — they
+spend that time in mobsim), but the trip outputs are not, they
 represent a mobsim that rejected every move. Re-run any benchmark that
 cites MATSim Q3/Q4 / Table 5.2 / Fig 5.3 / Fig 5.7 / Fig 5.8 / Fig 5.9
 numbers. SUMO and DTALite cells are unaffected and don't need re-running.
 
 **Tests added (`tests/test_matsim_adapter.py:TestBuildMATSimPlans`):**
-- `test_route_text_includes_start_and_end_links` — pins the requirement
+- `test_route_text_includes_start_and_end_links`, pins the requirement
   that the `<route>` text first token == `start_link` and last token ==
   `end_link` for every emitted plan.
-- `test_route_start_link_matches_start_activity_link` — pins the
+- `test_route_start_link_matches_start_activity_link`, pins the
   requirement that the route's `start_link` and `end_link` attributes
   match the activity links that surround the leg.
 
@@ -1344,7 +1344,7 @@ Two latent bugs in `execution/run_benchmark.py` surfaced when the
 canonical small-tier sbatch (`cluster/jobs/benchmark_small.sbatch`) was
 run on Pitzer with three parallel-by-scenario workers:
 
-**Bug 1 — `--output` CLI override silently clobbered by runspec.**
+**Bug 1, `--output` CLI override silently clobbered by runspec.**
 `BenchmarkHarness.run_benchmark()` unconditionally re-set
 `self.output_base = Path(runspec.global_output_dir)` after the constructor
 already accepted the CLI value. All three workers ended up with
@@ -1369,7 +1369,7 @@ harness.output_base = Path(args.output)  # honored by per-cell paths,
 harness = BenchmarkHarness(output_base=Path(args.output) if args.output else None)
 ```
 
-**Bug 2 — per-cell directory missing the `mode` segment.**
+**Bug 2, per-cell directory missing the `mode` segment.**
 The path was `<base>/<scenario>/<engine>/seed_<N>/`. SUMO meso and SUMO
 micro for the same seed both wrote to `<scenario>/sumo/seed_42/`, and the
 second invocation overwrote the first's `tripinfo.xml`,
@@ -1379,11 +1379,11 @@ overwrite hits disk), but the on-disk artefacts that
 `audit_fairness` Q1/Q2/Q3 walk to verify the trip set + SCC + per-engine
 trip counts were destroyed for the first-written mode.
 
-**Fix:** per-cell path now includes `mode` —
+**Fix:** per-cell path now includes `mode`,
 `<base>/<scenario>/<engine>/<mode>/seed_<N>/`. Both meso and micro
 artefacts coexist on disk under their respective subdirs.
 
-**Cascade — `evaluation/audit_fairness.py` layout detector extended.**
+**Cascade, `evaluation/audit_fairness.py` layout detector extended.**
 `_find_cell_dir()` and `_discover_scenarios()` now recognise the new
 mode-segmented Phase-12+ layouts as preferred matches, with the
 pre-Phase-12 mode-less layouts kept as fallbacks for back-compat
@@ -1396,18 +1396,18 @@ mode default to meso.
 
 **Migration note for old run dirs:**
 - Pre-Phase-12 results (no `<mode>/` segment in the path) are still
-  audit-able — `_find_cell_dir`'s back-compat fallbacks handle them.
+  audit-able, `_find_cell_dir`'s back-compat fallbacks handle them.
 - The on-disk artefacts in those old dirs are whatever was written
   *last* (sumo micro overwrites sumo meso). The aggregate JSON is the
   authoritative source for per-cell metrics; the per-cell artefacts are
   for trip-id intersection and feasibility-report verification only.
 - Re-running affected benchmarks under Phase 12+ gives clean coverage.
 
-**Bug 3 — `prepare_<engine>_inputs` repeated per cell instead of cached.**
+**Bug 3, `prepare_<engine>_inputs` repeated per cell instead of cached.**
 The dominant cost of `prepare_sumo_inputs` / `prepare_matsim_inputs` /
 `prepare_dtalite_inputs` on big networks is per-trip BFS routing on the
 canonical node graph. Those routes are deterministic given (scenario,
-engine) — they never depend on seed, mode, or rep number. The harness
+engine), they never depend on seed, mode, or rep number. The harness
 was nevertheless recomputing them from scratch for every cell. On
 la_50k_car (50,000 trips × 159K-node network) BFS routing takes ~10 h
 **per cell**; the canonical small-tier matrix has 15 la cells, so the
@@ -1429,7 +1429,7 @@ manifest hash; mismatch triggers `shutil.rmtree(cache_dir)` and a
 fresh prepare. So if you regenerate `scenarios/<scenario>/` (e.g.
 bump trip count or change radius) and reuse the same `--output`,
 the next benchmark invocation automatically detects the change and
-re-prepares — no manual `rm -rf .cache/` required. Synthetic /
+re-prepares, no manual `rm -rf .cache/` required. Synthetic /
 partial bundles without `manifest.xml` get an empty hash and the
 cache remains non-invalidating (best-effort behavior).
 
@@ -1450,19 +1450,19 @@ in particular). Without this guard, the BFS-prep cache directory
 would be walked as if it were a scenario.
 
 **Tests added (`tests/test_run_benchmark.py:TestPreparedCache`):**
-- `test_warm_cache_skips_prepare` — pin the sentinel-driven no-op path.
-- `test_cold_cache_calls_prepare_and_marks_sentinel` — pin the cold-prep
+- `test_warm_cache_skips_prepare`, pin the sentinel-driven no-op path.
+- `test_cold_cache_calls_prepare_and_marks_sentinel`, pin the cold-prep
   path + sentinel write (now containing the bundle's manifest SHA).
-- `test_cache_invalidates_when_bundle_changes` — pin the auto-invalidation:
+- `test_cache_invalidates_when_bundle_changes`, pin the auto-invalidation:
   rewrite the bundle's manifest, observe that a subsequent
   `_ensure_prepared_cache` triggers a fresh prep (called twice across
   two invocations) and the sentinel reflects the new hash.
-- `test_warm_hit_when_bundle_unchanged` — pin that repeated calls with
+- `test_warm_hit_when_bundle_unchanged`, pin that repeated calls with
   the SAME manifest content stay as a single cold prep.
-- `test_mirror_hardlinks_cache_to_run_dir` — pin the inode-equality
+- `test_mirror_hardlinks_cache_to_run_dir`, pin the inode-equality
   invariant that proves files are hardlinked, plus verify the
   `.prepared` sentinel doesn't propagate to per-cell dirs.
-- `test_mirror_falls_back_to_copy_on_oserror` — pin the cross-filesystem
+- `test_mirror_falls_back_to_copy_on_oserror`, pin the cross-filesystem
   fallback path.
 
 Empirical confirmation against a real chicago_1k_car bundle:
@@ -1473,15 +1473,15 @@ Empirical confirmation against a real chicago_1k_car bundle:
   vs seed=43 verified to differ).
 
 **Tests added (`tests/test_run_benchmark.py` + `tests/test_audit_fairness.py`):**
-- `TestExplicitOutputBase` — pins the `_explicit_output` flag and the
+- `TestExplicitOutputBase`, pins the `_explicit_output` flag and the
   default-vs-override behaviour of the harness constructor.
-- `TestFindCellDir.test_layout_b_phase12_*` — pin the new mode-segmented
+- `TestFindCellDir.test_layout_b_phase12_*`, pin the new mode-segmented
   layouts as preferred matches over the legacy mode-less ones.
-- `TestFindCellDir.test_back_compat_pre_phase12_layout_b` — pre-Phase-12
+- `TestFindCellDir.test_back_compat_pre_phase12_layout_b`, pre-Phase-12
   dirs still resolve.
-- `TestDiscoverModes` — new test class for the modes-per-scenario helper.
+- `TestDiscoverModes`, new test class for the modes-per-scenario helper.
 - `TestDiscoverScenarios.test_finds_layout_b_phase12_with_mode_segment` +
-  `test_finds_layout_a_micro_seed` — discovery handles the new layouts
+  `test_finds_layout_a_micro_seed`, discovery handles the new layouts
   and now also catches micro-mode flat dirs.
 
 109 tests pass (29 audit_fairness original + 14 new layout/discover/modes
@@ -1490,11 +1490,11 @@ Empirical confirmation against a real chicago_1k_car bundle:
 arm64 due to the pre-existing netconvert incompatibility (unrelated to
 this phase).
 
-**Bonus — sbatch wrappers now `shopt -s nullglob`.**
+**Bonus, sbatch wrappers now `shopt -s nullglob`.**
 `cluster/jobs/benchmark_small.sbatch` and `cluster/jobs/benchmark_large.sbatch`
 both used `RESULTS=(<base>/*/<glob>.json)` to gather per-scenario JSONs.
 Without `nullglob`, an unmatched glob stays as the literal pattern
-string — the array ends up with one element (`"<base>/*/<glob>.json"`)
+string, the array ends up with one element (`"<base>/*/<glob>.json"`)
 that bash treats as a real path. The aggregation step then reports
 "Found 1 result file" pointing at a path that doesn't exist, and
 `analyze_benchmark` errors with `Results file not found: …/*/…`. Both
@@ -1515,7 +1515,7 @@ slowdowns.
 ### Phase 11.8: Drop redundant Fig 5.4 (Engine summary panel) + renumber (2026-05-01)
 
 The 3-panel "Engine summary" figure (per-mode runtime + R-score + throughput
-side-by-side) was redundant with Fig 5.1 (runtime) and Fig 5.2 (R-score) —
+side-by-side) was redundant with Fig 5.1 (runtime) and Fig 5.2 (R-score),
 two of its three panels duplicated information the reader had just seen.
 Only the throughput panel was unique, and it was a derivative quantity
 (`trip_count / runtime`) easily computed from the existing runtime tables.
@@ -1523,11 +1523,11 @@ Only the throughput panel was unique, and it was a derivative quantity
 Removed:
 
 - `plot_engine_summary()` and its driver entry in `evaluation/generate_plots.py`.
-- Fig 5.4 section in `doc/chapters/results.md` §5.5 — the section now opens
+- Fig 5.4 section in `doc/chapters/results.md` §5.5, the section now opens
   directly with the throughput table (the data the section actually needed)
   and references Table 5.1 / Fig 5.1 for the underlying runtime numbers.
 
-Renumbered 5.5 → 5.4, 5.6 → 5.5, … , 5.11 → 5.10 throughout. Total figures:
+Renumbered 5.5 → 5.4, 5.6 → 5.5, …, 5.11 → 5.10 throughout. Total figures:
 **11 → 10**. Affected files:
 
 - `evaluation/generate_plots.py` (driver list, suptitles, save names, docstring)
@@ -1539,19 +1539,19 @@ Renumbered 5.5 → 5.4, 5.6 → 5.5, … , 5.11 → 5.10 throughout. Total figur
 
 Verified: `python -m evaluation.generate_plots <results.json>` renders the
 10 figures cleanly with the new numbering. Existing audit / analyze tests
-still pass — no result-JSON shape change.
+still pass, no result-JSON shape change.
 
 ### Phase 11.7: Two new thesis figures (Fig 5.10, Fig 5.11) (2026-05-01)
 
 `evaluation/generate_plots.py` now produces 11 figures instead of 9:
 
-- **Fig 5.10 — Demand composition.** Per-scenario stacked bar of the
+- **Fig 5.10, Demand composition.** Per-scenario stacked bar of the
   V5+ trip-purpose taxonomy (HBW_AM/PM, HBSchool_AM/PM, HBW_*_chained).
   Reads each bundle's canonical `demand.csv` `purpose` column via
   `evaluation/demand_composition.py`. Pre-V5 bundles without that
   column are silently skipped; if no scenario has V5+ data the whole
   figure is omitted.
-- **Fig 5.11 — Wall vs engine breakdown.** Per-cell stacked bar:
+- **Fig 5.11, Wall vs engine breakdown.** Per-cell stacked bar:
   engine subprocess at the bottom, adapter prep + output parsing
   (`cell_wall_s − engine_wall_s`) on top, hatched. Documents where
   per-cell wall time actually goes after the Phase 11.6 timing split.
@@ -1562,8 +1562,8 @@ Existing runtime figures got minor relabels for honesty: "Runtime"
 → "Engine runtime" in Fig 5.1, 5.6, 5.7 titles + the y-axis labels,
 since after the Phase 11.6 split the CLI exposes both wall and engine
 numbers and a thesis reader could legitimately ask which one a runtime
-figure shows. The values themselves didn't change — every figure has
-always been engine subprocess only — only the labels are now explicit.
+figure shows. The values themselves didn't change, every figure has
+always been engine subprocess only, only the labels are now explicit.
 
 ### Phase 11.6: Wall-vs-engine timing split + cleaner failure display (2026-05-01)
 
@@ -1571,14 +1571,14 @@ Per-cell timing in `run.py` and `execution/run_benchmark.py` now reports
 two numbers, since the previous single number conflated two different
 costs:
 
-- **`engine_wall_s`** — engine subprocess only (mobsim / DTA iterations
+- **`engine_wall_s`**, engine subprocess only (mobsim / DTA iterations
   / queue net). What Chapter 5 runtime tables cite, since the thesis is
   benchmarking the engine paradigm, not the Python adapter.
-- **`cell_wall_s`** — full per-cell wall: adapter prep (canonical →
+- **`cell_wall_s`**, full per-cell wall: adapter prep (canonical →
   engine format, **including the per-trip BFS pre-routing the
   SUMO/MATSim adapters do**) + engine subprocess + output parsing.
   Per-cell `cell_wall_s` values now sum to the harness "Wall time"
-  total — the previous single number didn't, which was confusing for
+  total, the previous single number didn't, which was confusing for
   large scenarios (nyc_10k_car MATSim: ~9.5 min per-cell wall vs the
   ~15 s the cell row used to display).
 
@@ -1596,7 +1596,7 @@ engine 95 % CIs:
   chicago_1k_car  sumo  meso   seed=42  Ambiguity in turnarounds at junction 'n10033'. (+4 more)
 
 Per-cell wall time (full prep + engine + parse, mean ± 95 % CI across reps;
-engine-only mean in parens — that's the number Chapter 5 tables cite):
+engine-only mean in parens, that's the number Chapter 5 tables cite):
   chicago_1k_car  matsim   meso     25.3s ±   0.8s wall  (engine  10.6s)  (3 runs)
 ```
 
@@ -1627,8 +1627,8 @@ JSON shape additions per `results[]` entry:
 
 `python help.py` (no args, TTY) now opens a full-screen curses TUI
 instead of dumping the overview text. Topics are grouped under five
-headings — Getting Started, Core Workflows, Reference, Analysis &
-Tools, Troubleshooting — and the user navigates with arrow keys.
+headings, Getting Started, Core Workflows, Reference, Analysis &
+Tools, Troubleshooting, and the user navigates with arrow keys.
 
 Key bindings:
 
@@ -1641,7 +1641,7 @@ Key bindings:
 | Home / End      | Jump to top / bottom of a topic           |
 | q  (or Esc)     | Quit (from the menu)                      |
 
-Returning from a topic via Esc redraws the menu cleanly — no leftover
+Returning from a topic via Esc redraws the menu cleanly, no leftover
 content from the topic appears on screen, because curses owns the
 whole viewport and `stdscr.erase()` runs on every redraw.
 
@@ -1664,7 +1664,7 @@ whole viewport and `stdscr.erase()` runs on every redraw.
   footer to reduce visual clutter
 
 Auto-fallback: when `import curses` fails or the terminal can't host
-a curses session (rare — dumb terminals, restricted CI), the help
+a curses session (rare, dumb terminals, restricted CI), the help
 system silently falls back to the numbered-input menu (with `/<word>`
 search) introduced in V11.5's first iteration. So Windows shells
 without `windows-curses` installed still work.
@@ -1688,7 +1688,7 @@ Windows without `windows-curses`). No new dependencies introduced.
 
 ### Phase 11.4: Scenario analyzer tool (2026-04-30)
 
-New `tools/analyze_scenarios.py` — comprehensive tabular analysis of
+New `tools/analyze_scenarios.py`, comprehensive tabular analysis of
 canonical scenario bundles. Each section is one side-by-side table
 with metrics as rows and scenarios as columns. Auto-paginates per
 section when the terminal isn't wide enough (each section splits
@@ -1696,21 +1696,21 @@ based on its own column widths).
 
 Sections (selectable via `--section`):
 
-- `configuration`  — city, trips, time window, radius, seed, strategy,
+- `configuration`, city, trips, time window, radius, seed, strategy,
   generation time, OSM source
-- `network`        — nodes, links, has_signal nodes (% of nodes), turn
+- `network`, nodes, links, has_signal nodes (% of nodes), turn
   restrictions, speed/lane range + means
-- `road_classes`   — per-OSM-highway-type link counts, sorted by total
-- `signals`        — junction count, cycle, phase pattern, density
-- `demand`         — totals + trip-purpose breakdown subsection +
+- `road_classes`, per-OSM-highway-type link counts, sorted by total
+- `signals`, junction count, cycle, phase pattern, density
+- `demand`, totals + trip-purpose breakdown subsection +
   peak split & chain summary subsection
-- `artefacts`      — per-file sizes + total
-- `toolchain`      — env recorded at generation time (Python, osmnx,
+- `artefacts`, per-file sizes + total
+- `toolchain`, env recorded at generation time (Python, osmnx,
   numpy, networkx, lxml, etc.)
 
 Default: every complete bundle in `scenarios/`. Pass scenario names
 or full paths to subset. `--no-color` disables ANSI for piping.
-Pagination is automatic via `shutil.get_terminal_size()` — sections
+Pagination is automatic via `shutil.get_terminal_size()`, sections
 split into pages of N scenarios when the terminal isn't wide enough,
 each page suffixed `(scenarios X–Y of N)`.
 
@@ -1719,9 +1719,9 @@ the totals subsection of DEMAND. Reuses
 `evaluation.demand_composition.read_demand_composition` for purpose
 tallying so the analyzer's numbers match what
 `audit_fairness` Q5 and `analyze_benchmark`'s composition table
-report — single source of truth across all three tools.
+report, single source of truth across all three tools.
 
-Standard library only — no new dependencies.
+Standard library only, no new dependencies.
 
 ### Phase 11.3: Test-suite session-scoped fixture optimisation (2026-04-30)
 
@@ -1735,14 +1735,14 @@ implicitly running BFS on every trip in the bundle.
 Refactored to share the heavy lifts across tests via session-scoped
 fixtures. The new fixtures live at the top of the file:
 
-- `canonical_network_data` — `(nodes, links)` from chicago_1k_car
+- `canonical_network_data`, `(nodes, links)` from chicago_1k_car
   (consumes `bundled_scenario`, calls `load_canonical_network` once)
-- `built_network_xml` — MATSim network XML string built once
-- `built_plans_xml` — MATSim plans XML string built once (the
+- `built_network_xml`, MATSim network XML string built once
+- `built_plans_xml`, MATSim plans XML string built once (the
   expensive BFS pre-routing call)
-- `prepared_chicago` — full `prepare_matsim_inputs(chicago_1k_car)`
+- `prepared_chicago`, full `prepare_matsim_inputs(chicago_1k_car)`
   output dir + config path, prepared once per session
-- `prepared_sweep` — `{scenario_path: (out_dir, config_path)}` map
+- `prepared_sweep`, `{scenario_path: (out_dir, config_path)}` map
   for every small bundled scenario, prepared once per session
 
 `TestLoadCanonicalNetwork`, `TestBuildMATSimNetwork`,
@@ -1753,14 +1753,14 @@ pass; assertions unchanged.
 **Measured impact**: 12m 17s → 10m 42s wall time on M-series Mac
 (~75 s of cross-test redundancy eliminated). Less than initially
 projected because the test_all_scenarios sweep was already only
-calling `prepare_matsim_inputs(nyc_10k_car)` once — that single 5-7
+calling `prepare_matsim_inputs(nyc_10k_car)` once, that single 5-7
 min BFS pass is V5 Phase 7's intentional pre-routing cost on 10K
 trips × 379 turn restrictions, not redundancy.
 
 **Coverage delta: zero.** Every assertion runs against a real
 prepared/built artefact. Determinism of the underlying code paths is
 covered by `tests/test_adapter_determinism.py` (which explicitly
-runs prepare twice and hash-compares — that pattern is unchanged
+runs prepare twice and hash-compares, that pattern is unchanged
 and is the proper place for "runs N times consistently" guarantees).
 
 To skip the slow sweep during routine dev:
@@ -1808,12 +1808,12 @@ Migrated to `population_v6` DTD (also shipped in MATSim 15 JAR):
 - DOCTYPE: `plans_v4.dtd` → `population_v6.dtd`
 - Root: `<plans>` → `<population>`
 - Activity element: `<act>` → `<activity>`
-- `<route>` keeps its V5 idiom — population_v6 explicitly supports
+- `<route>` keeps its V5 idiom, population_v6 explicitly supports
   `type="links" start_link="..." end_link="...">interior</route>`
 - `PopulationReaderMatsimV6` honors pre-emitted routes (same
   contract V5 Phase 7 always intended)
 
-**Sticky progress bar — log routing always on**
+**Sticky progress bar, log routing always on**
 (`generate.py`, `run.py`, `execution/run_benchmark.py`)
 
 Pre-V11.2 the bar's log-capture handler was gated on `--verbose`,
@@ -1840,7 +1840,7 @@ without misleading the operator.
 Pytest's default end-of-session output prints the full traceback
 for every failed test before the SimForge plugin's unified summary.
 The summary already lists each failed nodeid with its first-error
-line — the extra traceback was redundant noise. Added
+line, the extra traceback was redundant noise. Added
 `tr.summary_failures = lambda: None` and `summary_errors = lambda:
 None` to the existing monkey-patch block so the failure block is
 suppressed alongside warnings/short-test-summary/stats.
@@ -1858,7 +1858,7 @@ what the operator expected).
 
 Test-count references in `README.md`, `CONTRIBUTING.md`, `TESTING.md`,
 `SETUP.md`, `help.py`, `doc/chapters/methods.md`, and
-`doc/chapters/experiments.md` updated. Headline is **~477 tests** —
+`doc/chapters/experiments.md` updated. Headline is **~477 tests**,
 the count a fresh `git clone && pytest` shows with the 3 tracked
 bundles (`chicago_1k_car`, `nyc_10k_car`, `la_50k_car`). Generating
 the two larger benchmark tiers (`scripts/04`, `scripts/05`) adds
@@ -1908,7 +1908,7 @@ output bundle, and the cross-engine equivalence is testable.
   delegates to ``matsim_vehicle_type_xml()``. The MATSim `<width>`
   bug is also fixed: the pre-V11 hardcoded value ``1.0`` (motorcycle
   width) is now ``1.8`` (canonical car width). MATSim's `length`
-  stays at ``7.5`` because that's the cross-engine equivalent —
+  stays at ``7.5`` because that's the cross-engine equivalent,
   changing it would *introduce* drift, not remove it.
 
 - ``adapters/dtalite/dtalite_adapter.py`` imports ``CAR_PCE`` and
@@ -1922,7 +1922,7 @@ and ``sumo_max_speed == matsim_max_speed``).
 
 **Cross-engine fairness impact:** Q4 travel-time spread should be
 unchanged at the headline (the physical values are identical); the
-win is structural — explicit parameters in every bundle, single source
+win is structural, explicit parameters in every bundle, single source
 of truth, and a regression-pinning test that catches future drift.
 The ``MATSim width 1.0 → 1.8`` change is cosmetic in the queue
 mobsim (width isn't used by MATSim's flow model), but visible in
@@ -1944,21 +1944,21 @@ coordinates.
 
 New shared helper module `evaluation/demand_composition.py` exposing:
 
-- `read_demand_composition(demand_csv)` — tally the purpose column,
+- `read_demand_composition(demand_csv)`, tally the purpose column,
   return a structured breakdown (total, AM peak, PM peak, chain legs,
   per-purpose counts), or `None` for pre-V5 bundles missing the column.
-- `format_composition_report(comp)` — multi-line breakdown for terminal
+- `format_composition_report(comp)`, multi-line breakdown for terminal
   output (used by `audit_fairness`).
-- `find_canonical_demand(scenario)` — resolves
+- `find_canonical_demand(scenario)`, resolves
   `<repo_root>/scenarios/<scenario>/demand.csv` (the canonical bundle's
   copy, not the engine-translated copies which drop `purpose`).
-- `AM_PURPOSES` / `PM_PURPOSES` / `CHAIN_LEG_PURPOSES` — re-exported
+- `AM_PURPOSES` / `PM_PURPOSES` / `CHAIN_LEG_PURPOSES`, re-exported
   frozensets that pin the purpose taxonomy. `AM_PURPOSES` and
   `PM_PURPOSES` are hoisted to module-level constants in
   `pipeline/demand/generate_census_demand.py` so both the generator's
   budget split and the audit tooling pull from the same source.
 
-**audit_fairness.py** — new "Q5: Demand composition" section emitted
+**audit_fairness.py**, new "Q5: Demand composition" section emitted
 after Q4 in every per-scenario audit block. Output for chicago_1k_car:
 
 ```
@@ -1967,7 +1967,7 @@ after Q4 in every per-scenario audit block. Output for chicago_1k_car:
   total trips:    1000
   AM peak:          1000 (100.0%)
   PM peak:             0 (  0.0%)
-  school-related:     16 (  1.6%) — 8 AM chains + 0 PM chains
+  school-related:     16 (  1.6%), 8 AM chains + 0 PM chains
   by purpose:
     HBW_AM                  984
     HBW_AM_chained            8
@@ -1975,11 +1975,11 @@ after Q4 in every per-scenario audit block. Output for chicago_1k_car:
 ```
 
 Pre-V5 bundles (no `purpose` column) print
-`(no V5+ purpose column at <path> — skipping)` and the section is
+`(no V5+ purpose column at <path>, skipping)` and the section is
 gracefully omitted from the rest of the audit. No new
-PASS/WARN/FAIL gate — Q5 is informational, not a fairness check.
+PASS/WARN/FAIL gate, Q5 is informational, not a fairness check.
 
-**analyze_benchmark.py** — new
+**analyze_benchmark.py**, new
 `print_demand_composition_table(stats_list)` emits a one-row-per-unique-
 scenario table inserted between the Coverage Diagnostic and Runtime
 table sections. Pre-V5 bundles cause the whole section to be silently
@@ -2032,7 +2032,7 @@ departures). Phase 9a wires that parameter to a peak-aware allocation:
   user's `--trips N` budget 50/50 across AM (HBW outbound,
   home → work) and PM (HBW return, work → home).
 - AM-only horizon (chicago_1k_car at 7-8 AM, nyc_10k_car 7-9, la_50k_car
-  6-10, nyc_500k_car 6-10): unchanged — all N trips are HBW_AM.
+  6-10, nyc_500k_car 6-10): unchanged, all N trips are HBW_AM.
 - PM-only or neither (rare): clamp to AM template.
 
 Each PM trip uses `schedule[1].time_s` as the per-person arrival
@@ -2042,7 +2042,7 @@ relative to AM (work → home).
 
 New `purpose` column on `demand.csv`: `HBW_AM` and `HBW_PM`.
 Existing canonical 5-column subset (`trip_id, origin_node_id,
-destination_node_id, departure_time_s, mode`) unchanged — adapters
+destination_node_id, departure_time_s, mode`) unchanged, adapters
 read it by name and ignore the new column.
 
 Empirical effect on chicago 24h, 200 trips, seed 42:
@@ -2081,7 +2081,7 @@ Two foundational fixes were required:
 New `purpose` values on `demand.csv`: `HBSchool_AM` (home → school,
 parent dropping kid off) and `HBW_AM_chained` (school → work,
 parent's continued commute). Both rows share the same per-person
-departure time computed from JWMNP — the engine simulates the parent
+departure time computed from JWMNP, the engine simulates the parent
 making both legs from the same vehicle/agent.
 
 Empirical effect on chicago_1k_car bbox (2 km Loop), 200 trips:
@@ -2092,7 +2092,7 @@ Empirical effect on chicago_1k_car bbox (2 km Loop), 200 trips:
 - Final demand: 184 HBW_AM + 8 HBSchool_AM + 8 HBW_AM_chained = 200
 
 Tests:
-- `tests/test_parse_model_file.py::TestHBSchoolHelpers` — 6 new tests
+- `tests/test_parse_model_file.py::TestHBSchoolHelpers`, 6 new tests
   covering `_is_school_kind` recognition, `age_by_per_id` filtered-kid
   visibility, household-composition lookup edge cases (solo
   household, all-adult household, PUMS -1 sentinel exclusion).
@@ -2122,9 +2122,9 @@ spans the 17:00 PM peak. The chain reuses Phase 9b's
 just applied to the PM half of the budget split.
 
 Two new `purpose` values on `demand.csv`:
-- `HBW_PM_chained` — parent leaves work, drives to school for
+- `HBW_PM_chained`, parent leaves work, drives to school for
   pickup
-- `HBSchool_PM` — parent + kid drive from school to home (kid is
+- `HBSchool_PM`, parent + kid drive from school to home (kid is
   the passenger that justifies the chain detour)
 
 Both rows share the same per-person departure time, computed from
@@ -2136,7 +2136,7 @@ emit single `HBW_PM` trips.
 `PM_PURPOSES` budget set updated:
 `{"HBW_PM"} → {"HBW_PM", "HBSchool_PM", "HBW_PM_chained"}`. The
 gravity-fallback Phase 2 sees the chained legs as PM-emitted and
-skips topping up beyond the requested budget — same accounting
+skips topping up beyond the requested budget, same accounting
 discipline as Phase 9b's AM side.
 
 Empirical effect on chicago 24h horizon, 1,000 trips, seed 42
@@ -2155,14 +2155,14 @@ Total            1,000   (AM peak=500 + PM peak=500, chain legs=50)
 
 The PM chain rate (12/500 = 2.4 %) is slightly below the AM rate
 (13/500 = 2.6 %) because the cohort is independently shuffled per
-peak, but both peaks see ~2-3 % chain participation — consistent
+peak, but both peaks see ~2-3 % chain participation, consistent
 with the ~9 % bbox-covered parent-with-kid pool in the chicago_1k
 SCC.
 
 Back-compat: AM-only horizons (chicago_1k_car at 7-8 AM,
 nyc_10k_car 7-9 AM, all bundled tiers) emit zero PM rows and are
 byte-identical to Phase 9b output. Verified by regenerating
-`scenarios/chicago_1k_car/demand.csv` after the refactor —
+`scenarios/chicago_1k_car/demand.csv` after the refactor,
 distribution unchanged: 984 HBW_AM + 8 HBSchool_AM + 8
 HBW_AM_chained = 1,000.
 
@@ -2184,7 +2184,7 @@ to work, in minutes).
 
 Pre-V5 behavior:
 - Gaussian peak centered at horizon midpoint
-- σ = `(end - start) / 6` — so a 1-hour horizon got σ = 10 min
+- σ = `(end - start) / 6`, so a 1-hour horizon got σ = 10 min
 - All trips bell-shaped around the midpoint, regardless of any
   individual's actual commute duration.
 
@@ -2225,18 +2225,18 @@ the same demand.csv). Absolute travel times: peak congestion now
 concentrates more accurately near the natural surge point rather than
 being smeared across the horizon.
 
-Net code change: `pipeline/demand/generate_census_demand.py` —
+Net code change: `pipeline/demand/generate_census_demand.py`,
 `_generate_departure_time()` rewritten (no `rng` argument; takes
 `arrival_time_s` as a defaulted parameter). Both call sites pass the
 person's `schedule[0].time_s` when available, fall back to the
 cityscape AM constant otherwise. No new dataset dependency.
 
-### Phase 7: OSM turn restrictions — extraction + adapter enforcement (2026-04-30)
+### Phase 7: OSM turn restrictions, extraction + adapter enforcement (2026-04-30)
 
 Extracted OSM `type=restriction` relations during the existing PBF
 ingestion pass and persisted them to canonical `network.xml` as a new
 `<turn_restrictions>` block. **All three adapters now enforce them
-symmetrically** in their native formats — SUMO and MATSim pre-route
+symmetrically** in their native formats, SUMO and MATSim pre-route
 via the shared state-aware BFS, DTALite gets a GMNS `movement.csv`
 that mirrors the OSM data for downstream tools (path4gmns 0.10.0
 doesn't ingest movement.csv natively yet, so DTALite's UE assignment
@@ -2244,45 +2244,45 @@ treats this file as documentary; SUMO and MATSim do enforce).
 
 Three concrete code changes:
 
-- **`pipeline/network/load_network_from_pbf.py`** — `_slice_pbf_to_xml`
+- **`pipeline/network/load_network_from_pbf.py`**, `_slice_pbf_to_xml`
   now also detects OSM relations with `type=restriction` and
   `via=node` on the same PBF stream that produces the way slice and
   the signal-node set. Returns a 4-tuple
   `(ways_written, nodes_referenced, signal_node_ids, turn_restrictions)`
   where each turn-restriction entry is a dict
   `{"restriction": str, "from_way": int, "via_node": int, "to_way":
-  int, "osm_relation_id": int}`. Cost: zero — the relation pass was
+  int, "osm_relation_id": int}`. Cost: zero, the relation pass was
   already happening as part of the FileProcessor stream; we just
   added a tag-and-member check.
 
-- **`pipeline/network/build_network_from_osm.py`** — added
+- **`pipeline/network/build_network_from_osm.py`**, added
   `CanonicalTurnRestriction` dataclass and resolution logic in
   `extract_canonical_network()` that maps OSM way IDs → canonical link
   IDs (using `(osm_way_id, to_node)` for the from-link and
   `(osm_way_id, from_node)` for the to-link). Restrictions whose
   via-node was filtered out by the bbox + SCC truncation, or whose
   ways didn't survive into the canonical link set, are silently
-  dropped — those movements can't be made on the canonical network
+  dropped, those movements can't be made on the canonical network
   anyway. `build_network_xml()` emits a `<turn_restrictions>` block
   after `<links>` when at least one resolved restriction exists.
   `build_network_from_osm()` returns `turn_restriction_count` in its
   result dict.
 
-- **`pipeline/network/turn_restrictions.py`** (new) — three utilities
+- **`pipeline/network/turn_restrictions.py`** (new), three utilities
   for downstream use:
-  - `parse_turn_restrictions(network_path)` — reads
+  - `parse_turn_restrictions(network_path)`, reads
     `<turn_restriction>` entries; empty list for V4 / pre-restriction
     networks (back-compat).
-  - `build_forbidden_moves(restrictions, outgoing_links_by_node)` —
+  - `build_forbidden_moves(restrictions, outgoing_links_by_node)`,
     compiles a list of restrictions into a fast
     `(via_node, from_link) -> frozenset[forbidden_to_link]` lookup,
     correctly expanding `only_*_turn` restrictions into "everything
     except the named exit is forbidden."
-  - `shortest_path_with_restrictions(...)` — state-aware BFS where
+  - `shortest_path_with_restrictions(...)`, state-aware BFS where
     state is `(node, last_link_id)`; outgoing links forbidden by the
     restrictions table are skipped during expansion.
 
-- **`canonical/schema/network_v0.md`** — added `<turn_restriction>`
+- **`canonical/schema/network_v0.md`**, added `<turn_restriction>`
   documentation with the seven supported OSM restriction values, the
   required attribute table, the `(via=node, from_link)` resolution
   semantics, and the `only_*_turn`-as-inverted-set convention.
@@ -2294,7 +2294,7 @@ The pre-V5 `shortest_path_nodes(adjacency, ...)` BFS call site at the
 trip-routing loop is now `shortest_path_with_restrictions(...)` from
 the new utility module. State is `(node, last_link_id)`; outgoing
 links forbidden by the compiled restriction table are skipped during
-expansion. When state-aware BFS finds no path (rare — restrictions
+expansion. When state-aware BFS finds no path (rare, restrictions
 typically force detours, not disconnections), the adapter falls back
 to plain BFS and logs the count. Empirical fallback rate on
 chicago_1k_car: typically 0.
@@ -2304,22 +2304,22 @@ Each plan now ships with an explicit
 `<route type="links" start_link=… end_link=…>…interior link IDs…</route>`
 inside its `<leg>` element when the canonical network has turn
 restrictions. The route comes from the same state-aware BFS the SUMO
-adapter uses — so SUMO and MATSim consume identical paths. The plans
+adapter uses, so SUMO and MATSim consume identical paths. The plans
 XML uses **MATSim 15 population_v6 DTD** (originally shipped with
 plans_v4 in V5.7, corrected to population_v6 in V11.2 after the
 plans_v4 DTD was found to reject `type="links"` and treat route text
-as a node sequence — see Phase 11.2 entry above). MATSim 15's
+as a node sequence, see Phase 11.2 entry above). MATSim 15's
 `PopulationReaderMatsimV6` honors pre-emitted routes and skips its
 internal router. A new `_LinkRef` shim wraps MATSim's dict-based link
 records to plug into the generic BFS. When restrictions are absent
 (legacy bundles, synthetic networks), MATSim falls back to its V4
-self-routing behavior — back-compat preserved.
+self-routing behavior, back-compat preserved.
 
 **DTALite** (`adapters/dtalite/dtalite_adapter.py:write_dtalite_movement_csv`):
 New writer emits a GMNS-conformant `movement.csv` next to the engine's
 `node.csv` / `link.csv` / `demand.csv` outputs. Each row maps an OSM
 turn restriction to a movement record with `capacity=0` and
-`penalty=99999` — both standard GMNS signals for "this movement is
+`penalty=99999`, both standard GMNS signals for "this movement is
 forbidden." path4gmns 0.10.0 (the DTA library SimForge uses) doesn't
 ingest movement.csv natively yet, so DTALite's UE assignment may
 still cross restricted movements in practice. The file is documentary
@@ -2332,7 +2332,7 @@ asymmetry the V5 work leaves open.
 
 Pre-V5: SUMO pre-routed; MATSim and DTALite routed independently.
 Three different routing strategies, three different paths possible
-for the same trip — `audit_fairness` Q4 (cross-engine TT comparison)
+for the same trip, `audit_fairness` Q4 (cross-engine TT comparison)
 already absorbed this asymmetry as part of the thesis's
 "engines disagree" signal.
 
@@ -2353,13 +2353,13 @@ differs by design). Q1-Q4 audits all continue to pass.
 | la_50k_car       | CA 1.3 GB   | 1,000-3,000                      | +0 s (free)     |
 
 Cost is zero because relation traversal was already part of the
-FileProcessor stream — we just added a member/tag inspection.
+FileProcessor stream, we just added a member/tag inspection.
 
 ### Phase 6: OSM-grounded signal placement (2026-04-29)
 
 Replaced the legacy "signalize every junction with degree ≥ 4"
 heuristic in `pipeline/signals/build_signals_default.py` (which
-signalized ~85 % of network nodes — every junction, regardless of
+signalized ~85 % of network nodes, every junction, regardless of
 real-world reality) with **OSM `highway=traffic_signals` ground
 truth**. Empirical effect on the three reference bundles:
 
@@ -2378,7 +2378,7 @@ density of each city's bbox per LADOT and Chicago DOT public records.
 
 Three concrete code changes:
 
-- **`pipeline/network/load_network_from_pbf.py`** — `_slice_pbf_to_xml`
+- **`pipeline/network/load_network_from_pbf.py`**, `_slice_pbf_to_xml`
   now piggybacks signal-node detection on the same PBF stream that
   produces the way-network slice. Returns
   `(ways_written, nodes_referenced_count, signal_node_ids)` instead of
@@ -2388,7 +2388,7 @@ Three concrete code changes:
   iteration of this fix introduced was removed in favor of the
   unified scan.
 
-- **`pipeline/network/build_network_from_osm.py`** — `CanonicalNode`
+- **`pipeline/network/build_network_from_osm.py`**, `CanonicalNode`
   gains `has_signal: bool = False`. `extract_canonical_network()`
   accepts an `osm_signal_ids: set[int]` argument and sets
   `has_signal=True` on canonical nodes whose source OSM ID is in that
@@ -2399,7 +2399,7 @@ Three concrete code changes:
   `build_network_from_osm()` returns `osm_signal_node_count` in its
   result dict.
 
-- **`pipeline/signals/build_signals_default.py`** —
+- **`pipeline/signals/build_signals_default.py`**,
   `load_network_topology()` returns the set of nodes with
   `has_signal="true"`. `identify_signalized_intersections()` prefers
   this OSM ground truth as the source of truth and signalizes only
@@ -2408,7 +2408,7 @@ Three concrete code changes:
   WARNING telling the operator to regenerate the network. The module
   docstring was rewritten to describe both paths.
 
-- **`canonical/schema/network_v0.md`** — added `has_signal` (boolean,
+- **`canonical/schema/network_v0.md`**, added `has_signal` (boolean,
   optional) and `osm_id` (string, optional, was emitted but undocumented)
   rows to the `<node>` attribute table.
 
@@ -2420,7 +2420,7 @@ Cross-engine fairness is unaffected: every adapter still consumes the
 same `signals.xml` file, so Q1-Q4 in `audit_fairness` continue to
 PASS as before. Absolute simulated travel times will drop noticeably
 in dense-bundle benchmarks (~10-30 %, depending on bundle) because
-cars no longer stop at every block — they stop only at the actually
+cars no longer stop at every block, they stop only at the actually
 signalized intersections OSM records.
 
 The cycle template inside each controller is unchanged: 2-phase 90-second
@@ -2436,41 +2436,41 @@ carpool=2, taxi=11, WFH=10) while the cityscape-produced `<city>_model.txt`
 files use the **ACS 2021** codebook (Car/truck/van=1, Bus=2, Taxi=7, WFH=11).
 Six of twelve codes had the wrong simulator bucket; the empirical impact
 was Chicago's reported "1,044,084 car commuters" silently including ~71K
-bus riders + ~326K WFH workers + ~17K "Other" — a 37% inflation of the
+bus riders + ~326K WFH workers + ~17K "Other", a 37% inflation of the
 car pool. Same arithmetic applied to NYC and LA.
 
 Five fixes shipped together so the regenerated bundles are coherent:
 
-- **`pipeline/demand/parse_model_file.py`** — `JWTRNS_TO_MODE` rewritten
+- **`pipeline/demand/parse_model_file.py`**, `JWTRNS_TO_MODE` rewritten
   with the cityscape-correct mapping (`car: {1,7,8}`, `transit: {2,3,4,5,6}`,
   `bike: {9}`, `walk: {10}`, `home: {11,12}` / excluded). Added
   `SUPPORTED_MODES` tuple + `MODE_TO_JWTRNS` reverse index. The hardcoded
-  `car_modes = {1, 2, 11, 12}` literal at line 414 is gone — the car-only
+  `car_modes = {1, 2, 11, 12}` literal at line 414 is gone, the car-only
   filter path now derives its set from `MODE_TO_JWTRNS["car"]`. Module
   docstring rewritten with cityscape labels and citation.
-- **`pipeline/modelgen_scanner.py`** — duplicate `JWTRNS_TO_MODE` dict
+- **`pipeline/modelgen_scanner.py`**, duplicate `JWTRNS_TO_MODE` dict
   removed; `from pipeline.demand.parse_model_file import JWTRNS_TO_MODE`
   re-export so the scanner and demand pipeline can never drift.
-- **`generate.py`** — dispatch at the `parse_model_file` call site
+- **`generate.py`**, dispatch at the `parse_model_file` call site
   simplified: always passes `modes=modes`. Fixes the silent no-filter
   bug where single non-car modes (e.g. `--modes transit`) hit neither
   the `modes is not None` branch nor the `car_only` branch and let the
   full unfiltered population through.
-- **`adapters/common/feasibility.py`** — `feasible_trip_ids()` accepts a
+- **`adapters/common/feasibility.py`**, `feasible_trip_ids()` accepts a
   `supported_modes` set; trips whose `mode` column is outside this set
   are dropped from the feasible set with a new `skipped_unsupported_mode`
   counter on the report. SUMO/MATSim/DTALite adapters now declare
   `supported_modes={"car"}` so multi-mode bundles automatically narrow
   to their car subset before simulation. The `FeasibilityReport` JSON
   carries the `supported_modes` it was filtered on.
-- **`evaluation/audit_fairness.py`** — Q1 includes the new
+- **`evaluation/audit_fairness.py`**, Q1 includes the new
   `skipped_unsupported_mode` counter in the byte-identical comparison.
   Q3 now compares each engine's simulated count against its own
   `feasibility_report.json::feasible_trips` (per-engine target) instead
   of using one engine's target for all, and prints the `mode∈{...}`
   scope alongside the count.
 
-The `python help.py cities` output now reflects the corrected counts —
+The `python help.py cities` output now reflects the corrected counts,
 Chicago's "Car" drops from 1,044,084 to ~654K (a clean removal of the
 WFH/bus inflation), Chicago's "Transit" jumps from 73,621 to ~145K (now
 correctly includes bus riders), Chicago's "Bike" jumps from 467 to
@@ -2500,7 +2500,7 @@ what every adapter today actually simulates):
 
 `runspecs/{benchmark_small,benchmark_large}.yaml` updated to point at the
 new scenario IDs. `runspecs/stress_test.yaml` (the canonical thesis matrix)
-is unchanged — its `chicago_1k_car` cell was already correctly named.
+is unchanged, its `chicago_1k_car` cell was already correctly named.
 
 Documentation refreshed: `doc/MODELGEN_AND_MODES.md` (new in this phase,
 authoritative reference for the data + mode pipeline), `help.py`
@@ -2521,7 +2521,7 @@ input contract on Pitzer. The narrative log of every commit, job ID, and
 measured number lives in [`doc/EXPERIMENT_LOG.md`](doc/EXPERIMENT_LOG.md);
 Phase 4-relevant headlines:
 
-- **`evaluation/audit_fairness.py`** — read-only cross-engine fairness
+- **`evaluation/audit_fairness.py`**, read-only cross-engine fairness
   audit (commits `d42a7f8`, `7c576f6`, `542bd4a`, `59fc7cc`, `4a8eded`,
   `ff33f06`). Four checks per scenario: Q1 same trip set, Q2 same network,
   Q3 same trip count simulated, Q4 cross-engine travel-time spread. Auto-
@@ -2530,14 +2530,14 @@ Phase 4-relevant headlines:
   dir). Counts SUMO nodes from `.nod.xml` / `.edg.xml` rather than the
   compiled `.net.xml` (which inflates with internal lane junctions).
   Invocation: `python -m evaluation.audit_fairness <run_dir>`.
-- **DTALite SCC-fairness fix** (commit `861c971`) — `prepare_dtalite_inputs`
+- **DTALite SCC-fairness fix** (commit `861c971`), `prepare_dtalite_inputs`
   now prunes the canonical graph to the largest SCC before emitting
   `node.csv` / `link.csv`, matching MATSim's `clean_network` and (after
   `df5fe4e`) SUMO's prepare path. Verified on chicago_1k_car: DTALite
   emits 19,744 nodes (== MATSim) / 1,184 zones / 58,162 links. The 270-link
   gap from MATSim's 58,432 is the documented self-loop + sub-meter OSM-
   noise filter (BPR cost would divide by zero on those edges).
-- **SUMO SCC-fairness fix** (commit `df5fe4e`) — `prepare_sumo_inputs`
+- **SUMO SCC-fairness fix** (commit `df5fe4e`), `prepare_sumo_inputs`
   now applies the same `compute_largest_scc` filter the other adapters
   use. Closed the last fairness gap: previously SUMO emitted the full
   canonical network (314 non-SCC dead-end nodes more than MATSim/DTALite
@@ -2545,7 +2545,7 @@ Phase 4-relevant headlines:
   was historically skipped. Trips themselves were already SCC-feasibility-
   filtered, so the dropped nodes were unused; the fix is for cross-engine
   fairness audit defensibility, not for changing simulation results.
-- **Engine/mode skip** (commit `c31e087`) — `run.py` now skips
+- **Engine/mode skip** (commit `c31e087`), `run.py` now skips
   (engine, mode) cells the engine doesn't support, instead of silently
   re-running mesoscopic-only engines as `mode=micro`. New
   `ENGINE_SUPPORTED_MODES` constant: SUMO supports both, MATSim and
@@ -2553,7 +2553,7 @@ Phase 4-relevant headlines:
   with N=3 reps × 2 scenarios is now 24 runs (8 valid cells × 3 reps),
   down from 36 in the naive Cartesian product. Banner prints the
   skipped pairs so the operator can audit.
-- **`doc/EXPERIMENT_LOG.md`** — chronological journal of every commit,
+- **`doc/EXPERIMENT_LOG.md`**, chronological journal of every commit,
   SLURM job ID, and measured number on the Version_5 branch. Format
   spec at the top of the file; new entries land at the top of §3.
   Source-of-truth for the thesis writeup: every results-chapter claim
@@ -2568,17 +2568,17 @@ successful runs:
 | Engine | Mean TT | P95 | R-score | Completed |
 |---|---|---|---|---|
 | SUMO meso | 372.4 s | 689.0 s | 0.9963 | 932/1000 |
-| SUMO micro | — | — | 0.9966 | 1000/1000 |
+| SUMO micro | n/a | n/a | 0.9966 | 1000/1000 |
 | MATSim meso | 244.5 s | 423.0 s | 1.0000 | 1000/1000 |
 | DTALite meso | 174.1 s | 291.4 s | 1.0000 | 997/1000 |
 
 Cross-engine TT ratios (paradigm-spread signal):
 
-- DTALite/MATSim mean-TT: 0.712 (-28.8%) — DTA equilibrium finds optimal
+- DTALite/MATSim mean-TT: 0.712 (-28.8%), DTA equilibrium finds optimal
   routes, undercuts queue-mobsim by ~29%
-- SUMO/MATSim mean-TT: 1.523 (+52.3%) — SUMO meso adds intersection
+- SUMO/MATSim mean-TT: 1.523 (+52.3%), SUMO meso adds intersection
   delays, ~52% above MATSim
-- SUMO/DTALite mean-TT: 2.139 (+113.9%) — full paradigm spread is 2.1×
+- SUMO/DTALite mean-TT: 2.139 (+113.9%), full paradigm spread is 2.1×
 
 This is the headline thesis result the cross-engine framework was built
 to produce.
@@ -2600,7 +2600,7 @@ The third-engine selection rationale is in
 DTALite was chosen on three grounds: (1) it actually works (smoke-tested
 locally during the selection research), (2) it's CPU-only so the full matrix
 runs on Mac as well as Linux, (3) it adds a paradigm-distinct comparator
-(mesoscopic Dynamic Traffic Assignment with user equilibrium) — vs LPSim
+(mesoscopic Dynamic Traffic Assignment with user equilibrium), vs LPSim
 which would have been "another mesoscopic queue-based engine" overlapping with
 MATSim. The cross-engine paradigm-spread argument now reads SUMO microscopic +
 MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
@@ -2647,7 +2647,7 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
 - **`lib/dtalite/manifest.json`** pins `path4gmns==0.10.0` + upstream URLs.
   `.gitignore` updated to re-include the manifest under the otherwise-ignored
   `lib/*` (replaces the LPSim re-include rule that became dead in Phase 1)
-- **`tests/test_dtalite_adapter.py`** — 46 unit tests covering all writers,
+- **`tests/test_dtalite_adapter.py`**, 46 unit tests covering all writers,
   schema fidelity (LF endings, GMNS column names), unit conversions, demand
   aggregation by OD pair, intra-zonal trip filtering, sub-meter edge filtering,
   demand-driven zoning, determinism (byte-identical re-runs), output parsing,
@@ -2656,21 +2656,21 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
 - **DTALite branches** in `execution/runspec.py`, `execution/run_benchmark.py`,
   `run.py`, `evaluation/{generate_plots,analyze_benchmark,compare_modes}.py`,
   `tools/env_report.py`, `help.py`, `tests/test_engine_smoke.py`
-- **`runspecs/{stress_test,benchmark_small,benchmark_large}.yaml`** — DTALite
+- **`runspecs/{stress_test,benchmark_small,benchmark_large}.yaml`**, DTALite
   cells replace the LPSim cells (same scenarios, same N=5 repeats)
-- **`requirements.txt` + `requirements.lock`** — `path4gmns>=0.10.0,<1` added
+- **`requirements.txt` + `requirements.lock`**, `path4gmns>=0.10.0,<1` added
   with a comment noting the macOS `brew install libomp` system dep
 
 ### Documented
 
-- `doc/engines/LPSIM_RETROSPECTIVE.md` — full narrative of LPSim integration,
+- `doc/engines/LPSIM_RETROSPECTIVE.md`, full narrative of LPSim integration,
   the five failure classes (4 resolved, GPU kernel SIGSEGV unresolved), and
   why the abandonment frames as evidence FOR SimForge's adapter pattern
-- `doc/engines/QARSUMO_RETROSPECTIVE.md` — Version_4 Phase A drop story for
+- `doc/engines/QARSUMO_RETROSPECTIVE.md`, Version_4 Phase A drop story for
   the QarSUMO 5th-engine slot
-- `doc/engines/THIRD_ENGINE_OPTIONS.md` — deep research verdicts on DTALite,
+- `doc/engines/THIRD_ENGINE_OPTIONS.md`, deep research verdicts on DTALite,
   CityFlow, and POLARIS as third-engine candidates, with DTALite recommended
-- `doc/engines/ENGINE_COMPARISON.md` — thesis-writing reference consolidating
+- `doc/engines/ENGINE_COMPARISON.md`, thesis-writing reference consolidating
   paradigm taxonomy, wallclock estimates, R-score expectations, output
   fidelity comparison, and a thesis-defense quote bank
 
@@ -2680,7 +2680,7 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
   (20,058 nodes / 58,505 links / 1,000 trips) prepared + run + parsed
   in **8.4 s** total via `python run.py --scenario chicago_1k_car
   --engine dtalite --mode meso`. Mean travel time 174 s (2.9 min),
-  P95 291 s, mean distance 2.89 km — values consistent with morning-peak
+  P95 291 s, mean distance 2.89 km, values consistent with morning-peak
   Chicago profile.
 - Full pytest suite: **429 passed, 1 failed (pre-existing arm64 netconvert
   issue, not introduced by Version_5), 9 skipped** in 226 s.
@@ -2689,11 +2689,11 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
 
 ---
 
-## [Unreleased] — Version_4 (superseded by Version_5)
+## [Unreleased], Version_4 (superseded by Version_5)
 
 ### Fixed (Phase B Pitzer landing patch)
 
-- **LPSim binary failed with `libcudart.so.11.0: not found` on first Pitzer launch** — the `yibo123/lpsim:cuda12.4` image is mis-tagged. The image's installed CUDA toolkit is 12.4, but the bundled `LivingCity` binary was compiled against `libcudart.so.11.0`. Diagnosis: `ldd /LivingCity/LivingCity` inside the SIF showed `libcudart.so.11.0 => not found` as the only unresolved dependency. Resolution:
+- **LPSim binary failed with `libcudart.so.11.0: not found` on first Pitzer launch**, the `yibo123/lpsim:cuda12.4` image is mis-tagged. The image's installed CUDA toolkit is 12.4, but the bundled `LivingCity` binary was compiled against `libcudart.so.11.0`. Diagnosis: `ldd /LivingCity/LivingCity` inside the SIF showed `libcudart.so.11.0 => not found` as the only unresolved dependency. Resolution:
   - `adapters/lpsim/lpsim_adapter.run_lpsim` now detects `$CUDA_HOME` on the host and, when `libcudart.so.11.0` is present, passes `singularity exec --nv --bind /apps --env LD_LIBRARY_PATH=$CUDA_HOME/lib64:/usr/local/cuda-12.4/lib64:/usr/include/pandana/src:/.singularity.d/libs …`. Apptainer 1.3.6 doesn't auto-mount `/apps` and doesn't inherit host `LD_LIBRARY_PATH`, so both the bind and the env var are required. Logs a clear warning if `$CUDA_HOME` isn't set.
   - `cluster/jobs/benchmark_small.sbatch` + `benchmark_large.sbatch` + `build_lpsim.sbatch` now `module load cuda/11.8.0` (CUDA 11.8 is binary-stable with 11.0; ships `libcudart.so.11.0`).
   - `lib/lpsim/manifest.json` gains `cuda_runtime_required` / `cuda_runtime_note` / `host_cuda_module_pitzer` fields documenting the requirement.
@@ -2701,15 +2701,15 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
 
 ### Added (Phase B reproducibility patch)
 
-- **`lib/lpsim/manifest.json`** — pinned LPSim provenance: git SHA `452067ee831e6ecb4c906bae96fb77fdf71fa92e` (2024-11-27), Docker image `yibo123/lpsim:cuda12.4`, build dependency manifest. Same provenance pattern `osm_data/manifest.json` uses for OSM PBFs. LPSim is **not** in `requirements.lock` because it's a C++ binary — this manifest is the equivalent reproducibility artifact.
+- **`lib/lpsim/manifest.json`**, pinned LPSim provenance: git SHA `452067ee831e6ecb4c906bae96fb77fdf71fa92e` (2024-11-27), Docker image `yibo123/lpsim:cuda12.4`, build dependency manifest. Same provenance pattern `osm_data/manifest.json` uses for OSM PBFs. LPSim is **not** in `requirements.lock` because it's a C++ binary, this manifest is the equivalent reproducibility artifact.
 - **`cluster/jobs/build_lpsim.sbatch`** now reads the pinned SHA + Docker tag from `lib/lpsim/manifest.json` (via `jq`) and `git checkout --detach` to that SHA before building. Overridable with `--export=LPSIM_GIT_SHA=…,LPSIM_DOCKER_REF=…`.
-- **`tools/env_report.py`** reports LPSim binary state (binary, Singularity image, or "NOT BUILT") plus the pinned `git@SHA` and `image:tag` from the manifest — surfaces cross-machine drift in the same diagnostic that already covers SUMO + MATSim.
-- **`tests/test_engine_smoke.py::test_lpsim_real_binary_produces_people_csv`** — real-binary smoke test that mirrors the SUMO and MATSim smoke tests. Skips gracefully on hosts without CUDA + LivingCity; runs end-to-end on Pitzer once `build_lpsim.sbatch` has staged the binary.
-- **README + SETUP + doc/REPRODUCING + doc/PITZER**: explicit "Will LPSim run on my Mac?" answer (no — but the rest of the matrix is unaffected) plus a step-by-step "how to bump the pin" workflow.
+- **`tools/env_report.py`** reports LPSim binary state (binary, Singularity image, or "NOT BUILT") plus the pinned `git@SHA` and `image:tag` from the manifest, surfaces cross-machine drift in the same diagnostic that already covers SUMO + MATSim.
+- **`tests/test_engine_smoke.py::test_lpsim_real_binary_produces_people_csv`**, real-binary smoke test that mirrors the SUMO and MATSim smoke tests. Skips gracefully on hosts without CUDA + LivingCity; runs end-to-end on Pitzer once `build_lpsim.sbatch` has staged the binary.
+- **README + SETUP + doc/REPRODUCING + doc/PITZER**: explicit "Will LPSim run on my Mac?" answer (no, but the rest of the matrix is unaffected) plus a step-by-step "how to bump the pin" workflow.
 
-### Added (Phase B — LPSim integration)
+### Added (Phase B, LPSim integration)
 
-- **`adapters/lpsim/`** — full adapter package (`__init__.py`, `lpsim_adapter.py`, `cli.py`, `MAPPING.md`) targeting the LPSim B18 loader's exact column schemas:
+- **`adapters/lpsim/`**, full adapter package (`__init__.py`, `lpsim_adapter.py`, `cli.py`, `MAPPING.md`) targeting the LPSim B18 loader's exact column schemas:
   - `nodes.csv`: `osmid, x, y, highway, index`
   - `edges.csv`: `uniqueid, osmid_u, osmid_v, u, v, length, lanes, speed_mph` (with self-loop filter and m/s → mph conversion)
   - OD demand: `PERNO, origin, destination` (LPSim has no per-trip departure column; the canonical `departure_time_s` is intentionally dropped, with departures governed globally by `START_HR`/`END_HR` in the .ini)
@@ -2717,34 +2717,34 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
   - Output parser handles `<NUM_PASSES>_people*.csv` and produces `mean_travel_time_s` / `p95_travel_time_s` / `completed_count` for the same KPI surface SUMO and MATSim use
   - Binary discovery: `LPSIM_BINARY` env var → `$HOME/lpsim/LivingCity/LivingCity` → `$HOME/lpsim/LivingCity` → `LivingCity` on `PATH`
   - Singularity fallback: `$HOME/lpsim/lpsim.sif` runs via `singularity exec --nv … LivingCity`
-  - **No silent CPU fallback** — when no GPU binary is available the adapter records a clean `RunResult` failure with a build pointer, avoiding the QarSUMO bit-identical-fallback trap.
-- **`tests/test_lpsim_adapter.py`** (39 tests) — covers helpers, all four writers (nodes/edges/demand/INI), determinism (byte-identical re-runs), end-to-end input prep on the bundled scenario, output parsing on synthetic `*_people.csv` fixtures, and binary discovery. No GPU required for the fast tier.
-- **`cluster/jobs/build_lpsim.sbatch`** — one-time GPU-partition job that pulls the `yibo123/lpsim:cuda12.4` Docker image as a Singularity SIF (preferred, fast) or clones+builds LPSim from source (`make` under `LivingCity/`) and symlinks the binary to `$HOME/lpsim/LivingCity/LivingCity` where the adapter looks for it. Module-loads `gcc/13.2.0` + `cuda/12.6.2` per Pitzer's lmod conventions.
+  - **No silent CPU fallback**, when no GPU binary is available the adapter records a clean `RunResult` failure with a build pointer, avoiding the QarSUMO bit-identical-fallback trap.
+- **`tests/test_lpsim_adapter.py`** (39 tests), covers helpers, all four writers (nodes/edges/demand/INI), determinism (byte-identical re-runs), end-to-end input prep on the bundled scenario, output parsing on synthetic `*_people.csv` fixtures, and binary discovery. No GPU required for the fast tier.
+- **`cluster/jobs/build_lpsim.sbatch`**, one-time GPU-partition job that pulls the `yibo123/lpsim:cuda12.4` Docker image as a Singularity SIF (preferred, fast) or clones+builds LPSim from source (`make` under `LivingCity/`) and symlinks the binary to `$HOME/lpsim/LivingCity/LivingCity` where the adapter looks for it. Module-loads `gcc/13.2.0` + `cuda/12.6.2` per Pitzer's lmod conventions.
 - **Engine registries widened** to include `lpsim` across `execution/runspec.py::KNOWN_ENGINES`, `execution/run_benchmark.py::supported_engines`, `run.py::ALL_ENGINES`, `evaluation/generate_plots.py::ENGINE_COLORS / KNOWN_ENGINES`, the engine tuples in `evaluation/analyze_benchmark.py` and `evaluation/compare_modes.py`. `help.py` lists LPSim alongside SUMO + MATSim.
-- **Runspec entries** — `runspecs/stress_test.yaml` is now a 4-cell matrix (SUMO meso, SUMO micro, MATSim meso, LPSim meso); `benchmark_small.yaml` adds an LPSim row per scenario (12 entries / 60 invocations); `benchmark_large.yaml` adds an LPSim row per scenario (6 entries / 30 invocations). All cells use **N=5** repeats per advisor sign-off.
-- **Cluster sbatches switched back to the GPU partition** — `cluster/jobs/benchmark_small.sbatch` and `benchmark_large.sbatch` now request `--partition=gpu --gres=gpu:v100:1` since LPSim needs CUDA. Pre-flight diagnostics surface whether the LPSim binary or Singularity image is present.
+- **Runspec entries**, `runspecs/stress_test.yaml` is now a 4-cell matrix (SUMO meso, SUMO micro, MATSim meso, LPSim meso); `benchmark_small.yaml` adds an LPSim row per scenario (12 entries / 60 invocations); `benchmark_large.yaml` adds an LPSim row per scenario (6 entries / 30 invocations). All cells use **N=5** repeats per advisor sign-off.
+- **Cluster sbatches switched back to the GPU partition**, `cluster/jobs/benchmark_small.sbatch` and `benchmark_large.sbatch` now request `--partition=gpu --gres=gpu:v100:1` since LPSim needs CUDA. Pre-flight diagnostics surface whether the LPSim binary or Singularity image is present.
 
 ### Changed (Phase B follow-on)
 
-- **N=5 across the matrix** — `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` all bumped from N=3/2 to N=5. The 95 % CI half-width shrinks ~3.5× vs N=3 (t-factor 2.776 vs 4.303 on top of √(5/3) variance reduction), which is the precision the plan §3.5 commitments need.
+- **N=5 across the matrix**, `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` all bumped from N=3/2 to N=5. The 95 % CI half-width shrinks ~3.5× vs N=3 (t-factor 2.776 vs 4.303 on top of √(5/3) variance reduction), which is the precision the plan §3.5 commitments need.
 
 ### Removed
 
-- **QarSUMO engine completely dropped** (Version_4 Phase A) — the plan listed QarSUMO as a 5th engine, but as of the 2026-04-26 audit no usable public source exists: LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper cited in the plan hasn't materialised into runnable code. The CPU-fallback path that shipped through Version_3 was bit-identical to standard SUMO meso, contributing no new comparison signal. Removed: `adapters/qarsumo/` package, `tests/test_qarsumo_adapter.py` (10 tests), `cluster/jobs/build_qarsumo.sbatch`, all `qarsumo` runspec entries (`stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml`), engine registry membership in `execution/runspec.py` and `run.py`, dispatcher branches in `execution/run_benchmark.py`, plot/analyze engine tuples, and all doc references. The 3rd primary engine slot is now reserved for **LPSim** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU-accelerated, Docker shipped) — see `todo.md` Phase B.
+- **QarSUMO engine completely dropped** (Version_4 Phase A), the plan listed QarSUMO as a 5th engine, but as of the 2026-04-26 audit no usable public source exists: LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper cited in the plan hasn't materialised into runnable code. The CPU-fallback path that shipped through Version_3 was bit-identical to standard SUMO meso, contributing no new comparison signal. Removed: `adapters/qarsumo/` package, `tests/test_qarsumo_adapter.py` (10 tests), `cluster/jobs/build_qarsumo.sbatch`, all `qarsumo` runspec entries (`stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml`), engine registry membership in `execution/runspec.py` and `run.py`, dispatcher branches in `execution/run_benchmark.py`, plot/analyze engine tuples, and all doc references. The 3rd primary engine slot is now reserved for **LPSim** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU-accelerated, Docker shipped), see `todo.md` Phase B.
 
 ### Changed
 
-- **`cluster/jobs/benchmark_small.sbatch` and `benchmark_large.sbatch` switched off the GPU partition** — without QarSUMO, no current engine needs CUDA. Both jobs now request `--partition=cpu`. Once LPSim lands in Version_4 Phase B, both will switch back to `--partition=gpu --gres=gpu:v100:1`.
+- **`cluster/jobs/benchmark_small.sbatch` and `benchmark_large.sbatch` switched off the GPU partition**, without QarSUMO, no current engine needs CUDA. Both jobs now request `--partition=cpu`. Once LPSim lands in Version_4 Phase B, both will switch back to `--partition=gpu --gres=gpu:v100:1`.
 - **`runspecs/stress_test.yaml`** is now a **3-cell matrix** (was 4): `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso}`.
 - **`runspecs/benchmark_small.yaml`** is now **9 entries / ~24 invocations** (was 15 / ~42): SUMO meso+micro + MATSim meso per scenario, no QarSUMO.
 - **`runspecs/benchmark_large.yaml`** is now **4 entries / ~10 invocations** (was 6 / ~16): SUMO meso + MATSim meso per scenario, no QarSUMO.
 
 ### Added
 
-- **`todo.md`** — Version_4 roadmap with plan-vs-reality gap audit (engines, cities, loads, hardware, repeats, reproducibility, calibration, metrics, deliverables), advisor-approved scope adjustments, phased roadmap (A: foundation → B: LPSim → C: containers → D: optional → E: integration), and open questions for the next advisor meeting. Cross-references `a personal PDF` (December 2025) as the canonical source of truth.
-- **`evaluation/metrics/confidence.py`** — 95 % confidence intervals on the mean via Student's t-distribution. Hard-coded t-critical table (df 1–30) with normal-distribution Z=1.960 fallback for df > 30 — no scipy dependency, math is auditable in the thesis appendix. Closes plan §3.5 commitment to "95 % CIs on every KPI". Tested in `tests/test_confidence.py` (11 tests covering edge cases and hand-computable references). Wired into:
-  - `evaluation/analyze_benchmark.py` — `ScenarioStats` gains `ci95_runtime` / `ci95_travel_time` fields; Tables 5.1 / 5.2 add a `95% CI` column alongside the existing `Std`; LaTeX and Markdown table generators render `mean ± half-width` instead of bare means.
-  - `evaluation/generate_plots.py` — `ScenarioMetrics` gains the same fields; error bars in Figs 5.1 (runtime), 5.3 (travel time), and 5.6 (micro vs meso) now show 95 % CIs instead of ±1σ. Figure titles updated to flag the change.
+- **`todo.md`**, Version_4 roadmap with plan-vs-reality gap audit (engines, cities, loads, hardware, repeats, reproducibility, calibration, metrics, deliverables), advisor-approved scope adjustments, phased roadmap (A: foundation → B: LPSim → C: containers → D: optional → E: integration), and open questions for the next advisor meeting. Cross-references `a personal PDF` (December 2025) as the canonical source of truth.
+- **`evaluation/metrics/confidence.py`**, 95 % confidence intervals on the mean via Student's t-distribution. Hard-coded t-critical table (df 1–30) with normal-distribution Z=1.960 fallback for df > 30, no scipy dependency, math is auditable in the thesis appendix. Closes plan §3.5 commitment to "95 % CIs on every KPI". Tested in `tests/test_confidence.py` (11 tests covering edge cases and hand-computable references). Wired into:
+  - `evaluation/analyze_benchmark.py`, `ScenarioStats` gains `ci95_runtime` / `ci95_travel_time` fields; Tables 5.1 / 5.2 add a `95% CI` column alongside the existing `Std`; LaTeX and Markdown table generators render `mean ± half-width` instead of bare means.
+  - `evaluation/generate_plots.py`, `ScenarioMetrics` gains the same fields; error bars in Figs 5.1 (runtime), 5.3 (travel time), and 5.6 (micro vs meso) now show 95 % CIs instead of ±1σ. Figure titles updated to flag the change.
 
 ## [Pre-Version_4 history below]
 
@@ -2752,57 +2752,57 @@ MATSim queue-based agent + DTALite DTA equilibrium = three distinct paradigms.
 
 ### Added
 
-- **Hash-pinned local OSM ingest (`osm_data/`)** — SimForge no longer depends on the live Overpass API for the cities it ships. State-level Geofabrik PBF snapshots (Illinois 348 MB, New York 489 MB, California 1.3 GB) are pinned by SHA-256 + MD5 in `osm_data/manifest.json`.
-- **`tools/download_osm.py`** — idempotent fetcher that downloads each manifest entry, verifies both hashes, and skips already-present files. Replaces the old per-scenario Overpass warm-up for the committed cities.
-- **`pipeline/network/load_network_from_pbf.py`** — pyosmium `FileProcessor().with_locations()` + `BackReferenceWriter` pipeline that bbox-slices a state-level PBF into an `.osm.xml` fragment without materialising the whole file, then hands it to `osmnx.graph_from_xml`.
-- **`doc/PITZER.md`** — new end-to-end guide for the OSC Pitzer supercomputer workflow: account setup, module loads, filesystem layout, PBF / ModelGen rsync, `srun` vs. `sbatch` templates per generation tier, job monitoring (`squeue` / `sacct`), QarSUMO GPU build, and troubleshooting.
+- **Hash-pinned local OSM ingest (`osm_data/`)**, SimForge no longer depends on the live Overpass API for the cities it ships. State-level Geofabrik PBF snapshots (Illinois 348 MB, New York 489 MB, California 1.3 GB) are pinned by SHA-256 + MD5 in `osm_data/manifest.json`.
+- **`tools/download_osm.py`**, idempotent fetcher that downloads each manifest entry, verifies both hashes, and skips already-present files. Replaces the old per-scenario Overpass warm-up for the committed cities.
+- **`pipeline/network/load_network_from_pbf.py`**, pyosmium `FileProcessor().with_locations()` + `BackReferenceWriter` pipeline that bbox-slices a state-level PBF into an `.osm.xml` fragment without materialising the whole file, then hands it to `osmnx.graph_from_xml`.
+- **`doc/PITZER.md`**, new end-to-end guide for the OSC Pitzer supercomputer workflow: account setup, module loads, filesystem layout, PBF / ModelGen rsync, `srun` vs. `sbatch` templates per generation tier, job monitoring (`squeue` / `sacct`), QarSUMO GPU build, and troubleshooting.
 - **`pyproject.toml`** with `[tool.pytest.ini_options]`: `testpaths`, `--strict-markers`, `--strict-config`, `--tb=short`, and a registered marker set (`slow`, `integration`, `determinism`, `requires_sumo`, `requires_java`, `requires_gpu`). Now also carries `[tool.coverage.run]` / `[tool.coverage.report]` / `[tool.coverage.xml]` (branch coverage, `source = [adapters, evaluation, pipeline]`, renderers + data-dependent modules in `omit`) and `[tool.mutmut]` (mutation-testing scope pinned to the two cross-engine-fairness modules).
 - **`tests/conftest.py`** with shared fixtures (`bundled_scenario`, `all_bundled_scenarios`, `small_bundled_scenarios`, `repo_root`) and helpers (`file_sha256`, `directory_sha256`, `is_arm64_netconvert_crash`, `is_large_scenario`, `warn_skipped`). Eliminates the `_CANDIDATES` scenario-discovery duplication that was sitting in five test files.
-- **`tests/test_scc.py`** (16 tests) — covers `pipeline/network/scc.py` (iterative Kosaraju + parsing) including a 5 000-node deep-chain test that would blow the recursive form's stack.
-- **`tests/test_feasibility.py`** (16 tests) — covers `adapters/common/feasibility.py`, the shared SCC-based trip filter that was the [1.0.0] cross-engine fairness fix. Exercises all four drop reasons (outside-SCC, unknown-node, missing-fields, missing-column), `FeasibilityReport` math, JSON persistence, log-level routing, manifest path resolution, and end-to-end ≥99 % feasibility on bundled scenarios.
-- **`tests/test_analyze_benchmark.py`** (25 tests — up from 16) — now also exercises every renderer (`print_runtime_table`, `print_reproducibility_table`, `print_summary_table`, `print_coverage_report` asymmetric + thin-cell detection, `generate_latex_table`, `generate_markdown_table`) alongside the original mode-aware grouping + `_resolve_identity` fallback coverage.
-- **`tests/test_osm_fetch.py`** (20 tests) — fully mocked Overpass/osmnx pipeline: `BoundingBox` validation (inverted lat/lon, `from_string` arity, `from_center` geometry), cache folder pinning to `<repo>/cache`, error translation (`ConnectionError → RuntimeError` with a "possible causes" block), empty-result guard (`ValueError`), missing-osmnx guard (`ImportError`), the `PREDEFINED_CITIES` catalogue, and full `build_network_from_osm` end-to-end against a duck-typed stub graph.
-- **`tests/test_demand_generators.py`** (21 tests) — `UniformRandomGenerator`, `GravityModelGenerator`, `PeakHourGenerator`, `load_network_for_demand`, and the `generate_synthetic_demand` dispatch. Proves SCC restriction on synthetic grids (dead-end nodes excluded from OD sampling), deterministic seeding (byte-identical `demand.csv` across runs), canonical CSV header, and the peak-hour temporal profile.
-- **`tests/test_engine_smoke.py`** (4 tests) — real-binary smoke for `sumo`, `netconvert`, and the MATSim JAR on the bundled scenario; asserts the engine produced non-empty artefacts (`tripinfo.xml`, `output_trips.csv.gz`). Skip-gracefully via `shutil.which()` + `check_java_available()` + `find_matsim_jar()` so `pytest -m "not slow"` stays green on a dev laptop without SUMO/Java installed.
-- **`requirements-dev.txt`** — pins `pytest>=7.0`, `pytest-cov>=4.1`, `pytest-xdist>=3.5`, `mutmut>=2.5,<3` on top of the runtime requirements.
-- **`doc/MUTATION_BASELINE.md`** — documents the `mutmut` scope (only `adapters/common/feasibility.py` + `pipeline/network/scc.py`, since those are the two modules that make cross-engine comparison *fair*), the narrow runner, the baseline table (populated on first run), and the surviving-mutant review checklist.
-- **Schedule-aware demand generation (cityscape ScheduleGenerator integration).** `pipeline/demand/parse_model_file.py` now extracts the trailing `(...)` activity-schedule field on `per` records (added by [raodj/cityscape Schedule-generator branch](https://github.com/raodj/cityscape/tree/Schedule-generator)) into a `Person.schedule: list[ScheduleActivity]`. `pipeline/demand/generate_census_demand.py` flips the per-trip sampler to a **schedule-first hybrid**: persons whose cityscape schedule resolves to a valid (home, workplace) pair inside the bbox + SCC contribute a *real PUMS-derived OD trip* (origin = household home building, destination = `schedule[0].bld_id` workplace, both snapped through the existing building→node mapping). Persons without a usable schedule fall through to the original gravity sampler, which is unchanged. New `dest_source` column in `demand.csv` records `schedule` or `gravity` per trip; new `demand_provenance` block in `generation_metadata.json` reports per-bundle counts and fallback reasons. Adapters consume the canonical 5-column subset of `demand.csv` by name and ignore the extra column. Wall-clock impact is large for high-trip tiers — the gravity loop's O(num_trips × destination_nodes) cost disappears for the schedule-driven fraction (estimated ~99 % drop in Step 4 wall-clock for NYC-500K).
-- **`tests/test_parse_model_file.py`** (10 tests) — covers the schedule-tuple regex (`_parse_schedule`), the per-line parser's quoted-field recovery (`_parse_person_line`), and the new `ModelData.home_bld_by_per_id` index that backs schedule-aware home resolution. Includes a regression test for the PUMS SERIALNO replication case (multiple synthesised households share one SERIALNO; each person must resolve to the *specific* household whose `person_ids` list names them).
-- **`tests/test_scenario_data_integrity.py::test_dest_source_values_when_column_present`** — when the `dest_source` provenance column is present in `demand.csv`, every value must be in `{schedule, gravity}`. Skips on legacy bundles that predate the column.
+- **`tests/test_scc.py`** (16 tests), covers `pipeline/network/scc.py` (iterative Kosaraju + parsing) including a 5 000-node deep-chain test that would blow the recursive form's stack.
+- **`tests/test_feasibility.py`** (16 tests), covers `adapters/common/feasibility.py`, the shared SCC-based trip filter that was the [1.0.0] cross-engine fairness fix. Exercises all four drop reasons (outside-SCC, unknown-node, missing-fields, missing-column), `FeasibilityReport` math, JSON persistence, log-level routing, manifest path resolution, and end-to-end ≥99 % feasibility on bundled scenarios.
+- **`tests/test_analyze_benchmark.py`** (25 tests, up from 16), now also exercises every renderer (`print_runtime_table`, `print_reproducibility_table`, `print_summary_table`, `print_coverage_report` asymmetric + thin-cell detection, `generate_latex_table`, `generate_markdown_table`) alongside the original mode-aware grouping + `_resolve_identity` fallback coverage.
+- **`tests/test_osm_fetch.py`** (20 tests), fully mocked Overpass/osmnx pipeline: `BoundingBox` validation (inverted lat/lon, `from_string` arity, `from_center` geometry), cache folder pinning to `<repo>/cache`, error translation (`ConnectionError → RuntimeError` with a "possible causes" block), empty-result guard (`ValueError`), missing-osmnx guard (`ImportError`), the `PREDEFINED_CITIES` catalogue, and full `build_network_from_osm` end-to-end against a duck-typed stub graph.
+- **`tests/test_demand_generators.py`** (21 tests), `UniformRandomGenerator`, `GravityModelGenerator`, `PeakHourGenerator`, `load_network_for_demand`, and the `generate_synthetic_demand` dispatch. Proves SCC restriction on synthetic grids (dead-end nodes excluded from OD sampling), deterministic seeding (byte-identical `demand.csv` across runs), canonical CSV header, and the peak-hour temporal profile.
+- **`tests/test_engine_smoke.py`** (4 tests), real-binary smoke for `sumo`, `netconvert`, and the MATSim JAR on the bundled scenario; asserts the engine produced non-empty artefacts (`tripinfo.xml`, `output_trips.csv.gz`). Skip-gracefully via `shutil.which()` + `check_java_available()` + `find_matsim_jar()` so `pytest -m "not slow"` stays green on a dev laptop without SUMO/Java installed.
+- **`requirements-dev.txt`**, pins `pytest>=7.0`, `pytest-cov>=4.1`, `pytest-xdist>=3.5`, `mutmut>=2.5,<3` on top of the runtime requirements.
+- **`doc/MUTATION_BASELINE.md`**, documents the `mutmut` scope (only `adapters/common/feasibility.py` + `pipeline/network/scc.py`, since those are the two modules that make cross-engine comparison *fair*), the narrow runner, the baseline table (populated on first run), and the surviving-mutant review checklist.
+- **Schedule-aware demand generation (cityscape ScheduleGenerator integration).** `pipeline/demand/parse_model_file.py` now extracts the trailing `(...)` activity-schedule field on `per` records (added by [raodj/cityscape Schedule-generator branch](https://github.com/raodj/cityscape/tree/Schedule-generator)) into a `Person.schedule: list[ScheduleActivity]`. `pipeline/demand/generate_census_demand.py` flips the per-trip sampler to a **schedule-first hybrid**: persons whose cityscape schedule resolves to a valid (home, workplace) pair inside the bbox + SCC contribute a *real PUMS-derived OD trip* (origin = household home building, destination = `schedule[0].bld_id` workplace, both snapped through the existing building→node mapping). Persons without a usable schedule fall through to the original gravity sampler, which is unchanged. New `dest_source` column in `demand.csv` records `schedule` or `gravity` per trip; new `demand_provenance` block in `generation_metadata.json` reports per-bundle counts and fallback reasons. Adapters consume the canonical 5-column subset of `demand.csv` by name and ignore the extra column. Wall-clock impact is large for high-trip tiers, the gravity loop's O(num_trips × destination_nodes) cost disappears for the schedule-driven fraction (estimated ~99 % drop in Step 4 wall-clock for NYC-500K).
+- **`tests/test_parse_model_file.py`** (10 tests), covers the schedule-tuple regex (`_parse_schedule`), the per-line parser's quoted-field recovery (`_parse_person_line`), and the new `ModelData.home_bld_by_per_id` index that backs schedule-aware home resolution. Includes a regression test for the PUMS SERIALNO replication case (multiple synthesised households share one SERIALNO; each person must resolve to the *specific* household whose `person_ids` list names them).
+- **`tests/test_scenario_data_integrity.py::test_dest_source_values_when_column_present`**, when the `dest_source` provenance column is present in `demand.csv`, every value must be in `{schedule, gravity}`. Skips on legacy bundles that predate the column.
 - **Per-bundle toolchain capture in `generation_metadata.json`.** New `toolchain` block records `python`, `platform`, `osmnx`, `numpy`, `networkx`, `lxml`, `shapely`, `osmium`, `geopandas`, `pandas` versions for every bundle. Cross-machine reproducibility audits no longer have to guess at which dep stack produced a bundle.
 - **Cross-platform reproducibility verified.** Generation produces byte-identical `demand.csv` and `signals.xml` across (Apple Silicon ARM64, macOS, Python 3.13.2, osmnx 2.0.7) and (x86_64, RHEL Pitzer, Python 3.12.4, osmnx 2.1.0) on the `la_50k_car` reference bundle. The `network.xml` MD5 differs only in lxml-version-dependent serialization (attribute ordering, float-precision rendering); semantic content is identical, as proven by both downstream artefacts being byte-equal. Verification recipe and reference MD5s in [`doc/REPRODUCING.md`](doc/REPRODUCING.md#cross-platform-reproducibility-verified); thesis-grade claim in [`doc/chapters/methods.md`](doc/chapters/methods.md) §3.7.2.
-- **`requirements.lock` — exact dep + Python pin via uv.** Captures the canonical thesis-build environment as `pkg==X.Y.Z` for every transitive (42 packages including SUMO, see below). Combined with `uv venv --python 3.13` to install Python 3.13.13 in user-space, the lockfile guarantees that any machine — laptop, fresh CI runner, Pitzer compute node — ends up on byte-identical Python + dep versions. The previous loose-pin `requirements.txt` is retained for development but `requirements.lock` is the canonical install path going forward (referenced from README, SETUP, REPRODUCING, and PITZER docs).
-- **`eclipse-sumo==1.26.0` bundled in `requirements.lock`.** SUMO is now a Python package install — `uv pip install -r requirements.lock` lands `sumo`, `netconvert`, and `sumo-gui` directly into `.venv/bin/` on both macOS arm64 and Linux x86_64. No more `brew install sumo` (broken on the dlr-ts tap as of 2026-04) or per-cluster module wrangling. Same wheel + version on every platform → cross-machine SUMO output reproducibility.
-- **`tools/env_report.py`** — single-command toolchain audit: prints Python version + platform + executable path, all 12 watched Python dep versions, SUMO/netconvert/Java binary versions, and counts of OSM PBFs / ModelGen files / scenarios. Designed for cross-machine parity verification — run on each end and `diff` the outputs.
-- **`cluster/jobs/{01_quick_test,02_small_commute,03_medium_multimodal,04_large_full_day,05_stress_test}.sbatch`** — five ready-to-submit per-tier sbatch templates matching `scripts/01..05.py`. Each is sized appropriately for its tier (4–8 cores, 8–64 GB, 30 min – 8 h) and uses the `logs/` subdir convention. Replaces the single tier-specific `gen_nyc_500k.sbatch` (which is preserved as the historical recorded-run artifact for `JobID 47063986`).
-- **Three reference scenario bundles tracked in git.** `chicago_1k_car` (~1 MB, original test fixture), `nyc_10k_car` (~36 MB, small commute tier), and `la_50k_car` (~164 MB, multi-modal medium tier and the cross-platform reproducibility reference) are now committed. A fresh clone runs the full test suite and the bundled adapters without first generating data. The 200K and 500K tiers stay untracked — their `network.xml` / `signals.xml` files individually exceed GitHub's 100 MB hard limit.
+- **`requirements.lock`, exact dep + Python pin via uv.** Captures the canonical thesis-build environment as `pkg==X.Y.Z` for every transitive (42 packages including SUMO, see below). Combined with `uv venv --python 3.13` to install Python 3.13.13 in user-space, the lockfile guarantees that any machine, laptop, fresh CI runner, Pitzer compute node, ends up on byte-identical Python + dep versions. The previous loose-pin `requirements.txt` is retained for development but `requirements.lock` is the canonical install path going forward (referenced from README, SETUP, REPRODUCING, and PITZER docs).
+- **`eclipse-sumo==1.26.0` bundled in `requirements.lock`.** SUMO is now a Python package install, `uv pip install -r requirements.lock` lands `sumo`, `netconvert`, and `sumo-gui` directly into `.venv/bin/` on both macOS arm64 and Linux x86_64. No more `brew install sumo` (broken on the dlr-ts tap as of 2026-04) or per-cluster module wrangling. Same wheel + version on every platform → cross-machine SUMO output reproducibility.
+- **`tools/env_report.py`**, single-command toolchain audit: prints Python version + platform + executable path, all 12 watched Python dep versions, SUMO/netconvert/Java binary versions, and counts of OSM PBFs / ModelGen files / scenarios. Designed for cross-machine parity verification, run on each end and `diff` the outputs.
+- **`cluster/jobs/{01_quick_test,02_small_commute,03_medium_multimodal,04_large_full_day,05_stress_test}.sbatch`**, five ready-to-submit per-tier sbatch templates matching `scripts/01..05.py`. Each is sized appropriately for its tier (4–8 cores, 8–64 GB, 30 min – 8 h) and uses the `logs/` subdir convention. Replaces the single tier-specific `gen_nyc_500k.sbatch` (which is preserved as the historical recorded-run artifact for `JobID 47063986`).
+- **Three reference scenario bundles tracked in git.** `chicago_1k_car` (~1 MB, original test fixture), `nyc_10k_car` (~36 MB, small commute tier), and `la_50k_car` (~164 MB, multi-modal medium tier and the cross-platform reproducibility reference) are now committed. A fresh clone runs the full test suite and the bundled adapters without first generating data. The 200K and 500K tiers stay untracked, their `network.xml` / `signals.xml` files individually exceed GitHub's 100 MB hard limit.
 
 ### Changed
 
 - **Network generation default flipped to PBF.** `pipeline/network/build_network_from_osm.py` now looks up `osm_data/manifest.json` first and dispatches to `load_network_from_pbf.py` when a covering PBF is present; the live Overpass path is reached only when no local file covers the bbox. `generate.py` hard-fails with a pointer to `tools/download_osm.py` if a committed city is requested but its PBF is absent.
-- **osmnx 2.x required.** `requirements.txt` now pins `osmnx>=2.0,<3` and `pipeline/network/load_network_from_pbf.py` calls `truncate_graph_bbox` only with the v2.x positional `bbox=(W, S, E, N)` tuple. The 1.9.x compat branch (`north=/south=/east=/west=` kwargs) is gone — clean reinstalls and Pitzer envs need `pip install -U "osmnx>=2.0,<3"` before re-running generation. The `geopandas` pin is bumped to `>=1.0,<2` to satisfy osmnx 2.x's transitive requirement (`geopandas>=1.0.1`); the previous `>=0.9,<1` would break `pip install -r requirements.txt` against the new osmnx range. SimForge code does not import geopandas directly.
+- **osmnx 2.x required.** `requirements.txt` now pins `osmnx>=2.0,<3` and `pipeline/network/load_network_from_pbf.py` calls `truncate_graph_bbox` only with the v2.x positional `bbox=(W, S, E, N)` tuple. The 1.9.x compat branch (`north=/south=/east=/west=` kwargs) is gone, clean reinstalls and Pitzer envs need `pip install -U "osmnx>=2.0,<3"` before re-running generation. The `geopandas` pin is bumped to `>=1.0,<2` to satisfy osmnx 2.x's transitive requirement (`geopandas>=1.0.1`); the previous `>=0.9,<1` would break `pip install -r requirements.txt` against the new osmnx range. SimForge code does not import geopandas directly.
 - **`requirements.txt`** now declares `osmium>=4.0` (pyosmium) explicitly and documents Overpass as fallback-only in an inline comment.
 - **All test files refactored** to use shared `bundled_scenario` / `small_bundled_scenarios` fixtures instead of duplicating the scenario-discovery preamble. Suite-wide adapter sweeps now carry `@pytest.mark.slow` / `@pytest.mark.requires_sumo` so contributors can run the fast tier with `pytest -m "not slow"`.
-- **`tests/test_scalability_metrics.py`** — `test_timer_measures_time` no longer relies on a hard-coded 0.05–0.30 s window; it now compares against a `time.monotonic()` reference, removing host-load flakiness.
+- **`tests/test_scalability_metrics.py`**, `test_timer_measures_time` no longer relies on a hard-coded 0.05–0.30 s window; it now compares against a `time.monotonic()` reference, removing host-load flakiness.
 - **`TESTING.md`** rewritten to document the 17-file / 293-test layout, the coverage summary (76.3 % line coverage; 70 % floor), and the run-command catalogue (full / fast / slow / by-marker / coverage / parallel / mutmut).
 
 ### Fixed
 
-- **NYC 500 K generation unblocked** — the previous Overpass path timed out on the full NYC bbox and the alternative (splitting the bbox across multiple Overpass queries) produced non-deterministic topology between runs. The PBF slice is both faster and byte-reproducible.
+- **NYC 500 K generation unblocked**, the previous Overpass path timed out on the full NYC bbox and the alternative (splitting the bbox across multiple Overpass queries) produced non-deterministic topology between runs. The PBF slice is both faster and byte-reproducible.
 - **MATSim 15.0 download URL** corrected in `setup_simforge.py`; the old release asset URL had been superseded on GitHub and caused a silent 404 → zero-byte JAR on fresh clones.
 - **Test count reconciled to 249.** Removing the redundant `nyc_1k_car`, `la_1k_car`, and three synthetic bundles shrank the parametrised suite in `tests/test_scenario_data_integrity.py` (70 → 35) and `tests/test_scc.py` (16 → 14). Docs across `README.md`, `SETUP.md`, `TESTING.md`, `CONTRIBUTING.md`, `help.py`, and the thesis chapters now consistently report **249 tests** (previously 293).
 - **Degenerate zero-length edges filtered at extract time.** `extract_canonical_network` in `pipeline/network/build_network_from_osm.py` now drops edges with `length <= 0` (logged via `logger.warning` with `osmid`/`highway` for traceability) and reports the skipped count in the summary line. Surfaced by `tests/test_scenario_data_integrity.py::test_link_lengths_are_positive` against the NYC-500K bundle, which contained 2 such edges out of 1.3 M from a single OSM way (`1351901326`) whose endpoint nodes shared identical coordinates. SUMO would warn and MATSim would emit teleport routes on these edges; filtering at the canonical extract is the right fix.
 
 ---
 
-## [1.1.0] — 2026-04-19
+## [1.1.0], 2026-04-19
 
 Plot polish, coverage diagnostics, and cache hygiene. Commit `537ae75`.
 
 ### Added
 
-- **Coverage diagnostic** in `evaluation/analyze_benchmark.py` (`print_coverage_report`) — flags low-sample cells (`n < 3`), asymmetric coverage across scenarios, and silently-failed cells.
-- **`tools/clean.sh`** — wipes Python bytecode (`__pycache__`, `*.pyc`, `.pytest_cache`); `--all` also drops `cache/` (OSM Overpass HTTP cache).
+- **Coverage diagnostic** in `evaluation/analyze_benchmark.py` (`print_coverage_report`), flags low-sample cells (`n < 3`), asymmetric coverage across scenarios, and silently-failed cells.
+- **`tools/clean.sh`**, wipes Python bytecode (`__pycache__`, `*.pyc`, `.pytest_cache`); `--all` also drops `cache/` (OSM Overpass HTTP cache).
 - **Per-bar error bars** confirmed on Figs 5.1 and 5.3 (`yerr=errs, capsize=3`) for cross-engine variance disclosure.
 
 ### Changed
@@ -2812,52 +2812,52 @@ Plot polish, coverage diagnostics, and cache hygiene. Commit `537ae75`.
 
 ### Removed
 
-- **Fig 5.10 (travel-time spread)** — duplicated information already shown in Fig 5.7 (runtime variability boxplot).
+- **Fig 5.10 (travel-time spread)**, duplicated information already shown in Fig 5.7 (runtime variability boxplot).
 
 ### Fixed
 
-- **`.gitignore`** now covers `.modelgen_cache.json` (per-machine fingerprints — kept causing diff churn). Verified no stray `.DS_Store` files were tracked.
+- **`.gitignore`** now covers `.modelgen_cache.json` (per-machine fingerprints, kept causing diff churn). Verified no stray `.DS_Store` files were tracked.
 
 ---
 
-## [1.0.0] — 2026-04-18
+## [1.0.0], 2026-04-18
 
 First end-to-end-correct release: SCC-aware demand, mode-aware analysis, fair cross-engine comparison, unified result schema. Commits `e508d5c`, `cd16a52`, `ac7e483`.
 
 ### Added
 
-- **`pipeline/network/scc.py`** — single canonical iterative-Kosaraju + network parser. Used by both demand generators and the adapter-layer post-condition feasibility check.
-- **`adapters/common/feasibility.py`** — `feasible_trip_ids(network_path, demand_path)` builds the SCC once and returns the set of trip IDs whose origin AND destination both lie in it.
-- **`feasibility_report.json`** — emitted next to every adapter's output, plus a WARNING line: `[sumo] feasibility: 1000/1000 trips (100.0%) — SCC covers 1204/1245 nodes, 2796/2856 links`.
-- **`pipeline/network/warmup.py`** — walks `scenarios/*/`, reconstructs each bbox (preferring `generation_metadata.json`'s `city`+`radius_km` so it matches the original Overpass cache key), and forces a fetch through the same `download_osm_network` path used at scenario generation. A fresh clone can pre-warm everything with `python -m pipeline.network.warmup`.
-- **OSM cold-start logging** — `download_osm_network()` logs a WARNING (`first-time fetch contacts the Overpass API and may take 10 s–2 min`) on cache miss, INFO (`cached OSM response found`) otherwise, with a `cache hit` / `fresh fetch` label after the call.
+- **`pipeline/network/scc.py`**, single canonical iterative-Kosaraju + network parser. Used by both demand generators and the adapter-layer post-condition feasibility check.
+- **`adapters/common/feasibility.py`**, `feasible_trip_ids(network_path, demand_path)` builds the SCC once and returns the set of trip IDs whose origin AND destination both lie in it.
+- **`feasibility_report.json`**, emitted next to every adapter's output, plus a WARNING line: `[sumo] feasibility: 1000/1000 trips (100.0%), SCC covers 1204/1245 nodes, 2796/2856 links`.
+- **`pipeline/network/warmup.py`**, walks `scenarios/*/`, reconstructs each bbox (preferring `generation_metadata.json`'s `city`+`radius_km` so it matches the original Overpass cache key), and forces a fetch through the same `download_osm_network` path used at scenario generation. A fresh clone can pre-warm everything with `python -m pipeline.network.warmup`.
+- **OSM cold-start logging**, `download_osm_network()` logs a WARNING (`first-time fetch contacts the Overpass API and may take 10 s–2 min`) on cache miss, INFO (`cached OSM response found`) otherwise, with a `cache hit` / `fresh fetch` label after the call.
 
 ### Changed
 
-- **Mode-aware analysis grouping**: `evaluation/analyze_benchmark.py` previously grouped by `(scenario, engine)`, collapsing SUMO meso (mean TT 204 s) and micro (mean TT 288 s) into one row. `_resolve_identity` now returns `(scenario, engine, mode)`; grouping key, `ScenarioStats` dataclass, and all output renderers (summary, runtime, reproducibility, LaTeX, Markdown) carry the mode column. (`generate_plots.py` and `compare_modes.py` already grouped by mode — only the analyze module was buggy.)
+- **Mode-aware analysis grouping**: `evaluation/analyze_benchmark.py` previously grouped by `(scenario, engine)`, collapsing SUMO meso (mean TT 204 s) and micro (mean TT 288 s) into one row. `_resolve_identity` now returns `(scenario, engine, mode)`; grouping key, `ScenarioStats` dataclass, and all output renderers (summary, runtime, reproducibility, LaTeX, Markdown) carry the mode column. (`generate_plots.py` and `compare_modes.py` already grouped by mode, only the analyze module was buggy.)
 - **`pipeline/demand/generate_synthetic_demand.py`** replaced its single-source-BFS SCC approximation with `compute_largest_scc`.
 - **`pipeline/demand/generate_census_demand.py`** restricts both origin sampling (residential buildings) and destination sampling (degree-weighted gravity) to SCC members; logs dropped-building count.
-- **`adapters/common/feasibility.py`** delegates SCC computation to `pipeline.network.scc` — behaviour unchanged but no longer duplicated.
+- **`adapters/common/feasibility.py`** delegates SCC computation to `pipeline.network.scc`, behaviour unchanged but no longer duplicated.
 - **OSM cache pinned**: `pipeline/network/build_network_from_osm.py::_configure_osmnx_cache()` pins `ox.settings.cache_folder` to `<repo>/cache`.
 - **Unified result schema**: `run.py` and `execution.run_benchmark` previously emitted slightly different JSON shapes; both code paths now write the same canonical schema. Downstream tools (`analyze_benchmark.py`, `generate_plots.py`, `compare_modes.py`) accept either source uniformly.
 
 ### Fixed
 
-- **Engine input asymmetry**: SUMO and MATSim previously simulated *different subsets* of the same demand — SUMO silently dropped per-trip if origin/destination weren't reachable, while MATSim dropped trips whose nodes lay outside the largest strongly-connected component of its cleaned network. Result on `chicago_1k_car`: SUMO ran 988/1000 trips, MATSim ran 981/1000. Now SUMO, MATSim, and QarSUMO all consume the shared SCC filter — verified the per-engine skip lists are byte-identical and `feasibility_report.json` reports `feasible_trips == total_trips == 1000` on both bundles.
+- **Engine input asymmetry**: SUMO and MATSim previously simulated *different subsets* of the same demand, SUMO silently dropped per-trip if origin/destination weren't reachable, while MATSim dropped trips whose nodes lay outside the largest strongly-connected component of its cleaned network. Result on `chicago_1k_car`: SUMO ran 988/1000 trips, MATSim ran 981/1000. Now SUMO, MATSim, and QarSUMO all consume the shared SCC filter, verified the per-engine skip lists are byte-identical and `feasibility_report.json` reports `feasible_trips == total_trips == 1000` on both bundles.
 - **Inflated R-Score from mode collapse**: combining SUMO meso (TT ≈ 204 s) and micro (TT ≈ 288 s) into one row inflated combined std/mean and dropped the displayed R-Score to 0.8132 ("Poor") despite each individual mode scoring ≥ 0.997 ("Excellent"). Mode-aware grouping (above) restored correct per-mode scores.
 
 ---
 
-## [0.9.0] — 2026-04-17
+## [0.9.0], 2026-04-17
 
 Initial end-to-end stress test: the first comprehensive run-through of the full pipeline (generate → validate → benchmark → analyse → plot). Surfaced the silent failure modes that `[1.0.0]` subsequently fixed, plus four concrete bugs. Commit `d06cf0a`.
 
 ### Fixed
 
-- **`--validate-only` `AttributeError` on `Path`** — `run.py` now wraps `scenarios_available[s]["path"]` in `Path(...)`.
-- **`test_all_scenarios` hangs on 50K+ scenarios** — added `_LARGE_PATTERNS` filter (`50k`, `200k`, `500k`, `5m`) to all four `test_*_all_scenarios` paths.
-- **`RuntimeError` text-matching missed arm64 "crashed"** — tests now match both `"failed"` and `"crashed"` in error text.
-- **`nyc_10k_car` arm64 netconvert crash** (4 041 nodes exceeded the ~3 000-node arm64 SUMO threshold) — regenerated with `--radius 2.5` (1 376 nodes).
+- **`--validate-only` `AttributeError` on `Path`**, `run.py` now wraps `scenarios_available[s]["path"]` in `Path(...)`.
+- **`test_all_scenarios` hangs on 50K+ scenarios**, added `_LARGE_PATTERNS` filter (`50k`, `200k`, `500k`, `5m`) to all four `test_*_all_scenarios` paths.
+- **`RuntimeError` text-matching missed arm64 "crashed"**, tests now match both `"failed"` and `"crashed"` in error text.
+- **`nyc_10k_car` arm64 netconvert crash** (4 041 nodes exceeded the ~3 000-node arm64 SUMO threshold), regenerated with `--radius 2.5` (1 376 nodes).
 
 ### Outcome
 
@@ -2867,19 +2867,19 @@ Initial end-to-end stress test: the first comprehensive run-through of the full 
 
 ---
 
-## [0.5.0] — 2026-04-15 → 2026-04-17
+## [0.5.0], 2026-04-15 → 2026-04-17
 
 Foundation work prior to the first end-to-end stress test. Earlier per-commit detail is in `git log`; the key milestones:
 
 ### Added
 
-- **Comprehensive test suite** (`ae4dcb2`) — now 184 tests across 11 files.
+- **Comprehensive test suite** (`ae4dcb2`), now 184 tests across 11 files.
 - **OSC Pitzer cluster scripts**, 500K jobs, cluster guide, HPC pin updates (`be20205`, `7ac0bb5`, `45188be`).
-- **ModelGen integration** (`2315dde`) — PUMS census microdata for population-weighted demand.
+- **ModelGen integration** (`2315dde`), PUMS census microdata for population-weighted demand.
 
 ### Changed
 
-- **Thesis-defense documentation overhaul** (`e7e156d`, `6d98a7d`, `66f3d5f`) — architecture, scenario generation, methods/experiments chapters.
+- **Thesis-defense documentation overhaul** (`e7e156d`, `6d98a7d`, `66f3d5f`), architecture, scenario generation, methods/experiments chapters.
 
 ---
 

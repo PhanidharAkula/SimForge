@@ -1,4 +1,4 @@
-# SimForge — reproducible cross-simulator benchmarking framework
+# SimForge, reproducible cross-simulator benchmarking framework
 # (SUMO + MATSim + DTALite, byte-deterministic adapters, Q1-Q5 fairness audit)
 #
 # Closes plan §1.10 Objective 3 (containerized execution),
@@ -6,7 +6,7 @@
 # §2.7 Reproducibility framework (OCI/Singularity),
 # §4.2 Software and Compute Environment.
 #
-# Build (local Docker, x86_64 target — Cardinal compatibility):
+# Build (local Docker, x86_64 target, Cardinal compatibility):
 #   docker buildx build --platform linux/amd64 -t simforge:latest .
 #
 # Build (GitHub Actions): auto-built on every push to phase-14-canonical-routes
@@ -58,7 +58,7 @@ FROM python:3.13-slim-bookworm
 #                            All four sumo CLI binaries (sumo, netconvert,
 #                            duarouter, sumo-gui) link against the same set.
 # - git:                     for `git rev-parse HEAD` in tools/generate_scorecard
-#                            (falls back to "unknown" if no .git tree — safe)
+#                            (falls back to "unknown" if no .git tree, safe)
 # - ca-certificates:         TLS verification (pip, OSM downloads)
 # - curl:                    tools/download_osm.py (hash-verified PBF fetch)
 # - tini:                    proper PID 1 / signal forwarding
@@ -95,7 +95,7 @@ WORKDIR /workspace/SimForge
 # ---------------------------------------------------------------------------
 # Cached as long as requirements.lock + pyproject.toml don't change.
 # `--system` installs into the container's system Python (no venv needed
-# inside the container — the container itself IS the isolation boundary).
+# inside the container, the container itself IS the isolation boundary).
 # ---------------------------------------------------------------------------
 COPY requirements.lock pyproject.toml ./
 RUN uv pip install --system --no-cache -r requirements.lock
@@ -107,7 +107,7 @@ RUN uv pip install --system --no-cache -r requirements.lock
 #
 # Note on sumolib: eclipse-sumo wheel installs the SUMO binaries to
 # /usr/local/bin/ (sumo, netconvert, duarouter, etc.) but does NOT put
-# sumolib on Python sys.path — sumolib lives at site-packages/sumo/tools/sumolib
+# sumolib on Python sys.path, sumolib lives at site-packages/sumo/tools/sumolib
 # and requires either SUMO_HOME setup or explicit sys.path appending.
 # SimForge invokes SUMO as a subprocess (not `import sumolib`), so we
 # verify the binary works, not the Python import.
@@ -118,7 +118,7 @@ RUN uv pip install --system --no-cache eclipse-sumo==1.26.0 && \
         echo "  ✓ eclipse-sumo wheel installed, sumo at $(which sumo)"; \
     else \
         echo "=== sumo --version output ==="; cat /tmp/sumo_version_check; \
-        echo "=== ldd $SUMO_REAL_BIN (ALL libs — look for 'not found' lines) ==="; ldd "$SUMO_REAL_BIN" 2>&1; \
+        echo "=== ldd $SUMO_REAL_BIN (ALL libs, look for 'not found' lines) ==="; ldd "$SUMO_REAL_BIN" 2>&1; \
         echo "=== /usr/local/bin/ sumo-related files ==="; ls -la /usr/local/bin/ | grep -E 'sumo|netconvert|duarouter' | head; \
         exit 1; \
     fi
@@ -168,7 +168,7 @@ RUN cd /tmp \
  && test -f /workspace/SimForge/lib/matsim-15.0/matsim-15.0.jar \
  && echo "  ✓ MATSim 15.0 downloaded: $(du -sh /workspace/SimForge/lib/matsim-15.0 | cut -f1) into lib/matsim-15.0/"
 
-# Repo-root docs + license — keeps the image self-describing
+# Repo-root docs + license, keeps the image self-describing
 COPY LICENSE README.md CHANGELOG.md SETUP.md TESTING.md CONTRIBUTING.md ./
 COPY doc/           ./doc/
 
@@ -205,7 +205,7 @@ RUN python -c "import adapters.sumo.sumo_adapter; print('  ✓ SUMO adapter impo
 #   /workspace/SimForge/modelgen    read-only   (optional) cityscape ModelGen
 #   /workspace/SimForge/logs        read-write  harness/SLURM logs
 #
-# No CMD or ENTRYPOINT — caller invokes the desired SimForge command directly:
+# No CMD or ENTRYPOINT, caller invokes the desired SimForge command directly:
 #   python -m execution.run_benchmark <runspec.yaml>
 #   python -m evaluation.audit_fairness <run-dir>
 #   python -m tools.generate_scorecard <run-dir>

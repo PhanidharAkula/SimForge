@@ -82,7 +82,7 @@ ALL_MODES = ["micro", "meso"]
 # SUMO supports both microscopic (car-following) and mesoscopic (link queue);
 # MATSim is queue-based mesoscopic only; DTALite is mesoscopic Dynamic
 # Traffic Assignment only. Cells in the experimental matrix that pair an
-# engine with an unsupported mode are skipped — not silently re-run as
+# engine with an unsupported mode are skipped, not silently re-run as
 # meso, which would inflate the result count with duplicated cells.
 ENGINE_SUPPORTED_MODES = {
     "sumo": {"micro", "meso"},
@@ -275,7 +275,7 @@ def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, time
 def run_dtalite_engine(scenario_path: Path, mode: str, seed: int,
                        output_dir: Path, timeout: int) -> dict:
     """Run DTALite simulation via the adapter (used by run.py one-off path)."""
-    _ = mode  # DTALite has no micro/meso flag — it's mesoscopic DTA only
+    _ = mode  # DTALite has no micro/meso flag, it's mesoscopic DTA only
     _ = seed  # DTALite is deterministic; seed has no effect
     from adapters.dtalite import (
         prepare_dtalite_inputs, run_dtalite, parse_dtalite_output, DTALiteConfig
@@ -313,7 +313,7 @@ def run_dtalite_engine(scenario_path: Path, mode: str, seed: int,
 
 def run_simulation(scenario: str, engine: str, mode: str, seed: int,
                    output_base: Path, timeout: int) -> dict:
-    """Run a single simulation. Pure function — caller handles all output."""
+    """Run a single simulation. Pure function, caller handles all output."""
     scenario_path = Path("scenarios") / scenario
     output_dir = output_base / f"{scenario}_{engine}_{mode}_seed{seed}"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -376,7 +376,7 @@ Examples:
 
     args = parser.parse_args()
 
-    # Quiet adapter INFO chatter by default — the per-cell summary lines
+    # Quiet adapter INFO chatter by default, the per-cell summary lines
     # are enough for the operator. The harness only suppresses INFO from
     # SimForge's own adapter modules; WARNING+ from any source still
     # surfaces. Pass --verbose to restore the firehose (useful when
@@ -685,7 +685,7 @@ Examples:
 
     if by_cell_wall:
         print("\n  Per-cell wall time (full prep + engine + parse, mean ± 95 % CI across reps;")
-        print("  engine-only mean in parens — that's the number Chapter 5 tables cite):")
+        print("  engine-only mean in parens, that's the number Chapter 5 tables cite):")
         for (sc, eng, md), wall_times in by_cell_wall.items():
             eng_times = by_cell_engine.get((sc, eng, md), [])
             ci = confidence_interval_95(wall_times)

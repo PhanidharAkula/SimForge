@@ -68,7 +68,7 @@ def check_python() -> bool:
     if (v.major, v.minor) >= MIN_PYTHON:
         _ok(f"Python {v.major}.{v.minor}.{v.micro}")
         return True
-    _fail(f"Python {v.major}.{v.minor} found — need {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+")
+    _fail(f"Python {v.major}.{v.minor} found, need {MIN_PYTHON[0]}.{MIN_PYTHON[1]}+")
     return False
 
 
@@ -76,7 +76,7 @@ def check_java() -> bool:
     """Check for Java (needed by MATSim)."""
     java = shutil.which("java")
     if not java:
-        _warn("Java not found — MATSim will not work")
+        _warn("Java not found, MATSim will not work")
         _warn("Install with: brew install openjdk@17  (macOS)")
         _warn("              apt install openjdk-17-jre  (Linux)")
         return False
@@ -90,7 +90,7 @@ def check_sumo() -> bool:
     """Check for SUMO traffic simulator."""
     sumo = shutil.which("sumo")
     if not sumo:
-        _warn("SUMO not found — SUMO engine will not work")
+        _warn("SUMO not found, SUMO engine will not work")
         _warn("Install with: uv pip install -r requirements.lock  (canonical, bundles eclipse-sumo)")
         _warn("       or:    pip install eclipse-sumo             (ad-hoc, same wheel)")
         return False
@@ -113,7 +113,7 @@ def check_libomp_macos() -> bool:
     if libomp_path.exists() or libomp_intel.exists():
         _ok("libomp (OpenMP runtime for DTALite) found")
         return True
-    _warn("libomp NOT found — DTALite engine will fail at run-time")
+    _warn("libomp NOT found, DTALite engine will fail at run-time")
     _warn("Install with: brew install libomp")
     return False
 
@@ -164,7 +164,7 @@ def install_dependencies():
             capture_output=True, text=True, check=False,
         )
         if dev_result.returncode != 0:
-            _warn(f"{REQUIREMENTS_DEV.name} install failed — "
+            _warn(f"{REQUIREMENTS_DEV.name} install failed, "
                   "coverage / mutation tools will be unavailable.")
             print(dev_result.stderr[-500:] if dev_result.stderr else dev_result.stdout[-500:])
         else:
@@ -220,7 +220,7 @@ def verify_installation() -> dict:
         _fail(f"Import check failed: {result.stderr.strip()}")
         checks["imports"] = False
 
-    # DTALite (path4gmns) import check — bundled binary inside the wheel,
+    # DTALite (path4gmns) import check, bundled binary inside the wheel,
     # so successful import means the engine should run (modulo the libomp
     # runtime dependency on macOS, checked separately above).
     result = _run([pip_python, "-c",
@@ -230,7 +230,7 @@ def verify_installation() -> dict:
         _ok("DTALite (path4gmns) ready")
         checks["dtalite"] = True
     else:
-        _warn("DTALite not available — `uv pip install path4gmns` (Mac: also brew install libomp)")
+        _warn("DTALite not available, `uv pip install path4gmns` (Mac: also brew install libomp)")
         checks["dtalite"] = False
 
     # Engine check
@@ -251,7 +251,7 @@ def verify_installation() -> dict:
     if scenario_dirs:
         _ok(f"{len(scenario_dirs)} scenario(s) found: {', '.join(s.name for s in scenario_dirs[:5])}")
     else:
-        _warn("No scenarios found — generate one to get started")
+        _warn("No scenarios found, generate one to get started")
     checks["scenarios"] = len(scenario_dirs)
 
     return checks
@@ -283,7 +283,7 @@ def print_next_steps(has_java: bool, has_sumo: bool, has_libomp: bool = True):
 {CYAN}Run simulation (all 3 engines):{RESET}
   python run.py --scenario chicago_1k_car --engine sumo,matsim,dtalite --mode meso --repeats 3
 
-{CYAN}Run the canonical benchmark (Phase 12+ — per-scenario JSONs land at runs/<runspec>/<scenario>/):{RESET}
+{CYAN}Run the canonical benchmark (Phase 12+, per-scenario JSONs land at runs/<runspec>/<scenario>/):{RESET}
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
 
 {CYAN}Analyze results (canonical 3-step post-benchmark pipeline):{RESET}
