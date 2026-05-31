@@ -9,6 +9,7 @@
       "short_tag": "db8d786",
       "git_sha": "db8d786d53b7562fd4aa58105cdef54e14330a55",
       "git_sha_url": "https://github.com/PhanidharAkula/SimForge/commit/db8d786d53b7562fd4aa58105cdef54e14330a55",
+      "branch_status": "Built from commit db8d786 on branch phase-14-canonical-routes, which was later consolidated into the default 'release' branch (and history rewritten). That commit is no longer reachable from release and the branch tag no longer exists on GitHub; the GHCR image under this tag remains the immutable artifact the thesis benchmark numbers were measured against. Pull by digest if the tag is unavailable.",
       "digest_sha256": "see https://github.com/PhanidharAkula/SimForge/pkgs/container/simforge",
       "pinned_at": "2026-05-20",
       "verified_on_cardinal": true,

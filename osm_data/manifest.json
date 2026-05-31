@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "description": "OSM PBF snapshots used to build network.xml for SimForge scenarios. The SHA256 hash is the provenance anchor — anyone downloading from the published URL and getting the same hash is working with bit-identical data.",
+  "description": "OSM PBF snapshots used to build network.xml for SimForge scenarios. The SHA256 hash is the provenance anchor: anyone downloading from the published URL and getting the same hash is working with bit-identical data.",
   "source": "Geofabrik (https://download.geofabrik.de/)",
   "license": "OSM data is ODbL 1.0 (https://www.openstreetmap.org/copyright)",
   "downloaded_on": "2026-04-22",
@@ -11,7 +11,7 @@
       "sha256": "ecd3ed6eb45f8dab8be8e5c7d869f68d83cca49daac3383c52cb19ccdafdac8a",
       "md5": "555edf10a19723f8d3f62993a46bf619",
       "size_bytes": 348231395,
-      "coverage": "State of Illinois — contains Chicago and its metropolitan area",
+      "coverage": "State of Illinois, contains Chicago and its metropolitan area",
       "cities": ["chicago"]
     },
     "new-york": {
@@ -20,7 +20,7 @@
       "sha256": "7585a75f1a1657ed959e98ca0771f4bd128ee0d1eac34c5582926ba636e5eca3",
       "md5": "75d18d3aca99faf08157ed2b0ec0b307",
       "size_bytes": 489250393,
-      "coverage": "State of New York — contains NYC and its metropolitan area",
+      "coverage": "State of New York, contains NYC and its metropolitan area",
       "cities": ["nyc"]
     },
     "california": {
@@ -29,7 +29,7 @@
       "sha256": "c5713ff03cbd868f08ec35ff89253815b14e02421bc38c94ad82ae2f5fc5726b",
       "md5": "9b255173fa549ce2ebd5e047f43c804c",
       "size_bytes": 1305423208,
-      "coverage": "State of California — contains Los Angeles and its metropolitan area",
+      "coverage": "State of California, contains Los Angeles and its metropolitan area",
       "cities": ["la"]
     }
   }

@@ -28,8 +28,8 @@ Each row represents **one trip**.
 
 ### Optional but allowed columns:
 
-- `purpose` (V5+ generator emits a fixed enum — see below)
-- `dest_source` (V5+ provenance tag — see below)
+- `purpose` (V5+ generator emits a fixed enum, see below)
+- `dest_source` (V5+ provenance tag, see below)
 - `passengers`
 - `value_of_time`
 - `vehicle_type`
@@ -54,7 +54,7 @@ These are allowed for future flexibility. v0 tools may ignore them, but parsers 
 
 | Column              | Type     | Requirement | Description                                                        |
 | :------------------ | :------- | :---------- | :----------------------------------------------------------------- |
-| **`purpose`**       | `string` | optional    | Trip purpose. V5+ census generator emits the 4-step taxonomy `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained` (see below). Other producers may use any string. |
+| **`purpose`**       | `string` | optional    | Trip purpose. V5+ census generator emits the six-purpose taxonomy `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained` (see below). Other producers may use any string. |
 | **`dest_source`**   | `string` | optional    | Provenance of the destination. V5+ census generator emits `schedule` (cityscape PUMS-derived workplace) or `gravity` (commute-calibrated gravity-model fallback). Logged for downstream split analysis. |
 | **`passengers`**    | `int`    | optional    | Number of occupants in the vehicle (default is 1 if omitted).      |
 | **`value_of_time`** | `float`  | optional    | Value of time (e.g., in USD/hour), for cost-based analyses.        |
@@ -79,12 +79,12 @@ provenance suffixes:
 Adapters consume the canonical 5-column subset (`trip_id`,
 `origin_node_id`, `destination_node_id`, `departure_time_s`, `mode`)
 by name and ignore both `purpose` and `dest_source`. The columns are
-informational — used by `evaluation/audit_fairness.py` (Q5 section)
+informational, used by `evaluation/audit_fairness.py` (Q5 section)
 and `evaluation/analyze_benchmark.py`
 (`print_demand_composition_table`) to surface per-scenario demand
 mix without coordinate re-derivation.
 
-Engines treat each row as an independent vehicle/agent — chain
+Engines treat each row as an independent vehicle/agent, chain
 semantics are not preserved at simulation time (would require SUMO
 `<person>` activity sequences or MATSim `<plan>` chains, neither
 wired today).

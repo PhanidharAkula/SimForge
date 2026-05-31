@@ -133,10 +133,10 @@ top-level `<turn_restrictions>` block.
 **Semantics:**
 
 - A `no_*_turn` restriction forbids the specific `(from_link, to_link)` pair at `via_node`.
-- An `only_*_turn` restriction forbids every `(from_link, *)` pair at `via_node` *except* the one named — i.e. the only allowed exit from `from_link` is `to_link`.
+- An `only_*_turn` restriction forbids every `(from_link, *)` pair at `via_node` *except* the one named, i.e. the only allowed exit from `from_link` is `to_link`.
 - `via=way` restrictions (rare, restriction spans a sequence of ways) are not currently emitted.
 - Adapter enforcement (V5+):
-  - **SUMO** and **MATSim** enforce these via state-aware BFS pre-routing in `pipeline/network/turn_restrictions.shortest_path_with_restrictions` — the prescribed route avoids forbidden movements and the engine drives it verbatim.
+  - **SUMO** and **MATSim** enforce these via state-aware BFS pre-routing in `pipeline/network/turn_restrictions.shortest_path_with_restrictions`; the prescribed route avoids forbidden movements and the engine drives it verbatim.
   - **DTALite** receives the data as a sibling `movement.csv` (GMNS-conformant), but path4gmns 0.10.0 does not ingest movement.csv natively yet; DTALite's UE assignment may still cross forbidden movements. This is a documented cross-engine asymmetry. See `pipeline/network/turn_restrictions.py` module docstring and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
 
 ---

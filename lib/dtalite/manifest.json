@@ -3,7 +3,7 @@
     "path4gmns_version": "0.10.0",
     "upstream_repo": "https://github.com/jdlph/Path4GMNS",
     "dtalite_repo": "https://github.com/asu-trans-ai-lab/DTALite",
-    "binary": "DTALiteClassic (mode 1: path-based UE)",
+    "binary": "DTALiteMM (path-based UE)",
     "format_standard": "GMNS",
     "format_spec_url": "https://github.com/zephyr-data-specs/GMNS",
     "license": "Apache-2.0",
