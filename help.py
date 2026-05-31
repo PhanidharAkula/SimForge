@@ -186,7 +186,7 @@ PROJECT STRUCTURE (alphabetical, repo root):
   scenarios/          Generated canonical data bundles
   scripts/            5 ready-to-use generation scripts (01–05)
   tests/              Test suite (pytest, ~639 tests across 29 files
-                      with all 5 bundles generated; ~502 with just the 3
+                      with all 5 bundles generated; ~567 with just the 3
                       tracked bundles. +36 per parametrized integrity tests
                       per bundle in scenarios/)
   tools/              Operator utilities (analyze_scenarios.py, clean.sh,
@@ -772,7 +772,7 @@ HELP_TESTS = """
 SimForge ships ~639 tests across 29 files when all 5 bundles are
 generated (chicago_1k_car + nyc_10k_car + la_50k_car tracked, plus
 chicago_200k_car + nyc_500k_car generated locally via the scripts/).
-The count is 394 base + 36 parametrized per bundle in `scenarios/`,
+The count is 459 base + 36 parametrized per bundle in `scenarios/`,
 so:
   • 0 bundles in scenarios/        → 459 tests
   • 3 tracked bundles only         → 459 + 3×36 = 567 tests
@@ -814,14 +814,16 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m "not requires_sumo"
 
 TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
-~502 with just the 3 tracked bundles. Alphabetical):
+~567 with just the 3 tracked bundles. Alphabetical):
 
+  test_adapter_contract.py        (6)   Three-function adapter contract regression
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
                                         (incl. Phase 10 demand composition table)
   test_audit_fairness.py          (40)  Q1-Q5 audit helpers + 5-layout detector
                                         (Phase 12+ mode-segmented + back-compat)
                                         + _discover_modes + synthetic-run-dir test
+  test_canonical_routes.py        (11)  Phase 14 shared parallel-BFS route cache
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
   test_demand_composition.py      (7)   V5+ Phase 10, `purpose` column tally,
                                         AM/PM peak split, chain-leg counter,
@@ -833,6 +835,7 @@ TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
   test_feasibility.py             (19)  Shared cross-engine trip filter
                                         + mode-aware feasibility (V5)
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
+  test_generate_scorecard.py      (22)  Scorecard renderer (tools/generate_scorecard)
   test_matsim_adapter.py          (26)  MATSim helpers + end-to-end + sweep,
                                         + Phase 12.1 route-text format pin
                                         (~10 min on M-series Mac, see
@@ -843,6 +846,7 @@ TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
                                         JWTRNS mapping + Phase 9 HBSchool helpers
                                         + AM_PURPOSES/PM_PURPOSES disjointness
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
+  test_recover_partial_summary.py (6)   Partial-summary recovery from interrupted runs
   test_reproducibility_metrics.py (15)  R-score core + edge cases
   test_run_benchmark.py           (12)  V5+ Phase 12, BenchmarkHarness
                                         explicit-output flag, prep-cache hot/cold
@@ -863,6 +867,7 @@ TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
   test_vehicle_types.py           (19)  V5+ Phase 11, canonical car constants,
                                         SUMO/MATSim XML emission, cross-engine
                                         equivalence (length+gap == effective)
+  test_visualization.py           (13)  Visualization component (loaders, coverage, CLI)
 
 test_scenario_data_integrity.py classes (7, parametrized over every scenario):
   TestFileExistence       All 5 canonical files exist
