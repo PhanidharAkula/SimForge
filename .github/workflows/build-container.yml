@@ -6,10 +6,9 @@ name: Build + publish SimForge container
 # reproducibility) + §2.7 (OCI / Singularity).
 #
 # Triggers:
-#   - Push to phase-14-canonical-routes branch: builds + tags as the
-#     branch name + the commit SHA.
-#   - Push to main: builds + tags as `latest` + `main` + SHA.
-#   - Manual dispatch: builds + tags as <branch>-manual + SHA.
+#   - Push to release (the default branch): builds + tags as the branch
+#     name + `latest` + the commit SHA.
+#   - Manual dispatch: builds + tags as <branch> + SHA.
 #
 # Cardinal pull (after this workflow lands an image):
 #   singularity pull docker://ghcr.io/phanidharakula/simforge:latest
@@ -21,8 +20,7 @@ name: Build + publish SimForge container
 on:
   push:
     branches:
-      - main
-      - phase-14-canonical-routes
+      - release
     paths-ignore:
       - 'doc/**'
       - '*.md'
@@ -67,8 +65,8 @@ jobs:
           TAGS="${TAGS},ghcr.io/${REPO_LOWER}:${SHORT_SHA}"
           TAGS="${TAGS},ghcr.io/${REPO_LOWER}:${{ github.sha }}"
 
-          # Only tag `latest` on main branch to keep latest stable
-          if [ "${{ github.ref_name }}" = "main" ]; then
+          # Only tag `latest` on the release branch to keep latest stable
+          if [ "${{ github.ref_name }}" = "release" ]; then
             TAGS="${TAGS},ghcr.io/${REPO_LOWER}:latest"
           fi
 
