@@ -1,17 +1,17 @@
-# Engine Comparison — Thesis Reference
+# Engine Comparison, Thesis Reference
 
-**Purpose:** A consolidated reference for thesis writing. Captures every cross-engine comparison point developed during Version_4 — paradigm spread, wallclock estimates, reproducibility, output fidelity, and "what question each engine answers" framing — across the five engines that appear anywhere in SimForge's lineage:
+**Purpose:** A consolidated reference for thesis writing. Captures every cross-engine comparison point developed during Version_4, paradigm spread, wallclock estimates, reproducibility, output fidelity, and "what question each engine answers" framing, across the five engines that appear anywhere in SimForge's lineage:
 
 - **Shipping:** SUMO microscopic, SUMO mesoscopic, MATSim
 - **Proposed (pending spike test):** DTALite
 - **Dropped:** LPSim, QarSUMO
 
-**How to use this doc:** Sections 2–7 provide the comparison tables. Section 8 is a "thesis-defense quote bank" — phrasings you can lift directly into the final thesis when defending engine selection, paradigm spread, or the abandonment decisions. Section 9 cross-links the supporting docs.
+**How to use this doc:** Sections 2–7 provide the comparison tables. Section 8 is a "thesis-defense quote bank", phrasings you can lift directly into the final thesis when defending engine selection, paradigm spread, or the abandonment decisions. Section 9 cross-links the supporting docs.
 
 **Companion docs:**
-- `LPSIM_RETROSPECTIVE.md` — full LPSim integration narrative + abandonment rationale
-- `QARSUMO_RETROSPECTIVE.md` — QarSUMO drop rationale + audit trail
-- `THIRD_ENGINE_OPTIONS.md` — deep research verdicts on DTALite/CityFlow/POLARIS
+- `LPSIM_RETROSPECTIVE.md`, full LPSim integration narrative + abandonment rationale
+- `QARSUMO_RETROSPECTIVE.md`, QarSUMO drop rationale + audit trail
+- `THIRD_ENGINE_OPTIONS.md`, deep research verdicts on DTALite/CityFlow/POLARIS
 
 ---
 
@@ -37,13 +37,13 @@ The dominant paradigms in academic traffic simulation, mapped to SimForge's matr
 | **Mesoscopic agent-based** | Agents with plans (origin, destination, mode, route) iteratively replan toward equilibrium | MATSim |
 | **Mesoscopic DTA equilibrium** | Iterative assignment seeking user-equilibrium link flows under route-choice principles | DTALite |
 | **GPU-accelerated mesoscopic** | Parallel B18 traffic flow on CUDA | LPSim (would have been; abandoned) |
-| **Macroscopic LWR/CTM** | Cell-transmission model, fluid-flow PDEs | Not in SimForge — out of thesis scope |
+| **Macroscopic LWR/CTM** | Cell-transmission model, fluid-flow PDEs | Not in SimForge, out of thesis scope |
 
 **Key observation for the thesis:** A 3-engine matrix of {SUMO micro, MATSim, DTALite} covers **three distinct paradigms** (microscopic + queue-based agent + DTA equilibrium). A 2-engine matrix of just {SUMO, MATSim} covers **two**, with overlap on the queue-based mesoscopic side. Paradigm spread is the most defensible "why these engines" answer in a benchmarking thesis.
 
 ## 3. Wallclock estimates at SimForge scenario sizes
 
-Order-of-magnitude estimates from the plan-era planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k under Phase 14 + Wave 2). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate — see Chapter 6 §6.2.2.
+Order-of-magnitude estimates from the plan-era planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k under Phase 14 + Wave 2). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate, see Chapter 6 §6.2.2.
 
 | Scenario | SUMO meso | SUMO micro | MATSim | DTALite (est.) | LPSim (would have been) |
 |---|---|---|---|---|---|
@@ -54,9 +54,9 @@ Order-of-magnitude estimates from the plan-era planning phase, retained here as 
 
 **What the table tells the thesis:**
 
-- **DTALite is competitive with MATSim** at every scale and **faster than SUMO micro** at large scale. Not a speedup story — a "different paradigm at acceptable cost" story.
+- **DTALite is competitive with MATSim** at every scale and **faster than SUMO micro** at large scale. Not a speedup story, a "different paradigm at acceptable cost" story.
 - **LPSim's wallclock advantage was real but only for very large scenarios** (5M+ trips, out of thesis scope). At your scenario sizes, GPU launch overhead dominates and the advantage shrinks to single-digit seconds.
-- **The thesis should not claim DTALite is "faster" than current engines** — it isn't. It is *different in paradigm at comparable cost*.
+- **The thesis should not claim DTALite is "faster" than current engines**, it isn't. It is *different in paradigm at comparable cost*.
 
 ## 4. Reproducibility (the metric SimForge actually scores)
 
@@ -68,12 +68,12 @@ R-score = ratio of inter-run variance to mean (lower is better; R = 1.0 means bi
 | SUMO micro | Fully deterministic with fixed `--seed` | 1.0 ✅ |
 | MATSim | Deterministic with `lastIteration=0` | 1.0 ✅ |
 | **DTALite** | Equilibrium-seeking algorithm with fixed iteration order, no atomic reductions | **1.0 expected** ✅ |
-| LPSim (would have been) | **Non-deterministic** — `atomicAdd` GPU reductions vary across runs even with same seed (documented LPSim behavior) | < 1.0 — would have required a "GPU non-determinism" footnote in every results table |
-| QarSUMO (would have been) | Inherits SUMO's determinism (because the fallback was bit-identical to SUMO meso) | 1.0 — but trivially, because it added zero new signal |
+| LPSim (would have been) | **Non-deterministic**, `atomicAdd` GPU reductions vary across runs even with same seed (documented LPSim behavior) | < 1.0, would have required a "GPU non-determinism" footnote in every results table |
+| QarSUMO (would have been) | Inherits SUMO's determinism (because the fallback was bit-identical to SUMO meso) | 1.0, but trivially, because it added zero new signal |
 
-**Thesis-defensible claim:** All three shipping/proposed engines (SUMO meso, MATSim, DTALite) are fully deterministic. SimForge's R = 1.0 ceiling is achievable on every cell of the matrix. **LPSim's atomicAdd non-determinism is one of the technical reasons the abandonment decision was correct** — it would have forced an explanatory footnote on every reproducibility number.
+**Thesis-defensible claim:** All three shipping/proposed engines (SUMO meso, MATSim, DTALite) are fully deterministic. SimForge's R = 1.0 ceiling is achievable on every cell of the matrix. **LPSim's atomicAdd non-determinism is one of the technical reasons the abandonment decision was correct**, it would have forced an explanatory footnote on every reproducibility number.
 
-## 5. Output fidelity — what each engine produces
+## 5. Output fidelity, what each engine produces
 
 | Engine | Per-vehicle output | Per-link output | Equilibrium output | Format |
 |---|---|---|---|---|
@@ -84,7 +84,7 @@ R-score = ratio of inter-run variance to mean (lower is better; R = 1.0 means bi
 | LPSim (was) | YES (`<NUM_PASSES>_people.csv`) | NO (aggregated only) | NO | CSV |
 | QarSUMO (was) | (would have inherited SUMO's) | (would have inherited SUMO's) | NO | XML |
 
-**Key point for the thesis:** DTALite is the **only engine in the matrix that produces equilibrium output as a first-class artifact**. This makes it useful as a "reference equilibrium" that SUMO meso (one-shot) and MATSim (iteratively converging) can be checked against — a cross-engine *validation* angle, not just a comparison angle.
+**Key point for the thesis:** DTALite is the **only engine in the matrix that produces equilibrium output as a first-class artifact**. This makes it useful as a "reference equilibrium" that SUMO meso (one-shot) and MATSim (iteratively converging) can be checked against, a cross-engine *validation* angle, not just a comparison angle.
 
 ## 6. The "what question does each engine answer" framing
 
@@ -92,12 +92,12 @@ Each engine answers a *slightly different question* about the same scenario. Thi
 
 | Engine | The question it answers |
 |---|---|
-| **SUMO micro** | "What travel times do vehicles experience in a single time-stepped car-following simulation?" — high-fidelity, one realization |
-| **SUMO meso** | "What travel times do vehicles experience when link dynamics are aggregated to queues?" — medium-fidelity, one realization |
-| **MATSim** | "What travel times emerge when agents iteratively replan and seek equilibrium over many days?" — co-evolutionary equilibrium |
-| **DTALite** | "What are the user-equilibrium link flows and travel times under the assumption that no driver can unilaterally improve their route?" — analytical iterative equilibrium |
+| **SUMO micro** | "What travel times do vehicles experience in a single time-stepped car-following simulation?", high-fidelity, one realization |
+| **SUMO meso** | "What travel times do vehicles experience when link dynamics are aggregated to queues?", medium-fidelity, one realization |
+| **MATSim** | "What travel times emerge when agents iteratively replan and seek equilibrium over many days?", co-evolutionary equilibrium |
+| **DTALite** | "What are the user-equilibrium link flows and travel times under the assumption that no driver can unilaterally improve their route?", analytical iterative equilibrium |
 | **LPSim (was)** | (Would have been the same question as SUMO meso, answered on GPU) |
-| **QarSUMO (was)** | (Would have been the same question as SUMO meso, answered in parallel — bit-identical fallback meant it answered exactly the same question with exactly the same numbers) |
+| **QarSUMO (was)** | (Would have been the same question as SUMO meso, answered in parallel, bit-identical fallback meant it answered exactly the same question with exactly the same numbers) |
 
 **The cross-engine comparison is meaningful because the engines answer different questions about the same data.** Agreement across paradigms = strong signal that the answer is robust to modeling-paradigm choice. Disagreement across paradigms = research finding worth reporting.
 
@@ -109,7 +109,7 @@ Each engine answers a *slightly different question* about the same scenario. Thi
 | Cross-engine agreement = some signal | Cross-engine agreement across **three paradigms** = much stronger signal |
 | No GMNS / open-standard adapter | GMNS adapter demonstrates SimForge handles community standards, not just engine-private formats |
 | Engine selection narrative is "the two engines that worked" | Engine selection narrative is "three paradigms validated through systematic ruling-out of two failures + one success" |
-| 2-engine matrix in results tables | 3-engine matrix — plan-promised count met |
+| 2-engine matrix in results tables | 3-engine matrix, plan-promised count met |
 | Reproducibility ceiling shared by 2 engines | Reproducibility ceiling shared by 3 engines, all R = 1.0 |
 
 ## 8. Thesis-defense quote bank
@@ -118,11 +118,11 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.1 On engine selection (why these engines)
 
-> SimForge's three primary engines — SUMO microscopic, MATSim queue-based agent simulation, and DTALite mesoscopic dynamic traffic assignment — were chosen to cover three fundamentally different paradigms in the academic traffic simulation literature. SUMO microscopic answers "what travel times do vehicles experience in a single time-stepped car-following simulation"; MATSim answers "what travel times emerge when agents iteratively replan toward equilibrium"; DTALite answers "what are the user-equilibrium link flows under the assumption that no driver can unilaterally improve their route." Cross-engine agreement across these three paradigms provides much stronger evidence of result robustness than agreement within a single paradigm would.
+> SimForge's three primary engines, SUMO microscopic, MATSim queue-based agent simulation, and DTALite mesoscopic dynamic traffic assignment, were chosen to cover three fundamentally different paradigms in the academic traffic simulation literature. SUMO microscopic answers "what travel times do vehicles experience in a single time-stepped car-following simulation"; MATSim answers "what travel times emerge when agents iteratively replan toward equilibrium"; DTALite answers "what are the user-equilibrium link flows under the assumption that no driver can unilaterally improve their route." Cross-engine agreement across these three paradigms provides much stronger evidence of result robustness than agreement within a single paradigm would.
 
 ### 8.2 On the abandonment of LPSim
 
-> LPSim was selected in Version_4 Phase B as a GPU-accelerated mesoscopic comparator. After exhaustive integration work — 12 commits across two debugging sessions, including in-container source rebuild, CUDA toolchain reconciliation, Boost compatibility patches, and CUDA architecture target changes — the rebuilt binary continued to crash with SIGSEGV at first kernel launch on networks of 20,000 nodes or larger. The upstream codebase shows clear signs of abandonment: the pinned commit dates from 2024, the repository is missing source files referenced by its own build script, the build chain assumes Boost 1.59 against a modern g++ that has incompatible name-lookup semantics, and there is no continuous integration. We retain the LPSim adapter, test suite, manifest, and build pipeline in the repository as ready-to-reactivate code; the abandonment decision is documented in `doc/engines/LPSIM_RETROSPECTIVE.md` and is itself evidence that SimForge's adapter pattern handles engine churn cleanly.
+> LPSim was selected in Version_4 Phase B as a GPU-accelerated mesoscopic comparator. After exhaustive integration work, 12 commits across two debugging sessions, including in-container source rebuild, CUDA toolchain reconciliation, Boost compatibility patches, and CUDA architecture target changes, the rebuilt binary continued to crash with SIGSEGV at first kernel launch on networks of 20,000 nodes or larger. The upstream codebase shows clear signs of abandonment: the pinned commit dates from 2024, the repository is missing source files referenced by its own build script, the build chain assumes Boost 1.59 against a modern g++ that has incompatible name-lookup semantics, and there is no continuous integration. We retain the LPSim adapter, test suite, manifest, and build pipeline in the repository as ready-to-reactivate code; the abandonment decision is documented in `doc/engines/LPSIM_RETROSPECTIVE.md` and is itself evidence that SimForge's adapter pattern handles engine churn cleanly.
 
 ### 8.3 On the QarSUMO drop
 
@@ -130,11 +130,11 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.4 On reproducibility (R-score)
 
-> SimForge's reproducibility metric (R-score, defined in §X.X) requires bit-identical output across N = 5 repeats with fixed seeds. All three primary engines — SUMO mesoscopic, MATSim with `lastIteration=0`, and DTALite — are fully deterministic by construction and achieve R = 1.0 on every scenario in the benchmark matrix. The abandoned LPSim engine would have required an explanatory footnote on every reproducibility number because its GPU code path uses `atomicAdd` reductions that are not bit-deterministic across runs even with identical seeds; this non-determinism is documented LPSim behavior and one of the technical reasons the abandonment decision was correct.
+> SimForge's reproducibility metric (R-score, defined in §X.X) requires bit-identical output across N = 5 repeats with fixed seeds. All three primary engines, SUMO mesoscopic, MATSim with `lastIteration=0`, and DTALite, are fully deterministic by construction and achieve R = 1.0 on every scenario in the benchmark matrix. The abandoned LPSim engine would have required an explanatory footnote on every reproducibility number because its GPU code path uses `atomicAdd` reductions that are not bit-deterministic across runs even with identical seeds; this non-determinism is documented LPSim behavior and one of the technical reasons the abandonment decision was correct.
 
 ### 8.5 On adaptability of the framework
 
-> SimForge's adapter pattern is engine-agnostic by construction. Every engine integration follows the same three-function contract: `prepare_<engine>_inputs`, `run_<engine>`, `parse_<engine>_output`. A new engine is added by implementing those functions, documenting the schema mapping in a `MAPPING.md`, pinning the engine version in `lib/<engine>/manifest.json`, writing a unit test suite, and registering the engine in the runspec module. No core SimForge code needs to change. The three engines we ship are not the framework's limit — they are its demonstration. The two engines we abandoned (LPSim, QarSUMO) are evidence that the same adapter pattern that makes integration cheap also makes removal cheap when an engine cannot be honestly compared.
+> SimForge's adapter pattern is engine-agnostic by construction. Every engine integration follows the same three-function contract: `prepare_<engine>_inputs`, `run_<engine>`, `parse_<engine>_output`. A new engine is added by implementing those functions, documenting the schema mapping in a `MAPPING.md`, pinning the engine version in `lib/<engine>/manifest.json`, writing a unit test suite, and registering the engine in the runspec module. No core SimForge code needs to change. The three engines we ship are not the framework's limit, they are its demonstration. The two engines we abandoned (LPSim, QarSUMO) are evidence that the same adapter pattern that makes integration cheap also makes removal cheap when an engine cannot be honestly compared.
 
 ### 8.6 On paradigm spread (one-line claim)
 
@@ -142,7 +142,7 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.7 On wallclock honesty
 
-> DTALite's wallclock at SimForge scenario sizes is comparable to MATSim and slower than SUMO mesoscopic. The thesis does not claim DTALite is faster than the existing engines — it claims that DTALite contributes a different *paradigm* at *acceptable computational cost*, which is the relevant benchmark for a cross-engine comparison framework.
+> DTALite's wallclock at SimForge scenario sizes is comparable to MATSim and slower than SUMO mesoscopic. The thesis does not claim DTALite is faster than the existing engines, it claims that DTALite contributes a different *paradigm* at *acceptable computational cost*, which is the relevant benchmark for a cross-engine comparison framework.
 
 ### 8.8 On the "two-engine framework" fallback
 
@@ -151,10 +151,10 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 ## 9. Cross-references to supporting material
 
 - **Methodology chapter:** `doc/chapters/methods.md` §3.4 (per-engine adapter descriptions, all three primary engines updated for Version_5).
-- **Results chapter:** `doc/chapters/results.md` — DTALite columns replace LPSim columns; §5.4 GPU-speedup limitation rewritten as the paradigm-spread claim with retrospective links.
+- **Results chapter:** `doc/chapters/results.md`, DTALite columns replace LPSim columns; §5.4 GPU-speedup limitation rewritten as the paradigm-spread claim with retrospective links.
 - **CHANGELOG:** Version_5 unreleased section enumerates the LPSim removal and DTALite addition; SCC-fairness fixes and audit_fairness landings tracked separately under Phase 4.
-- **Glossary:** `doc/GLOSSARY.md` — DTALite entry added under §D; LPSim entry rewritten as "abandoned" with retrospective pointer.
-- **Stress-test audit:** `doc/STRESS_TEST_AUDIT.md` — historical Version_3 snapshot, no updates needed; the existing "Superseded by Version_4" header is correct.
-- **Todo:** `todo.md` — Version_5 Phase B' (DTALite landing) replaces Phase B (LPSim landing); engine matrix marks LPSim/POLARIS/CityFlow as evaluated-and-rejected with retrospective links.
-- **Experiment log:** `doc/EXPERIMENT_LOG.md` — chronological journal of every commit, job ID, and measured number; the source for any specific Q1–Q4 fairness audit result you want to cite.
-- **Fairness audit script:** `evaluation/audit_fairness.py` — invoke as `python -m evaluation.audit_fairness <run_dir>` to verify any benchmark run was actually fair across engines (Q1–Q4 PASS/WARN/FAIL report).
+- **Glossary:** `doc/GLOSSARY.md`, DTALite entry added under §D; LPSim entry rewritten as "abandoned" with retrospective pointer.
+- **Stress-test audit:** `doc/STRESS_TEST_AUDIT.md`, historical Version_3 snapshot, no updates needed; the existing "Superseded by Version_4" header is correct.
+- **Todo:** `todo.md`, Version_5 Phase B' (DTALite landing) replaces Phase B (LPSim landing); engine matrix marks LPSim/POLARIS/CityFlow as evaluated-and-rejected with retrospective links.
+- **Experiment log:** `doc/EXPERIMENT_LOG.md`, chronological journal of every commit, job ID, and measured number; the source for any specific Q1–Q4 fairness audit result you want to cite.
+- **Fairness audit script:** `evaluation/audit_fairness.py`, invoke as `python -m evaluation.audit_fairness <run_dir>` to verify any benchmark run was actually fair across engines (Q1–Q4 PASS/WARN/FAIL report).

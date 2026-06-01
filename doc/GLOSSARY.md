@@ -10,7 +10,7 @@ Reference for the acronyms and domain terms that appear across the codebase, the
 A simulator-specific module under `adapters/<engine>/` that converts a *canonical scenario bundle* into the engine's native input files and parses its output back into a uniform metric object. Adapters are intentionally thin: their only responsibility is byte-deterministic translation.
 
 ### AGEP
-US Census variable for "Age of person (in years)". Used by V5+ HBSchool detection — household members with `0 ≤ AGEP < 18` are treated as school-age dependents, gating the parent's `HBSchool_AM/PM` chain emission. PUMS sentinel `-1` (Not applicable) is excluded.
+US Census variable for "Age of person (in years)". Used by V5+ HBSchool detection, household members with `0 ≤ AGEP < 18` are treated as school-age dependents, gating the parent's `HBSchool_AM/PM` chain emission. PUMS sentinel `-1` (Not applicable) is excluded.
 
 ### AM_PURPOSES / PM_PURPOSES
 Module-level frozensets in `pipeline/demand/generate_census_demand.py` listing the V5+ trip-purpose labels that consume each peak's budget. `AM_PURPOSES = {HBW_AM, HBSchool_AM, HBW_AM_chained}`; `PM_PURPOSES = {HBW_PM, HBSchool_PM, HBW_PM_chained}`. Re-exported by `evaluation/demand_composition.py` and pinned by `tests/test_parse_model_file.py::test_peak_purpose_sets_cover_all_chain_legs` so a future Phase that adds a chain leg cannot drift the budget split silently.
@@ -26,13 +26,13 @@ A *coverage diagnostic* class flagged when an `(engine, mode)` cell is present i
 The simulator-agnostic intermediate representation defined in `canonical/schema/`. A scenario bundle consists of `network.xml`, `demand.csv`, `signals.xml`, `config.xml`, and `manifest.xml`. Documented in `doc/SCENARIO_GENERATION.md`.
 
 ### Census tract
-A US Census Bureau geographic unit of ~4,000 residents. SimForge uses *PUMS* tract-level demographic and commute data to calibrate trip origins and travel-time targets. On the *visualization* branch, the Cartographic Boundary 2024 (500k resolution) tract polygons are used directly as the `od_*` and `travel_time` choropleth geometry — see *Choropleth*.
+A US Census Bureau geographic unit of ~4,000 residents. SimForge uses *PUMS* tract-level demographic and commute data to calibrate trip origins and travel-time targets. On the *visualization* branch, the Cartographic Boundary 2024 (500k resolution) tract polygons are used directly as the `od_*` and `travel_time` choropleth geometry, see *Choropleth*.
 
 ### Choropleth
 A thematic map style in which a scalar value (here: per-tract trip count or per-tract mean travel time) is rendered as a fill color on a pre-defined polygon (here: a US Census tract). SimForge's `od_origins` / `od_destinations` / `travel_time` renderers all use the choropleth style with a CityScape-derived 100-step blue→red log palette (origin/destination density) or `RdYlGn_r` (travel time). Light gray (`#dddddd`) marks tracts with no demand. Implementation: `visualization/render/od_choropleth.py` and `visualization/render/travel_time.py`.
 
 ### Cityscape
-The C++ activity-based population synthesizer + city-level digital-twin model generator that produces `<city>_model.txt` modelgen files. Developed by D. M. Rao (Miami University CSE); canonical paper: Rao, "CITYSCAPE: A City-Level Digital Twin Model Generator for Simulation & Analyses," *Proc. 2023 Winter Simulation Conference (WSC)* — cited as `rao2023cityscape` in the bibliography. Combines OSM, LandScan, US Census PUMS, and PUMA shapefiles into a streaming text format with `bld`/`hld`/`per` records. SimForge V5+ relies on cityscape's `model_gen/ScheduleGenerator.h:211-233` JWTRNS enum (Phase 5) and its `schedule[0]/[1]` workplace+home tuples (Phases 8-9). Source: <https://github.com/raodj/cityscape/tree/Schedule-generator>.
+The C++ activity-based population synthesizer + city-level digital-twin model generator that produces `<city>_model.txt` modelgen files. Developed by D. M. Rao (Miami University CSE); canonical paper: Rao, "CITYSCAPE: A City-Level Digital Twin Model Generator for Simulation & Analyses," *Proc. 2023 Winter Simulation Conference (WSC)*, cited as `rao2023cityscape` in the bibliography. Combines OSM, LandScan, US Census PUMS, and PUMA shapefiles into a streaming text format with `bld`/`hld`/`per` records. SimForge V5+ relies on cityscape's `model_gen/ScheduleGenerator.h:211-233` JWTRNS enum (Phase 5) and its `schedule[0]/[1]` workplace+home tuples (Phases 8-9). Source: <https://github.com/raodj/cityscape/tree/Schedule-generator>.
 
 ### Coverage diagnostic
 The audit emitted by `evaluation/analyze_benchmark.py` that flags three classes of silent gap: *low-sample cells*, *asymmetric coverage*, and silently-failed cells. See `doc/RESULTS_GUIDE.md` §4.1.
@@ -84,13 +84,13 @@ Standard 4-step transportation-planning prefix indicating one end of a trip is t
 Boolean attribute on `<node>` in V5+ `network.xml`. `"true"` when OSM tagged the node as `highway=traffic_signals`. Drives the V5+ Phase 6 OSM-grounded signal placement: `signals.xml` signalizes only nodes with `has_signal="true"`. See `canonical/schema/network_v0.md`.
 
 ### HBSchool_AM / HBSchool_PM
-V5+ purpose labels emitted by Phase 9b/9c. The first leg of a parent-with-kid school chain — `HBSchool_AM` is home → school (drop-off), `HBSchool_PM` is school → home (pickup). Chain partner is `HBW_AM_chained` / `HBW_PM_chained` respectively. Gating: parent has commute schedule + household member with `0 ≤ AGEP < 18` + nearest school within `_SCHOOL_MAX_KM = 5.0` km.
+V5+ purpose labels emitted by Phase 9b/9c. The first leg of a parent-with-kid school chain, `HBSchool_AM` is home → school (drop-off), `HBSchool_PM` is school → home (pickup). Chain partner is `HBW_AM_chained` / `HBW_PM_chained` respectively. Gating: parent has commute schedule + household member with `0 ≤ AGEP < 18` + nearest school within `_SCHOOL_MAX_KM = 5.0` km.
 
 ### HBW_AM / HBW_PM
 V5+ purpose labels for the standard Home-Based Work commute. `HBW_AM` is home → work (~8 AM arrival from cityscape `schedule[0]`), `HBW_PM` is work → home (~17:00 arrival from cityscape `schedule[1]`). Departure formula (V5+ Phase 8): `departure_s = arrival_time_s − commute_min × 60`.
 
 ### HBW_AM_chained / HBW_PM_chained
-V5+ purpose labels for the *continuation leg* of an HBSchool chain. `HBW_AM_chained` is school → work (parent dropping kid off then going to work); `HBW_PM_chained` is work → school (parent leaving work to pick up). SimForge-specific suffix layered on top of the standard HBW label — the standard 4-step taxonomy doesn't enumerate chained legs.
+V5+ purpose labels for the *continuation leg* of an HBSchool chain. `HBW_AM_chained` is school → work (parent dropping kid off then going to work); `HBW_PM_chained` is work → school (parent leaving work to pick up). SimForge-specific suffix layered on top of the standard HBW label, the standard 4-step taxonomy doesn't enumerate chained legs.
 
 ---
 
@@ -145,10 +145,10 @@ A simulation paradigm that models each vehicle individually with car-following a
 Cityscape's PUMS-based population synthesizer. Produces flat-text `<city>_model.txt` files (in `modelgen/`) containing buildings, households, and persons with full demographics + per-person workplace+home schedules. Parsed by `pipeline/demand/parse_model_file.py`. See *Cityscape* for branch and source pointers.
 
 ### `movement.csv` (V5+)
-GMNS-conformant turn-restriction file emitted by the DTALite adapter alongside `node.csv` / `link.csv` / `demand.csv`. Each row records a forbidden movement at a node (capacity = 0, penalty = 99999). path4gmns 0.10.0 does not natively ingest movement.csv — included as a *documentary* artefact for future engine versions and downstream tooling. See V5 Phase 7 cross-engine asymmetry note in `pipeline/network/turn_restrictions.py`.
+GMNS-conformant turn-restriction file emitted by the DTALite adapter alongside `node.csv` / `link.csv` / `demand.csv`. Each row records a forbidden movement at a node (capacity = 0, penalty = 99999). path4gmns 0.10.0 does not natively ingest movement.csv, included as a *documentary* artefact for future engine versions and downstream tooling. See V5 Phase 7 cross-engine asymmetry note in `pipeline/network/turn_restrictions.py`.
 
 ### MUTCD
-Manual on Uniform Traffic Control Devices — the US federal standard for traffic signal phasing. SimForge's signal-inference pipeline (`pipeline/signals/`) targets MUTCD-compatible phase timings inferred from intersection geometry.
+Manual on Uniform Traffic Control Devices, the US federal standard for traffic signal phasing. SimForge's signal-inference pipeline (`pipeline/signals/`) targets MUTCD-compatible phase timings inferred from intersection geometry.
 
 ---
 
@@ -158,7 +158,7 @@ Manual on Uniform Traffic Control Devices — the US federal standard for traffi
 National Electrical Manufacturers Association. NEMA TS 1/2 defines the standard 8-phase ring-and-barrier signal controller layout used by SimForge's signal generator.
 
 ### NHB (Non-Home-Based)
-Standard 4-step transportation-planning prefix for trips with neither end at home (e.g. work → lunch → work, shop → bank). SimForge currently emits **no** NHB trips — cityscape's modelgen schedule has only home-anchored activities (workplace at 8 AM, home return at 17:00). See *HB* for the contrast and `doc/MODELGEN_AND_MODES.md` §"Realism gaps" for the data-source rationale.
+Standard 4-step transportation-planning prefix for trips with neither end at home (e.g. work → lunch → work, shop → bank). SimForge currently emits **no** NHB trips, cityscape's modelgen schedule has only home-anchored activities (workplace at 8 AM, home return at 17:00). See *HB* for the contrast and `doc/MODELGEN_AND_MODES.md` §"Realism gaps" for the data-source rationale.
 
 ---
 
@@ -184,7 +184,7 @@ The 95th percentile of trip durations within a single run. Used as a tail-latenc
 The OSM project's binary serialization of map data (file extension `.osm.pbf`). Roughly an order of magnitude smaller than the equivalent XML and much faster to parse. SimForge stores *Geofabrik* state-level PBFs in `osm_data/` and slices them to a scenario bounding box with *pyosmium* before handing the slice to osmnx.
 
 ### PUMA (Public Use Microdata Area)
-A US Census Bureau geographic unit of ~100,000 residents (2,378 in the contiguous US). PUMAs are the spatial granularity at which *PUMS* records are released — every PUMS person record carries a PUMA code that identifies their general area without revealing exact address. *Cityscape* ModelGen uses the IPUMS-distributed PUMA shapefiles to spatially join PUMS records to OSM regions. Source: <https://usa.ipums.org/usa/volii/2010pumas.shtml>. Cited via `ipums_puma` in the bibliography.
+A US Census Bureau geographic unit of ~100,000 residents (2,378 in the contiguous US). PUMAs are the spatial granularity at which *PUMS* records are released, every PUMS person record carries a PUMA code that identifies their general area without revealing exact address. *Cityscape* ModelGen uses the IPUMS-distributed PUMA shapefiles to spatially join PUMS records to OSM regions. Source: <https://usa.ipums.org/usa/volii/2010pumas.shtml>. Cited via `ipums_puma` in the bibliography.
 
 ### PUMS (Public Use Microdata Sample)
 The US Census Bureau dataset of de-identified individual-level census records (American Community Survey 5-year file). SimForge uses PUMS columns *JWMNP* (commute time) and *JWTRNS* (commute mode) to calibrate demand. Default since the census-calibrated demand became the framework default; pass `--synthetic` to fall back to the gravity model. Cited via `uscensus_pums` in the bibliography.
@@ -197,7 +197,7 @@ Python bindings for `libosmium` (PyPI package `osmium`, `>=4.0` in `requirements
 ## Q
 
 ### QarSUMO
-A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope** — no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code). Full retrospective: [`doc/engines/QARSUMO_RETROSPECTIVE.md`](engines/QARSUMO_RETROSPECTIVE.md).
+A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope**, no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code). Full retrospective: [`doc/engines/QARSUMO_RETROSPECTIVE.md`](engines/QARSUMO_RETROSPECTIVE.md).
 
 ---
 
@@ -223,7 +223,7 @@ A maximal subgraph in which every node is reachable from every other node. SimFo
 Traffic signal timing plans, written to `signals.xml` in a scenario bundle. Inferred from OSM intersection geometry by `pipeline/signals/`.
 
 ### SimForge
-The framework documented by this repository — the cross-simulator benchmarking harness, the *canonical schema*, the adapters, and the evaluation tooling.
+The framework documented by this repository, the cross-simulator benchmarking harness, the *canonical schema*, the adapters, and the evaluation tooling.
 
 ### SRT (Simulated time : Real time)
 The ratio `simulated_time / wall_clock_time`. SRT > 1 means the simulator runs faster than real time. Reported by `evaluation/metrics/scalability.py`.
@@ -236,22 +236,22 @@ The Eclipse open-source traffic simulator. SimForge bundles `eclipse-sumo==1.26.
 ## T
 
 ### Throughput
-`trip_count / runtime`, expressed in trips/sec. A scaling metric derived from Table 5.1 runtime numbers and the per-engine `trip_count` column from `analyze_benchmark`'s output (no longer a dedicated figure since the executive-summary plot was retired in Phase 11.8 — see CHANGELOG).
+`trip_count / runtime`, expressed in trips/sec. A scaling metric derived from Table 5.1 runtime numbers and the per-engine `trip_count` column from `analyze_benchmark`'s output (no longer a dedicated figure since the executive-summary plot was retired in Phase 11.8, see CHANGELOG).
 
 ### Trip chain
-A sequence of related trips by the same person (e.g. home → school → work). SimForge V5+ Phase 9b/9c emits two-leg HBSchool chains (home → school → work in the morning; work → school → home in the evening). Engines simulate each leg as a separate vehicle — chain *demand* is preserved but chain *agency* (one person, multiple stops) is not. To preserve agency at simulation time would require SUMO `<person>` activity sequences or MATSim `<plan>` chains, neither wired today.
+A sequence of related trips by the same person (e.g. home → school → work). SimForge V5+ Phase 9b/9c emits two-leg HBSchool chains (home → school → work in the morning; work → school → home in the evening). Engines simulate each leg as a separate vehicle, chain *demand* is preserved but chain *agency* (one person, multiple stops) is not. To preserve agency at simulation time would require SUMO `<person>` activity sequences or MATSim `<plan>` chains, neither wired today.
 
 ### Trip purpose
 Categorical label on each `demand.csv` row indicating the role of the trip in a traveler's day. V5+ census generator emits one of six labels: `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained`. Adapters ignore the column; `evaluation/audit_fairness.py` Q5 and `evaluation/analyze_benchmark.py` use it for breakdown reporting. See `canonical/schema/demand_v0.md` and the *HB* / *NHB* entries.
 
 ### Turn restriction (V5+)
-An OSM `type=restriction via=node` relation extracted to the `<turn_restrictions>` block in V5+ `network.xml`. Each entry records `from_link`, `via_node`, `to_link`, and the restriction kind (`no_left_turn`, `no_u_turn`, `only_straight_on`, …). SUMO and MATSim adapters enforce them via state-aware BFS pre-routing (`pipeline/network/turn_restrictions.shortest_path_with_restrictions`). DTALite emits a sibling GMNS-conformant `movement.csv` but path4gmns 0.10.0 does not natively ingest it — documented cross-engine asymmetry. See `canonical/schema/network_v0.md` and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
+An OSM `type=restriction via=node` relation extracted to the `<turn_restrictions>` block in V5+ `network.xml`. Each entry records `from_link`, `via_node`, `to_link`, and the restriction kind (`no_left_turn`, `no_u_turn`, `only_straight_on`, …). SUMO and MATSim adapters enforce them via state-aware BFS pre-routing (`pipeline/network/turn_restrictions.shortest_path_with_restrictions`). DTALite emits a sibling GMNS-conformant `movement.csv` but path4gmns 0.10.0 does not natively ingest it, documented cross-engine asymmetry. See `canonical/schema/network_v0.md` and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
 
 ### TIGER/Line PRISECROADS
-US Census Bureau Topologically Integrated Geographic Encoding and Referencing roads dataset — *PRImary and SECondary ROADS*. Public-domain shapefiles at `tl_2024_<state_fips>_prisecroads.{shp,shx,dbf}`, cached under `cache/tiger/<fips>/` by `python -m tools.download_tiger_roads`. Used by the *visualization* branch as the roads basemap underneath the `od_*` and `travel_time` choropleths (renders cleaner than the canonical SimForge network for cartographic context).
+US Census Bureau Topologically Integrated Geographic Encoding and Referencing roads dataset, *PRImary and SECondary ROADS*. Public-domain shapefiles at `tl_2024_<state_fips>_prisecroads.{shp,shx,dbf}`, cached under `cache/tiger/<fips>/` by `python -m tools.download_tiger_roads`. Used by the *visualization* branch as the roads basemap underneath the `od_*` and `travel_time` choropleths (renders cleaner than the canonical SimForge network for cartographic context).
 
 ### TraCI
-SUMO's Traffic Control Interface — a TCP socket protocol for runtime interaction with a running SUMO instance. SimForge does **not** use TraCI; all SUMO adapter interaction is file-based (input XMLs in, `tripinfo.xml` and `statistics.xml` out) for byte-deterministic execution.
+SUMO's Traffic Control Interface, a TCP socket protocol for runtime interaction with a running SUMO instance. SimForge does **not** use TraCI; all SUMO adapter interaction is file-based (input XMLs in, `tripinfo.xml` and `statistics.xml` out) for byte-deterministic execution.
 
 ### tripinfo.xml
 SUMO's per-trip output XML, parsed by `evaluation/metrics/travel_time.py:parse_sumo_tripinfo` to extract mean travel time, P95, and trip count. On the *visualization* branch, `visualization/data/results.py:load_sumo_links` also reads this file to derive per-link volumes for `link_load` / `travel_time` rendering.
@@ -264,7 +264,7 @@ SUMO's per-trip output XML, parsed by `evaluation/metrics/travel_time.py:parse_s
 The pre-flight checks run by `pipeline/validation/validate_bundle.py` before any simulation: schema conformance, manifest hash match, referential integrity (every demand entry references a valid network node), and SCC reachability.
 
 ### Vehicle type (V11+ canonical)
-The canonical SimForge car parameters published in `adapters/common/vehicle_types.py` and consumed by all three adapters. Splits across engines as: SUMO `<vType id="simforge_car" length="5.0" minGap="2.5" width="1.8" maxSpeed="40.0" .../>`; MATSim `<vehicleType id="car"><length meter="7.5"/><width meter="1.8"/></vehicleType>` (length is *effective* spacing in MATSim's idiom = SUMO's physical length + minGap); DTALite `[agent_type] PCE=1.0`. Pre-V11 each adapter declared its own values inline with no shared source of truth — V11 centralises and pins the alignment via `tests/test_vehicle_types.py`. See `CHANGELOG.md` Phase 11.
+The canonical SimForge car parameters published in `adapters/common/vehicle_types.py` and consumed by all three adapters. Splits across engines as: SUMO `<vType id="simforge_car" length="5.0" minGap="2.5" width="1.8" maxSpeed="40.0" .../>`; MATSim `<vehicleType id="car"><length meter="7.5"/><width meter="1.8"/></vehicleType>` (length is *effective* spacing in MATSim's idiom = SUMO's physical length + minGap); DTALite `[agent_type] PCE=1.0`. Pre-V11 each adapter declared its own values inline with no shared source of truth, V11 centralises and pins the alignment via `tests/test_vehicle_types.py`. See `CHANGELOG.md` Phase 11.
 
 ### Visualization component (Phase 13)
 Standalone, opt-in module under `visualization/` (on the `visualization` branch only). Renders seven map types from canonical bundles and benchmark results: `od_origins`, `od_destinations`, `link_load`, `congestion`, `travel_time`, `route_diversity`, `animated_flow`. CLI: `python -m visualization.generate_maps --scenario <id> --maps <list>`. Reads canonical bundle + per-cell engine output, writes PNG / MP4 / GIF / APNG to `visualization/output/<scenario>/`. Never imported by main SimForge code paths; the locked benchmark numbers are independent of any rendered plot. See [`visualization/README.md`](../visualization/README.md). Tests: `tests/test_visualization.py` (13 tests).

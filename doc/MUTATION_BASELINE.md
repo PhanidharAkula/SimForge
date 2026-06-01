@@ -2,7 +2,7 @@
 
 `pytest` counts lines executed; `mutmut` counts *assertions that would have
 caught a bug*.  This baseline focuses on the two modules that underpin the
-`[1.0.0]` cross-engine fairness fix — `adapters/common/feasibility.py` and
+`[1.0.0]` cross-engine fairness fix, `adapters/common/feasibility.py` and
 `pipeline/network/scc.py`.  If either grows undetected logic drift, the
 mutation score here will fall before the line-coverage number moves.
 
@@ -54,7 +54,7 @@ modules, so the coverage gap is small.
 
 For each surviving mutant:
 
-1. `mutmut show <id>` — see the diff.
+1. `mutmut show <id>`, see the diff.
 2. Ask: would this change any observable behaviour?
    - **Yes** → add or strengthen a test assertion, re-run.
    - **No** (equivalent mutant, e.g. `<=` vs `<` where the boundary is

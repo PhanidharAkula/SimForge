@@ -1,4 +1,4 @@
-# LPSim Integration — Retrospective
+# LPSim Integration, Retrospective
 
 **Status:** Adapter implemented and tested; engine integration **abandoned** in Version_4 after exhaustive Pitzer debugging.
 **Decision date:** 2026-04-27.
@@ -12,11 +12,11 @@ LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT-licensed) is a
 
 The choice was defensible on five grounds:
 
-1. **Open license** — MIT, no commercial gating.
-2. **Pre-built distribution** — the upstream ships a Docker image (`yibo123/lpsim:cuda12.4`) with the binary already compiled, removing the need to build CUDA code from scratch.
-3. **Mesoscopic paradigm** — same fidelity tier as MATSim and SUMO meso, making cross-engine comparison meaningful.
-4. **Documented input format** — CSV-based (`nodes.csv`, `edges.csv`, `od_demand.csv`) plus a single `command_line_options.ini`. Schema reverse-engineerable from the LivingCity source.
-5. **GPU acceleration** — the only one of the three primary engines using CUDA, providing a real performance comparison signal beyond pure scaling.
+1. **Open license**, MIT, no commercial gating.
+2. **Pre-built distribution**, the upstream ships a Docker image (`yibo123/lpsim:cuda12.4`) with the binary already compiled, removing the need to build CUDA code from scratch.
+3. **Mesoscopic paradigm**, same fidelity tier as MATSim and SUMO meso, making cross-engine comparison meaningful.
+4. **Documented input format**, CSV-based (`nodes.csv`, `edges.csv`, `od_demand.csv`) plus a single `command_line_options.ini`. Schema reverse-engineerable from the LivingCity source.
+5. **GPU acceleration**, the only one of the three primary engines using CUDA, providing a real performance comparison signal beyond pure scaling.
 
 ## 2. What was built
 
@@ -25,8 +25,8 @@ The adapter package is **production-quality and was never the failure point**. I
 - **`adapters/lpsim/lpsim_adapter.py`** (~750 lines): canonical → LPSim conversion (`prepare_lpsim_inputs`), engine invocation (`run_lpsim`), and output parsing (`parse_lpsim_output`). Handles three input writers (nodes, edges, demand), the INI emitter, and a robust binary-discovery chain (env var → source build → bundled image → `$PATH`).
 - **`tests/test_lpsim_adapter.py`** (45 tests): covers all writers, schema fidelity (LF line endings, `ref` column, `dep_time` column, sequential `uniqueid`), determinism, and output parsing. **All pass on every commit**.
 - **`adapters/lpsim/MAPPING.md`** (~280 lines): documents the canonical → LPSim CSV schema mapping with line-level cross-references to the LivingCity source.
-- **`lib/lpsim/manifest.json`** — pins the LPSim git SHA (`452067ee...`) and Docker image:tag (`yibo123/lpsim:cuda12.4`) for reproducibility.
-- **`cluster/jobs/build_lpsim.sbatch`** — three-mode build pipeline (Singularity image pull, in-container source rebuild, native fallback) with all known patches (Boost 1.59 sed fix for modern g++, CUDA 12.4 path patches, missing-source-file extraction from the SIF, `cuda.depend_command` removal).
+- **`lib/lpsim/manifest.json`**, pins the LPSim git SHA (`452067ee...`) and Docker image:tag (`yibo123/lpsim:cuda12.4`) for reproducibility.
+- **`cluster/jobs/build_lpsim.sbatch`**, three-mode build pipeline (Singularity image pull, in-container source rebuild, native fallback) with all known patches (Boost 1.59 sed fix for modern g++, CUDA 12.4 path patches, missing-source-file extraction from the SIF, `cuda.depend_command` removal).
 
 The conversion logic, schema mapping, test suite, and build pipeline are **reusable as-is** if LPSim's runtime issues are ever resolved upstream.
 
@@ -40,14 +40,14 @@ The bundled LivingCity binary has **three different node/edge loaders** (csv.h S
 
 Fixed across `b060818`, `58df0f7`, `1b075aa`, `560d466`, `466d0a6`:
 - LF line endings on all CSVs (`lineterminator="\n"` in `csv.writer`)
-- `ref` column added to nodes.csv (empty string — canonical doesn't preserve OSM `ref`)
+- `ref` column added to nodes.csv (empty string, canonical doesn't preserve OSM `ref`)
 - `dep_time` column added to OD CSV (the SP loader filters by `dep_time >= startSimulationH * 3600`)
 - Sub-meter edges filtered before handoff (the GPU lane-map kernel allocates `length / cell_size` cells; sub-meter edges yield zero cells and trigger illegal-memory access)
 - `uniqueid` renumbered sequentially 0..N-1 (the GPU kernel indexes per-edge arrays by `uniqueid`; gaps from filtered self-loops/short edges caused OOB at `b18CUDA_trafficSimulator.cu:1682`)
 
 ### 3.2 Container path resolution (resolved)
 
-The bundled binary `chdir`s to `/LivingCity` at startup (or hardcodes the INI path) so `--pwd` alone doesn't redirect input reading — only output writing. Fixed at `e57141e` and `0ed5316` by overlaying our INI and network/ on top of `/LivingCity/command_line_options.ini` and `/LivingCity/network` via `--bind` mounts. Later extended at `99a7354` to also overlay at `/lpsim_src/LivingCity/...` for the rebuilt source binary.
+The bundled binary `chdir`s to `/LivingCity` at startup (or hardcodes the INI path) so `--pwd` alone doesn't redirect input reading, only output writing. Fixed at `e57141e` and `0ed5316` by overlaying our INI and network/ on top of `/LivingCity/command_line_options.ini` and `/LivingCity/network` via `--bind` mounts. Later extended at `99a7354` to also overlay at `/lpsim_src/LivingCity/...` for the rebuilt source binary.
 
 ### 3.3 CUDA toolchain mismatch (resolved)
 
@@ -61,19 +61,19 @@ When the bundled binary's GPU OOB at `b18CUDA_trafficSimulator.cu:1682` proved u
 - Fixing the `cuda.dependcy_type` typo
 - Extracting missing `src/benchmarker.{h,cpp}` and `src/linux_host_memory_logger.{h,cpp}` from the SIF (the upstream git repo is missing these files)
 - Downloading and bind-mounting Boost 1.59 from `archives.boost.org` (the in-container path is broken)
-- **The Boost wall:** Boost 1.59's `point_xy.hpp` uses `this->template set<N>(v)` which modern g++ (the container's gcc 13) resolves to `std::set<N>(...)` instead of the inherited base member template, failing with "type/value mismatch". Tried Boost 1.78 (`166ed87`) — broke the Geometry API completely. Reverted to 1.59 (`6fdaba1`) and sed-patched the two offending lines with explicit base-class qualification: `this->boost::geometry::model::point<CoordinateType,2,CoordinateSystem>::template set<N>(v)`. Build then succeeded.
+- **The Boost wall:** Boost 1.59's `point_xy.hpp` uses `this->template set<N>(v)` which modern g++ (the container's gcc 13) resolves to `std::set<N>(...)` instead of the inherited base member template, failing with "type/value mismatch". Tried Boost 1.78 (`166ed87`), broke the Geometry API completely. Reverted to 1.59 (`6fdaba1`) and sed-patched the two offending lines with explicit base-class qualification: `this->boost::geometry::model::point<CoordinateType,2,CoordinateSystem>::template set<N>(v)`. Build then succeeded.
 - Bumping CUDA_ARCH from sm_50 (Maxwell, the upstream default) to sm_70 (V100) at `483ebc9`
 
-The build pipeline is fully reproducible — `sbatch --export=ALL,LPSIM_FORCE_SOURCE=1 cluster/jobs/build_lpsim.sbatch` produces a 26 MB binary with sm_70 SASS in ~2 minutes.
+The build pipeline is fully reproducible, `sbatch --export=ALL,LPSIM_FORCE_SOURCE=1 cluster/jobs/build_lpsim.sbatch` produces a 26 MB binary with sm_70 SASS in ~2 minutes.
 
-### 3.5 The wall — GPU kernel SIGSEGV at first kernel launch (NOT resolved)
+### 3.5 The wall, GPU kernel SIGSEGV at first kernel launch (NOT resolved)
 
 After all the above, the rebuilt sm_70 binary on the chicago_1k_car scenario (20,058 nodes, 58,505 edges, 1,000 trips) consistently produces:
 
 ```
 Running main loop from 7 to 8 with 1000 person...
 Starting simulation ...
-[exit -11 — SIGSEGV]
+[exit -11, SIGSEGV]
 ```
 
 Identical crash signature with:
@@ -84,10 +84,10 @@ Identical crash signature with:
 The crash occurs **inside the simulation kernel entry** before any per-tick output is produced. We did not isolate whether the crash originates in:
 - The CPU-side data prep before the first `cudaMalloc`
 - The first `cudaMalloc` itself (16 GB V100 should have ample headroom for 20K nodes / 1K trips)
-- The first kernel launch (likely — the print "Starting simulation ..." emits then SIGSEGV with no stderr)
+- The first kernel launch (likely, the print "Starting simulation ..." emits then SIGSEGV with no stderr)
 - A CUDA driver / runtime context creation
 
-The diagnostic `cluster/jobs/diag_lpsim.sbatch` was prepared to test the rebuilt binary against the container's bundled `berkeley_2018` sample (with no SimForge inputs in the loop) to isolate "is the engine fundamentally broken on this CUDA/GPU combo?" from "are our inputs malformed?". It was not run before the abandonment decision — see §5.
+The diagnostic `cluster/jobs/diag_lpsim.sbatch` was prepared to test the rebuilt binary against the container's bundled `berkeley_2018` sample (with no SimForge inputs in the loop) to isolate "is the engine fundamentally broken on this CUDA/GPU combo?" from "are our inputs malformed?". It was not run before the abandonment decision, see §5.
 
 ## 4. Why the abandonment decision
 
@@ -99,19 +99,19 @@ Three converging factors:
 
 ## 5. What this proves about SimForge
 
-Engine churn — projects becoming unmaintained, build chains rotting, dependencies going incompatible — is the **default state** of academic simulation software. SimForge's adapter pattern is designed precisely for this. The LPSim experience is concrete evidence:
+Engine churn, projects becoming unmaintained, build chains rotting, dependencies going incompatible, is the **default state** of academic simulation software. SimForge's adapter pattern is designed precisely for this. The LPSim experience is concrete evidence:
 
-- The adapter package, MAPPING.md, manifest, build pipeline, and test suite are all preserved as-is. **If a future user finds a working LPSim fork (e.g., a maintained downstream, or upstream patches the GPU bug), the adapter reactivates with zero rework** — they re-pin the SHA in `lib/lpsim/manifest.json`, re-run `cluster/jobs/build_lpsim.sbatch`, and the test suite is already in place.
-- The integration cost — measured in adapter LOC, test count, and conversion logic — is now a known quantity for future engine integrations.
+- The adapter package, MAPPING.md, manifest, build pipeline, and test suite are all preserved as-is. **If a future user finds a working LPSim fork (e.g., a maintained downstream, or upstream patches the GPU bug), the adapter reactivates with zero rework**, they re-pin the SHA in `lib/lpsim/manifest.json`, re-run `cluster/jobs/build_lpsim.sbatch`, and the test suite is already in place.
+- The integration cost, measured in adapter LOC, test count, and conversion logic, is now a known quantity for future engine integrations.
 - The diagnostic scripts (`smoke_lpsim.sbatch`, `diag_lpsim.sbatch`) are reusable templates for any engine added through the adapter pattern.
 
-In thesis terms: **SimForge is the framework that survives the engine's failure.** The engine's failure is not a project failure — it is the use case the framework was built to handle.
+In thesis terms: **SimForge is the framework that survives the engine's failure.** The engine's failure is not a project failure, it is the use case the framework was built to handle.
 
 ## 6. References
 
 - **Phase B integration commits:** `fe118b5` (initial adapter), `b060818`–`466d0a6` (schema fixes), `1359b9e`–`6fdaba1` (in-container source rebuild path), `99a7354`–`27371ad` (Pitzer landing).
-- **Manifest:** `lib/lpsim/manifest.json` — pinned `git_sha` and `docker_image:tag`.
+- **Manifest:** `lib/lpsim/manifest.json`, pinned `git_sha` and `docker_image:tag`.
 - **Test suite:** `tests/test_lpsim_adapter.py` (45 tests, all passing).
 - **Methods chapter:** `doc/chapters/methods.md` §3.4.4 (LPSim adapter description; supersede the "fills the GPU comparator slot" claim with a forward-pointer to this retrospective).
-- **Glossary:** `doc/GLOSSARY.md` "LPSim" entry — keep, but flag as deferred per this doc.
+- **Glossary:** `doc/GLOSSARY.md` "LPSim" entry, keep, but flag as deferred per this doc.
 - **Upstream repo:** [Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim) (pinned SHA `452067ee831e6ecb4c906bae96fb77fdf71fa92e`).

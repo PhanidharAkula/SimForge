@@ -1,4 +1,4 @@
-# SimForge Scenario Generation — In-Depth Documentation
+# SimForge Scenario Generation, In-Depth Documentation
 
 > Everything about how SimForge generates scenarios: what's real, what's synthetic,
 > where each piece of data comes from, and how it all fits together.
@@ -32,7 +32,7 @@
 
 ## 1. High-Level Overview
 
-SimForge generates **simulator-agnostic scenario bundles** — a set of XML and CSV files that describe a complete traffic simulation scenario. Any scenario bundle contains:
+SimForge generates **simulator-agnostic scenario bundles**, a set of XML and CSV files that describe a complete traffic simulation scenario. Any scenario bundle contains:
 
 | File           | What It Describes                          | Source                              |
 | -------------- | ------------------------------------------ | ----------------------------------- |
@@ -47,7 +47,7 @@ The generation pipeline has **4 steps**, executed by `generate.py`:
 ```
 Step 1: Slice road network from a hash-pinned Geofabrik OSM PBF
         (also collects OSM `highway=traffic_signals` node tags on the
-         same PBF stream — no extra I/O)
+         same PBF stream, no extra I/O)
 Step 2: Build signals.xml from those tagged nodes
 Step 3: Write config.xml + manifest.xml
 Step 4: Generate trip demand (census-calibrated or synthetic)
@@ -63,17 +63,17 @@ This is the critical question. Here's the honest breakdown:
 
 | Component                     | Source                                         | How Real Is It?                                                  |
 | ----------------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
-| **Road network topology**     | OpenStreetMap (crowd-sourced)                  | Very real — actual streets, intersections, one-ways              |
-| **Road lengths**              | OSM edge geometry                              | Real — measured from GPS-traced roads                            |
-| **Speed limits**              | OSM `maxspeed` tags, or defaults per road type | Mostly real — some defaults where OSM data is missing            |
-| **Lane counts**               | OSM `lanes` tags, or defaults                  | Partially real — many roads missing lane data, defaults used     |
-| **Building locations**        | OpenStreetMap building polygons                | Real — actual building footprints                                |
-| **Building-to-road snapping** | ModelGen nearest-road algorithm                | Real — each building is linked to its closest road               |
-| **Population distribution**   | LandScan population grids                      | Real — satellite-derived population estimates at ~1km resolution |
-| **Household demographics**    | U.S. Census PUMS microdata                     | Real — actual survey responses (anonymized)                      |
-| **Person age, income, wages** | PUMS (AGEP, HINCP, WAGP)                       | Real — from census surveys                                       |
-| **Commute duration**          | PUMS JWMNP field                               | Real — survey-reported commute time in minutes                   |
-| **Transport mode choice**     | PUMS JWTRNS field                              | Real — survey-reported mode (car, bus, rail, bike, walk, etc.)   |
+| **Road network topology**     | OpenStreetMap (crowd-sourced)                  | Very real, actual streets, intersections, one-ways              |
+| **Road lengths**              | OSM edge geometry                              | Real, measured from GPS-traced roads                            |
+| **Speed limits**              | OSM `maxspeed` tags, or defaults per road type | Mostly real, some defaults where OSM data is missing            |
+| **Lane counts**               | OSM `lanes` tags, or defaults                  | Partially real, many roads missing lane data, defaults used     |
+| **Building locations**        | OpenStreetMap building polygons                | Real, actual building footprints                                |
+| **Building-to-road snapping** | ModelGen nearest-road algorithm                | Real, each building is linked to its closest road               |
+| **Population distribution**   | LandScan population grids                      | Real, satellite-derived population estimates at ~1km resolution |
+| **Household demographics**    | U.S. Census PUMS microdata                     | Real, actual survey responses (anonymized)                      |
+| **Person age, income, wages** | PUMS (AGEP, HINCP, WAGP)                       | Real, from census surveys                                       |
+| **Commute duration**          | PUMS JWMNP field                               | Real, survey-reported commute time in minutes                   |
+| **Transport mode choice**     | PUMS JWTRNS field                              | Real, survey-reported mode (car, bus, rail, bike, walk, etc.)   |
 
 ### Synthetic / Modeled (Not Directly Observed)
 
@@ -81,9 +81,9 @@ This is the critical question. Here's the honest breakdown:
 | ----------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | **Trip origins (which node)** | Population-weighted random sampling (gravity path) **or** the person's actual PUMS home building (schedule path) | Schedule path: real (per-person home). Gravity path: semi-real (population-weighted within the building pool). Per-trip provenance recorded in `dest_source` column. |
 | **Trip destinations**         | Hybrid: cityscape PUMS-derived workplace `bld_id` (schedule path, when available) **or** commute-calibrated gravity model (fallback) | Schedule path: real (cityscape `RadiusFilterWorkBuildingAssigner` picks a non-home building matching the person's PUMS commute time within ±1 min, subject to office-capacity bounds). Gravity path: semi-real (commute time is from census, destination is gravity-fitted). Mix per bundle is logged in `generation_metadata.json::demand_provenance`. |
-| **Departure times** (V5+)     | Per-person empirical: `departure = arrival_time_s − commute_min × 60` | Real-grounded — no synthetic distribution shape. Each row's departure is the trip-bearer's PUMS-reported `JWMNP` subtracted from cityscape's schedule arrival (28800 s = 8 AM, 61200 s = 17:00). Long-commute persons depart earlier; short-commute persons depart closer to arrival. Pre-V5 used a Gaussian peak at horizon midpoint — replaced in Phase 8. |
-| **Traffic signal timing**     | Fixed-time 2-phase 90 s cycle (NS green / EW green)            | Synthetic — placeholder for adapters, not coordinated arterial timing. Real cities use 4-8 phases with actuation, lead/lag protected lefts, etc. |
-| **Signal placement** (V5+)    | OSM `highway=traffic_signals` node tags                        | Real — community-curated ground truth from OpenStreetMap. Empirical: chicago/nyc/la in V5 produce 1-3% signalized (vs ~85% under the pre-V5 `degree ≥ 4` heuristic). Pre-V5 bundles fall back to the heuristic with a WARNING. |
+| **Departure times** (V5+)     | Per-person empirical: `departure = arrival_time_s − commute_min × 60` | Real-grounded, no synthetic distribution shape. Each row's departure is the trip-bearer's PUMS-reported `JWMNP` subtracted from cityscape's schedule arrival (28800 s = 8 AM, 61200 s = 17:00). Long-commute persons depart earlier; short-commute persons depart closer to arrival. Pre-V5 used a Gaussian peak at horizon midpoint, replaced in Phase 8. |
+| **Traffic signal timing**     | Fixed-time 2-phase 90 s cycle (NS green / EW green)            | Synthetic, placeholder for adapters, not coordinated arterial timing. Real cities use 4-8 phases with actuation, lead/lag protected lefts, etc. |
+| **Signal placement** (V5+)    | OSM `highway=traffic_signals` node tags                        | Real, community-curated ground truth from OpenStreetMap. Empirical: chicago/nyc/la in V5 produce 1-3% signalized (vs ~85% under the pre-V5 `degree ≥ 4` heuristic). Pre-V5 bundles fall back to the heuristic with a WARNING. |
 | **OD pair routability**       | Not pre-checked in census mode                                 | Some OD pairs may not be routable depending on network connectivity                        |
 
 ### Completely Absent (Not Modeled)
@@ -92,7 +92,7 @@ This is the critical question. Here's the honest breakdown:
 | --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | **Actual OD survey data**         | Real OD surveys (like NHTS or city travel diaries) are not integrated                                          |
 | **NHB (non-home-based) trips**    | Cityscape encodes only home-anchored schedules; midday work-meeting / shop-errand chains require NHTS or equivalent |
-| **HBO trips** (shopping, leisure) | Building-kind destinations are derivable from modelgen, but per-person trip rates and temporal anchors are not — would require NHTS rate tables |
+| **HBO trips** (shopping, leisure) | Building-kind destinations are derivable from modelgen, but per-person trip rates and temporal anchors are not, would require NHTS rate tables |
 | **Transit routes/schedules**      | Mode is "transit" but no actual bus/rail routes are generated                                                  |
 | **Parking**                       | No parking availability or search behavior                                                                     |
 | **Weather, events, incidents**    | Not modeled                                                                                                    |
@@ -106,7 +106,7 @@ This is the critical question. Here's the honest breakdown:
 
 ### What Are They?
 
-The `modelgen/` directory contains large text files (`chicago_model.txt`, `la_model.txt`, `nyc_model.txt`) produced by an **activity-based population synthesizer** — a standalone C++ tool called **ModelGen** (developed by your advisor's research group).
+The `modelgen/` directory contains large text files (`chicago_model.txt`, `la_model.txt`, `nyc_model.txt`) produced by an **activity-based population synthesizer**, a standalone C++ tool called **ModelGen** (developed by your advisor's research group).
 
 ### What Data Sources Feed Into ModelGen?
 
@@ -153,7 +153,7 @@ bld 24825537 3 0 465 false "museum:" 249630 -87.61835 41.8656 -87.61545 41.86683
 
 | Field       | Value          | Meaning                                        |
 | ----------- | -------------- | ---------------------------------------------- |
-| `bld`       | —              | Record type marker                             |
+| `bld`       | n/a | Record type marker                             |
 | `24825537`  | bld_id         | Unique building ID                             |
 | `3`         | levels         | Number of floors                               |
 | `0`         | population     | Estimated residents (0 = non-residential)      |
@@ -161,10 +161,10 @@ bld 24825537 3 0 465 false "museum:" 249630 -87.61835 41.8656 -87.61545 41.86683
 | `false`     | is_home        | Is this a residential building?                |
 | `"museum:"` | kind           | Building use type (from OSM)                   |
 | `249630`    | sq_foot        | Estimated floor area                           |
-| `-87.61835` | top_lon        | Bounding box — top-left longitude              |
-| `41.8656`   | top_lat        | Bounding box — top-left latitude               |
-| `-87.61545` | bot_lon        | Bounding box — bottom-right longitude          |
-| `41.86683`  | bot_lat        | Bounding box — bottom-right latitude           |
+| `-87.61835` | top_lon        | Bounding box, top-left longitude              |
+| `41.8656`   | top_lat        | Bounding box, top-left latitude               |
+| `-87.61545` | bot_lon        | Bounding box, bottom-right longitude          |
+| `41.86683`  | bot_lat        | Bounding box, bottom-right latitude           |
 | `681213873` | way_id         | OSM way ID of nearest road                     |
 | `41.86552`  | way_lat        | Snap point latitude (on nearest road)          |
 | `-87.61756` | way_lon        | Snap point longitude (on nearest road)         |
@@ -181,7 +181,7 @@ hld 47219695 "1,2021HU0097114" 4 6 3525 174 153400 2 1963621 1963622
 
 | Field               | Value      | Meaning                                           |
 | ------------------- | ---------- | ------------------------------------------------- |
-| `hld`               | —          | Record type                                       |
+| `hld`               | n/a | Record type                                       |
 | `47219695`          | bld_id     | Building this household lives in                  |
 | `"1,2021HU0097114"` | serial_no  | PUMS household serial number (real census record) |
 | `4`                 | bedrooms   | Number of bedrooms                                |
@@ -202,7 +202,7 @@ per 1963621 2021HU0097114 4 54 106000 -1 11 ""
 
 | Field           | Value      | Meaning                                       |
 | --------------- | ---------- | --------------------------------------------- |
-| `per`           | —          | Record type                                   |
+| `per`           | n/a | Record type                                   |
 | `1963621`       | per_id     | Unique person ID                              |
 | `2021HU0097114` | hld_serial | Household they belong to                      |
 | `4`             | num_info   | Number of info fields following               |
@@ -228,10 +228,10 @@ canonical reference: cityscape `model_gen/ScheduleGenerator.h:211-233`):
 | 10   | Walked                         | `walk`                     |
 | 11   | Worked from home               | `home` (excluded from demand) |
 | 12   | Other method                   | `home` (excluded from demand) |
-| -1   | N/A — not a worker             | (excluded from demand)     |
+| -1   | N/A, not a worker             | (excluded from demand)     |
 
 ACS 2019+ merged the previous "drove alone" + "carpooled" codes into a single
-"Car, truck, or van" — that's why this list has 12 codes (plus -1) rather
+"Car, truck, or van", that's why this list has 12 codes (plus -1) rather
 than 13. See `doc/MODELGEN_AND_MODES.md` §2 for the full provenance.
 
 ### Scale of ModelGen Data
@@ -269,12 +269,12 @@ Output: scenarios/chicago_1k_car/network.xml
 
 2. **Slice the state PBF** via pyosmium (`load_network_from_pbf.py::_slice_pbf_to_xml`):
    - `osmium.FileProcessor(state.osm.pbf).with_locations()` streams the PBF (never holds the whole state in memory).
-   - For each way with a `highway=*` tag, check if any node lies inside the bbox — if so, write the way via `osmium.BackReferenceWriter`. The back-reference writer automatically includes every node the way refers to, even those outside the bbox (required so long arterials that pass through the corner keep their geometry).
-   - Result: a reference-complete `.osm` XML staged under `$TMPDIR` — this is what `osmium extract -b N,S,E,W state.pbf` would produce via the CLI, expressed through the Python API so only `pip install osmium` is needed.
+   - For each way with a `highway=*` tag, check if any node lies inside the bbox, if so, write the way via `osmium.BackReferenceWriter`. The back-reference writer automatically includes every node the way refers to, even those outside the bbox (required so long arterials that pass through the corner keep their geometry).
+   - Result: a reference-complete `.osm` XML staged under `$TMPDIR`, this is what `osmium extract -b N,S,E,W state.pbf` would produce via the CLI, expressed through the Python API so only `pip install osmium` is needed.
 
 3. **Parse with osmnx**: `ox.graph_from_xml(simplify=True, retain_all=False)` turns the sliced XML into a `networkx.MultiDiGraph` with per-node `x`/`y` and per-edge `highway`/`length`/`maxspeed`/`lanes`/`name`/`osmid` attributes. Graph simplification merges degree-2 nodes (straight-through segments) and keeps only intersections and dead-ends.
 
-4. **Clip the bleed with `truncate_graph_bbox`**: `BackReferenceWriter` keeps every node any matched way references — including nodes far outside the bbox when long ways pass through the corner. osmnx's `truncate.truncate_graph_bbox(truncate_by_edge=True)` removes those stub extensions so the simulated footprint matches what a direct bbox query would have returned. The call uses osmnx 2.x's positional `bbox=(W, S, E, N)` tuple; `requirements.txt` pins `osmnx>=2.0,<3`.
+4. **Clip the bleed with `truncate_graph_bbox`**: `BackReferenceWriter` keeps every node any matched way references, including nodes far outside the bbox when long ways pass through the corner. osmnx's `truncate.truncate_graph_bbox(truncate_by_edge=True)` removes those stub extensions so the simulated footprint matches what a direct bbox query would have returned. The call uses osmnx 2.x's positional `bbox=(W, S, E, N)` tuple; `requirements.txt` pins `osmnx>=2.0,<3`.
 
 5. **Convert to canonical format**:
    - Each OSM node → `<node id="n0" x="-87.657" y="41.895" type="intersection" osm_id="25779173" />`
@@ -286,19 +286,19 @@ Output: scenarios/chicago_1k_car/network.xml
 
 | Path           | Reproducibility                       | Speed (city-scale bbox) | Reliability                                  |
 | -------------- | ------------------------------------- | ----------------------- | -------------------------------------------- |
-| Local PBF      | ✅ SHA-256 pinned, byte-identical      | 30 – 90 s               | ✅ Deterministic — no rate limits             |
+| Local PBF      | ✅ SHA-256 pinned, byte-identical      | 30 – 90 s               | ✅ Deterministic, no rate limits             |
 | Overpass (API) | ⚠️ OSM is a moving target (daily churn) | 5 – 30+ min             | ⚠️ Rate-limited; stalls silently on NYC-sized bboxes |
 
 The Overpass path (`download_osm_network`) is retained as a fallback for cities without a committed PBF, but every city in `generate.py::CITIES` has a matching `pbf_file` entry, and the thesis pipeline exclusively uses the PBF path. The move was motivated by a concrete failure: a NYC 500K scenario stalled an 8-hour Pitzer SLURM job with the Overpass path; the same bbox now finishes the slice in ~4 minutes against `new-york-2026-04-22.osm.pbf`.
 
 **PBF provenance:** every PBF in `osm_data/` is pinned by SHA-256 + MD5 in `osm_data/manifest.json` with its source URL (Geofabrik) and coverage area. Anyone downloading from the published URL and getting the same hash is working with bit-identical data.
 
-**Realistic?** YES — these are actual roads from OpenStreetMap with real geometries, real names, and mostly real speed limits. The network structure is as real as OSM data quality allows.
+**Realistic?** YES, these are actual roads from OpenStreetMap with real geometries, real names, and mostly real speed limits. The network structure is as real as OSM data quality allows.
 
 **V5+ extras captured during the same PBF pass** (no extra I/O):
 
 - **`highway=traffic_signals` node tags** → emitted as `has_signal="true"` on the canonical `<node>`. Drives signal placement (see Step 2).
-- **`type=restriction` relations with `via=node`** → emitted as `<turn_restriction>` entries inside a top-level `<turn_restrictions>` block in `network.xml`. Each entry records the OSM restriction (`no_left_turn`, `no_u_turn`, `only_straight_on`, …), the canonical `from_link`, `via_node`, and `to_link`, plus the source `osm_relation_id` for provenance. Typical share in major US cities: 50-3,000 restrictions per bundle, scaling with bbox area + arterial coverage. **Adapters do not enforce these by default in V5** — see `pipeline/network/turn_restrictions.py` module docstring for the cross-engine fairness rationale and `CHANGELOG.md` Phase 7 for the full history.
+- **`type=restriction` relations with `via=node`** → emitted as `<turn_restriction>` entries inside a top-level `<turn_restrictions>` block in `network.xml`. Each entry records the OSM restriction (`no_left_turn`, `no_u_turn`, `only_straight_on`, …), the canonical `from_link`, `via_node`, and `to_link`, plus the source `osm_relation_id` for provenance. Typical share in major US cities: 50-3,000 restrictions per bundle, scaling with bbox area + arterial coverage. **Adapters do not enforce these by default in V5**, see `pipeline/network/turn_restrictions.py` module docstring for the cross-engine fairness rationale and `CHANGELOG.md` Phase 7 for the full history.
 
 **Typical output**: 1,200-1,500 nodes, 2,500-3,500 links for a 2 km radius in a dense urban area.
 
@@ -319,16 +319,16 @@ Output: scenarios/<id>/signals.xml
 
 1. **Identify real signalized intersections from OSM** during PBF
    ingestion. The PBF stream that builds the road network also looks at
-   every node in the file and checks `tag.highway == "traffic_signals"` —
+   every node in the file and checks `tag.highway == "traffic_signals"`,
    community-curated ground truth for actual signal placement in major US
    cities. The set of OSM node IDs is returned alongside the road graph
-   (no extra I/O — same PBF pass).
+   (no extra I/O, same PBF pass).
 2. **Persist to canonical network.xml**: matching nodes get
    `has_signal="true"` written into their `<node>` element. The attribute
    is part of the V0 schema (see `canonical/schema/network_v0.md`).
 3. **Generate signal controllers** (`build_signals_default.py`): signalize
    exactly the nodes carrying `has_signal="true"`. Each gets a 2-phase
-   90-second cycle template (NS green / EW red, then EW green / NS red) —
+   90-second cycle template (NS green / EW red, then EW green / NS red),
    a placeholder for adapters, not a real-world signal plan with
    coordinated timing or actuation.
 
@@ -347,17 +347,17 @@ real-world signalization rates.
 **Legacy fallback**: when consuming a network.xml without `has_signal`
 attributes (pre-V5 bundles or networks generated by some external
 pipeline), the signal generator falls back to its old degree heuristic
-(`degree >= 4`, signalizes ~85-90 % of nodes — every junction). The
+(`degree >= 4`, signalizes ~85-90 % of nodes, every junction). The
 fallback emits a loud WARNING so the operator knows to regenerate.
 
 **Realistic?**
 
-- ✅ **Placement** — matches OSM community ground truth for tagged
+- ✅ **Placement**, matches OSM community ground truth for tagged
   signals. In well-mapped US cities (chicago/nyc/la all are), this
   catches the great majority of real signals.
-- ⚠️ **Timing** — fixed 90-second 2-phase cycle is a placeholder. Real
+- ⚠️ **Timing**, fixed 90-second 2-phase cycle is a placeholder. Real
   cities use coordinated arterial timing, actuated controllers, lead/lag
-  protected lefts, pedestrian phases, etc. — none of which SimForge
+  protected lefts, pedestrian phases, etc., none of which SimForge
   models. Cross-engine fairness comparisons are unaffected because every
   adapter consumes the same `signals.xml`.
 
@@ -380,7 +380,7 @@ Output: config.xml, manifest.xml
 
 **manifest.xml** lists all files in the bundle, their types, and paths.
 
-**Realistic?** N/A — these are metadata files, not simulation data.
+**Realistic?** N/A, these are metadata files, not simulation data.
 
 ---
 
@@ -426,7 +426,7 @@ Output: scenarios/chicago_1k_car/demand.csv
    - Maximum distance: 10 km (keeps trips urban-scale)
 3. **Departure times**: uniform random within the time window
 
-**Realistic?** LESS than census mode — everything is based on network topology alone, with no real population or demographic data.
+**Realistic?** LESS than census mode, everything is based on network topology alone, with no real population or demographic data.
 
 ---
 
@@ -496,7 +496,7 @@ This section explains exactly how each trip is generated when using census (Mode
 - The Gaussian distance profile is a model, not observed data
 - Node degree is a rough proxy for employment/activity density
 
-**This is the single biggest source of approximation in the pipeline.** Real cities have complex OD patterns driven by employment centers, schools, hospitals, shopping — none of which are explicitly modeled.
+**This is the single biggest source of approximation in the pipeline.** Real cities have complex OD patterns driven by employment centers, schools, hospitals, shopping, none of which are explicitly modeled.
 
 ### 5.4 Departure Time Generation (V5+)
 
@@ -511,7 +511,7 @@ departure_s = arrival_time_s − commute_min × 60
 
 where:
 - `arrival_time_s` is the cityscape-emitted workplace arrival from
-  `schedule[i].time_s` for the trip's peak — 28800 s (08:00 AM) for
+  `schedule[i].time_s` for the trip's peak, 28800 s (08:00 AM) for
   AM trips, 61200 s (17:00) for PM trips. Persons without a schedule
   fall back to the same constants by peak template.
 - `commute_min` is the trip-bearer's real PUMS-reported `JWMNP`
@@ -519,7 +519,7 @@ where:
 
 Departures that would fall outside `[horizon_start, horizon_end - 1]`
 clamp to the boundary (no rows dropped). The clamp is rare in
-practice — it triggers only for persons with `JWMNP ≥ 60` min on the
+practice, it triggers only for persons with `JWMNP ≥ 60` min on the
 1-hour Chicago horizon, ~85 of 1000 trips for chicago_1k_car.
 
 **Peak split** (V5+ Phase 9a): when the user's horizon spans both
@@ -529,7 +529,7 @@ home, ~17:00 arrival). AM-only horizons (all bundled tiers) emit
 zero PM rows.
 
 **What's real**:
-- Departure timing is fully grounded in PUMS — no synthetic
+- Departure timing is fully grounded in PUMS, no synthetic
   distribution shape, no horizon-midpoint Gaussian.
 - Aggregate temporal shape emerges naturally from the JWMNP
   distribution of the cohort; no need for assumed σ or offset
@@ -544,7 +544,7 @@ zero PM rows.
   per-person schedule input.
 
 **What's still synthetic** in V5+: nothing in the timing formula
-itself. The remaining gaps are upstream — cityscape's schedule
+itself. The remaining gaps are upstream, cityscape's schedule
 encodes only weekday HBW; weekend/school-out variation, NHB chains,
 and HBO trips are not in the data source at all.
 
@@ -573,20 +573,20 @@ and HBO trips are not in the data source at all.
 SimForge scenarios are **more realistic than typical synthetic benchmarks** because:
 
 1. **Real road networks** from OpenStreetMap, not grid networks or random graphs
-2. **Population-grounded origins** — trip production is proportional to where people actually live (LandScan + OSM buildings)
-3. **Census-calibrated demographics** — commute times, transport modes, and demographics come from actual PUMS survey responses
-4. **Spatial realism** — buildings are snapped to their actual nearest roads, preserving spatial fidelity
-5. **City-specific** — Chicago, LA, and NYC each have their own demographics, road patterns, and commute profiles
+2. **Population-grounded origins**, trip production is proportional to where people actually live (LandScan + OSM buildings)
+3. **Census-calibrated demographics**, commute times, transport modes, and demographics come from actual PUMS survey responses
+4. **Spatial realism**, buildings are snapped to their actual nearest roads, preserving spatial fidelity
+5. **City-specific**, Chicago, LA, and NYC each have their own demographics, road patterns, and commute profiles
 
 ### The Honest Limitations
 
 1. **OD provenance is mixed.** Trips with `dest_source = "schedule"` carry a real PUMS-derived workplace assigned by the cityscape ScheduleGenerator (non-home building matching JWMNP within ±1 min, capacity-bounded). Trips with `dest_source = "gravity"` use a fitted distribution. The mix per bundle depends on (a) how many of the city's PUMS records have schedules in cityscape's covered transport modes and (b) how many of those schedules' workplaces fall within the bbox + SCC. The `demand_provenance` block in `generation_metadata.json` reports the exact split per bundle (`schedule_driven_count`, `gravity_fallback_count`, `fallback_reasons`). Real LODES/LEHD or NHTS OD data could close the remaining gravity gap.
 
-2. **Partial activity chains** (V5+): SimForge now emits the morning *and* evening commute (Phase 9a: `HBW_AM` + `HBW_PM`) plus parent-with-kid school chains (Phase 9b/9c: `HBSchool_AM/PM` + `HBW_AM/PM_chained`). Still missing: NHB chains (work → meeting → office), HBO trips (shopping, errands, leisure), and weekend/school-out variation — none of which cityscape's schedule encodes. Engines treat each row as a separate vehicle, so chain *semantics* aren't preserved at simulation time even though the demand pattern is enriched. Activity-based models (like POLARIS) capture full chain agency.
+2. **Partial activity chains** (V5+): SimForge now emits the morning *and* evening commute (Phase 9a: `HBW_AM` + `HBW_PM`) plus parent-with-kid school chains (Phase 9b/9c: `HBSchool_AM/PM` + `HBW_AM/PM_chained`). Still missing: NHB chains (work → meeting → office), HBO trips (shopping, errands, leisure), and weekend/school-out variation, none of which cityscape's schedule encodes. Engines treat each row as a separate vehicle, so chain *semantics* aren't preserved at simulation time even though the demand pattern is enriched. Activity-based models (like POLARIS) capture full chain agency.
 
-3. **Simplified signal timing** (V5+ partial): Placement is now real (OSM `highway=traffic_signals` ground truth, see Step 2). Timing is still a fixed 2-phase 90 s cycle — real cities use 4-8 phases with coordinated arterial offsets, actuated controllers, lead/lag protected lefts, and pedestrian phases.
+3. **Simplified signal timing** (V5+ partial): Placement is now real (OSM `highway=traffic_signals` ground truth, see Step 2). Timing is still a fixed 2-phase 90 s cycle, real cities use 4-8 phases with coordinated arterial offsets, actuated controllers, lead/lag protected lefts, and pedestrian phases.
 
-4. **Vehicle-type realism — single canonical sedan** (V11+ partial): Every `mode=car` trip simulates as a 5.0 m sedan (PCE 1.0) regardless of the original PUMS JWTRNS code. The `car` bucket conflates JWTRNS 1 (Car/truck/van), 7 (Taxicab), 8 (Motorcycle), and 12 (Other) — a real-world motorcycle's PCE is 0.4-0.5 vs the simulated 1.0, so motorcycle trips are overweighted by ~2× in saturation-flow terms. Empirically <1% of US trips are motorcycles so the absolute distortion is small. V11 fixed the *cross-engine* alignment problem (SUMO and MATSim now share a single source of truth in `adapters/common/vehicle_types.py`); within-bucket heterogeneity is post-V11 work. **Heavy commercial freight is entirely absent** — ACS PUMS is a journey-to-work survey of residents, not a freight survey, so trucks aren't in modelgen at all. FHWA road-class truck percentages (typically 5-10% on arterials, 15-20% on motorways) are the future synthesis path.
+4. **Vehicle-type realism, single canonical sedan** (V11+ partial): Every `mode=car` trip simulates as a 5.0 m sedan (PCE 1.0) regardless of the original PUMS JWTRNS code. The `car` bucket conflates JWTRNS 1 (Car/truck/van), 7 (Taxicab), 8 (Motorcycle), and 12 (Other), a real-world motorcycle's PCE is 0.4-0.5 vs the simulated 1.0, so motorcycle trips are overweighted by ~2× in saturation-flow terms. Empirically <1% of US trips are motorcycles so the absolute distortion is small. V11 fixed the *cross-engine* alignment problem (SUMO and MATSim now share a single source of truth in `adapters/common/vehicle_types.py`); within-bucket heterogeneity is post-V11 work. **Heavy commercial freight is entirely absent**, ACS PUMS is a journey-to-work survey of residents, not a freight survey, so trucks aren't in modelgen at all. FHWA road-class truck percentages (typically 5-10% on arterials, 15-20% on motorways) are the future synthesis path.
 
 5. **Turn restrictions are extracted, but enforcement is asymmetric** (V5+): The full OSM `<turn_restriction>` set is in `network.xml` (Phase 7). SUMO and MATSim adapters honor them via state-aware BFS pre-routing; DTALite emits a sibling `movement.csv` (GMNS-conformant) but path4gmns 0.10.0 does not ingest it natively. See `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry" for the rationale.
 
@@ -626,8 +626,8 @@ Each pipeline component is scored on a 0–100% realism scale based on how close
 | **Departure times** (V5+)     | 90%     | PUMS JWMNP empirical            | Phase 8 fix: per-person `arrival - commute_min × 60`. No synthetic distribution shape; aggregate timing is the empirical PUMS distribution of the cohort. Was 70% pre-V5 (Gaussian). |
 | **Trip purposes** (V5+)       | 70%     | Cityscape `schedule[0,1]` + OSM `kind=school` + AGEP | HBW (AM + PM) and HBSchool chains derived from modelgen. Missing NHB, HBO, weekend variation. |
 | **Mode split (multi-mode)** (V5+) | 85% | Cityscape JWTRNS (Phase 5 fix) | Phase 5 corrected 6 of 12 codes (bus → transit, walk → walk, etc.). Self-reported mode from PUMS. No transit routing though. |
-| **Mode split (single-mode)**  | N/A     | Fixed assignment                | All trips forced to one mode — not a realism question.                                                               |
-| **Vehicle types within `car`** (V11+) | 60% | Single canonical sedan in `adapters/common/vehicle_types.py` | All car-bucket trips simulate as the same 5.0 m / PCE 1.0 sedan. Cross-engine alignment fixed in V11 (SUMO and MATSim now share length / width / max-speed / PCE via a single source of truth — pre-V11 they silently disagreed on width). Within-bucket heterogeneity (motorcycle PCE 0.4-0.5, taxi behavior, freight) and commercial freight (entirely absent — not in PUMS) are post-V11 work. |
+| **Mode split (single-mode)**  | N/A     | Fixed assignment                | All trips forced to one mode, not a realism question.                                                               |
+| **Vehicle types within `car`** (V11+) | 60% | Single canonical sedan in `adapters/common/vehicle_types.py` | All car-bucket trips simulate as the same 5.0 m / PCE 1.0 sedan. Cross-engine alignment fixed in V11 (SUMO and MATSim now share length / width / max-speed / PCE via a single source of truth, pre-V11 they silently disagreed on width). Within-bucket heterogeneity (motorcycle PCE 0.4-0.5, taxi behavior, freight) and commercial freight (entirely absent, not in PUMS) are post-V11 work. |
 | **Signal locations** (V5+)    | 90%     | OSM `highway=traffic_signals`   | Phase 6 fix: community-curated ground truth from OSM. Was ~50% pre-V5 (degree ≥ 4 heuristic). Coverage gaps where OSM tags are stale (rare in chicago/nyc/la). |
 | **Signal timing**             | 25%     | Generic 2-phase controller      | Real signals use 4-8 phases with coordinated offsets, adaptive control, protected turns.                             |
 | **Building locations**        | 90%     | OSM building polygons           | Real footprints. Some buildings missing from OSM, especially in suburban areas.                                      |
@@ -651,7 +651,7 @@ $$\text{Overall Realism} = \frac{w_\text{net} \cdot R_\text{net} + w_\text{orig}
 | Signals      | 0.15         | 35%           | 5.3%           |
 | **Total**    | **1.00**     |               | **62.8%**      |
 
-**V5+ (current — Phases 5-10 applied):**
+**V5+ (current, Phases 5-10 applied):**
 
 | Component                | Weight ($w$) | Realism ($R$) | Weighted Score | Phase responsible |
 | ------------------------ | ------------ | ------------- | -------------- | ----------------- |
@@ -663,7 +663,7 @@ $$\text{Overall Realism} = \frac{w_\text{net} \cdot R_\text{net} + w_\text{orig}
 | Signals                  | 0.15         | 60%           | 9.0%           | Phase 6 (placement 50→90 %, timing unchanged) |
 | **Total**                | **1.00**     |               | **~71.6%**     |                                        |
 
-**Current overall realism: ~70-72%** (V5+) — up from ~62% in V4. Still below
+**Current overall realism: ~70-72%** (V5+), up from ~62% in V4. Still below
 full activity-based models (~85-95%) because the destinations component
 remains gravity-fitted and chains are split into independent vehicles
 at simulation time.
@@ -674,11 +674,11 @@ If ModelGen integrates real destination data (e.g., LODES employment locations, 
 
 | Component    | Weight   | Current   | With Real OD | Delta     |
 | ------------ | -------- | --------- | ------------ | --------- |
-| Network      | 0.25     | 85%       | 85%          | —         |
-| Origins      | 0.20     | 85%       | 85%          | —         |
+| Network      | 0.25     | 85%       | 85%          | n/a |
+| Origins      | 0.20     | 85%       | 85%          | n/a |
 | Destinations | 0.25     | 35%       | 82%          | **+47**   |
 | Departure    | 0.15     | 70%       | 75%          | +5        |
-| Signals      | 0.15     | 35%       | 35%          | —         |
+| Signals      | 0.15     | 35%       | 35%          | n/a |
 | **Total**    | **1.00** | **62.8%** | **74.5%**    | **+11.7** |
 
 With additional signal timing improvements (from real signal plans or AI-optimized timing):
@@ -686,7 +686,7 @@ With additional signal timing improvements (from real signal plans or AI-optimiz
 | Improvement Scenario                       | Projected Realism |
 | ------------------------------------------ | ----------------- |
 | Pre-V5 (Version_4)                         | ~60-65%           |
-| **V5 (current — Phases 5-10 shipped)**     | **~70-72%**       |
+| **V5 (current, Phases 5-10 shipped)**     | **~70-72%**       |
 | + Real OD destinations (LODES/NHTS)        | ~80-85%           |
 | + Real OD + real signal timing             | ~85-90%           |
 | + Real OD + signals + agent-based chains   | ~90-95%           |
@@ -696,9 +696,9 @@ With additional signal timing improvements (from real signal plans or AI-optimiz
 The thesis goal is **not** to replicate real traffic perfectly, but to **compare simulators fairly under identical, realistic-enough inputs**. For this purpose:
 
 1. **Fair comparison requires identical inputs**, not perfect inputs. Even synthetic demand is valid if all simulators receive the same trips.
-2. **Census-calibrated demand preserves spatial structure** — trip patterns follow real population geography, which stresses the network at realistic bottlenecks.
+2. **Census-calibrated demand preserves spatial structure**, trip patterns follow real population geography, which stresses the network at realistic bottlenecks.
 3. **60-65% realism exceeds the standard in simulation benchmarking literature**, where most studies use random demand or simplified grid networks (typically ~15-20% realism by this rubric).
-4. **Each improvement is independently testable** — the framework's modular design means adding real OD data, real signals, or activity chains requires changing one pipeline stage without affecting the rest.
+4. **Each improvement is independently testable**, the framework's modular design means adding real OD data, real signals, or activity chains requires changing one pipeline stage without affecting the rest.
 
 ---
 
@@ -778,7 +778,7 @@ The thesis goal is **not** to replicate real traffic perfectly, but to **compare
   │     c. Sample destination (gravity + commute km)   │
   │  6. Departure time per row:                        │
   │       arrival_s − commute_min × 60                 │
-  │       (V5+ Phase 8 — pure PUMS, no Gaussian)       │
+  │       (V5+ Phase 8, pure PUMS, no Gaussian)       │
   │  7. Assign mode from cityscape JWTRNS (V5+ Phase 5)│
   │  8. Write demand.csv with `purpose` + `dest_source`│
   └──────────────────────┬─────────────────────────────┘
@@ -817,10 +817,10 @@ t3,n603,n352,27200,car,schedule,HBW_AM_chained
 | `trip_id`             | Sequential counter                    | Generated                                                             |
 | `origin_node_id`      | Building → nearest node, pop-weighted | Semi-real (population distribution is real, specific node is sampled) |
 | `destination_node_id` | Schedule path: real PUMS workplace `bld_id`. Gravity path: gravity model + commute distance | Schedule: real. Gravity: synthetic (no real OD data). |
-| `departure_time_s`    | `arrival_s − commute_min × 60`        | **Real (V5+ Phase 8)** — per-person empirical from PUMS JWMNP, no synthetic distribution. |
+| `departure_time_s`    | `arrival_s − commute_min × 60`        | **Real (V5+ Phase 8)**, per-person empirical from PUMS JWMNP, no synthetic distribution. |
 | `mode`                | Cityscape JWTRNS (V5+ Phase 5 mapping fix) | Real when multi-mode; fixed when single-mode                          |
-| `dest_source`         | `schedule` or `gravity`               | Provenance — which generation path produced this row                  |
-| `purpose`             | One of `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained` | Phase 9a/b/c — informational, adapters ignore |
+| `dest_source`         | `schedule` or `gravity`               | Provenance, which generation path produced this row                  |
+| `purpose`             | One of `HBW_AM`, `HBW_PM`, `HBSchool_AM`, `HBSchool_PM`, `HBW_AM_chained`, `HBW_PM_chained` | Phase 9a/b/c, informational, adapters ignore |
 
 ### network.xml
 
@@ -860,7 +860,7 @@ t3,n603,n352,27200,car,schedule,HBW_AM_chained
 
 | Attribute    | Source                                                | Real or Synthetic? |
 | ------------ | ----------------------------------------------------- | ------------------ |
-| Location     | OSM `highway=traffic_signals` node tags (V5+ Phase 6) | **Real** — community-curated ground truth. Pre-V5 used a `degree ≥ 4` heuristic. |
+| Location     | OSM `highway=traffic_signals` node tags (V5+ Phase 6) | **Real**, community-curated ground truth. Pre-V5 used a `degree ≥ 4` heuristic. |
 | Cycle length | Fixed 90 s                                            | Synthetic          |
 | Phase timing | 2-phase 50/50 split (NS green / EW green)             | Synthetic          |
 
@@ -884,9 +884,9 @@ t3,n603,n352,27200,car,schedule,HBW_AM_chained
 
 ## 9. Running on OSC Pitzer
 
-All 50K – 500K scenarios in the thesis were generated on the Ohio Supercomputer Center's Pitzer cluster. The full HPC workflow — account setup, module loads, rsyncing PBFs and ModelGen files, per-tier SLURM `sbatch` templates, job monitoring, and troubleshooting — lives in a dedicated guide:
+All 50K – 500K scenarios in the thesis were generated on the Ohio Supercomputer Center's Pitzer cluster. The full HPC workflow, account setup, module loads, rsyncing PBFs and ModelGen files, per-tier SLURM `sbatch` templates, job monitoring, and troubleshooting, lives in a dedicated guide:
 
-- **[doc/PITZER.md](PITZER.md)** — OSC Pitzer setup and batch-job reference.
+- **[doc/PITZER.md](PITZER.md)**, OSC Pitzer setup and batch-job reference.
 
 Short version:
 
@@ -900,7 +900,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
 uv python install 3.13                       # Pitzer modules only offer 3.10/3.12
 
-module load openjdk/21.0.3_9                  # for MATSim — Pitzer's lmod requires an explicit version
+module load openjdk/21.0.3_9                  # for MATSim, Pitzer's lmod requires an explicit version
 uv venv --python 3.13 .venv && source .venv/bin/activate
 uv pip install -r requirements.lock          # 35 lockfile-pinned packages
 uv pip install eclipse-sumo==1.26.0          # SUMO wheel (separate; manylinux_2_28 only)
@@ -915,9 +915,9 @@ sbatch cluster/jobs/05_nyc_500k_car.sbatch    # or any of cluster/jobs/01..05
 
 Three things are worth stressing here (full detail in [PITZER.md](PITZER.md)):
 
-1. **Clone into `$HOME`, not the project share** — you own 500 GB of quota and the workflow doesn't need advisor approvals.
-2. **OSM PBFs and ModelGen files are gitignored** — rsync them in from your dev box, or run `python tools/download_osm.py` on Pitzer (NAT allows outbound HTTPS).
-3. **Pitzer Python is 3.12** (Mac dev box may be 3.13/3.14). Both versions work; osmium 4.x wheels are available for both. If `pip install -r requirements.txt` skips osmium, re-run it — older Pitzer checkouts may not have had `osmium>=4.0` in requirements.
+1. **Clone into `$HOME`, not the project share**, you own 500 GB of quota and the workflow doesn't need advisor approvals.
+2. **OSM PBFs and ModelGen files are gitignored**, rsync them in from your dev box, or run `python tools/download_osm.py` on Pitzer (NAT allows outbound HTTPS).
+3. **Pitzer Python is 3.12** (Mac dev box may be 3.13/3.14). Both versions work; osmium 4.x wheels are available for both. If `pip install -r requirements.txt` skips osmium, re-run it, older Pitzer checkouts may not have had `osmium>=4.0` in requirements.
 
 ---
 
@@ -925,23 +925,23 @@ Three things are worth stressing here (full detail in [PITZER.md](PITZER.md)):
 
 | Term                         | Definition                                                                                                                   |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| **ACS**                      | American Community Survey — annual U.S. Census Bureau survey of demographics, commuting, housing                             |
+| **ACS**                      | American Community Survey, annual U.S. Census Bureau survey of demographics, commuting, housing                             |
 | **Bounding box (bbox)**      | Geographic rectangle defined by (north, south, east, west) coordinates                                                       |
 | **Canonical format**         | SimForge's simulator-agnostic scenario schema (network.xml, demand.csv, etc.)                                                |
 | **Census-calibrated demand** | Trip generation using real census demographic data (vs purely random)                                                        |
 | **Geofabrik**                | A long-running provider of OSM extracts at country / state / region granularity. Source of the PBFs in `osm_data/`.          |
 | **Gravity model**            | Trip distribution model where flow between zones is proportional to "mass" (activity) and inversely proportional to distance |
-| **JWMNP**                    | ACS/PUMS field: Journey to Work — travel time in Minutes to Place of work                                                    |
-| **JWTRNS**                   | ACS/PUMS field: Journey to Work — TRaNSportation mode                                                                        |
+| **JWMNP**                    | ACS/PUMS field: Journey to Work, travel time in Minutes to Place of work                                                    |
+| **JWTRNS**                   | ACS/PUMS field: Journey to Work, TRaNSportation mode                                                                        |
 | **LandScan**                 | Global population distribution dataset by Oak Ridge National Laboratory (~1km cells)                                         |
 | **ModelGen**                 | C++ population synthesizer that combines OSM, LandScan, and PUMS into building/household/person models                       |
-| **OD pair**                  | Origin-Destination pair — a single trip from point A to point B                                                              |
-| **OSM**                      | OpenStreetMap — crowd-sourced geographic database                                                                            |
+| **OD pair**                  | Origin-Destination pair, a single trip from point A to point B                                                              |
+| **OSM**                      | OpenStreetMap, crowd-sourced geographic database                                                                            |
 | **Overpass API**             | HTTP API for querying OpenStreetMap data. Used as a *fallback* in SimForge for cities without a committed PBF.               |
-| **PBF**                      | Protocolbuffer Binary Format — compact binary serialization of OSM data (`.osm.pbf`), ~1/10 the size of equivalent XML       |
-| **PUMA**                     | Public Use Microdata Area — geographic unit (~100K-200K people) used in census microdata                                     |
-| **PUMS**                     | Public Use Microdata Sample — individual-level census records (anonymized)                                                   |
+| **PBF**                      | Protocolbuffer Binary Format, compact binary serialization of OSM data (`.osm.pbf`), ~1/10 the size of equivalent XML       |
+| **PUMA**                     | Public Use Microdata Area, geographic unit (~100K-200K people) used in census microdata                                     |
+| **PUMS**                     | Public Use Microdata Sample, individual-level census records (anonymized)                                                   |
 | **pyosmium**                 | Python bindings for libosmium; used by `pipeline/network/load_network_from_pbf.py` to bbox-slice state-level PBFs            |
-| **SCC**                      | Strongly Connected Component — the largest subgraph where every node can reach every other node                              |
+| **SCC**                      | Strongly Connected Component, the largest subgraph where every node can reach every other node                              |
 | **Snap point**               | The point on the closest road to a building; stored as `way_lat`/`way_lon` in model files                                    |
-| **WGTP**                     | Household weight from PUMS — how many real households one survey record represents                                           |
+| **WGTP**                     | Household weight from PUMS, how many real households one survey record represents                                           |

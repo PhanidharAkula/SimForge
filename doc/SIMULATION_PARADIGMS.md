@@ -13,7 +13,7 @@ story.
 
 ## 1. The three resolutions
 
-Traffic simulators operate at one of three levels of abstraction —
+Traffic simulators operate at one of three levels of abstraction,
 distinguished by *the unit being simulated*:
 
 | Resolution | Unit | What's tracked per unit | Throw away |
@@ -31,7 +31,7 @@ The trade-off curve is steep:
 | Vehicle identity preserved | no | yes (as packet) | yes (full state) |
 | Typical use | regional planning forecasts | network-level operations, DTA equilibrium | intersection-level analysis, ITS evaluation |
 
-SimForge ships **meso** and **micro**. It does not ship a macro mode —
+SimForge ships **meso** and **micro**. It does not ship a macro mode,
 all three engines (SUMO, MATSim, DTALite) operate at meso or micro
 resolution; the engines that *do* macro (e.g., legacy four-step models)
 are outside SimForge's scope.
@@ -40,7 +40,7 @@ are outside SimForge's scope.
 
 ## 2. What each resolution captures and misses
 
-### Micro — "every vehicle is an agent with full physics"
+### Micro, "every vehicle is an agent with full physics"
 
 A microscopic simulator models each vehicle individually with
 car-following + lane-changing + intersection-conflict logic. SUMO
@@ -61,17 +61,17 @@ Krauss car-following model (see `doc/GLOSSARY.md::Krauss`).
 **Misses:**
 
 - Nothing at the vehicle level. (Edge cases: pedestrian interactions,
-  weather, mechanical failures — typically modeled by extensions.)
+  weather, mechanical failures, typically modeled by extensions.)
 
 **Cost shape:** Roughly **O(N_vehicles × simulated_seconds /
 step_length)**. Doubling vehicles doubles cost; halving step length
 doubles cost.
 
-### Meso — "vehicles are packets queueing on links"
+### Meso, "vehicles are packets queueing on links"
 
 A mesoscopic simulator treats each link as a queue with a service rate.
 Vehicles enter, wait in queue, get served, and exit. There's no notion
-of *which lane* a vehicle is in — the link is one fat aggregated
+of *which lane* a vehicle is in, the link is one fat aggregated
 service unit.
 
 **Captures:**
@@ -91,11 +91,11 @@ service unit.
 - Driver heterogeneity (every vehicle is "average")
 
 **Cost shape:** Roughly **O(N_links × simulated_seconds / event_step)**.
-Near-constant in vehicle count — adding vehicles only adds to a queue
+Near-constant in vehicle count, adding vehicles only adds to a queue
 counter, not new physics calculations. This is why meso is 10–100× faster
 than micro on the same scenario.
 
-### Macro — "flow as fluid density"
+### Macro, "flow as fluid density"
 
 Not used by SimForge. A macroscopic simulator treats traffic as a
 continuous fluid: each link has a density (veh/km), a flow (veh/h),
@@ -103,7 +103,7 @@ and a velocity (km/h) related by the fundamental traffic-flow equation
 *flow = density × velocity*. Individual vehicles do not exist as
 distinct entities.
 
-Mentioned here only for taxonomy completeness — SimForge's `mode`
+Mentioned here only for taxonomy completeness, SimForge's `mode`
 column (`car`, `transit`, `bike`, `walk` in `demand.csv`) operates
 on individual trip records, so macro is out of scope by construction.
 
@@ -125,7 +125,7 @@ engine table, which is uninteresting for a cross-simulator benchmark.
 This drives the runspec design:
 
 - `runspecs/benchmark_small.yaml`, `benchmark_large.yaml`,
-  `stress_test.yaml` — run **meso** for SUMO + MATSim + DTALite to
+  `benchmark_large.yaml` runs **meso** for SUMO + MATSim + DTALite to
   produce cross-engine Q1–Q4 fairness data.
 - SUMO **micro** is included separately as a *within-engine* comparison
   on smaller bundles (chicago_1k_car, nyc_10k_car) to characterize the
@@ -141,7 +141,7 @@ before any cell starts.
 
 The fairness contract (`doc/ARCHITECTURE.md` §1) requires that every
 adapter receives the same canonical input and runs the same paradigm.
-There's no fair way to compare *MATSim meso* to *SUMO micro* — they're
+There's no fair way to compare *MATSim meso* to *SUMO micro*, they're
 not solving the same problem. So:
 
 - **Cross-engine fairness (Q1–Q4)**: meso for all three engines.
@@ -180,7 +180,7 @@ seed-driven variance:
 | `chicago_1k_car` | 0.998 | 0.995 |
 | `nyc_10k_car` | 0.956 | 0.973 |
 
-Both well within the "Excellent" / "Good" bands — micro is not
+Both well within the "Excellent" / "Good" bands, micro is not
 unreproducible, it just doesn't hit the byte-deterministic R = 1.000
 that MATSim and DTALite achieve at `lastIteration=0`.
 
@@ -190,7 +190,7 @@ that MATSim and DTALite achieve at `lastIteration=0`.
 
 Phase 14 (canonical-routes deduplication + parallel BFS + MATSim
 O(N)→O(1) link-find) collapsed the BFS *prep* cost. The engine
-runtime is unchanged — it scales the same way it always did:
+runtime is unchanged, it scales the same way it always did:
 
 | Scenario | Trips | Linear extrapolation | Super-linear (1.5–2×) | Engine wall per cell |
 |---|---:|---:|---:|---|
@@ -206,7 +206,7 @@ because congestion is light; 200K on chicago's network is
 medium-density, 500K on NYC is high-density.
 
 **Memory.** SUMO micro tracks per-vehicle state (lane position,
-speed, acceleration) — typically 2–5× the RAM of meso. Phase 13
+speed, acceleration), typically 2–5× the RAM of meso. Phase 13
 chicago_200k_car meso peaked at 23 GB. Micro is expected at 50–115 GB
 (fits Cardinal's 192 GB nodes). nyc_500k_car micro could push 150–300 GB
 (may require a fat-node allocation or it OOMs).
@@ -231,11 +231,11 @@ chicago_200k_car meso peaked at 23 GB. Micro is expected at 50–115 GB
 A pocket-sized framing if the committee asks why SimForge defaults to
 meso:
 
-> **Mesoscopic** treats vehicles as fluid packets flowing on links —
+> **Mesoscopic** treats vehicles as fluid packets flowing on links,
 > captures network-level congestion and signal effects, but smooths
 > away per-vehicle behavior. **Microscopic** simulates every vehicle
 > as a full agent with car-following, lane changes, and gap
-> acceptance — captures the rich vehicle-level detail at significant
+> acceptance, captures the rich vehicle-level detail at significant
 > compute cost. SimForge runs cross-engine comparisons at meso because
 > that's the paradigm all three engines support (SUMO, MATSim,
 > DTALite), and runs SUMO micro as a within-engine resolution check
@@ -248,7 +248,7 @@ meso:
 
 ## 8. Within-engine meso-vs-micro: the thesis story
 
-The plan (Chapter 5 implicit) wanted *fidelity vs reality* —
+The plan (Chapter 5 implicit) wanted *fidelity vs reality*,
 how close each engine is to observed Chicago/NYC/LA traffic. Without
 observed ground truth, SimForge does the next-best thing in two
 directions:
@@ -261,7 +261,7 @@ directions:
   counterpart on the *same* scenario? → resolution-fidelity finding.
 
 The within-SUMO comparison is the closest thing to "ground truth" the
-shipped data supports — micro is closer to reality than meso (because
+shipped data supports, micro is closer to reality than meso (because
 it models more of the relevant physics), so the meso-vs-micro gap
 inside SUMO is an upper bound on the meso-only inaccuracy of the
 cross-engine results.
@@ -283,31 +283,31 @@ on its own as a paradigm-divergence result.
 
 ## 9. Where this lives in the code
 
-- `run.py` — `--mode meso|micro` CLI flag; `ENGINE_SUPPORTED_MODES`
+- `run.py`, `--mode meso|micro` CLI flag; `ENGINE_SUPPORTED_MODES`
   enforces per-engine compatibility.
-- `runspecs/*.yaml` — `mode:` field per cell; `stress_test.yaml`
+- `runspecs/*.yaml` `mode:` field per cell; `benchmark_large.yaml`
   declares the full meso + SUMO-micro matrix.
-- `adapters/sumo/sumo_adapter.py` — passes `--meso` to SUMO when
+- `adapters/sumo/sumo_adapter.py`, passes `--meso` to SUMO when
   `mode=meso`; default is micro.
-- `adapters/matsim/`, `adapters/dtalite/` — mode is informational,
+- `adapters/matsim/`, `adapters/dtalite/`, mode is informational,
   always run their native (meso) paradigm; raise on `mode=micro`.
-- `evaluation/audit_fairness.py::_discover_modes` — walks each
+- `evaluation/audit_fairness.py::_discover_modes`, walks each
   scenario directory listing modes present on disk per cell.
-- `tests/test_adapter_determinism.py` — covers both meso and micro
+- `tests/test_adapter_determinism.py`, covers both meso and micro
   byte-identity (where the engine supports both).
 
 ---
 
 ## References
 
-- `doc/GLOSSARY.md` — short Mesoscopic / Microscopic / Krauss /
+- `doc/GLOSSARY.md`, short Mesoscopic / Microscopic / Krauss /
   PCE / DTA entries link back to this doc for the long form.
-- `doc/ARCHITECTURE.md` — fairness contract, engine compatibility
+- `doc/ARCHITECTURE.md`, fairness contract, engine compatibility
   matrix.
-- `doc/DEVIATIONS.md` — D1 (engine substitution), D6
+- `doc/DEVIATIONS.md`, D1 (engine substitution), D6
   (no grid-search calibration), D7 (vehicles/sec/core).
-- `doc/MODELGEN_AND_MODES.md` — the *other* meaning of "mode" in
+- `doc/MODELGEN_AND_MODES.md`, the *other* meaning of "mode" in
   SimForge: travel mode (car/transit/bike/walk), not simulation
   resolution. Easy source of confusion.
-- `doc/RESULTS_GUIDE.md` §2 — `run.py` vs `run_benchmark.py`
+- `doc/RESULTS_GUIDE.md` §2, `run.py` vs `run_benchmark.py`
   side-by-side, including the `--mode` flag and runspec `mode:` field.

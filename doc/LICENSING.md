@@ -9,11 +9,11 @@ the commitments in Thesis Plan §3.6 ("Data Management and Ethics").
 
 ## 1. SimForge code
 
-The SimForge codebase — every file in `adapters/`, `pipeline/`,
+The SimForge codebase, every file in `adapters/`, `pipeline/`,
 `evaluation/`, `execution/`, `visualization/`, `tools/`, `tests/`,
 `cluster/`, top-level entry points (`run.py`, `generate.py`, `help.py`,
 `setup_simforge.py`), runspecs in `runspecs/`, and SBATCH wrappers in
-`cluster/jobs/` — is licensed under the **Apache License, Version 2.0**.
+`cluster/jobs/`, is licensed under the **Apache License, Version 2.0**.
 
 The full license text is at `LICENSE` in the repository root, and a
 copyright notice is included in the license appendix.
@@ -35,7 +35,7 @@ to SimForge and to the upstream sources via the bundle's `manifest.xml`
 provenance block.
 
 Note that an OSM-derived bundle inherits a stricter `ODbL` obligation
-on the network component — see §3.1.
+on the network component, see §3.1.
 
 ## 3. Upstream data sources
 
@@ -52,7 +52,7 @@ contributors.
 The bundle's `manifest.xml` records the upstream PBF source, the
 extraction date, and the bbox used for the per-scenario slice.
 
-### 3.2 US Census Bureau — PUMS microdata + cityscape ModelGen
+### 3.2 US Census Bureau, PUMS microdata + cityscape ModelGen
 
 Source: Cityscape's Schedule-generator branch synthesizes population +
 schedules from US Census Public Use Microdata Sample (PUMS) records.
@@ -65,7 +65,7 @@ status. SimForge's derived `demand.csv` is therefore unencumbered.
 
 Attribution: US Census Bureau, American Community Survey (ACS) PUMS.
 
-### 3.3 US Census Bureau — TIGER/Line Cartographic Boundary
+### 3.3 US Census Bureau, TIGER/Line Cartographic Boundary
 
 Source: tract polygons (`cb_2024_<fips>_tract_500k.shp`) and roads
 (`tl_2024_<fips>_prisecroads.shp`) cached under `cache/census/` and
@@ -81,16 +81,16 @@ the canonical benchmark pipeline.
 ## 4. Third-party software dependencies
 
 Pinned in `requirements.lock`. Each package retains its own upstream
-license; SimForge does not redistribute the binary wheels — they are
+license; SimForge does not redistribute the binary wheels, they are
 fetched at install time by `uv pip install`.
 
 | Component | Version pin | Upstream license |
 |---|---|---|
 | `eclipse-sumo` (includes SUMO binary) | 1.26.0 | **Eclipse Public License 2.0 (EPL-2.0)** |
-| MATSim runtime JAR | 15.0 | **GPL v2 or MIT/Apache (per release jar)** — distribution governed by MATSim's per-release notices in `lib/matsim-15.0/` |
+| MATSim runtime JAR | 15.0 | **GPL v2 or MIT/Apache (per release jar)**, distribution governed by MATSim's per-release notices in `lib/matsim-15.0/` |
 | `path4gmns` (includes DTALite binary) | 0.10.0 | **Apache 2.0** (path4gmns); DTALite C++ upstream Apache 2.0 |
 | Python 3.13 | 3.13.13 (pinned by `uv`) | **PSF License** |
-| `numpy`, `scipy`, `pandas`, `lxml`, `matplotlib`, `shapely`, `pyshp`, `osmium`, `osmnx`, `networkx`, `psutil`, `pytest` (+ transitive) | per `requirements.lock` | Varies (BSD, MIT, LGPL, Apache 2.0) — each retains its own |
+| `numpy`, `scipy`, `pandas`, `lxml`, `matplotlib`, `shapely`, `pyshp`, `osmium`, `osmnx`, `networkx`, `psutil`, `pytest` (+ transitive) | per `requirements.lock` | Varies (BSD, MIT, LGPL, Apache 2.0), each retains its own |
 | OpenJDK 17/21 (runtime) | per system / Cardinal `module load openjdk/21.0.3_9` | **GPL v2 with Classpath exception** |
 | `libomp` (DTALite OpenMP runtime) | per system | **MIT-style (LLVM)** |
 
@@ -103,7 +103,7 @@ include each upstream notice file.
 
 `doc/`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `TESTING.md`,
 `SETUP.md`, the thesis chapter drafts in `doc/chapters/`, and the
-opt-in `visualization/README.md` — same as the code: **Apache 2.0**.
+opt-in `visualization/README.md`, same as the code: **Apache 2.0**.
 
 ## 6. Re-use guidance for downstream users
 

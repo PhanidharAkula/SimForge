@@ -53,8 +53,8 @@ The canonical schema is the lingua franca of SimForge. Every scenario is express
 
 **Why this design:**
 
-- XML for structured, hierarchical data (networks, signals) — well-supported by all simulators
-- CSV for tabular data (demand) — enables pandas analysis, spreadsheet inspection
+- XML for structured, hierarchical data (networks, signals), well-supported by all simulators
+- CSV for tabular data (demand), enables pandas analysis, spreadsheet inspection
 - SHA-256 manifest prevents accidental corruption and enables cache-based deduplication
 
 ### 2.2 Generation Pipeline
@@ -195,7 +195,7 @@ BenchmarkResult (JSON)
 **RunSpec example** (`runspecs/benchmark_small.yaml`):
 
 ```yaml
-name: stress_test
+name: benchmark_large
 description: End-to-end stress test across all engines and modes.
 output_dir: runs/benchmark_small
 
@@ -228,7 +228,7 @@ Three metric families, each in a dedicated module:
 Standalone, opt-in module under `visualization/`. Generates geographic
 maps from canonical bundles and benchmark results. Lives on the
 `visualization` branch and is not imported by any main SimForge code
-path — `generate.py`, `run_benchmark.py`, `analyze_benchmark`,
+path, `generate.py`, `run_benchmark.py`, `analyze_benchmark`,
 `audit_fairness`, and `generate_plots` are agnostic to it.
 
 ```
@@ -255,7 +255,7 @@ Seven map types are shipped:
 
 | Map | Phase | Inputs | Engine specificity |
 |---|---|---|---|
-| `od_origins` / `od_destinations` | A | Bundle (`network.xml` + `demand.csv`) + cached US Census tracts + TIGER roads | — (cross-engine) |
+| `od_origins` / `od_destinations` | A | Bundle (`network.xml` + `demand.csv`) + cached US Census tracts + TIGER roads |, (cross-engine) |
 | `link_load` | B | Per-cell engine output | per `(engine, mode)` |
 | `congestion` | B | DTALite `link_performance.csv` | DTALite only (needs link mean speed) |
 | `travel_time` | B | Per-cell engine output + bundle | per `(engine, mode)` |
@@ -287,15 +287,15 @@ layer is invisible to anyone who never runs
 **Cross-engine interpretation surfaces.** Three properties visible from
 the maps and documented in `visualization/README.md`:
 
-- **SUMO ≈ MATSim, DTALite differs in `link_load`** — same routes
+- **SUMO ≈ MATSim, DTALite differs in `link_load`**, same routes
   (SimForge BFS) produce same spatial traffic structure; DTALite's UE
   picks different links. Direct visual proof of the fair-comparison
   contract.
-- **`animated_flow` shows departure bursts** — PUMS JWMNP integer-
+- **`animated_flow` shows departure bursts**, PUMS JWMNP integer-
   minute discretization means 1000 trips share ~20 departure
   timestamps; the bursts are faithful to the data, not a SimForge
   artefact. Cross-referenced with `methods.md` §3.3 step 9.
-- **`chicago_200k_car od_origins ≈ od_destinations`** — only the
+- **`chicago_200k_car od_origins ≈ od_destinations`**, only the
   full-day scenario emits both AM + PM HBW pairs; origins and
   destinations are then the same set of nodes ({homes} ∪ {workplaces})
   visited at different times.
@@ -310,7 +310,7 @@ the post-run pipeline section of
 ## 3. Module Dependency Graph
 
 ```
-pipeline/demand/parse_model_file.py     (no deps — pure parser)
+pipeline/demand/parse_model_file.py     (no deps, pure parser)
     │
     ▼
 pipeline/demand/generate_census_demand.py
@@ -346,9 +346,9 @@ execution/run_benchmark.py         (uses: runspec, adapters, subprocess, time)
 evaluation/metrics/fidelity.py      (numpy, scipy.stats)
 evaluation/metrics/scalability.py   (time, platform, psutil)
 evaluation/metrics/reproducibility.py (statistics)
-evaluation/metrics/travel_time.py   (xml.etree — SUMO tripinfo parser)
+evaluation/metrics/travel_time.py   (xml.etree, SUMO tripinfo parser)
     │
-    ▼  (separate, opt-in — visualization branch)
+    ▼  (separate, opt-in, visualization branch)
 visualization/data/{bundle,census,events,osm_ways,results,tiger_roads}.py
     │ uses: lxml, csv, pyshp, shapely, pyosmium, gzip
 visualization/render/{basemap,od_choropleth,link_load,travel_time,route_diversity,animated_flow}.py
@@ -359,15 +359,15 @@ visualization/generate_maps.py + visualization/coverage.py
 
 **External dependencies** (from `requirements.txt`):
 
-- `osmium` (pyosmium) — bbox-slicing of local PBF snapshots
-- `osmnx` — parses the sliced XML into a `MultiDiGraph`; also drives the Overpass fallback
-- `networkx` — graph operations (pulled in by osmnx)
-- `lxml` — XML processing
-- `pandas` — demand CSV handling
-- `numpy` — numerical computations (metrics)
-- `scipy` — KS statistic
-- `pyyaml` — RunSpec loading
-- `psutil` — hardware detection
+- `osmium` (pyosmium), bbox-slicing of local PBF snapshots
+- `osmnx`, parses the sliced XML into a `MultiDiGraph`; also drives the Overpass fallback
+- `networkx`, graph operations (pulled in by osmnx)
+- `lxml`, XML processing
+- `pandas`, demand CSV handling
+- `numpy`, numerical computations (metrics)
+- `scipy`, KS statistic
+- `pyyaml`, RunSpec loading
+- `psutil`, hardware detection
 
 ---
 
@@ -388,7 +388,7 @@ User: python generate.py --city chicago --trips 1000 --seed 42
     then truncate_graph_bbox to clip stub extensions)
         │ → network.xml (1,245 nodes, 2,862 links for chicago_1k_car)
         ▼
-[3] Compute largest SCC (pipeline/network/scc.py — iterative Kosaraju)
+[3] Compute largest SCC (pipeline/network/scc.py, iterative Kosaraju)
         │ → SCC node set (1,204/1,245 nodes for chicago_1k_car)
         ▼
 [4] Detect signals (OSM highway=traffic_signals nodes)
@@ -457,9 +457,9 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
 
 **Problem**: SUMO requires explicit vehicle routes (sequence of edges), not OD pairs.
 
-**Alternative A**: Use SUMO's `duarouter` — adds external dependency, slower, non-reproducible across SUMO versions.
+**Alternative A**: Use SUMO's `duarouter`, adds external dependency, slower, non-reproducible across SUMO versions.
 
-**Alternative B**: BFS in adapter — deterministic, no external tool, same route regardless of SUMO version.
+**Alternative B**: BFS in adapter, deterministic, no external tool, same route regardless of SUMO version.
 
 **Chosen**: Alternative B. BFS guarantees byte-identical routes given the same network, regardless of simulator version.
 
@@ -540,7 +540,7 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
                     │ git clone           │ apptainer pull
                     ▼                     ▼
 ┌─────────────────────────────────────────────────┐
-│  HPC (OSC Pitzer + Cardinal Clusters) — optional  │
+│  HPC (OSC Pitzer + Cardinal Clusters), optional  │
 │  48-core Intel Xeon / 192 GB (Pitzer)             │
 │  256-core Xeon Max 9470 / 503 GB (Cardinal)       │
 │  → OSM PBFs + ModelGen files rsynced from dev box │
@@ -552,4 +552,4 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 └──────────────────────────────────────────────────┘
 ```
 
-The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development — only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring) and [doc/CONTAINER_USAGE.md](CONTAINER_USAGE.md) for the Wave 2 container-mode opt-in.
+The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development, only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring) and [doc/CONTAINER_USAGE.md](CONTAINER_USAGE.md) for the Wave 2 container-mode opt-in.

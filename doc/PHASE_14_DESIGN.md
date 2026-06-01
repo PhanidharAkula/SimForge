@@ -1,4 +1,4 @@
-# Phase 14 — Canonical Routes + Parallel BFS
+# Phase 14, Canonical Routes + Parallel BFS
 
 **Branch**: `phase-14-canonical-routes`
 **Status**: implementation landed 2026-05-12 (sub-commits 14.0–14.5);
@@ -53,8 +53,8 @@ Two compounding optimizations that combine multiplicatively:
 
 | Lever | Mechanism | Expected speedup |
 |---|---|---|
-| **Phase 14a — canonical routes** | Compute BFS once per scenario, share between SUMO and MATSim adapters | 2× on cold prep (eliminates the duplication) |
-| **Phase 14b — parallel BFS** | `multiprocessing.Pool` across trips with deterministic merge | ~12-15× (16-core Amdahl, serial setup + merge ~5% of wall) |
+| **Phase 14a, canonical routes** | Compute BFS once per scenario, share between SUMO and MATSim adapters | 2× on cold prep (eliminates the duplication) |
+| **Phase 14b, parallel BFS** | `multiprocessing.Pool` across trips with deterministic merge | ~12-15× (16-core Amdahl, serial setup + merge ~5% of wall) |
 
 Combined, expected `cold_prep_wall` on Cardinal:
 
@@ -90,7 +90,7 @@ def compute_canonical_routes(
 
     Returns trip_id → list of node_ids (origin first, destination last).
     Both SUMO and MATSim adapters consume this dict to emit their
-    engine-specific route XML — no per-adapter BFS pass.
+    engine-specific route XML, no per-adapter BFS pass.
 
     Determinism: byte-identical output regardless of `workers` value.
     The parallel implementation chunks trips by sorted trip_id, dispatches
@@ -155,12 +155,12 @@ future Phase 14.x.
 
 ### 2.3 Parallel BFS implementation
 
-#### 2.3.1 What "parallel" means here — and what it does NOT
+#### 2.3.1 What "parallel" means here, and what it does NOT
 
 This is **task parallelism over trips**, not data parallelism over the
 network. The graph is fully replicated in each worker; the trip list is
 the only thing that gets partitioned. Workers do not exchange any
-information during BFS execution — each one is a self-contained BFS
+information during BFS execution, each one is a self-contained BFS
 session that happens to be running simultaneously with 15 others.
 
 ```
@@ -203,12 +203,12 @@ session that happens to be running simultaneously with 15 others.
 
 #### 2.3.2 Three load-bearing properties
 
-**Property 1 — the network is replicated, not partitioned.**
+**Property 1, the network is replicated, not partitioned.**
 
 Each worker holds the full SCC-filtered canonical graph in its own
 heap (~150 MB for chicago_200k_car, ~250 MB for nyc_500k_car). We do
 not carve the graph into geographic zones because trips in a 15–20 km
-metro bbox routinely cross the entire network — partitioning would
+metro bbox routinely cross the entire network, partitioning would
 either force each worker to handle only intra-zone trips (which would
 exclude most of demand.csv) or require cross-zone messaging
 (introducing synchronisation overhead and breaking the simple
@@ -216,17 +216,17 @@ deterministic story below). Memory cost: 16 × 150 MB ≈ 2.4 GB on
 chicago_200k_car. Cardinal `cpu` nodes provide 503 GB; the
 replication cost is negligible.
 
-**Property 2 — the trip list is what's partitioned.**
+**Property 2, the trip list is what's partitioned.**
 
 The main process reads `demand.csv`, filters to the feasible set,
 sorts by `trip_id`, and splits into 1,000 chunks of ~200 trips each.
 Each chunk is a list of `(trip_id, origin_node, dest_node)` tuples.
-Workers grab chunks dynamically via `Pool.imap` — finishing a chunk
+Workers grab chunks dynamically via `Pool.imap`, finishing a chunk
 fast lets the worker pick up the next pending one, which gives
 free load balancing if individual cores run at slightly different
 speeds (NUMA effects, neighbour processes on the same node, etc.).
 
-**Property 3 — workers never exchange information during BFS.**
+**Property 3, workers never exchange information during BFS.**
 
 The only IPC is between main and worker, never worker-to-worker:
 
@@ -250,8 +250,8 @@ Each trip's BFS output is a pure function of four inputs:
 
 1. `origin` (string node id, from the demand row)
 2. `dest` (string node id, from the demand row)
-3. `adjacency` + `edge_lookup` (loaded from `network.xml` — same bytes per worker)
-4. `forbidden_moves` (built from `network.xml`'s `<turn_restrictions>` block — same per worker)
+3. `adjacency` + `edge_lookup` (loaded from `network.xml`, same bytes per worker)
+4. `forbidden_moves` (built from `network.xml`'s `<turn_restrictions>` block, same per worker)
 
 All four inputs are bit-identical across workers and across runs
 (network.xml is hash-pinned per the V5 manifest; demand.csv has the
@@ -272,10 +272,10 @@ refactor that introduces nondeterminism into this chain.
 
 | Approach | Pros | Cons | Verdict |
 |---|---|---|---|
-| **Multiprocessing + replicated graph + trip-partition (current)** | Trivially deterministic; zero synchronisation; small chunks give free load balancing | Replicates graph N times in RAM (~2.4 GB on chicago_200k, 16-way) | ✅ chosen — RAM is abundant at our scale, simplicity wins |
-| **Threading + shared graph** | No graph duplication | Python's GIL serialises CPU-bound work — BFS is a pure-Python loop, so 0× speedup measured | ❌ GIL is the deal-breaker |
+| **Multiprocessing + replicated graph + trip-partition (current)** | Trivially deterministic; zero synchronisation; small chunks give free load balancing | Replicates graph N times in RAM (~2.4 GB on chicago_200k, 16-way) | ✅ chosen, RAM is abundant at our scale, simplicity wins |
+| **Threading + shared graph** | No graph duplication | Python's GIL serialises CPU-bound work, BFS is a pure-Python loop, so 0× speedup measured | ❌ GIL is the deal-breaker |
 | **`multiprocessing.shared_memory` for the graph** | Single in-RAM copy of the graph | Requires serialising the graph dict into raw bytes + custom view-layer; complicates determinism analysis; saves ~2 GB which we don't need | ❌ overkill for our memory budget |
-| **Network partitioning (geographic zones) + cross-zone messaging** | Saves memory if the graph were enormous (millions of nodes) | Workers must coordinate when a path crosses zone boundaries — introduces synchronisation, breaks the pure-function determinism story, requires substantially more complex code | ❌ unnecessary; our graphs are at most ~80K nodes |
+| **Network partitioning (geographic zones) + cross-zone messaging** | Saves memory if the graph were enormous (millions of nodes) | Workers must coordinate when a path crosses zone boundaries, introduces synchronisation, breaks the pure-function determinism story, requires substantially more complex code | ❌ unnecessary; our graphs are at most ~80K nodes |
 | **C/Cython extension with shared graph + threads (releasing GIL)** | Could be 5–10× faster per worker; no graph duplication | Requires writing + maintaining native code; loses the cross-platform pure-Python guarantee; build-time complexity | ❌ not warranted yet, future Phase candidate |
 
 #### 2.3.5 The `spawn` vs `fork` choice
@@ -296,7 +296,7 @@ relying on the platform default:
   no inherited-state surprises.
 
 We pay the ~16–32 s of cumulative startup once per cell, amortised
-over hours of BFS work — completely irrelevant in the wall-time
+over hours of BFS work, completely irrelevant in the wall-time
 accounting, and worth it for the determinism + portability story.
 
 #### 2.3.6 What the user sees vs what's actually happening
@@ -358,7 +358,7 @@ def _route_chunk(trip_chunk: list[tuple[str, str, str]]) -> list[tuple[str, list
 Pinned by `tests/test_canonical_routes.py::TestParallelDeterminism`.
 
 **Per-worker `_init_worker` rather than fork-inherited globals**:
-See §2.3.5 above — `spawn` is forced for cross-platform consistency,
+See §2.3.5 above, `spawn` is forced for cross-platform consistency,
 worker state is rebuilt from `network.xml` instead of inherited.
 
 ### 2.4 Adapter integration
@@ -366,7 +366,7 @@ worker state is rebuilt from `network.xml` instead of inherited.
 Both `prepare_sumo_inputs` and `prepare_matsim_inputs` gain an
 optional `canonical_routes` parameter. When provided, the adapter
 skips its internal BFS loop and consumes the dict directly.
-When `None` (legacy path), the adapter falls back to its own BFS —
+When `None` (legacy path), the adapter falls back to its own BFS,
 back-compat for standalone runs that don't go through the harness.
 
 **SUMO** (`adapters/sumo/sumo_adapter.py:build_sumo_routes_xml`):
@@ -431,7 +431,7 @@ def _ensure_prepared_cache(self, scenario_path, scenario_id, engine, engine_opti
         self.prepare_sumo_inputs(scenario_path, cache_dir,
                                   canonical_routes=routes)
     elif engine == "dtalite":
-        # No BFS pre-routing for DTALite — runs its own UE assignment
+        # No BFS pre-routing for DTALite, runs its own UE assignment
         prepare_dtalite_inputs(scenario_path, cache_dir, cfg)
     ...
 ```
@@ -454,7 +454,7 @@ invalidates both layers.
 | 14.3 | MATSim adapter accepts `canonical_routes=` kwarg | `TestMatsimPlansXmlByteIdentity` passes | ✅ landed |
 | 14.4 | Harness wires shared BFS pass | 12 cache-management tests pass (stubs added) | ✅ landed |
 | 14.5 | `multiprocessing.Pool` in `canonical_routes.py` | `TestParallelDeterminism` passes (workers=2,4) | ✅ landed |
-| 14.6 | Documentation pass | — | ✅ landed |
+| 14.6 | Documentation pass | n/a | ✅ landed |
 | 14.7 | Cluster re-measurement on Cardinal | post-run wall numbers vs Phase 13 projections | ⏳ pending next sbatch |
 
 Each commit passes `python -m pytest tests/test_canonical_routes.py
@@ -468,7 +468,7 @@ tests/test_adapter_determinism.py tests/test_run_benchmark.py`
 
 ### Determinism
 
-The byte-identity invariant is non-negotiable — this is what
+The byte-identity invariant is non-negotiable, this is what
 `audit_fairness` Q1/Q3 measure. The test file pins:
 
 1. `compute_canonical_routes(...)` with `workers=1, 2, 4` produces
@@ -520,7 +520,7 @@ existing `cache/<type>/[<scope>/]<filename>` layout for `cache/census/`,
 pre-existing per-output-dir cache file is `rename()`d (atomic) into the
 global location. Operator sees a `[bfs] migrated   :` log line per moved
 file. Cross-filesystem rename failures log a warning but don't block the
-BFS — a cache miss triggers recompute (correct, just slow).
+BFS, a cache miss triggers recompute (correct, just slow).
 
 **Scope.** Only the harness caller changed
 (`execution/run_benchmark.py::_canonical_routes_for`); the cache-handling
@@ -554,9 +554,9 @@ comfortably within the umbrella's parallel-on-one-node strategy. See
 
 Numbers go into:
 - `CHANGELOG.md` Phase 14 entry, in a measured-speedup table.
-- `doc/chapters/methods.md` §3.X — added as the engineering
+- `doc/chapters/methods.md` §3.X, added as the engineering
   contribution narrative (problem → measurement → fix → re-measurement).
-- `doc/chapters/results.md` — referenced if the speedup affects any
+- `doc/chapters/results.md`, referenced if the speedup affects any
   Chapter 5 figure (e.g., Fig 5.10 wall-vs-engine breakdown gains a
   Phase 14 column).
 
@@ -580,7 +580,7 @@ large-tier cold prep; verified byte-identity of the produced routes."
   there are too few trips. **Resolved by deployment (post-Phase-14.7):**
   the harness uses `SLURM_CPUS_PER_TASK` when set, otherwise falls back
   to 4 for laptop runs. The small-bundle over-parallelization concern
-  proved unmeasurable in practice — chicago_1k_car prep finishes in
+  proved unmeasurable in practice, chicago_1k_car prep finishes in
   seconds even at 16 workers, and large-tier benchmarks (chicago_200k +
   nyc_500k) saturate the pool. No `min(workers, feasible_count // 1000)`
   gating was added.

@@ -1,7 +1,7 @@
 # SimForge on OSC Pitzer
 
 This is the authoritative guide for running SimForge on the Ohio Supercomputer
-Center's Pitzer cluster — the HPC target used for all 50K – 500K scenarios in
+Center's Pitzer cluster, the HPC target used for all 50K – 500K scenarios in
 the thesis. Everything below is verified against the actual end-to-end run
 that produced the published numbers.
 
@@ -41,7 +41,7 @@ that produced the published numbers.
 After the LPSim removal in Version_5, **the entire SimForge matrix is CPU-only**
 and reproduces from a developer Mac. Pitzer is now reserved purely for the
 larger trip tiers (50k–500k) where SUMO microscopic + MATSim wall time
-exceeds laptop patience — none of the three engines requires GPU or
+exceeds laptop patience, none of the three engines requires GPU or
 specialised hardware. See [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md)
 for the GPU-engine abandonment narrative.
 
@@ -68,11 +68,11 @@ for the GPU-engine abandonment narrative.
 | Login nodes         | 4 × `pitzer.osc.edu` (round-robin DNS to `pitzer-login01` … `04`)          |
 | OS                  | RHEL 9                                                                     |
 | Scheduler           | SLURM                                                                      |
-| Standard CPU nodes  | 564 nodes — Skylake (40 cores, 192 GB) or Cascade Lake (48 cores, 192 GB)  |
+| Standard CPU nodes  | 564 nodes, Skylake (40 cores, 192 GB) or Cascade Lake (48 cores, 192 GB)  |
 | Large-memory nodes  | 12 × ~744 GB + 4 × 3 TB (huge-mem, 80 cores)                               |
 | GPU nodes           | 74 × dual-V100 (16 GB or 32 GB) + 4 × quad-V100 (32 GB)                    |
 | Aggregate           | 658 nodes / 29,664 cores                                                   |
-| Project account     | `PMIU0110` (advisor's allocation — passed via `--account=PMIU0110`)        |
+| Project account     | `PMIU0110` (advisor's allocation, passed via `--account=PMIU0110`)        |
 
 ### Filesystems
 
@@ -97,7 +97,7 @@ NAT (`192.148.249.248–251`). This means:
 - `pip install eclipse-sumo` works in batch jobs ✓
 - `git clone`, `git pull`, `gh` work ✓
 - Package fetches from PyPI, GitHub releases succeed ✓
-- **Inbound is blocked** — you can't expose a service on a compute node.
+- **Inbound is blocked**, you can't expose a service on a compute node.
 
 If a public endpoint is ever blocked, email `oschelp@osc.edu`.
 
@@ -114,7 +114,7 @@ If a public endpoint is ever blocked, email `oschelp@osc.edu`.
    advisor's project at <https://my.osc.edu/>. You will receive a username
    (e.g., `phanidharakula`) under project `PMIU0110`.
 
-2. **Set up SSH key** (recommended — avoids password prompts):
+2. **Set up SSH key** (recommended, avoids password prompts):
 
    ```bash
    # On your local machine
@@ -152,35 +152,35 @@ including the `uv` install, dep install, and MATSim JAR download.
 
 The canonical install uses [`requirements.lock`](../requirements.lock) so Pitzer
 ends up on **byte-identical Python + dep versions** as a developer's Mac. SUMO
-is included in the lockfile — no `module load sumo` (Pitzer doesn't have one)
+is included in the lockfile, no `module load sumo` (Pitzer doesn't have one)
 and no separate `pip install eclipse-sumo` step.
 
 ```bash
-# 4.1 — clone into $HOME (500 GB quota, no advisor permission needed)
+# 4.1, clone into $HOME (500 GB quota, no advisor permission needed)
 cd $HOME
 git clone -b Version_5 https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
 
-# 4.2 — install uv (manages Python + venv; user-space, no admin)
+# 4.2, install uv (manages Python + venv; user-space, no admin)
 curl -LsSf https://astral.sh/uv/install.sh | sh
 source ~/.local/bin/env
 echo 'source $HOME/.local/bin/env' >> ~/.bashrc      # persist across logins
 
-# 4.3 — install Python 3.13 via uv (Pitzer modules only offer 3.10 / 3.12)
+# 4.3, install Python 3.13 via uv (Pitzer modules only offer 3.10 / 3.12)
 uv python install 3.13                               # downloads 3.13.13
 
-# 4.4 — load OpenJDK module (needed only for MATSim runs)
-module load openjdk/21.0.3_9                         # explicit version — Pitzer's lmod requires one
+# 4.4, load OpenJDK module (needed only for MATSim runs)
+module load openjdk/21.0.3_9                         # explicit version, Pitzer's lmod requires one
 echo 'module load openjdk/21.0.3_9' >> ~/.bashrc     # persist across logins
 
-# 4.5 — create venv and install everything from the lockfile
+# 4.5, create venv and install everything from the lockfile
 uv venv --python 3.13 .venv
 source .venv/bin/activate
 uv pip install --upgrade pip
 uv pip install -r requirements.lock                  # 35 lockfile-pinned packages
 uv pip install eclipse-sumo==1.26.0                  # SUMO wheel (separate; manylinux_2_28 only)
 
-# 4.6 — download MATSim 15.0 JAR (~65 MB; gitignored)
+# 4.6, download MATSim 15.0 JAR (~65 MB; gitignored)
 mkdir -p lib
 curl -L -o matsim-15.0-release.zip \
     https://github.com/matsim-org/matsim-libs/releases/download/15.0/matsim-15.0-release.zip
@@ -188,7 +188,7 @@ unzip matsim-15.0-release.zip -d lib/
 rm matsim-15.0-release.zip
 ls lib/matsim-15.0/matsim-15.0.jar       # should exist
 
-# 4.7 — verify the env matches your dev machine + run the test suite
+# 4.7, verify the env matches your dev machine + run the test suite
 python tools/env_report.py                # diff against your laptop's output
 python -m pytest
 ```
@@ -202,12 +202,12 @@ versions rebump after cluster upgrades). As of 2026-04:
 | ---------- | ------------------------- | ------------------------------------------------------------------- |
 | Python     | **not used**              | Use `uv` (installs Python 3.13.13 to match the locked dev env)      |
 | GCC        | `module load gcc`         | Usually unneeded (modern default)                                   |
-| OpenJDK    | `module load openjdk/21.0.3_9` | MATSim runtime — Pitzer's lmod requires an explicit version (`module spider openjdk` lists current options) |
-| Git        | pre-installed             | —                                                                   |
+| OpenJDK    | `module load openjdk/21.0.3_9` | MATSim runtime, Pitzer's lmod requires an explicit version (`module spider openjdk` lists current options) |
+| Git        | pre-installed             | n/a |
 | SUMO       | **not** a module          | Bundled in `requirements.lock` (`eclipse-sumo` wheel)               |
 
 Pitzer's `module load python/3.12` provides Python 3.12.x, but the locked dev
-environment is on **Python 3.13** — using `uv` to manage Python aligns Pitzer
+environment is on **Python 3.13**, using `uv` to manage Python aligns Pitzer
 to the canonical version regardless of what the cluster modules offer.
 
 ---
@@ -216,13 +216,13 @@ to the canonical version regardless of what the cluster modules offer.
 
 SimForge reads road networks from hash-pinned Geofabrik PBFs listed in
 [`osm_data/manifest.json`](../osm_data/manifest.json). The PBFs themselves
-are **not** in git (they're too large — 348 MB – 1.3 GB per state). ModelGen
+are **not** in git (they're too large, 348 MB – 1.3 GB per state). ModelGen
 population files (`modelgen/*_model.txt`, 281 MB – 608 MB each) are also
 gitignored.
 
 There are two ways to land these files on Pitzer:
 
-### Option A — rsync from your local machine (recommended)
+### Option A, rsync from your local machine (recommended)
 
 If you already have the PBFs and ModelGen files locally (e.g., from your dev
 laptop), rsync is fastest because OSC's inbound pipe is ~Gbps:
@@ -238,7 +238,7 @@ rsync -avh --progress modelgen/ pitzer:SimForge/modelgen/
 Rsync preserves mtime and skips already-transferred files, so re-running is
 cheap.
 
-### Option B — download on Pitzer itself
+### Option B, download on Pitzer itself
 
 Everything needed is reachable from Pitzer's NAT:
 
@@ -285,10 +285,10 @@ cd $HOME/SimForge
 source .venv/bin/activate
 module load python/3.12 openjdk/21.0.3_9
 
-# Generate the bundled small scenario — ~30 s on Pitzer CPU
+# Generate the bundled small scenario, ~30 s on Pitzer CPU
 python generate.py --city chicago --trips 1000
 
-# Run a single SUMO meso simulation — ~5 s
+# Run a single SUMO meso simulation, ~5 s
 python run.py --scenario chicago_1k_car --engine sumo --mode meso --repeats 1
 
 # Exit the compute node
@@ -327,7 +327,7 @@ sbatch cluster/jobs/05_nyc_500k_car.sbatch
 ```
 
 For a different OSC project, copy and edit `--account` (and `--mail-user`)
-first — `jobs/` is gitignored so your edits stay local:
+first, `jobs/` is gitignored so your edits stay local:
 
 ```bash
 cp cluster/jobs/05_nyc_500k_car.sbatch jobs/
@@ -340,9 +340,9 @@ measured 3 h 52 m runtime (see budgets below).
 
 ### Wall-clock budgets
 
-The `stress_test` row is **measured** on JobID 47063986 (Pitzer `cpu`,
+The `nyc_500k_car` row is **measured** on JobID 47063986 (Pitzer `cpu`,
 8 cores, 64 GB, NYC @ 20 km radius, `new-york-2026-04-22.osm.pbf`,
-`scripts/05_nyc_500k_car.py`) — pre-schedule-first pipeline. The
+`scripts/05_nyc_500k_car.py`), pre-schedule-first pipeline. The
 schedule-first generator (V5+, current) finishes the same scenario
 in 10-15 min wall on Pitzer; the 4 h budget here is the historical
 gravity-only baseline, kept for sbatch `--time` sizing headroom.
@@ -352,24 +352,24 @@ nodes), so any tier pointed at a larger graph will run proportionally longer.
 
 | Tier             | Trips   | PBF slice   | osmnx parse | Demand gen      | Total           | Partition   |
 | ---------------- | ------- | ----------- | ----------- | --------------- | --------------- | ----------- |
-| `quick_test`     | 1K      | 5 – 15 s    | < 5 s       | 1 – 2 s         | < 1 min         | `debug-cpu` |
-| `small_commute`  | 10K     | 15 – 45 s   | 10 – 20 s   | 5 – 10 s        | 1 – 2 min       | `cpu`       |
-| `medium_multi`   | 50K     | 45 – 90 s   | 30 – 60 s   | 30 – 60 s       | 3 – 5 min       | `cpu`       |
-| `large_full_day` | 200K    | 60 – 120 s  | 60 – 120 s  | 2 – 4 min*      | 5 – 10 min*     | `cpu`       |
-| `stress_test`    | 500K    | **211 s**   | **217 s**   | **3 h 43 min**  | **3 h 52 min**  | `cpu`       |
+| `chicago_1k_car`  | 1K      | 5 – 15 s    | < 5 s       | 1 – 2 s         | < 1 min         | `debug-cpu` |
+| `nyc_10k_car`     | 10K     | 15 – 45 s   | 10 – 20 s   | 5 – 10 s        | 1 – 2 min       | `cpu`       |
+| `la_50k_car`      | 50K     | 45 – 90 s   | 30 – 60 s   | 30 – 60 s       | 3 – 5 min       | `cpu`       |
+| `chicago_200k_car`| 200K    | 60 – 120 s  | 60 – 120 s  | 2 – 4 min*      | 5 – 10 min*     | `cpu`       |
+| `nyc_500k_car`    | 500K    | **211 s**   | **217 s**   | **3 h 43 min**  | **3 h 52 min**  | `cpu`       |
 
-\* `large_full_day` demand is estimated for a mid-size city; a 200K NYC-class
-run would land much closer to the `stress_test` row. The gravity sampler is a
+\* `chicago_200k_car` demand is estimated for a mid-size city; a 200K NYC-class
+run would land much closer to the `nyc_500k_car` row. The gravity sampler is a
 single-threaded NumPy loop over all SCC destination nodes, so wall-time scales
-near-linearly with both trip count and graph size — `--cpus-per-task` past 1
+near-linearly with both trip count and graph size, `--cpus-per-task` past 1
 buys nothing for this step.
 
-The PBF + osmnx numbers above assume the California PBF (~1.2 GB) — the
+The PBF + osmnx numbers above assume the California PBF (~1.2 GB), the
 heaviest case. Smaller states finish faster. These are **generation**
 numbers; the actual simulation runs (SUMO / MATSim) are separate
 jobs. Always set `--time` to ≥ 1.5× the relevant row; the committed
 `cluster/jobs/05_nyc_500k_car.sbatch` uses `--time=08:00:00` for the
-`stress_test` tier (≈ 2× the measured 3 h 52 m runtime).
+`nyc_500k_car` tier (≈ 2× the measured 3 h 52 m runtime).
 
 ### Running the benchmark matrix
 
@@ -400,14 +400,14 @@ python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_be
 DTALite (the third primary engine in Version_5) is bundled inside the
 [`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package and
 ships in `requirements.lock`. After `uv pip install -r requirements.lock`
-in the Pitzer venv, DTALite is ready — no separate build step. The
+in the Pitzer venv, DTALite is ready, no separate build step. The
 bundled binary on Linux x86_64 (`DTALiteMM.so` inside path4gmns/bin/)
 links against standard `libgomp` only and works against Pitzer's
 `module load openjdk/21.0.3_9` toolchain (no CUDA, no Apptainer needed).
 
 > **Historical note.** Versions 1–4 reserved this slot for LPSim
 > (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was
-> abandoned in Version_5 — the bundled `LivingCity` binary crashed on
+> abandoned in Version_5, the bundled `LivingCity` binary crashed on
 > networks larger than a few-K nodes, and an in-container source rebuild
 > against the V100's sm_70 arch SIGSEGV'd at first kernel launch. The
 > full integration narrative (12+ commits across two debugging sessions,
@@ -440,7 +440,7 @@ States:
 | `CF` | Configuring (node being prepared)                  |
 | `CG` | Completing (cleanup phase)                         |
 | `F`  | Failed (non-zero exit)                             |
-| `TO` | Timed out (hit `--time` limit — increase and resubmit) |
+| `TO` | Timed out (hit `--time` limit, increase and resubmit) |
 | `CA` | Cancelled (by user or admin)                       |
 
 ### Historical queue (sacct)
@@ -454,7 +454,7 @@ sacct --user=$USER --starttime=now-24hours -o JobID,JobName,State,ExitCode,Elaps
 # One specific job
 sacct -j 47060176 -o JobID,JobName,State,ExitCode,Elapsed,MaxRSS,NodeList
 
-# Failure autopsy (exit code + wall-clock — correlate with the .out file for
+# Failure autopsy (exit code + wall-clock, correlate with the .out file for
 # progress, .err for tracebacks)
 sacct -j 47060176 --format=JobID,State,ExitCode,Elapsed,DerivedExitCode
 ```
@@ -469,13 +469,13 @@ file only catches uncaught Python tracebacks and external-tool stderr (SUMO,
 MATSim, etc.).
 
 ```bash
-# Primary live stream — generation progress, per-step timings
+# Primary live stream, generation progress, per-step timings
 tail -f ~/SimForge/logs/simforge_nyc_500k_47063986.out
 
-# Real errors only — usually empty on a healthy run
+# Real errors only, usually empty on a healthy run
 tail -f ~/SimForge/logs/simforge_nyc_500k_47063986.err
 
-# Grep across all recent logs (check both — uncaught tracebacks still land in .err)
+# Grep across all recent logs (check both, uncaught tracebacks still land in .err)
 grep -E "(Error|Traceback|FAILED)" ~/SimForge/logs/*.{out,err}
 ```
 
@@ -516,14 +516,14 @@ runs/benchmark_small/
 ```
 
 (Pre-Phase-12.2 doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
-is also still detected by `audit_fairness` — Layout C back-compat.)
+is also still detected by `audit_fairness`, Layout C back-compat.)
 
 Copy the plots and `benchmark_results_*.json` back to your local machine for
 inclusion in the thesis:
 
 ```bash
 # From your local machine
-rsync -avh pitzer:SimForge/runs/benchmark_small/ ./runs/stress_test_pitzer/
+rsync -avh pitzer:SimForge/runs/benchmark_small/ ./runs/benchmark_small_pitzer/
 ```
 
 ---
@@ -532,18 +532,18 @@ rsync -avh pitzer:SimForge/runs/benchmark_small/ ./runs/stress_test_pitzer/
 
 | Problem                                                | Diagnosis / fix                                                                                                                 |
 | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| `module: command not found`                            | Log out and back in — `module` is loaded by Pitzer's login shell. If still missing, `source /etc/profile.d/lmod.sh`.             |
+| `module: command not found`                            | Log out and back in, `module` is loaded by Pitzer's login shell. If still missing, `source /etc/profile.d/lmod.sh`.             |
 | `ImportError: osmium` after a fresh pull               | Pitzer was on an older commit before `git pull`. Re-run `pip install -r requirements.txt` so `osmium>=4.0` is installed.         |
-| `TypeError` from `truncate_graph_bbox` on `bbox` kwarg | osmnx 1.x is installed. `requirements.txt` now requires `>=2.0,<3` — run `pip install -U "osmnx>=2.0,<3"`.                       |
+| `TypeError` from `truncate_graph_bbox` on `bbox` kwarg | osmnx 1.x is installed. `requirements.txt` now requires `>=2.0,<3`, run `pip install -U "osmnx>=2.0,<3"`.                       |
 | `FileNotFoundError: osm_data/<state>.osm.pbf`          | PBF not transferred. See §5. Re-run `python tools/download_osm.py` to fetch + SHA-256-verify against the manifest.              |
-| Job sits in `PD` for hours                             | `squeue --start -j <id>` shows estimated start. `cpu` partition is oversubscribed during semester peaks — try `debug-cpu` (≤1 h) or reduce `--time`.  |
-| `ValueError: Found no graph nodes within the requested polygon` | Likely an osmnx version mismatch. `requirements.txt` requires `>=2.0,<3` — confirm with `python -c "import osmnx; print(osmnx.__version__)"` and `pip install -U "osmnx>=2.0,<3"` if older. |
-| `MATSim ClassNotFoundException`                        | `module load openjdk/21.0.3_9` (must be in the sbatch, not just your login shell — and Pitzer's lmod requires an explicit version) and verify `lib/matsim-15.0/matsim-15.0.jar` exists. |
+| Job sits in `PD` for hours                             | `squeue --start -j <id>` shows estimated start. `cpu` partition is oversubscribed during semester peaks, try `debug-cpu` (≤1 h) or reduce `--time`.  |
+| `ValueError: Found no graph nodes within the requested polygon` | Likely an osmnx version mismatch. `requirements.txt` requires `>=2.0,<3`, confirm with `python -c "import osmnx; print(osmnx.__version__)"` and `pip install -U "osmnx>=2.0,<3"` if older. |
+| `MATSim ClassNotFoundException`                        | `module load openjdk/21.0.3_9` (must be in the sbatch, not just your login shell, and Pitzer's lmod requires an explicit version) and verify `lib/matsim-15.0/matsim-15.0.jar` exists. |
 | Job killed with `OUT_OF_MEMORY`                        | Increase `--mem` in the sbatch. 200K tier needs ≥ 48 GB; 500K needs ≥ 64 GB; multi-engine benchmark needs ≥ 96 GB.                |
 | `Disk quota exceeded` on `$HOME`                       | `myquota` to confirm. Move `runs/` to `/fs/scratch/PMIU0110/$USER/runs/` and symlink: `ln -s /fs/scratch/.../runs $HOME/SimForge/runs`. |
 | Scratch files disappeared                              | Scratch is purged after ~90 days of inactivity. Copy anything precious back to `$HOME` or `/fs/ess/PMIU0110/`.                    |
-| `git push` fails with `Permission denied`              | Use HTTPS with a GitHub PAT — key-based auth is not set up by default. Or `gh auth login` once in a login-node shell.             |
-| Queue wait is multi-hour and I need to test a fix      | Submit to `debug-cpu` (partition for ≤ 1 h jobs) or start an `srun --pty` interactive shell — these usually land in < 5 min.      |
+| `git push` fails with `Permission denied`              | Use HTTPS with a GitHub PAT, key-based auth is not set up by default. Or `gh auth login` once in a login-node shell.             |
+| Queue wait is multi-hour and I need to test a fix      | Submit to `debug-cpu` (partition for ≤ 1 h jobs) or start an `srun --pty` interactive shell, these usually land in < 5 min.      |
 
 ### Getting help
 

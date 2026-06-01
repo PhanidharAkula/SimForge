@@ -16,7 +16,7 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 - 16+ GB RAM
 - 50+ GB disk space
-- (No GPU required — all three primary engines (SUMO, MATSim, DTALite) are CPU-only after the LPSim removal in Version_5)
+- (No GPU required, all three primary engines (SUMO, MATSim, DTALite) are CPU-only after the LPSim removal in Version_5)
 
 ### Software Requirements
 
@@ -70,7 +70,7 @@ python tools/download_osm.py
 python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
 # Expected: ✓ VALID
 
-# Print the toolchain report (used to verify cross-machine parity — see §Cross-Platform Reproducibility below)
+# Print the toolchain report (used to verify cross-machine parity, see §Cross-Platform Reproducibility below)
 python tools/env_report.py
 ```
 
@@ -78,7 +78,7 @@ python tools/env_report.py
 
 (For a deeper install walkthrough, see [SETUP.md](../SETUP.md). For the OSM data source, coverage, and hash-pinning, see [doc/SCENARIO_GENERATION.md §4](SCENARIO_GENERATION.md).)
 
-### Running vs. regenerating — PBF requirement
+### Running vs. regenerating, PBF requirement
 
 The pre-built `scenarios/*_1k_car/` bundles already contain `network.xml`; reproducing the published simulation results does **not** require any OSM data. You only need the PBFs when:
 
@@ -140,7 +140,7 @@ DTALite is the 3rd primary engine in Version_5: CPU mesoscopic Dynamic Traffic A
   "path4gmns_version": "0.10.0",
   "upstream_repo":    "https://github.com/jdlph/Path4GMNS",
   "dtalite_repo":     "https://github.com/asu-trans-ai-lab/DTALite",
-  "binary":           "DTALiteClassic (mode 1: path-based UE)",
+  "binary":           "DTALiteMM (path-based UE)",
   "format_standard":  "GMNS",
   "license":          "Apache-2.0"
 }}
@@ -154,9 +154,9 @@ uv pip install path4gmns
 brew install libomp
 ```
 
-The pinned version also lives in `requirements.lock` so a fresh `uv pip sync requirements.lock` brings it in. The adapter at `adapters/dtalite/` auto-detects the bundled binary via `is_dtalite_available()`. With path4gmns not installed, every `dtalite` cell records a clean failure with the install command — there is no silent fallback.
+The pinned version also lives in `requirements.lock` so a fresh `uv pip sync requirements.lock` brings it in. The adapter at `adapters/dtalite/` auto-detects the bundled binary via `is_dtalite_available()`. With path4gmns not installed, every `dtalite` cell records a clean failure with the install command, there is no silent fallback.
 
-> Versions 1–4 reserved this slot for LPSim (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was abandoned in Version_5 — the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
+> Versions 1–4 reserved this slot for LPSim (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was abandoned in Version_5, the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
 
 ### V5 realism phases (affect bundle hashes)
 
@@ -168,7 +168,7 @@ bundle and is reflected in `manifest.xml`'s SHA-256:
 |---|---|---|
 | 5  | JWTRNS code mapping fixed using cityscape Schedule-generator branch (6 of 12 codes were wrong pre-V5: e.g., bus → transit, walk → walk, WFH → excluded). Corrects ~30-40 % drift in eligible commuter pool size on Chicago. | `pipeline/demand/parse_model_file.py` |
 | 6  | OSM-grounded signal placement: `network.xml` `<node has_signal="true">` set populated from real `highway=traffic_signals` OSM tags. signals.xml signalizes only those (was: every `degree ≥ 4` node, ~85 %). Empirical drop: chicago 85 → 2.8 %; LA 85 → 1.4 %. | `pipeline/network/load_network_from_pbf.py`, `pipeline/signals/build_signals_default.py` |
-| 7  | OSM turn restrictions: new `<turn_restrictions>` block in `network.xml`. SUMO + MATSim adapters enforce via state-aware BFS pre-routing; DTALite emits sibling `movement.csv` (path4gmns 0.10.0 doesn't ingest — documented asymmetry). | `pipeline/network/turn_restrictions.py`, all three adapters |
+| 7  | OSM turn restrictions: new `<turn_restrictions>` block in `network.xml`. SUMO + MATSim adapters enforce via state-aware BFS pre-routing; DTALite emits sibling `movement.csv` (path4gmns 0.10.0 doesn't ingest, documented asymmetry). | `pipeline/network/turn_restrictions.py`, all three adapters |
 | 8  | PUMS-grounded per-person departure times: `departure = arrival_s − commute_min × 60`. Replaces V4 Gaussian peak. | `pipeline/demand/generate_census_demand.py` |
 | 9a | PM HBW return trips read cityscape `schedule[1]` (work → home @ 17:00). | same |
 | 9b | HBSchool_AM chains: parents with AGEP<18 dependents emit 2-row `home → school + school → work`. | same |
@@ -176,7 +176,7 @@ bundle and is reflected in `manifest.xml`'s SHA-256:
 | 10 | Audit-tooling wiring: `evaluation/demand_composition.py` (new), Q5 section in `audit_fairness`, demand-composition table in `analyze_benchmark`. | `evaluation/` |
 
 The committed `chicago_1k_car/`, `nyc_10k_car/`, and `la_50k_car/`
-bundles are V5+ (regenerated 2026-04-30 onwards) — their hashes will
+bundles are V5+ (regenerated 2026-04-30 onwards), their hashes will
 not match a V4 `generate.py` run. The two largest tiers
 (`chicago_200k_car/`, `nyc_500k_car/`) are gitignored and must be
 regenerated locally or on Pitzer/Cardinal with the current code path
@@ -189,12 +189,12 @@ before benchmarking; see `scripts/04_chicago_200k_car.py` and
 
 ## Running the Canonical Benchmark
 
-The thesis figures are produced by `runspecs/benchmark_small.yaml` — an
+The thesis figures are produced by `runspecs/benchmark_small.yaml`, an
 11-cell matrix across the three reference scenarios:
 
 - `chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` (4 cells)
 - `nyc_10k_car   × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}` (4 cells)
-- `la_50k_car    × {SUMO meso,             MATSim meso, DTALite meso}` (3 cells; SUMO micro skipped at 50K — wall-times past 4 h on arm64)
+- `la_50k_car    × {SUMO meso,             MATSim meso, DTALite meso}` (3 cells; SUMO micro skipped at 50K, wall-times past 4 h on arm64)
 
 with **N=5 repeats per cell** = 55 runs total.
 
@@ -244,7 +244,7 @@ Each writes a fresh bundle into `scenarios/<id>/` and is then runnable through `
 
 ### Regenerating on a Supercomputer (OSC Pitzer)
 
-The 200K and 500K tiers were produced on the Ohio Supercomputer Center's Pitzer cluster. The full workflow — module setup, PBF / ModelGen rsync, per-tier SLURM templates, monitoring, and troubleshooting — is documented in [doc/PITZER.md](PITZER.md). Short version:
+The 200K and 500K tiers were produced on the Ohio Supercomputer Center's Pitzer cluster. The full workflow, module setup, PBF / ModelGen rsync, per-tier SLURM templates, monitoring, and troubleshooting, is documented in [doc/PITZER.md](PITZER.md). Short version:
 
 ```bash
 # From your laptop
@@ -257,7 +257,7 @@ cd ~/SimForge && source .venv/bin/activate
 sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 ```
 
-> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix at scale** — see [doc/PITZER.md §1](PITZER.md). The full Version_5 matrix is CPU-only; the GPU partition is no longer required since LPSim was removed. The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
+> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix at scale**, see [doc/PITZER.md §1](PITZER.md). The full Version_5 matrix is CPU-only; the GPU partition is no longer required since LPSim was removed. The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
 
 ### Cross-Platform Reproducibility (Verified)
 
@@ -269,7 +269,7 @@ The schedule-first census demand generator is **byte-reproducible across archite
 | `signals.xml` | `4388b4eca436be69349ea1fede8e07e5`    | `4388b4eca436be69349ea1fede8e07e5`        | ✅ byte-identical |
 | `network.xml` | `aef23159dd9b0d96088ef84410fc2dea`    | `ebde743b57d330544f8e9dede8e61911`        | ⚠️ semantic-identical, serialization differs |
 
-The `network.xml` MD5 differs only because of **lxml-version-dependent XML serialization** (attribute ordering, float-precision rendering). The semantic content — node IDs, edge `from`/`to` pairs, lengths, lane counts, SCC membership — is identical, as evidenced by the two downstream artefacts being byte-equal: `signals.xml` and `demand.csv` reference network node IDs by string, so any drift in the underlying node set would have propagated and broken those matches.
+The `network.xml` MD5 differs only because of **lxml-version-dependent XML serialization** (attribute ordering, float-precision rendering). The semantic content, node IDs, edge `from`/`to` pairs, lengths, lane counts, SCC membership, is identical, as evidenced by the two downstream artefacts being byte-equal: `signals.xml` and `demand.csv` reference network node IDs by string, so any drift in the underlying node set would have propagated and broken those matches.
 
 What this means in practice: feeding either the Mac-generated or the Pitzer-generated `demand.csv` into a SUMO/MATSim simulation will produce the same engine inputs and (under the same engine version + seed) the same simulation outputs. The generation step is fully reproducible at the level the simulators care about.
 
@@ -286,7 +286,7 @@ md5sum scenarios/la_50k_car/demand.csv \
 
 If those two MD5s match, your local install reproduces the reference bundle exactly. Each bundle's `generation_metadata.json::toolchain` block additionally records the exact Python and dependency versions that produced it, so any future divergence is diagnosable without guesswork.
 
-### Reference toolchain — `env_report.py` baseline
+### Reference toolchain, `env_report.py` baseline
 
 Before running the simulation pipeline, verify your install matches the canonical thesis-build environment:
 
@@ -294,7 +294,7 @@ Before running the simulation pipeline, verify your install matches the canonica
 python tools/env_report.py
 ```
 
-The full reference output is committed at [`cluster/example_runs/env_report_canonical.txt`](../cluster/example_runs/env_report_canonical.txt) — diff your local output against it. Inline reference (Mac side, captured 2026-04-26 after the `uv` migration):
+The full reference output is committed at [`cluster/example_runs/env_report_canonical.txt`](../cluster/example_runs/env_report_canonical.txt), diff your local output against it. Inline reference (Mac side, captured 2026-04-26 after the `uv` migration):
 
 ```text
 ============================================================
@@ -329,9 +329,9 @@ Executable: <repo>/.venv/bin/python              # differs by host (full path is
 ============================================================
 ```
 
-Any line marked **MUST match** that differs in your output is a real toolchain drift — your install is on a different version than the canonical environment. Re-run `uv pip install -r requirements.lock` to reconcile, or check `cluster/example_runs/env_report_canonical.txt` for the Pitzer comparison block (Linux x86_64 reference).
+Any line marked **MUST match** that differs in your output is a real toolchain drift, your install is on a different version than the canonical environment. Re-run `uv pip install -r requirements.lock` to reconcile, or check `cluster/example_runs/env_report_canonical.txt` for the Pitzer comparison block (Linux x86_64 reference).
 
-The Mac↔Pitzer empirical verification we ran on 2026-04-26: every dep version matched exactly across both machines; the only differences were `Platform`, `Executable`, and a Java patch (17.0.13 vs 17.0.17 — both LTS).
+The Mac↔Pitzer empirical verification we ran on 2026-04-26: every dep version matched exactly across both machines; the only differences were `Platform`, `Executable`, and a Java patch (17.0.13 vs 17.0.17, both LTS).
 
 ---
 
@@ -364,7 +364,7 @@ runs/benchmark_small/
 ```
 
 (Pre-Phase-12.2 doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
-is also still detected by `audit_fairness` — Layout C back-compat.)
+is also still detected by `audit_fairness`, Layout C back-compat.)
 
 `feasibility_report.json` is the audit trail proving every engine was fed the same trip set (see [CHANGELOG.md](../CHANGELOG.md), Addenda 1–2).
 
@@ -380,7 +380,7 @@ Produces:
 - Summary table (one row per `(scenario, engine, mode)` cell)
 - Runtime performance table
 - Reproducibility table (R = 1 − σ/μ across repeats)
-- **Coverage diagnostic** — flags low-sample (`n < 3`) cells, asymmetric coverage, and silently-failed cells
+- **Coverage diagnostic**, flags low-sample (`n < 3`) cells, asymmetric coverage, and silently-failed cells
 
 ### Generating Plots
 
@@ -392,7 +392,7 @@ Renders Fig 5.1 – Fig 5.10 (PNG + PDF) into `runs/benchmark_small/plots/`. See
 
 ---
 
-## Expected Results (Canonical 11-Cell Matrix — Pitzer Intel Xeon Skylake, post-Phase-12.5)
+## Expected Results (Canonical 11-Cell Matrix, Pitzer Intel Xeon Skylake, post-Phase-12.5)
 
 The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `47248311` (post-Phase-12.4 re-queue) + `tools/recover_partial_summary.py` (Phase 12.5 synthesis for la_50k_car DTALite cells). See [CHANGELOG.md](../CHANGELOG.md) Phase 12 series for the diagnostic chain. Table 5.1 in the thesis results chapter is the canonical source; a compact summary here:
 
@@ -408,13 +408,13 @@ The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `472483
 | nyc_10k_car | dtalite | meso | 10,544 (105.4 %)\* | 334.7 ± 0.00 | 583.06 ± 2.241 | 1.0000 |
 | la_50k_car | sumo | meso | 38,947 (77.9 %) | 2621.1 ± 63.86 | 91.68 ± 1.324 | 0.9804 |
 | la_50k_car | matsim | meso | 50,000 (100.0 %) | 2551.7 ± 2.25 | 52.98 ± 2.043 | 0.9993 |
-| la_50k_car | dtalite | meso | _did not converge — path4gmns 0.10.0 4-thread cap; see results.md §5.7_ |
+| la_50k_car | dtalite | meso | _did not converge, path4gmns 0.10.0 4-thread cap; see results.md §5.7_ |
 
 \* DTALite per-route trip count exceeds `feasible_trips` when the column-gen pool finds multiple equilibrium paths per OD pair.
 
-The trip-count gap on SUMO is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses; DTALite assigns route paths to all OD pairs). It is the simulation outcome we want to *measure*, not an input asymmetry — every `feasibility_report.json` records `feasible_trips == total_trips`. Verified by Q1 of `audit_fairness` (PASS on all three scenarios).
+The trip-count gap on SUMO is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses; DTALite assigns route paths to all OD pairs). It is the simulation outcome we want to *measure*, not an input asymmetry, every `feasibility_report.json` records `feasible_trips == total_trips`. Verified by Q1 of `audit_fairness` (PASS on all three scenarios).
 
-**Headline cross-engine alignment:** SUMO/MATSim mean-TT ratio is 0.869 (-13.1 %) at 1 K, 1.132 (+13.2 %) at 10 K, and **1.046 (+4.6 %) at 50 K** — alignment improves with scale (law of large numbers). See `doc/chapters/results.md` §5.3 for the discussion.
+**Headline cross-engine alignment:** SUMO/MATSim mean-TT ratio is 0.869 (-13.1 %) at 1 K, 1.132 (+13.2 %) at 10 K, and **1.046 (+4.6 %) at 50 K**, alignment improves with scale (law of large numbers). See `doc/chapters/results.md` §5.3 for the discussion.
 
 ---
 
@@ -427,7 +427,7 @@ The trip-count gap on SUMO is **engine-internal mobsim behaviour** (SUMO refuses
 | `Java version too old`           | `brew install openjdk@17` (macOS) or `apt-get install openjdk-17-jdk` (Linux).                            |
 | Slow MATSim runs                 | MATSim has ~5 – 7 s JVM startup overhead per run; this dominates wall-clock for the 1K tier.              |
 | `FileNotFoundError: osm_data/illinois-*.osm.pbf` during generation | Run `python tools/download_osm.py` to fetch the hash-pinned PBFs.                      |
-| `SHA-256 mismatch` on a PBF      | A partial download — delete the offending file in `osm_data/` and re-run `tools/download_osm.py`.       |
+| `SHA-256 mismatch` on a PBF      | A partial download, delete the offending file in `osm_data/` and re-run `tools/download_osm.py`.       |
 | `osmnx.truncate` TypeError on `bbox` kwargs | osmnx 1.x is installed. `requirements.txt` now requires `osmnx>=2.0,<3` (positional `bbox=(W,S,E,N)`). Run `pip install -U "osmnx>=2.0,<3"`. |
 | Overpass fallback hangs          | Only reachable for cities without a committed PBF. Pre-fetch with `pipeline.network.warmup`, or add the PBF to `osm_data/manifest.json`. |
 | `cache/` grows large             | `tools/clean.sh --all` to wipe both Python bytecode and the OSM HTTP cache. (PBFs in `osm_data/` are kept.) |
@@ -452,7 +452,7 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 | Fig 5.6  | Engine runtime variability (boxplot per cell)              |
 | Fig 5.7  | P95 tail-latency analysis                                  |
 | Fig 5.8  | Trip-count parity (validates SCC/feasibility filter)       |
-| Fig 5.9  | Demand composition — V5+ trip-purpose stacked bar           |
+| Fig 5.9  | Demand composition, V5+ trip-purpose stacked bar           |
 | Fig 5.10 | Wall vs engine breakdown (Phase 11.6+ result files only)   |
 
 See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for each figure's full interpretation.
@@ -465,7 +465,7 @@ This thesis was produced with:
 
 | Component | Version |
 | --------- | ------- |
-| SimForge  | Version_5 (DTALite + Phases 5-10 realism work — see `CHANGELOG.md`) |
+| SimForge  | Version_5 (DTALite + Phases 5-10 realism work, see `CHANGELOG.md`) |
 | Python    | 3.13.2  |
 | SUMO      | 1.26.0 (`eclipse-sumo` wheel via `requirements.lock`) |
 | MATSim    | 15.0    |
@@ -473,7 +473,7 @@ This thesis was produced with:
 | osmnx     | 2.x (`requirements.txt` pins `>=2.0,<3`) |
 | osmium (pyosmium) | 4.x |
 | path4gmns | 0.10.0 (DTALite bundled binary) |
-| OSM PBF snapshots | Geofabrik extracts — exact SHA-256 hashes in `osm_data/manifest.json` |
+| OSM PBF snapshots | Geofabrik extracts, exact SHA-256 hashes in `osm_data/manifest.json` |
 
 To reproduce exactly, use these versions.
 

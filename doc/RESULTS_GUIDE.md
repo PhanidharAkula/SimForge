@@ -23,15 +23,15 @@ RunSpec ──► run_benchmark ──► runs/<name>/benchmark_results_<name>.j
                               Thesis Chapter 5
 ```
 
-The middle step — `audit_fairness` — is the methodology check the
+The middle step, `audit_fairness`, is the methodology check the
 thesis defense relies on. It verifies four fairness questions and
 reports a fifth informational breakdown on each scenario:
 
   - **Q1: same trip set** (cross-engine feasibility verdict byte-identical)
   - **Q2: same network** (SCC-filtered nodes/links match across adapters)
   - **Q3: same trip count simulated** (per-engine simulated count = feasibility target)
-  - **Q4: cross-engine travel-time spread** (mean / P95 + pairwise ratios — this is the paradigm-spread signal)
-  - **Q5: demand composition** (V5+ trip-purpose breakdown) — informational, not a fairness gate. Shows total / AM peak / PM peak / school-related percentages and the per-purpose row count, sourced from the canonical bundle's `demand.csv`. Pre-V5 bundles missing the `purpose` column emit a one-line `(no V5+ purpose column at <path> — skipping)` and the section is omitted.
+  - **Q4: cross-engine travel-time spread** (mean / P95 + pairwise ratios, this is the paradigm-spread signal)
+  - **Q5: demand composition** (V5+ trip-purpose breakdown), informational, not a fairness gate. Shows total / AM peak / PM peak / school-related percentages and the per-purpose row count, sourced from the canonical bundle's `demand.csv`. Pre-V5 bundles missing the `purpose` column emit a one-line `(no V5+ purpose column at <path>, skipping)` and the section is omitted.
 
 See `evaluation/audit_fairness.py` docstring for invocation and `doc/EXPERIMENT_LOG.md` §3 for measured Q1–Q4 results from the canonical Pitzer runs.
 
@@ -51,7 +51,7 @@ compare_modes.py  ──►  micro vs meso  ──►  speedup + fidelity
 python -m execution.run_benchmark runspecs/benchmark_small.yaml
 ```
 
-Writes per-scenario JSONs at `runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json` (Phase 12+ — 11 cells × 5 repeats = 55 runs total across the three scenarios).
+Writes per-scenario JSONs at `runs/benchmark_small/<scenario>/benchmark_results_benchmark_small.json` (Phase 12+, 11 cells × 5 repeats = 55 runs total across the three scenarios).
 
 ### Ad-hoc one-off via `run.py`
 
@@ -67,7 +67,7 @@ Writes to `runs/<timestamp>/benchmark_results_<timestamp>.json`.
 python run.py --list
 ```
 
-### `run.py` vs `run_benchmark.py` — what differs
+### `run.py` vs `run_benchmark.py`, what differs
 
 Both call the same adapters and produce the same per-cell engine artefacts (`tripinfo.xml`, `output_trips.csv.gz`, `link_performance.csv`, `feasibility_report.json` …). They differ in the wrapping: how the per-cell directories are laid out, what the summary JSON is named, and the top-level schema of that JSON.
 
@@ -84,7 +84,7 @@ Both call the same adapters and produce the same per-cell engine artefacts (`tri
 | Cluster sbatch wrappers      | none                                                    | `cluster/jobs/benchmark_*.sbatch`, `cluster/jobs/05_nyc_500k_car.sbatch`   |
 | Used for                     | Quick exploration, one-offs, ad-hoc matrices            | Reproducible thesis numbers; locked, version-controllable                 |
 
-`evaluation/audit_fairness.py` autodetects both layouts (plus the two sbatch-nested variants), so the same `audit_fairness <run-dir>` invocation works regardless of which entry point produced the run. `analyze_benchmark` and `generate_plots` consume either summary JSON unchanged — they key off `results[].{scenario,engine,mode,seed,runtime_s,metrics}`, all of which exist in both schemas.
+`evaluation/audit_fairness.py` autodetects both layouts (plus the two sbatch-nested variants), so the same `audit_fairness <run-dir>` invocation works regardless of which entry point produced the run. `analyze_benchmark` and `generate_plots` consume either summary JSON unchanged, they key off `results[].{scenario,engine,mode,seed,runtime_s,metrics}`, all of which exist in both schemas.
 
 Why both still exist: `run.py` predates the runspec harness and grew the nicer interactive ergonomics (sticky progress bar, `--verbose`, `--list`, `--validate-only`); `run_benchmark.py` was added when locked, citable matrices became thesis-critical. Neither has been retired. See `help.py run` and `help.py benchmark` for the per-script flag list.
 
@@ -92,9 +92,9 @@ Why both still exist: `run.py` predates the runspec harness and grew the nicer i
 
 ## 3. Result JSON Structure
 
-Two shapes — one per entry point. The `results[]` array fields mostly overlap; the top-level wrapper is what differs.
+Two shapes, one per entry point. The `results[]` array fields mostly overlap; the top-level wrapper is what differs.
 
-### 3.1 `benchmark_results.json` — written by `run.py`
+### 3.1 `benchmark_results.json`, written by `run.py`
 
 ```json
 {
@@ -130,11 +130,11 @@ Two shapes — one per entry point. The `results[]` array fields mostly overlap;
 }
 ```
 
-### 3.2 `benchmark_results_<runspec_name>.json` — written by `run_benchmark.py`
+### 3.2 `benchmark_results_<runspec_name>.json`, written by `run_benchmark.py`
 
 ```json
 {
-  "runspec_name": "stress_test",
+  "runspec_name": "benchmark_large",
   "started_at": "2026-04-25T18:00:00Z",
   "completed_at": "2026-04-25T18:27:14Z",
   "total_runs": 20,
@@ -187,9 +187,9 @@ The harness shape is defined by `BenchmarkResult.to_dict()` / `RunResult.to_dict
 | `mode`                           | `meso` or `micro` (kept separate by analysis layer)  |
 | `status`                         | `success` or `failed`                                |
 
-> **Wall vs engine.** SimForge separates these because Chapter 5 is benchmarking the *engine paradigm* (mobsim vs UE vs queue), not the Python adapter prep. A faster Python adapter would lower `cell_wall_s` but leave `engine_wall_s` (and therefore the thesis runtime numbers) untouched. The CLI shows both — `wall (engine)` per cell — so users can see where time actually goes; downstream tools key off the engine number for citing.
+> **Wall vs engine.** SimForge separates these because Chapter 5 is benchmarking the *engine paradigm* (mobsim vs UE vs queue), not the Python adapter prep. A faster Python adapter would lower `cell_wall_s` but leave `engine_wall_s` (and therefore the thesis runtime numbers) untouched. The CLI shows both, `wall (engine)` per cell, so users can see where time actually goes; downstream tools key off the engine number for citing.
 
-A sibling `feasibility_report.json` is written next to every adapter's output, recording the SCC-derived feasible-trip set and any drops — proves engines were fed the same input set.
+A sibling `feasibility_report.json` is written next to every adapter's output, recording the SCC-derived feasible-trip set and any drops, proves engines were fed the same input set.
 
 ---
 
@@ -214,7 +214,7 @@ python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_be
 | **LaTeX**                | Copy-pasteable `\begin{table}` blocks                                              | Appendix / Chapter 5      |
 | **Markdown**             | GitHub-friendly tables                                                             | README / documentation    |
 
-> **Mode is part of the grouping key** — SUMO meso and SUMO micro never collapse into one row. (See CHANGELOG.md → Addendum 3 for why this matters.)
+> **Mode is part of the grouping key**, SUMO meso and SUMO micro never collapse into one row. (See CHANGELOG.md → Addendum 3 for why this matters.)
 
 #### Reproducibility Score (R)
 
@@ -233,9 +233,9 @@ where σ is the standard deviation and μ is the mean of travel times across rep
 
 Catches three classes of silent gaps in any RunSpec:
 
-- **Low-sample cells** — `n < 3`: R-score is statistically weak; the diagnostic prints a warning so the table reader knows not to over-interpret.
-- **Asymmetric coverage** — engine/mode present in some scenarios but missing in others (the gap that motivated `runspecs/benchmark_small.yaml`'s NYC-cell fill-in).
-- **Silently-failed cells** — declared `runs[]` entries that produced 0 successes.
+- **Low-sample cells**, `n < 3`: R-score is statistically weak; the diagnostic prints a warning so the table reader knows not to over-interpret.
+- **Asymmetric coverage**, engine/mode present in some scenarios but missing in others (the gap that motivated `runspecs/benchmark_small.yaml`'s NYC-cell fill-in).
+- **Silently-failed cells**, declared `runs[]` entries that produced 0 successes.
 
 ### 4.2 Plot Generation
 
@@ -244,22 +244,22 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 ```
 
-Renders **10 figures** (PNG + PDF) into `<results-dir>/plots/` (or `--output` if specified). Two of them — Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine) — are auto-skipped when their data isn't available, so the figure count drops to 8 on pre-V5 bundles or pre-Phase-11.6 result files.
+Renders **10 figures** (PNG + PDF) into `<results-dir>/plots/` (or `--output` if specified). Two of them, Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine), are auto-skipped when their data isn't available, so the figure count drops to 8 on pre-V5 bundles or pre-Phase-11.6 result files.
 
 #### Generated figures
 
 | Figure      | Plot Type            | Content                                                          | Thesis Use                          |
 | ----------- | -------------------- | ---------------------------------------------------------------- | ----------------------------------- |
-| **Fig 5.1**  | Grouped bar (errbar) | **Engine** runtime by `(city, engine)`, faceted by mode (engine subprocess only — see §3) | Headline runtime comparison         |
+| **Fig 5.1**  | Grouped bar (errbar) | **Engine** runtime by `(city, engine)`, faceted by mode (engine subprocess only, see §3) | Headline runtime comparison         |
 | **Fig 5.2**  | Heatmap              | Reproducibility R-score per `(engine, mode)` × scenario; NaN cells render hatched grey ("not run") rather than red | Determinism evidence              |
 | **Fig 5.3**  | Grouped bar (errbar) | Mean travel time by engine, faceted by mode                      | Cross-engine output fidelity        |
 | **Fig 5.4**  | Speedup bars         | Engine speedup vs MATSim baseline, **within-mode**               | Cross-simulator comparison          |
 | **Fig 5.5**  | Mode comparison      | Micro vs meso **engine** runtime per engine                      | Mesoscopic-mode value proposition   |
 | **Fig 5.6**  | Boxplot              | **Engine** runtime variability per `(engine, mode)`              | Tail-behaviour discussion           |
 | **Fig 5.7**  | Scatter / dual-bar   | P95 tail latency vs mean travel time, faceted by mode            | Worst-case behaviour                |
-| **Fig 5.8**  | Trip-count parity    | Completed trips per `(engine, mode)`                             | Validates SCC/feasibility filter — every engine is shown to receive the same N |
+| **Fig 5.8**  | Trip-count parity    | Completed trips per `(engine, mode)`                             | Validates SCC/feasibility filter, every engine is shown to receive the same N |
 | **Fig 5.9**  | Stacked bar          | Per-scenario V5+ trip-purpose composition (HBW_AM/PM, HBSchool_AM/PM, chains) read from canonical `demand.csv` | Demand-realism evidence (Phases 5–10) |
-| **Fig 5.10** | Stacked bar          | Per-cell wall time breakdown — engine subprocess vs adapter prep + parse (`cell_wall_s − engine_wall_s`); skipped on pre-Phase-11.6 result files | Methodological footnote: where time actually goes |
+| **Fig 5.10** | Stacked bar          | Per-cell wall time breakdown, engine subprocess vs adapter prep + parse (`cell_wall_s − engine_wall_s`); skipped on pre-Phase-11.6 result files | Methodological footnote: where time actually goes |
 
 ### 4.3 Mode Comparison
 
@@ -273,11 +273,11 @@ Runs both micro and meso modes on the same scenario and computes:
 - **Fidelity metrics**: RMSE, GEH, KS-statistic between micro/meso travel-time distributions
 - **Trip completion ratio** for each mode
 
-### 4.4 Geographic Visualization — `python -m visualization.generate_maps`
+### 4.4 Geographic Visualization, `python -m visualization.generate_maps`
 
 Separate, opt-in component on the `visualization` branch. Reads the
 same canonical bundle + per-cell engine output as the other analysis
-tools and renders seven geographic map types — two from the bundle
+tools and renders seven geographic map types, two from the bundle
 alone, three per-engine maps, and two cross-engine maps. The main
 SimForge code paths do not import it, so the locked benchmark numbers
 are independent of any rendered plot.
@@ -306,12 +306,12 @@ python -m visualization.generate_maps --scenario chicago_1k_car \
 
 | Map | Inputs | Engine specificity | Use in thesis |
 |---|---|---|---|
-| `od_origins` / `od_destinations` | Bundle + cached US Census tracts + TIGER roads | — (cross-engine, demand only) | §3.3 demand realism — proves the V5+ Phase 9c PM-chain mechanism produces symmetric metro-scale demand |
-| `link_load` | Per-cell engine output | per `(engine, mode)` | §5.0 cross-engine sanity — SUMO ≈ MATSim, DTALite distinct (same data as `route_diversity`, different framing) |
-| `congestion` | DTALite `link_performance.csv` | DTALite only | §5.0 — visualizes UE equilibrium link-level congestion |
-| `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` | §5.2 — choropleth of mean travel time by origin tract |
-| `route_diversity` | Cell output from ≥ 2 engines | cross-engine | §5.0 — direct visual proof of the SimForge BFS contract: consensus links gray, DTALite UE alternates red |
-| `animated_flow` | MATSim `output_events.xml.gz` | MATSim only | §3.3 — visualizes PUMS integer-minute departure bursts (cross-references `methods.md` step 9) |
+| `od_origins` / `od_destinations` | Bundle + cached US Census tracts + TIGER roads |, (cross-engine, demand only) | §3.3 demand realism, proves the V5+ Phase 9c PM-chain mechanism produces symmetric metro-scale demand |
+| `link_load` | Per-cell engine output | per `(engine, mode)` | §5.0 cross-engine sanity, SUMO ≈ MATSim, DTALite distinct (same data as `route_diversity`, different framing) |
+| `congestion` | DTALite `link_performance.csv` | DTALite only | §5.0, visualizes UE equilibrium link-level congestion |
+| `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` | §5.2, choropleth of mean travel time by origin tract |
+| `route_diversity` | Cell output from ≥ 2 engines | cross-engine | §5.0, direct visual proof of the SimForge BFS contract: consensus links gray, DTALite UE alternates red |
+| `animated_flow` | MATSim `output_events.xml.gz` | MATSim only | §3.3, visualizes PUMS integer-minute departure bursts (cross-references `methods.md` step 9) |
 
 **Coverage matrix.** The CLI prints what's renderable before doing
 work, similar to `analyze_scenarios`:
@@ -334,7 +334,7 @@ Available maps:
 ```
 
 Maps whose inputs aren't on disk render as `[--]` in the matrix and
-`[SKIP]` when actually requested — never an error.
+`[SKIP]` when actually requested, never an error.
 
 **Output layout.** Default destination is
 `visualization/output/<scenario>/` (gitignored). Naming convention:
@@ -349,7 +349,7 @@ Animations support three containers: `mp4` (default, smallest), `gif`
 ~5× smaller than GIF).
 
 **Cross-engine interpretation surfaces.** Three properties the maps
-make visible — see `visualization/README.md` for the full detail:
+make visible, see `visualization/README.md` for the full detail:
 
 - *SUMO and MATSim `link_load` look identical, DTALite differs.* Same
   SimForge BFS routes → same spatial traffic structure across SUMO /
@@ -357,7 +357,7 @@ make visible — see `visualization/README.md` for the full detail:
   the fair-comparison contract.
 - *`animated_flow` shows "departure bursts".* PUMS JWMNP is integer-
   minute, so chicago_1k_car's 1000 trips share only ~20 unique
-  departure timestamps. Faithful to data, not a SimForge artefact —
+  departure timestamps. Faithful to data, not a SimForge artefact,
   documented in `methods.md` §3.3 step 9.
 - *`chicago_200k_car od_origins ≈ od_destinations` (74 % overlap).*
   Full-day scenarios emit both AM + PM HBW pairs; OD sets are the same
@@ -368,7 +368,7 @@ full CLI reference, output conventions, data-source provenance, and
 the `tools/download_census_tracts.py` / `tools/download_tiger_roads.py`
 helpers that populate the public-domain shapefile cache.
 
-### 4.5 Pre-Run Bundle Inspection — `tools/analyze_scenarios.py`
+### 4.5 Pre-Run Bundle Inspection, `tools/analyze_scenarios.py`
 
 Tabular end-to-end analysis of every (or any) scenario bundle in
 `scenarios/`. Useful before running the benchmark to verify the
@@ -394,13 +394,13 @@ Seven sections (each one side-by-side table with scenarios as columns):
 | `artefacts`      | Per-file sizes + total                                                |
 | `toolchain`      | Python / osmnx / numpy / etc. versions recorded at generation time    |
 
-Auto-paginates when the terminal isn't wide enough — each section
+Auto-paginates when the terminal isn't wide enough, each section
 splits into pages of N scenarios with a `(scenarios X–Y of N)` page
 suffix. Pre-V5 bundles missing the `purpose` column gracefully render
 the demand totals subsection only.
 
 This complements `audit_fairness` Q5 and `analyze_benchmark`'s demand
-composition table — those run *after* simulation; `analyze_scenarios`
+composition table, those run *after* simulation; `analyze_scenarios`
 runs *before*, on the canonical bundle alone, with no engine output
 needed.
 
@@ -437,18 +437,18 @@ Located in `evaluation/metrics/`:
 
 3. **Fidelity** (Fig 5.3, Fig 5.8)
    - Mean travel times are consistent across engines for the same scenario
-   - Fig 5.8 shows engines all received the same trip set — any per-engine `trip_count` gap is engine-internal mobsim behaviour, not feed asymmetry
+   - Fig 5.8 shows engines all received the same trip set, any per-engine `trip_count` gap is engine-internal mobsim behaviour, not feed asymmetry
 
 4. **Mode trade-off** (Fig 5.5, Fig 5.6, Fig 5.7)
    - Micro is more accurate at the edges (P95) but pays an order-of-magnitude runtime cost vs meso
 
 5. **Demand realism** (Fig 5.9, audit_fairness Q5)
-   - Per-scenario stacked bar makes the V5+ trip-purpose composition visible at a glance — HBW dominates, HBSchool + chain legs are the parent-with-school-age-dependent share.
+   - Per-scenario stacked bar makes the V5+ trip-purpose composition visible at a glance, HBW dominates, HBSchool + chain legs are the parent-with-school-age-dependent share.
    - Pairs with the MODELGEN_AND_MODES.md text and Phase 9 in CHANGELOG to back the "we use real demand, not a uniform OD matrix" claim.
 
 6. **Methodological footnote** (Fig 5.10)
    - Per-cell wall = adapter prep + engine subprocess + parse. Chapter 5 runtime tables and Fig 5.1 cite the engine subprocess only; this figure documents that prep is non-trivial for large MATSim/SUMO scenarios (per-trip BFS routing on the canonical graph).
-   - Useful in the defense if a committee member asks "is the engine number really the right thing to compare?" — the answer is yes, because adapter prep is a SimForge implementation cost, not an engine cost.
+   - Useful in the defense if a committee member asks "is the engine number really the right thing to compare?", the answer is yes, because adapter prep is a SimForge implementation cost, not an engine cost.
 
 ### Key thesis claims these results support
 
@@ -469,8 +469,8 @@ Located in `evaluation/metrics/`:
 - **Apple Silicon arm64**: `netconvert` on macOS arm64 has historically segfaulted on large networks (>~3,000 nodes) under SUMO 1.20.x. Behaviour under the locked SUMO 1.26.0 wheel has not been re-verified at scale; the bundled 1K and 10K scenarios run cleanly, but for the 50K+ tiers we recommend Linux/HPC where the same `eclipse-sumo` wheel installs without the macOS-specific issue.
 - **MATSim**: Requires Java 17+ and the JAR in `lib/matsim-15.0/` (downloaded once per [SETUP.md](../SETUP.md)).
 - **Microscopic mode**: Order-of-magnitude slower than meso for the same trip count.
-- **DTALite**: Requires `path4gmns` from `requirements.lock`. On macOS the bundled binary needs `brew install libomp` for the OpenMP runtime. The adapter does not silently fall back — when path4gmns is not installed, every `dtalite` cell records a clean failure with the install command.
-- **DTALite determinism**: Fully deterministic — UE algorithm with fixed iteration order, no atomic reductions, no GPU non-determinism. R = 1.0 expected, matching SUMO meso and MATSim with `lastIteration=0`.
+- **DTALite**: Requires `path4gmns` from `requirements.lock`. On macOS the bundled binary needs `brew install libomp` for the OpenMP runtime. The adapter does not silently fall back, when path4gmns is not installed, every `dtalite` cell records a clean failure with the install command.
+- **DTALite determinism**: Fully deterministic, UE algorithm with fixed iteration order, no atomic reductions, no GPU non-determinism. R = 1.0 expected, matching SUMO meso and MATSim with `lastIteration=0`.
 - **LPSim** (historical): Was the third primary engine in Versions 1–4, abandoned in Version_5 after the bundled GPU binary crashed on networks > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
 
 ---

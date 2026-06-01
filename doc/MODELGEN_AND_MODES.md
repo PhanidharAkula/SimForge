@@ -10,12 +10,12 @@ generated `demand.csv`.
 This doc consolidates everything we verified about the data + mode pipeline
 in the Version_5 audit. Read it alongside:
 
-- `doc/SCENARIO_GENERATION.md` — higher-level walkthrough of how a canonical
+- `doc/SCENARIO_GENERATION.md`, higher-level walkthrough of how a canonical
   scenario bundle is built from cityscape data; see §"Step 2: Traffic
   Signals" for the OSM-grounded signal-placement pipeline (V5+).
-- `doc/GLOSSARY.md` — short definitions for *PUMS*, *JWMNP*, *JWTRNS*,
+- `doc/GLOSSARY.md`, short definitions for *PUMS*, *JWMNP*, *JWTRNS*,
   *ModelGen*.
-- `doc/ARCHITECTURE.md` — the cross-engine fairness contract and adapter
+- `doc/ARCHITECTURE.md`, the cross-engine fairness contract and adapter
   responsibilities.
 
 ---
@@ -53,12 +53,12 @@ header. Example from `modelgen/chicago_model.txt`:
 cityscape merges four real-world sources into the flat-text model
 (see `doc/SCENARIO_GENERATION.md` §3 for the full diagram):
 
-1. **OpenStreetMap** — road network, building polygons.
-2. **LandScan population grids** (Oak Ridge National Lab) — satellite-derived
+1. **OpenStreetMap**, road network, building polygons.
+2. **LandScan population grids** (Oak Ridge National Lab), satellite-derived
    population density at ~1 km resolution.
-3. **U.S. Census ACS PUMS** (Public Use Microdata Sample) — the source of
+3. **U.S. Census ACS PUMS** (Public Use Microdata Sample), the source of
    per-person `JWTRNS` (mode) and `JWMNP` (commute time) values.
-4. **PUMA shapefiles** — Public Use Microdata Area boundaries, link PUMS
+4. **PUMA shapefiles**, Public Use Microdata Area boundaries, link PUMS
    records to geography.
 
 The file format and per-line schema are documented in
@@ -74,7 +74,7 @@ are released only for PUMAs of ≥100,000 population, and individual
 microdata cells with fewer than 10 persons are suppressed before
 release. The cityscape ModelGen synthesizer ingests these
 already-aggregated PUMS records verbatim, and SimForge's demand
-generator consumes ModelGen output directly — so the threshold is
+generator consumes ModelGen output directly, so the threshold is
 honored without SimForge needing to apply an additional filter at
 `demand.csv`-emit time.
 
@@ -107,7 +107,7 @@ PUMS Data Dictionary URL (cited verbatim in each source file):
 
 | Code | Cityscape label |
 |---|---|
-| `bb` | N/A — not a worker (under 16, unemployed, employed but not at work, Armed Forces not at work) |
+| `bb` | N/A, not a worker (under 16, unemployed, employed but not at work, Armed Forces not at work) |
 | `01` | Car, truck, or van |
 | `02` | Bus |
 | `03` | Subway or elevated rail |
@@ -126,7 +126,7 @@ PUMS Data Dictionary URL (cited verbatim in each source file):
 In ACS years 2008–2018 the canonical PUMS list had **13** codes, with
 "drove alone" and "carpooled" as separate values (1 and 2). Starting with
 **ACS 2019**, those two were merged into a single code 1 = "Car, truck, or
-van" — passenger-occupancy detail moved to a separate variable (`JWAP`).
+van", passenger-occupancy detail moved to a separate variable (`JWAP`).
 That's why cityscape's table has 12 codes plus `bb`.
 
 ### `bb` → `-1` integer conversion
@@ -145,12 +145,12 @@ $ awk '$1=="per" && NF>=8 {print $8}' modelgen/chicago_model.txt | sort -u
 -1   1   10  11  12  2   3   4   5   7   8   9
 ```
 
-(Chicago has zero ferryboat commuters — code 6 is absent. NYC and LA contain
+(Chicago has zero ferryboat commuters, code 6 is absent. NYC and LA contain
 all 13 distinct values: `-1, 1..12`.)
 
 ### cityscape's only built-in filter
 
-cityscape itself has a single hard-coded JWTRNS filter — the workplace
+cityscape itself has a single hard-coded JWTRNS filter, the workplace
 assigner only runs for code 1 (driving) people:
 
 ```cpp
@@ -226,11 +226,11 @@ mirrors these four fields verbatim.
 Computed directly from the local model files
 (`awk '$1=="per" && NF>=8 {c[$8]++} END {…}'`).
 
-### Chicago — 2,420,896 persons (1,191,464 workers)
+### Chicago, 2,420,896 persons (1,191,464 workers)
 
 | Code | Cityscape label | Persons | % of all | % of workers |
 |---|---|---:|---:|---:|
-| -1 | N/A — not a worker | 1,229,432 | 50.8% | — |
+| -1 | N/A, not a worker | 1,229,432 | 50.8% | n/a |
 | 1 | Car, truck, or van | 629,522 | 26.0% | **52.8%** |
 | 2 | Bus | 71,266 | 2.9% | 6.0% |
 | 3 | Subway or elevated rail | 57,230 | 2.4% | 4.8% |
@@ -244,11 +244,11 @@ Computed directly from the local model files
 | 11 | Worked from home | 325,865 | 13.5% | **27.3%** |
 | 12 | Other method | 17,431 | 0.7% | 1.5% |
 
-### NYC — 6,801,148 persons (3,287,075 workers)
+### NYC, 6,801,148 persons (3,287,075 workers)
 
 | Code | Cityscape label | Persons | % of all | % of workers |
 |---|---|---:|---:|---:|
-| -1 | N/A — not a worker | 3,514,073 | 51.7% | — |
+| -1 | N/A, not a worker | 3,514,073 | 51.7% | n/a |
 | 1 | Car, truck, or van | 824,746 | 12.1% | 25.1% |
 | 2 | Bus | 308,525 | 4.5% | 9.4% |
 | 3 | Subway or elevated rail | 1,146,607 | 16.9% | **34.9%** |
@@ -262,11 +262,11 @@ Computed directly from the local model files
 | 11 | Worked from home | 521,444 | 7.7% | 15.9% |
 | 12 | Other method | 36,837 | 0.5% | 1.1% |
 
-### LA — 2,614,904 persons (1,344,555 workers)
+### LA, 2,614,904 persons (1,344,555 workers)
 
 | Code | Cityscape label | Persons | % of all | % of workers |
 |---|---|---:|---:|---:|
-| -1 | N/A — not a worker | 1,270,349 | 48.6% | — |
+| -1 | N/A, not a worker | 1,270,349 | 48.6% | n/a |
 | 1 | Car, truck, or van | 901,000 | 34.5% | **67.0%** |
 | 2 | Bus | 84,948 | 3.2% | 6.3% |
 | 3 | Subway or elevated rail | 10,402 | 0.4% | 0.8% |
@@ -307,10 +307,10 @@ collapses them into exactly **4 buckets** that match how road simulators
 think about traffic: `car`, `transit`, `bike`, `walk`. The collapse is
 defined in **one** place (single source of truth):
 
-- `pipeline/demand/parse_model_file.py:200-213` — the `JWTRNS_TO_MODE`
+- `pipeline/demand/parse_model_file.py:200-213`, the `JWTRNS_TO_MODE`
   dict + the derived `MODE_TO_JWTRNS` reverse index + the
   `SUPPORTED_MODES` tuple. The demand generator uses these directly.
-- `pipeline/modelgen_scanner.py:19-22` — re-exports the canonical dict
+- `pipeline/modelgen_scanner.py:19-22`, re-exports the canonical dict
   via `from pipeline.demand.parse_model_file import JWTRNS_TO_MODE` so
   the `python help.py cities` topic and the demand pipeline can never
   drift out of sync.
@@ -322,14 +322,14 @@ bucket maps cleanly onto how a road simulator models a person's trip:
 
 | Bucket | Network role | Why these codes are grouped |
 |---|---|---|
-| `car` | One vehicle queueing on road links | Car/truck/van / taxi / motorcycle: all are private road vehicles taking up one lane slot. (Code 1 already merges drove-alone + carpool per ACS 2019+ — see §2.) |
+| `car` | One vehicle queueing on road links | Car/truck/van / taxi / motorcycle: all are private road vehicles taking up one lane slot. (Code 1 already merges drove-alone + carpool per ACS 2019+, see §2.) |
 | `transit` | Person uses scheduled public service, contributes 0 vehicles to road congestion | Bus / subway / commuter rail / light rail / ferry: from the road simulator's perspective these riders are "removed" from car traffic. The bus itself adds one vehicle to road congestion regardless of ridership; SimForge does not model bus vehicles today. |
 | `bike` | Vehicle on bike infrastructure / shared lanes | Bicycle. (Motorcycle goes to `car` because cityscape's enum + every road simulator treats it as a motorized road vehicle, not a 2-wheeled bike.) |
 | `walk` | Pedestrian on sidewalk infrastructure | Walked. |
 
 So the collapse maps **commute mode** → **simulator infrastructure**. It's
 the right granularity if the research question is "how congested are the
-roads?" — which is the canonical SimForge thesis question. For sub-mode
+roads?", which is the canonical SimForge thesis question. For sub-mode
 questions (taxi vs private car, bus vs rail) the collapse loses information,
 see §8 below.
 
@@ -347,8 +347,8 @@ see §8 below.
 | 8  | Motorcycle                     | `car` | road vehicle (uses car infrastructure) |
 | 9  | Bicycle                        | `bike` | bike infrastructure |
 | 10 | Walked                         | `walk` | sidewalk |
-| 11 | Worked from home               | `home` | excluded — no commute trip generated |
-| 12 | Other method                   | `home` | excluded — unclassified, no trip generated |
+| 11 | Worked from home               | `home` | excluded, no commute trip generated |
+| 12 | Other method                   | `home` | excluded, unclassified, no trip generated |
 
 ### Bucket → JWTRNS code grouping
 
@@ -357,7 +357,7 @@ car     → {1, 7, 8}
 transit → {2, 3, 4, 5, 6}
 bike    → {9}
 walk    → {10}
-home    → {11, 12}          # excluded — never enters the demand
+home    → {11, 12}          # excluded, never enters the demand
 N/A     → {-1}              # not a worker (cityscape's "bb" sentinel)
 ```
 
@@ -382,7 +382,7 @@ Concretely:
 | `bike` (single) | `{9}` | `bike` |
 | `walk` (single) | `{10}` | `walk` |
 | `car,transit` (multi) | `{1, 2, 3, 4, 5, 6, 7, 8}` | per-trip from `JWTRNS_TO_MODE` |
-| anything (excluded) | codes 11, 12 are always dropped (mapped to `home`) | — |
+| anything (excluded) | codes 11, 12 are always dropped (mapped to `home`) | n/a |
 
 ---
 
@@ -393,7 +393,7 @@ All three engine adapters declare a **supported_modes** set
 feasibility filter at `adapters/common/feasibility.py` to drop trips
 whose `mode` column is outside that set **before** routing/conversion.
 This means a multi-mode bundle simulates exactly its car-mode subset
-under each engine — the cross-engine fairness audit (Q1-Q4) compares
+under each engine, the cross-engine fairness audit (Q1-Q4) compares
 engines on the same mode-restricted target.
 
 ### `demand.csv` schema
@@ -409,24 +409,24 @@ Where:
 
 Purpose taxonomy:
 
-- **HBW_AM** / **HBW_PM** — Home-Based Work outbound (8 AM arrival from
+- **HBW_AM** / **HBW_PM**, Home-Based Work outbound (8 AM arrival from
   cityscape `schedule[0]`) and return (5 PM arrival from `schedule[1]`).
   These cover ~95–98 % of the budget for typical bundles.
-- **HBSchool_AM** / **HBSchool_PM** — school drop-off (home → school)
+- **HBSchool_AM** / **HBSchool_PM**, school drop-off (home → school)
   and pickup (school → home) legs of a parent-with-kid chain. Emitted
   only for commuters whose household contains an `AGEP < 18` dependent
   AND has a school within 5 km. Each chain consumes 2 budget slots.
-- **HBW_AM_chained** / **HBW_PM_chained** — the parent's continued
+- **HBW_AM_chained** / **HBW_PM_chained**, the parent's continued
   commute leg of the same chain (school → work in the morning;
   work → school in the evening). Always emitted as the second row
   of an HBSchool chain.
 
 Adapters consume the canonical 5-column subset (`trip_id, origin_node_id,
 destination_node_id, departure_time_s, mode`) by name and ignore
-`dest_source` and `purpose` — they're informational only and don't
+`dest_source` and `purpose`, they're informational only and don't
 affect simulation output.
 
-### Cross-engine fairness filter — `adapters/common/feasibility.py`
+### Cross-engine fairness filter, `adapters/common/feasibility.py`
 
 - Reads the canonical network + demand.
 - Computes the largest SCC of the network (mode-agnostic).
@@ -439,7 +439,7 @@ affect simulation output.
   these are byte-identical across engines and Q3 compares each engine's
   simulated count to its own report's `feasible_trips`.
 
-### SUMO adapter — `adapters/sumo/sumo_adapter.py:627`
+### SUMO adapter, `adapters/sumo/sumo_adapter.py:627`
 
 - Calls `feasible_trip_ids(network, demand, supported_modes={"car"})`.
 - For each feasible trip, writes one `<vehicle id="veh_{trip_id}" type="simforge_car">`.
@@ -451,7 +451,7 @@ affect simulation output.
   `<vehicleType id="car">`. In a future PT-wiring extension additional
   vClasses (bus/rail) would be emitted alongside.
 
-### MATSim adapter — `adapters/matsim/matsim_adapter.py:588`
+### MATSim adapter, `adapters/matsim/matsim_adapter.py:588`
 
 - Calls `feasible_trip_ids(..., supported_modes={"car"})`.
 - For each surviving (car-mode) trip, writes a `<plan>` with
@@ -461,7 +461,7 @@ affect simulation output.
   extension (would need additional `modeParams` blocks per mode and
   a `transitSchedule.xml` for transit).
 
-### DTALite adapter — `adapters/dtalite/dtalite_adapter.py:573`
+### DTALite adapter, `adapters/dtalite/dtalite_adapter.py:573`
 
 - Calls `feasible_trip_ids(..., supported_modes={"car"})`.
 - Aggregates feasible trips to GMNS-format `(o_zone_id, d_zone_id, volume)`
@@ -473,9 +473,9 @@ affect simulation output.
 
 | Engine | Engine theoretical capability | SimForge today |
 |---|---|---|
-| SUMO | car (micro/meso), bus/PT (with PT-module wiring), bicycle (vClass=bicycle), pedestrian | **car only** — `supported_modes={"car"}`, all simulated trips are `vClass="passenger"` |
-| MATSim | car, transit, bike, walk (full multi-modal) | **car only** — `supported_modes={"car"}`, only `mode=car` modeParams configured |
-| DTALite | car only by design | **car only** — `supported_modes={"car"}` matches engine capability |
+| SUMO | car (micro/meso), bus/PT (with PT-module wiring), bicycle (vClass=bicycle), pedestrian | **car only**, `supported_modes={"car"}`, all simulated trips are `vClass="passenger"` |
+| MATSim | car, transit, bike, walk (full multi-modal) | **car only**, `supported_modes={"car"}`, only `mode=car` modeParams configured |
+| DTALite | car only by design | **car only**, `supported_modes={"car"}` matches engine capability |
 
 Practical implication: the `la_50k_car` bundle (49,291 car +
 442 transit + 267 bike trips) simulates as ~50,000 cars in every engine.
@@ -483,9 +483,9 @@ The bundle's name documents what generated it, not what gets simulated.
 
 ---
 
-## 6. SUMO's PT (public transport) module — capability vs current SimForge wiring
+## 6. SUMO's PT (public transport) module, capability vs current SimForge wiring
 
-SUMO ships built-in public-transport support — it's not a separate plugin,
+SUMO ships built-in public-transport support, it's not a separate plugin,
 just a set of features in core SUMO that you opt into by writing the right
 input XML. To actually use PT in SUMO requires:
 
@@ -494,7 +494,7 @@ input XML. To actually use PT in SUMO requires:
 2. A `ptlines.xml` schedule file describing each line: stops, headways,
    vehicle type.
 3. `<vType>` definitions with `vClass="bus"`, `vClass="rail_urban"`,
-   `vClass="tram"`, etc. — each gets its own physics (dimensions, accel,
+   `vClass="tram"`, etc., each gets its own physics (dimensions, accel,
    top speed, lane permissions).
 4. Optionally `<personFlow>` definitions so passengers walk to a stop,
    board the vehicle, ride, alight, and walk to the destination.
@@ -537,7 +537,7 @@ re-introduce the same bugs.
 against the **pre-2019** PUMS codebook (where code 2 = "carpooled" and
 code 11 = "Taxicab"). Cityscape uses the **ACS 2021** codebook (where
 code 2 = "Bus", code 11 = "Worked from home", and codes 1-12 are
-shifted overall). The mapping is now corrected — see §4 for the
+shifted overall). The mapping is now corrected, see §4 for the
 authoritative table. Empirical confirmation:
 
 ```
@@ -551,14 +551,14 @@ $ python help.py cities  # Chicago
 ```
 
 The previous "1,044,084 Chicago car commuters" included 71K bus riders
-+ 326K WFH workers + 17K "Other" — all of which are now correctly
++ 326K WFH workers + 17K "Other", all of which are now correctly
 filtered or rebucketed.
 
 ### 7.2 ✅ Dual source-of-truth for "what is car?" (eliminated)
 
 The hardcoded `car_modes = {1, 2, 11, 12}` literal at the old
 `parse_model_file.py:414` was replaced with `car_modes = MODE_TO_JWTRNS["car"]`
-— derived from the same dict that drives the multi-mode path.
+derived from the same dict that drives the multi-mode path.
 `pipeline/modelgen_scanner.py` now imports `JWTRNS_TO_MODE` from
 `parse_model_file.py` instead of carrying its own copy. There is now
 exactly one place where the mapping lives.
@@ -630,7 +630,7 @@ disaggregation:
   blocks per mode; DTALite to filter or split the OD matrix by submode.
   Each adapter would advertise an expanded `supported_modes` set so
   the shared feasibility filter passes the right trips through. This is
-  significant work — a real research-system extension — weeks not hours.
+  significant work, a real research-system extension, weeks not hours.
 
 - **Phase C (full multi-modal):** wire up SUMO PT (busStops, ptlines,
   personFlow), MATSim's transit-routing module, etc. This is a
@@ -689,7 +689,7 @@ Three options were considered:
    does not yet ingest it."*
 2. **Network-side encoding for DTALite**. Restructure DTALite's
    `link.csv` so that restricted (from→via→to) chains are physically
-   broken — split each via-node into virtual nodes per restricted
+   broken, split each via-node into virtual nodes per restricted
    approach. Significant engineering (~1 week), changes the network
    topology DTALite sees relative to SUMO/MATSim, defers other thesis
    work.
@@ -705,7 +705,7 @@ the four canonical references that frame this asymmetry honestly.
 
 Either:
 - **Upstream (preferred)**: path4gmns gains `movement.csv` ingestion.
-  Closes DTALite enforcement transparently — no SimForge changes needed.
+  Closes DTALite enforcement transparently, no SimForge changes needed.
   Watch path4gmns release notes.
 - **In-tree (fallback)**: implement option 2 above (node splitting in
   `write_dtalite_link_csv` / `write_dtalite_node_csv`). Roughly
@@ -717,18 +717,18 @@ Either:
 
 ## References
 
-- `pipeline/demand/parse_model_file.py` — model-file parser + `JWTRNS_TO_MODE`.
-- `pipeline/demand/generate_census_demand.py` — schedule + gravity demand
+- `pipeline/demand/parse_model_file.py`, model-file parser + `JWTRNS_TO_MODE`.
+- `pipeline/demand/generate_census_demand.py`, schedule + gravity demand
   generator that consumes parsed `ModelData`.
-- `pipeline/modelgen_scanner.py` — fast scanner used by `python help.py cities`.
-- `adapters/sumo/sumo_adapter.py` — SUMO routes/vehicles writer.
-- `adapters/matsim/matsim_adapter.py` — MATSim plans + config writer.
-- `adapters/dtalite/dtalite_adapter.py` — DTALite GMNS demand writer.
-- `adapters/common/feasibility.py` — shared cross-engine SCC trip filter.
-- `generate.py` — top-level scenario-generation CLI.
-- `help.py` — in-repo help system (`HELP_MODES` topic).
-- `doc/SCENARIO_GENERATION.md` — higher-level demand-pipeline walkthrough.
-- `doc/GLOSSARY.md` — definitions for PUMS / JWMNP / JWTRNS / ModelGen.
+- `pipeline/modelgen_scanner.py`, fast scanner used by `python help.py cities`.
+- `adapters/sumo/sumo_adapter.py`, SUMO routes/vehicles writer.
+- `adapters/matsim/matsim_adapter.py`, MATSim plans + config writer.
+- `adapters/dtalite/dtalite_adapter.py`, DTALite GMNS demand writer.
+- `adapters/common/feasibility.py`, shared cross-engine SCC trip filter.
+- `generate.py`, top-level scenario-generation CLI.
+- `help.py`, in-repo help system (`HELP_MODES` topic).
+- `doc/SCENARIO_GENERATION.md`, higher-level demand-pipeline walkthrough.
+- `doc/GLOSSARY.md`, definitions for PUMS / JWMNP / JWTRNS / ModelGen.
 - Cityscape repository: <https://github.com/raodj/cityscape>
 - ACS PUMS 2021 Data Dictionary:
   <https://www2.census.gov/programs-surveys/acs/tech_docs/pums/data_dict/PUMS_Data_Dictionary_2021.pdf>

@@ -59,7 +59,7 @@ singularity exec \
 | Python | 3.13 from the official `python:3.13-slim-bookworm` |
 | Package manager | `uv` 0.5.18 (deterministic + fast) |
 | Python deps | All `requirements.lock` pins installed via `uv pip install --system` |
-| Engine wheels | `eclipse-sumo` (1.26.0) + `path4gmns` (0.10.0, bundled DTALite) — both pulled from `requirements.lock` |
+| Engine wheels | `eclipse-sumo` (1.26.0) + `path4gmns` (0.10.0, bundled DTALite), both pulled from `requirements.lock` |
 | MATSim | `lib/matsim-15.0/matsim-15.0.jar` (~3 MB, COPY'd directly) |
 | SimForge source | `adapters/`, `pipeline/`, `evaluation/`, `execution/`, `visualization/`, `tools/`, `runspecs/`, `scripts/`, `canonical/`, `lib/`, `tests/`, `doc/`, top-level entry points |
 
@@ -88,7 +88,7 @@ variable. When set, the sbatch invokes the SimForge harness inside
 the pinned-digest Singularity container instead of the host venv:
 
 ```bash
-# Default (host venv — current behaviour):
+# Default (host venv, current behaviour):
 sbatch cluster/jobs/benchmark_large.sbatch
 
 # Container mode (Singularity exec inside the sbatch):
@@ -194,7 +194,7 @@ github.com/apptainer/apptainer/internal/pkg/client.(*RoundTripper).ProgressCompl
     github.com/apptainer/apptainer/internal/pkg/client/progress_roundtrip.go:75
 ```
 
-The download itself usually succeeds — all blobs are cached — but the
+The download itself usually succeeds, all blobs are cached, but the
 SIF conversion never starts because of the panic. Two workarounds:
 
 1. **Pull by the immutable short SHA tag, not the branch tag.** For some
@@ -211,7 +211,7 @@ SIF conversion never starts because of the panic. Two workarounds:
    The full git SHA also works. Look up the current tag on the GHCR
    package page or in `lib/container/manifest.json`.
 
-2. **Retry — sometimes the second pull succeeds.** The first pull
+2. **Retry, sometimes the second pull succeeds.** The first pull
    populated the cache; the panic happens on the progress-complete code
    path, not the download. Retrying may skip enough of the affected
    code to land cleanly. Less reliable than option 1.
@@ -239,8 +239,8 @@ hosts (Cardinal works fine; arm64 Macs don't).
 
 ## Related docs
 
-- `doc/REPRODUCING.md` — end-to-end thesis reproduction recipe
-- `doc/PITZER.md` — Cardinal-specific SLURM setup
-- `doc/LICENSING.md` — per-component license stack (Apache + EPL + GPL + ODbL + public domain)
-- `doc/DATA_MANAGEMENT.md` — data sources, retention, PII policy
-- `CHANGELOG.md` — Wave 2 entry for the container release
+- `doc/REPRODUCING.md`, end-to-end thesis reproduction recipe
+- `doc/PITZER.md`, Cardinal-specific SLURM setup
+- `doc/LICENSING.md`, per-component license stack (Apache + EPL + GPL + ODbL + public domain)
+- `doc/DATA_MANAGEMENT.md`, data sources, retention, PII policy
+- `CHANGELOG.md`, Wave 2 entry for the container release
