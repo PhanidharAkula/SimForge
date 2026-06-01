@@ -24,7 +24,7 @@ If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install pa
 
 ### 1. Branch from `release`
 
-`main` tracks the released thesis snapshot. `release` is the active branch (succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases, JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
+`release` is the default branch and the released thesis snapshot (it succeeded `Version_4` in 2026-04 with the DTALite-as-third-engine swap and the V5 realism phases, JWTRNS mapping fix, OSM-grounded signals, OSM turn restrictions, PUMS-grounded departures, modelgen-grounded trip purposes, and audit-tooling wiring). Base your work on it:
 
 ```bash
 git checkout release

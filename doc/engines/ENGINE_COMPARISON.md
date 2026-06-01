@@ -10,7 +10,6 @@
 
 **Companion docs:**
 - `LPSIM_RETROSPECTIVE.md`, full LPSim integration narrative + abandonment rationale
-- `QARSUMO_RETROSPECTIVE.md`, QarSUMO drop rationale + audit trail
 - `THIRD_ENGINE_OPTIONS.md`, deep research verdicts on DTALite/CityFlow/POLARIS
 
 ---
@@ -126,7 +125,7 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.3 On the QarSUMO drop
 
-> QarSUMO was listed in the original plan as a fifth engine but was dropped in Version_4 Phase A after a source-availability audit found no usable public distribution: `LLNL/QarSUMO` returns HTTP 404, `QarSUMO/QarSUMO` is an empty placeholder repository, and the cited Boulmakoul 2023 IEEE HPCS paper has not produced runnable code. The Version_3 SimForge harness ran a CPU-fallback path that was bit-identical to standard SUMO mesoscopic, contributing zero new comparison signal while occupying one fifth of the experimental matrix. The drop is documented in `doc/engines/QARSUMO_RETROSPECTIVE.md` and demonstrates the framework's selection discipline: when source is unavailable, the right answer is to remove the engine and document why, not to silently substitute.
+> QarSUMO was listed in the original plan as a fifth engine but was dropped in Version_4 Phase A after a source-availability audit found no usable public distribution: `LLNL/QarSUMO` returns HTTP 404, `QarSUMO/QarSUMO` is an empty placeholder repository, and the cited Boulmakoul 2023 IEEE HPCS paper has not produced runnable code. The Version_3 SimForge harness ran a CPU-fallback path that was bit-identical to standard SUMO mesoscopic, contributing zero new comparison signal while occupying one fifth of the experimental matrix. The drop demonstrates the framework's selection discipline: when source is unavailable, the right answer is to remove the engine and document why, not to silently substitute.
 
 ### 8.4 On reproducibility (R-score)
 
@@ -150,11 +149,7 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ## 9. Cross-references to supporting material
 
-- **Methodology chapter:** `doc/chapters/methods.md` §3.4 (per-engine adapter descriptions, all three primary engines updated for Version_5).
-- **Results chapter:** `doc/chapters/results.md`, DTALite columns replace LPSim columns; §5.4 GPU-speedup limitation rewritten as the paradigm-spread claim with retrospective links.
 - **CHANGELOG:** Version_5 unreleased section enumerates the LPSim removal and DTALite addition; SCC-fairness fixes and audit_fairness landings tracked separately under Phase 4.
-- **Glossary:** `doc/GLOSSARY.md`, DTALite entry added under §D; LPSim entry rewritten as "abandoned" with retrospective pointer.
-- **Stress-test audit:** `doc/STRESS_TEST_AUDIT.md`, historical Version_3 snapshot, no updates needed; the existing "Superseded by Version_4" header is correct.
-- **Todo:** `todo.md`, Version_5 Phase B' (DTALite landing) replaces Phase B (LPSim landing); engine matrix marks LPSim/POLARIS/CityFlow as evaluated-and-rejected with retrospective links.
+- **Glossary:** `doc/GLOSSARY.md`, DTALite entry under §D; LPSim entry rewritten as "abandoned".
 - **Experiment log:** `doc/EXPERIMENT_LOG.md`, chronological journal of every commit, job ID, and measured number; the source for any specific Q1–Q4 fairness audit result you want to cite.
 - **Fairness audit script:** `evaluation/audit_fairness.py`, invoke as `python -m evaluation.audit_fairness <run_dir>` to verify any benchmark run was actually fair across engines (Q1–Q4 PASS/WARN/FAIL report).

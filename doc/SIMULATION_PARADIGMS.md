@@ -222,7 +222,7 @@ chicago_200k_car meso peaked at 23 GB. Micro is expected at 50–115 GB
 3. **Skip nyc_500k_car SUMO micro** for the defense. It's a
    confirmatory data point (we already know micro is slower than
    meso) that would consume disproportionate compute. Document as a
-   D-class deviation in `doc/DEVIATIONS.md` if needed.
+   D-class deviation in the thesis plan-deviations appendix if needed.
 
 ---
 
@@ -304,7 +304,7 @@ on its own as a paradigm-divergence result.
   PCE / DTA entries link back to this doc for the long form.
 - `doc/ARCHITECTURE.md`, fairness contract, engine compatibility
   matrix.
-- `doc/DEVIATIONS.md`, D1 (engine substitution), D6
+- the plan-deviations appendix, D1 (engine substitution), D6
   (no grid-search calibration), D7 (vehicles/sec/core).
 - `doc/MODELGEN_AND_MODES.md`, the *other* meaning of "mode" in
   SimForge: travel mode (car/transit/bike/walk), not simulation

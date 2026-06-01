@@ -167,4 +167,3 @@ The engines we ship are not the framework's *limit*. They are the framework's *d
 
 ### Companion docs
 - `LPSIM_RETROSPECTIVE.md`
-- `QARSUMO_RETROSPECTIVE.md`

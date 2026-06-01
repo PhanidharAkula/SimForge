@@ -360,7 +360,7 @@ The super-linear estimate accounts for car-following + lane-change interactions 
 |---|---|---|
 | ≤ 30 h | **GREEN** | Bump runspec `repeats: 5`, `timeout_s: actual + 20 % margin`, re-submit as 5-seed sbatch. Becomes Chapter 5 §5.4 extension. |
 | 30 – 48 h | **YELLOW** | 5-seed matrix needs 7-day wall + 5 parallel sbatchs. Doable but expensive in compute. Document the constraint, decide based on remaining Cardinal allocation. |
-| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as D-class deviation in `doc/DEVIATIONS.md` (parallel to D3 5M-tier dropped). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
+| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as D-class deviation in the plan-deviations appendix (parallel to D3 5M-tier dropped). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
 
 **Submission command** (on Cardinal, from `~/SimForge`):
 

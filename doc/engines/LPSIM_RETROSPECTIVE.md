@@ -8,7 +8,7 @@
 
 ## 1. Why LPSim was chosen
 
-LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT-licensed) is a GPU-accelerated mesoscopic traffic simulator built on the UC Berkeley B18 traffic-flow model. It was selected to fill the **GPU comparator slot** in SimForge's three-engine matrix after QarSUMO was dropped in Version_4 Phase A (see `QARSUMO_RETROSPECTIVE.md`).
+LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT-licensed) is a GPU-accelerated mesoscopic traffic simulator built on the UC Berkeley B18 traffic-flow model. It was selected to fill the **GPU comparator slot** in SimForge's three-engine matrix after QarSUMO was dropped in Version_4 Phase A.
 
 The choice was defensible on five grounds:
 

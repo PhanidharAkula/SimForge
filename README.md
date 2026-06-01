@@ -158,7 +158,7 @@ SimForge/
 │   ├── matsim/             # Activity-based simulator
 │   └── dtalite/            # CPU mesoscopic Dynamic Traffic Assignment (path4gmns)
 ├── canonical/schema/       # Schema documentation (v0)
-├── doc/                    # Architecture, reproduction, Pitzer, thesis chapters
+├── doc/                    # Engineering docs (architecture, reproduction, Pitzer, engine retrospectives)
 ├── evaluation/             # Metrics, analysis, plot generation
 │   └── metrics/            # Fidelity, scalability, reproducibility
 ├── execution/              # Benchmark harness & runners
@@ -311,7 +311,6 @@ symmetry).
 | [doc/SIMULATION_PARADIGMS.md](doc/SIMULATION_PARADIGMS.md) | Macro / meso / micro reference + per-engine support |
 | [doc/LICENSING.md](doc/LICENSING.md)                       | Per-component license declarations            |
 | [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics   |
-| [doc/DEVIATIONS.md](doc/DEVIATIONS.md)   | Plan commitments vs shipped state (31 items) |
 | [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal             |
 | [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                    |
 | `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules               |

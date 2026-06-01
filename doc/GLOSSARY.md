@@ -197,7 +197,7 @@ Python bindings for `libosmium` (PyPI package `osmium`, `>=4.0` in `requirements
 ## Q
 
 ### QarSUMO
-A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope**, no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code). Full retrospective: [`doc/engines/QARSUMO_RETROSPECTIVE.md`](engines/QARSUMO_RETROSPECTIVE.md).
+A GPU-accelerated SUMO variant. Originally listed in the plan as one of five engines, but **dropped from Version_4 scope**, no usable public source as of the 2026-04-26 audit (LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper has not materialised into runnable code).
 
 ---
 
