@@ -235,7 +235,7 @@ typically notice 2-3 such bursts in a `chicago_1k_car` playback, more
 in `nyc_10k_car`.
 
 This is **real demand behaviour**, not a rendering glitch. Per
-`doc/chapters/methods.md` §3.3 step 9, departures are computed as
+`doc/MODELGEN_AND_MODES.md` (departure-time derivation), departures are computed as
 `t_depart = t_arrival − JWMNP × 60` where JWMNP (PUMS-reported commute
 time in minutes) is quantised by Census to **integer minutes**. Every
 person reporting the same JWMNP value lands on the exact same

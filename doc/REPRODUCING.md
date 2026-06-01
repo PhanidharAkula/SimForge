@@ -394,7 +394,7 @@ Renders Fig 5.1 – Fig 5.10 (PNG + PDF) into `runs/benchmark_small/plots/`. See
 
 ## Expected Results (Canonical 11-Cell Matrix — Pitzer Intel Xeon Skylake, post-Phase-12.5)
 
-The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `47248311` (post-Phase-12.4 re-queue) + `tools/recover_partial_summary.py` (Phase 12.5 synthesis for la_50k_car DTALite cells). See [CHANGELOG.md](../CHANGELOG.md) Phase 12 series for the diagnostic chain. Table 5.1 in [`doc/chapters/results.md`](chapters/results.md) is the canonical source; a compact summary here:
+The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `47248311` (post-Phase-12.4 re-queue) + `tools/recover_partial_summary.py` (Phase 12.5 synthesis for la_50k_car DTALite cells). See [CHANGELOG.md](../CHANGELOG.md) Phase 12 series for the diagnostic chain. Table 5.1 in the thesis results chapter is the canonical source; a compact summary here:
 
 | Scenario | Engine | Mode | Trips completed | Avg TT (s) | Runtime (s) | R-Score |
 |---|---|---|---|---|---|---|

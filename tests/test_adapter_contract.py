@@ -2,8 +2,7 @@
 Adapter contract regression guard.
 
 Pins the three-function adapter contract documented in
-``doc/chapters/introduction.md`` §1.5.4 and
-``doc/engines/THIRD_ENGINE_OPTIONS.md`` §"Adapter pattern":
+``doc/engines/THIRD_ENGINE_OPTIONS.md`` ("Adapter pattern"):
 
     prepare_<engine>_inputs(scenario_path, output_dir, ...) -> ScenarioSummary | Path
     run_<engine>(config_path, timeout_s, ...) -> Tuple[bool, float, Optional[str]]
@@ -45,7 +44,7 @@ def test_adapter_exposes_three_function_contract(engine: str) -> None:
     missing = [fn for fn in CONTRACT[engine] if not callable(getattr(mod, fn, None))]
     assert not missing, (
         f"adapters.{engine}.{engine}_adapter is missing contract callables: {missing}. "
-        f"See doc/chapters/introduction.md §1.5.4 for the three-function pattern."
+        f"See doc/engines/THIRD_ENGINE_OPTIONS.md ('Adapter pattern') for the three-function contract."
     )
 
 

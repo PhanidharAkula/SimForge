@@ -301,8 +301,8 @@ sbatch wrapper (doubly-nested or per-scenario).
 ### 22. `test_adapter_contract.py`, Three-function contract regression (6 tests)
 
 Static regression guard that pins the three-function adapter contract
-documented in `doc/chapters/introduction.md` §1.5.4 and
-`doc/engines/THIRD_ENGINE_OPTIONS.md`. Parametrized across SUMO +
+documented in `doc/engines/THIRD_ENGINE_OPTIONS.md` ("Adapter pattern").
+Parametrized across SUMO +
 MATSim + DTALite (3 engines × 2 tests = 6). Verifies each adapter
 module exposes `prepare_<engine>_inputs`, `run_<engine>`,
 `parse_<engine>_output` as callables AND that `run_<engine>` returns

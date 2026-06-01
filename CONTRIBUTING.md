@@ -164,9 +164,6 @@ The doc set is intentionally consolidated, please don't introduce new top-level 
 | Maintainer          | `TESTING.md`                      | Test layout + per-file counts                     |
 | Reader              | `doc/GLOSSARY.md`                 | Acronyms and domain terms                         |
 | Visualizer          | `visualization/README.md`         | Opt-in geographic-map renderer (visualization branch) |
-| Thesis              | `doc/chapters/methods.md`         | Chapter 3                                         |
-| Thesis              | `doc/chapters/experiments.md`     | Chapter 4                                         |
-| Thesis              | `doc/chapters/results.md`         | Chapter 5                                         |
 
 Documentation that duplicates information in another file is technical debt, link, don't restate. If a number appears in two places, only one of them is right after the next change.
 

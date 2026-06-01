@@ -776,7 +776,7 @@ def run_sumo(
     """Run a SUMO simulation against a prepared `.sumocfg`.
 
     Mirrors the three-function adapter contract documented at
-    `doc/chapters/introduction.md` §1.5.4:
+    `doc/engines/THIRD_ENGINE_OPTIONS.md` ("Adapter pattern"):
     `prepare_<engine>_inputs / run_<engine> / parse_<engine>_output`.
     Used by `execution.run_benchmark.BenchmarkHarness.run_sumo` which
     delegates to this function so behaviour stays in the adapter module.

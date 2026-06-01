@@ -1094,7 +1094,7 @@ WHEN TO USE:
 SEE ALSO:
   visualization/README.md           full map catalogue + defaults
   doc/RESULTS_GUIDE.md sec 4.4      post-run pipeline + invocation
-  doc/chapters/methods.md sec 3.8   thesis methods entry
+  doc/SCENARIO_GENERATION.md        scenario + demand methodology
   python help.py evaluation         the related post-run analysis
                                     pipeline (analyze_benchmark +
                                     audit_fairness + generate_plots)

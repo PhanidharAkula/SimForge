@@ -313,9 +313,6 @@ symmetry).
 | [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics   |
 | [doc/DEVIATIONS.md](doc/DEVIATIONS.md)   | Plan commitments vs shipped state (31 items) |
 | [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal             |
-| [doc/chapters/methods.md](doc/chapters/methods.md)         | Thesis Chapter 3, Methods                    |
-| [doc/chapters/experiments.md](doc/chapters/experiments.md) | Thesis Chapter 4, Experiments                |
-| [doc/chapters/results.md](doc/chapters/results.md)         | Thesis Chapter 5, Results                    |
 | [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                    |
 | `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules               |
 | [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types) |
