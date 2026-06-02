@@ -1,11 +1,11 @@
 """
-Fast scanner for modelgen files.
+Quick scanner for the modelgen files.
 
-Counts total persons by JWTRNS transport mode without full parsing.
-Results are cached to avoid re-scanning unchanged files.
+Tallies persons by JWTRNS transport mode without doing a full parse, and
+caches the result so unchanged files don't get re-scanned.
 
-Cache is stored in: .modelgen_cache.json (project root)
-Re-scan triggers: file added/removed, file size changed, mtime changed.
+Cache lives at .modelgen_cache.json in the project root. A re-scan kicks in
+when a file is added or removed, or its size or mtime changes.
 """
 
 import json
@@ -16,21 +16,20 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-# Single source of truth — see pipeline/demand/parse_model_file.py for the
-# 12-code → 4-bucket mapping. Re-exported here so the scanner doesn't need
-# to depend on the heavier parse_model_file module's data classes.
+# One source of truth: parse_model_file.py owns the 12-code to 5-bucket
+# JWTRNS mapping (car, transit, bike, walk, home). We re-export it here so
+# the scanner doesn't have to pull in that module's heavier data classes.
 from pipeline.demand.parse_model_file import JWTRNS_TO_MODE  # noqa: E402
 
-# Expected city names derived from filename pattern: <city>_model.txt
-# Can auto-discover any file matching *_model.txt in modelgen/
+# City names come from the filename: <city>_model.txt. Any *_model.txt in
+# modelgen/ is auto-discovered.
 
 
 def _scan_model_file(path: Path) -> dict:
-    """
-    Fast line-by-line scan of a model file.
+    """Scan a model file line by line.
 
-    Only looks at 'per' lines to extract JWTRNS codes.
-    Returns dict with counts per canonical mode plus metadata.
+    Only the 'per' lines matter, for their JWTRNS codes. Returns per-mode
+    counts plus a bit of metadata.
     """
     mode_counts: dict[str, int] = defaultdict(int)
     total_persons = 0
@@ -67,7 +66,7 @@ def _scan_model_file(path: Path) -> dict:
 
 
 def _file_fingerprint(path: Path) -> dict:
-    """Get size + mtime for change detection."""
+    """Size and mtime, enough to tell if a file changed."""
     stat = path.stat()
     return {
         "size": stat.st_size,
@@ -80,10 +79,9 @@ def scan_modelgen_dir(
     cache_path: Optional[Path] = None,
     force: bool = False,
 ) -> dict:
-    """
-    Scan modelgen/ for all *_model.txt files and return census stats.
+    """Scan modelgen/ for every *_model.txt and return the census stats.
 
-    Results are cached; only re-scans files whose size or mtime changed.
+    Cached, so only files whose size or mtime changed get re-scanned.
 
     Returns:
         {
@@ -182,7 +180,7 @@ def scan_modelgen_dir(
 
 
 def get_city_stats(city_key: str, modelgen_dir: Optional[Path] = None) -> Optional[dict]:
-    """Get stats for a single city. Returns None if not found."""
+    """Stats for one city, or None if there's no model file for it."""
     result = scan_modelgen_dir(modelgen_dir=modelgen_dir)
     return result["cities"].get(city_key)
 

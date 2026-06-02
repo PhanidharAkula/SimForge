@@ -14,17 +14,11 @@ import xml.etree.ElementTree as ET
 
 
 def validate_bundle(scenario_root: Path) -> bool:
-    """
-    Validate a canonical scenario bundle located at scenario_root.
+    """Check the canonical bundle at scenario_root.
 
-    Expected files:
-      - manifest.xml
-      - network.xml
-      - demand.csv
-      - config.xml
-      - signals.xml
-
-    Returns True if the bundle is valid, False otherwise.
+    Looks for manifest.xml, network.xml, demand.csv, config.xml, and
+    signals.xml, and cross-checks them. Returns True if it all hangs
+    together, False otherwise.
     """
     errors: list[str] = []
 
@@ -292,9 +286,7 @@ def validate_bundle(scenario_root: Path) -> bool:
 
 
 def report_result(scenario_root: Path, errors: list[str]) -> bool:
-    """
-    Print validation result and return True (valid) or False (invalid).
-    """
+    """Print the result and return True if valid, False if not."""
     if errors:
         print(f"  ✗ INVALID  {scenario_root.name}")
         for err in errors:

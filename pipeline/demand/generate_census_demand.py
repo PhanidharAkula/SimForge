@@ -1,29 +1,31 @@
 """
-Generate census-calibrated demand from modelgen data + canonical network.
+Census-calibrated demand from modelgen data plus the canonical network.
 
-This module produces demand grounded in U.S. Census PUMS microdata. It reads
-a parsed ModelData object (buildings, households, persons, optional activity
-schedules) plus the canonical network.xml, and emits demand.csv with:
+The demand this module produces is grounded in U.S. Census PUMS microdata.
+It takes a parsed ModelData (buildings, households, persons, and activity
+schedules where present) and the canonical network.xml, and writes
+demand.csv:
 
-  - Origins        weighted by residential building population
+  - Origins        weighted by residential building population.
   - Destinations   schedule-first hybrid:
-                     1. If the picked person has a cityscape activity
-                        schedule, use the workplace bld_id from that
-                        schedule (real PUMS-derived OD pair).
+                     1. If the chosen person has a cityscape activity
+                        schedule, use the workplace bld_id from it (a real
+                        PUMS-derived OD pair).
                      2. Otherwise fall back to the gravity sampler
                         (degree-weighted, distance-decayed around the
                         person's PUMS commute time).
-  - Departure times morning-peak profile, calibrated by PUMS JWMNP
-                     commute time. Cityscape's schedule field has hard-
-                     coded 8 AM / 5 PM times that we deliberately do not
-                     use — they would create a thundering herd at 08:00.
-  - Mode           set from PUMS JWTRNS (car-only by default; multi-mode when modes=[...] is passed)
+  - Departure times morning peak, calibrated by PUMS JWMNP commute time.
+                     Cityscape's schedule field hardcodes 8 AM and 5 PM,
+                     which we deliberately don't use; they'd pile everyone
+                     onto 08:00 at once.
+  - Mode           from PUMS JWTRNS (car-only by default; multi-mode when
+                     you pass modes=[...]).
 
-The output CSV carries an extra `dest_source` column ({"schedule", "gravity"})
-so per-trip provenance is preserved. Adapters consume the canonical 5-column
-subset by name and ignore the extra column. The summary dict returned by
-``generate_census_demand`` includes a ``provenance`` block (counts +
-fallback reasons) which ``generate.py`` writes into generation_metadata.json.
+The CSV carries an extra `dest_source` column ({"schedule", "gravity"}) so
+each trip's provenance survives. Adapters read the canonical 5 columns by
+name and ignore the extra one. The summary dict from
+``generate_census_demand`` has a ``provenance`` block (counts and fallback
+reasons) that ``generate.py`` writes into generation_metadata.json.
 
 Usage (library):
     from pipeline.demand.parse_model_file import parse_model_file
@@ -59,7 +61,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Network loading (lightweight — only nodes + adjacency)
+# Network loading (lightweight: just nodes + adjacency)
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -151,10 +153,10 @@ def map_buildings_to_nodes(
     max_distance_km: float = 1.0,
 ) -> dict[int, str]:
     """
-    Map each building to the nearest canonical network node.
+    Snap each building to its nearest canonical network node.
 
-    Uses the building's way_lat/way_lon (the snap point on the nearest
-    road in the model file) for better accuracy than raw building centroid.
+    We use the building's way_lat/way_lon (the model file's snap point on
+    the nearest road), which is more accurate than the raw centroid.
 
     Args:
         buildings: List of Building objects.
@@ -238,23 +240,22 @@ def _generate_departure_time(
     horizon_end: int,
     arrival_time_s: int = _CITYSCAPE_AM_ARRIVAL_S,
 ) -> int:
-    """Compute a per-person departure time from real PUMS data.
+    """A per-person departure time, straight from real PUMS data.
 
-    ``departure = arrival_time_s − commute_min × 60``
+    ``departure = arrival_time_s - commute_min * 60``
 
-    where ``arrival_time_s`` is the cityscape-emitted workplace-arrival
-    time (28800 s = 08:00 AM for schedule-driven persons) and
-    ``commute_min`` is the person's PUMS-reported `JWMNP` (Travel time to
-    work, in minutes). This replaces the pre-V5 Gaussian peak that
-    centered every trip at the horizon midpoint regardless of the
-    person's actual commute duration.
+    ``arrival_time_s`` is cityscape's workplace-arrival time (28800 s,
+    08:00, for schedule-driven persons) and ``commute_min`` is the person's
+    PUMS `JWMNP` (travel time to work, in minutes). This took over from the
+    pre-V5 Gaussian peak that parked every trip at the horizon midpoint no
+    matter how long the actual commute was.
 
-    For horizons that don't include the cityscape arrival time
-    (rare — most thesis bundles have 7–8 AM or 6–10 AM windows that
-    cover 28800), the result is clamped to ``[horizon_start,
-    horizon_end - 1]``. Long commutes can produce departures before
-    ``horizon_start``: those clamp to ``horizon_start`` rather than
-    being dropped, keeping the requested trip count stable.
+    When the horizon doesn't cover cityscape's arrival time (rare; most
+    thesis bundles use 7-8 AM or 6-10 AM windows that include 28800), the
+    result clamps to ``[horizon_start, horizon_end - 1]``. A long commute
+    can put the departure before ``horizon_start``, and those clamp to
+    ``horizon_start`` rather than getting dropped, which keeps the requested
+    trip count steady.
     """
     departure = arrival_time_s - commute_min * 60
     return int(max(horizon_start, min(horizon_end - 1, departure)))
@@ -274,11 +275,10 @@ _SCHOOL_KIND_PREFIXES = (
     "college", "university",
 )
 
-# Maximum search distance from home to nearest school (km). Real US
-# school catchment areas typically fall within 1-3 km in dense urban
-# cores and up to 5-8 km in suburban areas. We use 5 km as a sensible
-# upper bound — beyond this distance a chained drop-off is unlikely
-# (parent would let the kid take the bus).
+# How far from home we'll look for the nearest school (km). Real US
+# catchment areas run 1-3 km in dense urban cores and 5-8 km out in the
+# suburbs. 5 km is a reasonable ceiling; past that a chained drop-off is
+# unlikely (the parent would just put the kid on the bus).
 _SCHOOL_MAX_KM = 5.0
 
 
@@ -295,12 +295,12 @@ def _build_school_destination_array(
     bld_to_node: dict,
     network: "NetworkInfo",
 ):
-    """Pre-compute (school_node, lat, lon) arrays for vectorized nearest-
-    school lookup. Returns (nodes_list, lats_array, lons_array) suitable
-    for haversine distance computation against parent home coordinates.
+    """Pre-compute (school_node, lat, lon) arrays for a vectorized
+    nearest-school lookup. Returns (nodes_list, lats_array, lons_array),
+    ready for a haversine distance against parent home coordinates.
 
-    Schools whose nearest network node is outside the SCC are dropped —
-    they wouldn't be routable from any home anyway.
+    A school whose nearest network node falls outside the SCC gets dropped,
+    since no home could route to it anyway.
     """
     nodes: list = []
     lats: list = []
@@ -318,18 +318,17 @@ def _build_school_destination_array(
 
 
 def _has_school_age_dependent(person, model_data: ModelData) -> bool:
-    """Detect a school-age (AGEP < 18) dependent in this person's household.
+    """Does this person's household have a school-age (AGEP < 18) dependent?
 
-    Returns True iff the household this person lives in contains at least
-    one *other* person with a valid age in [0, 18). We check `>=0` to
-    exclude PUMS `-1` (Not-applicable) sentinel values.
+    True when the household holds at least one *other* person whose age is
+    in [0, 18). The `>= 0` check drops PUMS's `-1` (not-applicable) sentinel.
 
-    Important: kids in PUMS have `JWTRNS=-1` (Not a worker), so they're
-    filtered out of `model_data.persons` by the mode/car-only step.
-    Looking them up via `model_data.per_by_id` would miss them entirely.
-    Instead we use `model_data.age_by_per_id`, which the parser
-    populates from the *un*filtered all-persons pass and therefore
-    covers every household member regardless of their own JWTRNS.
+    The catch: kids in PUMS have `JWTRNS=-1` (not a worker), so the
+    mode/car-only step filters them out of `model_data.persons`, and a
+    `model_data.per_by_id` lookup would never see them. So we read
+    `model_data.age_by_per_id` instead, which the parser fills from the
+    unfiltered all-persons pass and therefore covers every household member
+    no matter their own JWTRNS.
     """
     home_bld = model_data.home_bld_by_per_id.get(person.per_id)
     if home_bld is None:
@@ -392,17 +391,17 @@ def generate_census_demand(
     allow_oversample: bool = False,
 ) -> dict:
     """
-    Generate census-calibrated demand.csv from model data and network.
+    Write a census-calibrated demand.csv from model data and the network.
 
-    Pipeline:
-      1. Load canonical network nodes.
-      2. Map residential buildings to nearest network nodes.
-      3. Build origin weights proportional to building population.
+    The pipeline:
+      1. Load the canonical network nodes.
+      2. Snap residential buildings to their nearest network nodes.
+      3. Weight origins by building population.
       4. For each trip:
          a. Sample an origin node (population-weighted).
-         b. Sample a census person from that building (for commute profile).
-         c. Sample a destination node (degree-weighted gravity, distance-decayed).
-         d. Generate departure time from JWMNP-calibrated peak profile.
+         b. Sample a census person from that building (for the commute profile).
+         c. Sample a destination (degree-weighted gravity, distance-decayed).
+         d. Set the departure time from the JWMNP-calibrated peak profile.
       5. Write demand.csv.
 
     Args:
@@ -438,7 +437,7 @@ def generate_census_demand(
         model_data.buildings, network, max_distance_km=max_snap_distance_km
     )
 
-    # 3. Build origin weights — residential buildings only, restricted to SCC.
+    # 3. Build origin weights: residential buildings only, restricted to SCC.
     #    Weight = building population (from model file). Buildings whose nearest
     #    node lies outside the largest strongly-connected component are dropped
     #    here so every emitted trip is routable in both directions (matching the
@@ -482,7 +481,7 @@ def generate_census_demand(
     logger.info("Origin nodes: %d (total pop weight: %d)",
                 len(origin_nodes), sum(origin_weights))
 
-    # 4. Build destination weights — degree-based, restricted to SCC.
+    # 4. Build destination weights: degree-based, restricted to SCC.
     dest_nodes = [n for n in network.node_ids
                   if n in network.scc_nodes
                   and network.node_degrees.get(n, 0) > 0]
@@ -502,8 +501,8 @@ def generate_census_demand(
     _node_idx = {n: i for i, n in enumerate(dest_nodes)}
     _R_KM = 6371.0
 
-    # 5. Build a person pool — census persons for commute-time sampling
-    #    Grouped by building for origin-correlated sampling (gravity path)
+    # 5. Build a person pool: census persons for commute-time sampling,
+    #    grouped by building so the gravity path can sample origin-correlated.
     bld_persons: dict[int, list] = defaultdict(list)
     for hld in model_data.households:
         for pid in hld.person_ids:
@@ -545,11 +544,11 @@ def generate_census_demand(
         if home_node not in network.scc_nodes:
             fallback_reasons["home_outside_scc"] += 1
             continue
-        # First activity in cityscape's output is the workplace (8 AM
-        # arrival); the second is the return-home (5 PM). We use the
-        # workplace destination AND its arrival time — departure is then
-        # computed as `arrival - commute_min*60` per V5 (real PUMS
-        # JWMNP), instead of the pre-V5 Gaussian-around-horizon-midpoint.
+        # In cityscape's output the first activity is the workplace (8 AM
+        # arrival), the second the trip home (5 PM). We take the workplace
+        # destination and its arrival time, then compute departure as
+        # `arrival - commute_min*60` (V5, real PUMS JWMNP) instead of the
+        # pre-V5 Gaussian around the horizon midpoint.
         dest_bld_id = per.schedule[0].bld_id
         dest_node = bld_to_node.get(dest_bld_id)
         if dest_node is None:
@@ -599,19 +598,19 @@ def generate_census_demand(
             return JWTRNS_TO_MODE.get(person.transport_mode, "car")
         return mode
 
-    # 6. Generate trips — Phase 1 (schedule-driven) then Phase 2 (gravity).
-    # Per-trip rows omit `trip_id` here; ids are assigned after the final sort
-    # by departure_time so they remain stable and dense (t0..tN-1).
+    # 6. Generate trips: Phase 1 (schedule-driven), then Phase 2 (gravity).
+    # The rows here have no `trip_id` yet; ids are assigned after the final
+    # sort by departure_time so they stay stable and dense (t0..tN-1).
     trips: list[dict] = []
 
-    # Peak-coverage detection — V5+ adds PM HBW (work → home @ 17:00) trips
-    # using cityscape's `schedule[1]` tuple, which has been live data in
-    # modelgen all along but was previously dropped on the floor. Allocation:
-    # if both AM and PM peaks fall inside the user's horizon, split the trip
-    # budget 50/50 across the two purposes; otherwise put everything on the
-    # only peak that's in-window. AM-only horizons (chicago_1k_car at 7-8 AM,
-    # nyc_10k_car at 7-9 AM, la_50k_car at 6-10 AM, nyc_500k_car at 6-10 AM)
-    # produce identical demand.csv to pre-V5 — back-compat preserved.
+    # Which peaks are in the horizon. V5+ adds PM HBW (work to home at 17:00)
+    # trips from cityscape's `schedule[1]` tuple, which had been live data in
+    # modelgen all along but was getting thrown away. The budget split: if
+    # both AM and PM peaks land inside the user's horizon, split the trips
+    # 50/50 across the two purposes; otherwise put everything on whichever
+    # peak is in window. AM-only horizons (chicago_1k_car 7-8 AM, nyc_10k_car
+    # 7-9 AM, la_50k_car 6-10 AM, nyc_500k_car 6-10 AM) come out identical to
+    # the pre-V5 demand.csv, so back-compat holds.
     am_in_horizon = horizon_start <= _CITYSCAPE_AM_ARRIVAL_S <= horizon_end
     pm_in_horizon = horizon_start <= _CITYSCAPE_PM_ARRIVAL_S <= horizon_end
 
@@ -649,20 +648,19 @@ def generate_census_demand(
         )
 
     def _maybe_school_chain_for(person, home_node, work_node):
-        """Return school_node if this person has a school-age dependent, a
-        school is reachable within `_SCHOOL_MAX_KM` of their home, AND the
-        chain would not collapse to a self-trip; else None.
+        """Return the school_node when this person has a school-age
+        dependent, a school sits within `_SCHOOL_MAX_KM` of home, and the
+        chain won't collapse into a self-trip; otherwise None.
 
-        Self-trip guard: if the building→node snap puts home, school, or
-        work at the same network node, emitting the chain would produce a
-        ``home → school`` or ``school → work`` row with origin equal to
-        destination — which the bundle-validator's
-        TestDemandIntegrity.test_origin_differs_from_destination correctly
-        rejects. This is most common in dense urban grids where multiple
-        OSM buildings collapse onto a single graph node after SCC pruning.
-        Skip the chain entirely in that case; the caller falls back to a
-        bare HBW row, preserving demand realism without breaking
-        referential integrity.
+        The self-trip guard: if the building-to-node snap lands home,
+        school, or work on the same network node, the chain would emit a
+        ``home -> school`` or ``school -> work`` row with origin == dest,
+        which the validator's
+        TestDemandIntegrity.test_origin_differs_from_destination rightly
+        rejects. It happens most in dense grids where several OSM buildings
+        collapse onto one graph node after SCC pruning. We skip the chain in
+        that case and the caller falls back to a plain HBW row, keeping the
+        realism without breaking referential integrity.
         """
         if not school_nodes:
             return None
@@ -705,12 +703,12 @@ def generate_census_demand(
             # AND neither leg would self-trip, emit two rows:
             # home → school + school → work.
             if school_node is not None and am_emitted + 2 <= n_am_target:
-                # The school drop happens slightly before workplace arrival
-                # (parent stops on the way). For simplicity, emit both
-                # rows at the same departure time — engines reorder by
-                # departure_time_s and both vehicles enter the network at
-                # the same instant. A more sophisticated future model
-                # could split the journey time across the two segments.
+                # The school drop is a little before workplace arrival (the
+                # parent stops on the way). To keep it simple we give both
+                # rows the same departure time; engines order by
+                # departure_time_s and both vehicles enter at the same
+                # instant. A fancier model could split the journey time
+                # across the two legs.
                 trips.append({
                     "origin_node_id": home_node,
                     "destination_node_id": school_node,
@@ -745,23 +743,21 @@ def generate_census_demand(
             n_school_chains,
         )
 
-    # Phase 1b: Schedule-driven PM trips (work → home, 17:00 arrival) — V5+
-    # consumes cityscape's `schedule[1]` tuple. Cityscape always emits the
-    # PM tuple alongside the AM tuple, with the same dow_start=1, dow_end=5
-    # weekday range; the destination bld_id in `schedule[1]` is the home
-    # building (mirror of the AM origin). We reverse the OD direction and
-    # recompute the departure time from `schedule[1].time_s`.
+    # Phase 1b: schedule-driven PM trips (work to home, 17:00 arrival). V5+
+    # reads cityscape's `schedule[1]` tuple. Cityscape always emits the PM
+    # tuple next to the AM one, same dow_start=1, dow_end=5 weekday range;
+    # the destination bld_id in `schedule[1]` is the home building (mirror of
+    # the AM origin). We flip the OD direction and recompute the departure
+    # from `schedule[1].time_s`.
     #
-    # V5+: parents with a school-age dependent emit a chained
-    # work → school → home pair (HBW_PM_chained + HBSchool_PM) instead of
-    # a bare work → home trip. This is the symmetric mirror of the AM
-    # chain (parent picks up the kid on the way home). Each chain consumes
-    # 2 budget slots.
+    # V5+: a parent with a school-age dependent emits a chained
+    # work -> school -> home pair (HBW_PM_chained + HBSchool_PM) instead of a
+    # plain work -> home trip, the symmetric mirror of the AM chain (pick the
+    # kid up on the way home). Each chain uses 2 budget slots.
     n_school_chains_pm = 0
     if n_pm_target > 0 and len(valid_scheduled) > 0:
-        # Independent shuffle so the PM-trip person mix isn't a
-        # deterministic suffix of the AM mix — keeps the cohort's
-        # representativeness intact at all sampling sizes.
+        # Shuffle independently so the PM person mix isn't just a fixed tail
+        # of the AM mix; that keeps the cohort representative at any sample size.
         pm_sched_indices = list(range(len(valid_scheduled)))
         rng.shuffle(pm_sched_indices)
         pm_emitted = 0
@@ -777,14 +773,13 @@ def generate_census_demand(
             mode_str = _trip_mode_for(person)
 
             school_node = _maybe_school_chain_for(person, home_node, work_node)
-            # If chain fits the budget AND a reachable school exists
-            # AND neither leg would self-trip, emit two rows:
-            # work → school + school → home.
+            # If the chain fits the budget, a reachable school exists, and
+            # neither leg self-trips, emit two rows: work -> school and
+            # school -> home.
             if school_node is not None and pm_emitted + 2 <= n_pm_target:
-                # Both legs share the same departure_time_s — same
-                # simplification as the AM chain. Engines reorder by
-                # departure_time_s and both vehicles enter the network at
-                # the same instant.
+                # Both legs share one departure_time_s, same simplification
+                # as the AM chain. Engines order by departure_time_s and both
+                # vehicles enter at the same instant.
                 trips.append({
                     "origin_node_id": work_node,
                     "destination_node_id": school_node,
@@ -825,8 +820,8 @@ def generate_census_demand(
     # budgets to whatever the schedule path didn't cover. Deterministic
     # weighting picks AM vs PM proportional to remaining budget.
     #
-    # AM_PURPOSES / PM_PURPOSES are module-level frozensets — see the
-    # constants block near the top of this file for the rationale.
+    # AM_PURPOSES / PM_PURPOSES are module-level frozensets; the constants
+    # block near the top of the file explains why.
     am_emitted_so_far = sum(1 for t in trips if t["purpose"] in AM_PURPOSES)
     pm_emitted_so_far = sum(1 for t in trips if t["purpose"] in PM_PURPOSES)
     am_remaining = max(0, n_am_target - am_emitted_so_far)
@@ -838,8 +833,8 @@ def generate_census_demand(
     while (am_remaining + pm_remaining > 0
            and gravity_attempts < gravity_max_attempts):
         gravity_attempts += 1
-        # Pick which peak to fill — proportional to remaining budget so
-        # the AM/PM mix in gravity matches the budget allocation overall.
+        # Pick the peak to fill in proportion to the remaining budget, so
+        # the gravity AM/PM mix tracks the overall allocation.
         if pm_remaining == 0:
             current_peak = "AM"
         elif am_remaining == 0:
@@ -899,10 +894,10 @@ def generate_census_demand(
         if destination == origin:
             continue
 
-        # Pick peak template (AM or PM) — V5+ peak-aware. Persons with a
-        # cityscape schedule contribute their personal arrival time;
-        # non-code-1 persons (empty schedule) use the cityscape constant
-        # for whichever peak this iteration is filling.
+        # Pick the AM or PM template (V5+ is peak-aware). A person with a
+        # cityscape schedule brings their own arrival time; one without a
+        # schedule uses the cityscape constant for whichever peak this
+        # iteration is filling.
         if current_peak == "AM":
             arrival_s = (
                 person.schedule[0].time_s

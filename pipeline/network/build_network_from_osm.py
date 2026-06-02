@@ -1,8 +1,8 @@
 """
 Build canonical network.xml from OpenStreetMap data.
 
-This module downloads and processes OSM data for a given bounding box,
-extracting road network topology and converting it to the canonical schema.
+Given a bounding box, this downloads (or slices) the OSM data, pulls out the
+road-network topology, and converts it to the canonical schema.
 
 Usage:
     python -m pipeline.network.build_network_from_osm \
@@ -51,8 +51,8 @@ class BoundingBox:
     @classmethod
     def from_center(cls, lat: float, lon: float, radius_km: float) -> "BoundingBox":
         """Create bounding box from center point and radius in km."""
-        # Approximate: 1 degree latitude ≈ 111 km
-        # Longitude varies with latitude
+        # Rough: 1 degree of latitude is about 111 km. Longitude shrinks with
+        # latitude, hence the cos() below.
         import math
         lat_delta = radius_km / 111.0
         lon_delta = radius_km / (111.0 * math.cos(math.radians(lat)))
@@ -111,10 +111,10 @@ class CanonicalLink:
 # Used only when an OSM way has no explicit `maxspeed` tag. Most major US
 # roads carry maxspeed in OSM and override these defaults; this table is
 # for the long tail of unmarked residential / service roads. Values are
-# typical urban speed limits in km/h converted to m/s. (Note: cityscape's
-# `model_gen/ModelGenerator.cpp::SpeedLimits` is a separate US-mph table
-# used by cityscape's own travel-time estimation; SimForge does not
-# consume it — we read OSM `maxspeed` directly via osmnx.)
+# typical urban speed limits in km/h converted to m/s. (Cityscape's
+# `model_gen/ModelGenerator.cpp::SpeedLimits` is a separate US-mph table it
+# uses for its own travel-time estimation; we don't touch it, we read OSM
+# `maxspeed` directly through osmnx.)
 DEFAULT_SPEEDS_MPS = {
     "motorway": 33.3,       # 120 km/h
     "motorway_link": 22.2,  # 80 km/h
@@ -293,8 +293,7 @@ def extract_canonical_network(
     osm_signal_ids: Optional[set] = None,
     osm_turn_restrictions: Optional[list] = None,
 ) -> tuple[list[CanonicalNode], list[CanonicalLink], list[CanonicalTurnRestriction]]:
-    """
-    Extract canonical nodes, links, and turn restrictions from OSM graph.
+    """Pull canonical nodes, links, and turn restrictions out of an OSM graph.
 
     Args:
         G: OSM network graph from osmnx
@@ -314,8 +313,8 @@ def extract_canonical_network(
             ``load_network_from_pbf._slice_pbf_to_xml``. Each entry is
             resolved here against canonical link/node IDs and emitted
             as a ``CanonicalTurnRestriction``. Restrictions whose
-            ``via_node``, ``from_way``, or ``to_way`` didn't survive
-            bbox / SCC truncation are silently dropped — those movements
+            ``via_node``, ``from_way``, or ``to_way`` didn't survive the
+            bbox or SCC truncation are dropped quietly, since those movements
             don't exist in the canonical network anyway.
 
     Returns:
@@ -407,10 +406,10 @@ def extract_canonical_network(
         if isinstance(highway, list):
             highway = highway[0]
 
-        # Get length. Drop degenerate edges (length <= 0) — these arise when an
-        # OSM way connects two nodes that share identical coordinates (parking
-        # connectors, barrier-crossing artifacts, etc.). SUMO would warn and
-        # MATSim would emit teleport routes; safer to filter at extract time.
+        # Get length, and drop degenerate edges (length <= 0). These show up
+        # when an OSM way joins two nodes at the exact same coordinates
+        # (parking connectors, barrier-crossing artifacts, and the like). SUMO
+        # would warn and MATSim would teleport, so it's cleaner to filter here.
         # Logged at INFO so the noise stays out of default-mode output and only
         # surfaces under --verbose; the per-step summary line below still
         # reports the aggregate `dropped N zero-length` count regardless.
@@ -556,21 +555,21 @@ def build_network_xml(
     turn_restrictions: Optional[list[CanonicalTurnRestriction]] = None,
 ) -> etree.Element:
     """
-    Build canonical network.xml from extracted nodes, links, and (optional)
-    turn restrictions.
+    Build the canonical network.xml from the extracted nodes, links, and
+    (optional) turn restrictions.
 
     Args:
-        nodes: List of canonical nodes
-        links: List of canonical links
-        crs: Coordinate reference system string
-        units_length: Length unit string
-        units_speed: Speed unit string
-        turn_restrictions: Optional list of CanonicalTurnRestriction. When
-            present and non-empty, a ``<turn_restrictions>`` block is emitted
-            after ``<links>`` with one ``<turn_restriction>`` per entry.
+        nodes: the canonical nodes
+        links: the canonical links
+        crs: coordinate reference system string
+        units_length: length unit string
+        units_speed: speed unit string
+        turn_restrictions: optional CanonicalTurnRestriction list. When it's
+            non-empty, a ``<turn_restrictions>`` block follows ``<links>``
+            with one ``<turn_restriction>`` per entry.
 
     Returns:
-        lxml Element tree root
+        The lxml element-tree root.
     """
     root = etree.Element("network")
     
@@ -638,22 +637,22 @@ def build_network_from_osm(
     pbf_path: Optional[Path] = None,
 ) -> dict:
     """
-    Main entry point: build canonical network.xml from OSM data.
+    The entry point: build canonical network.xml from OSM data.
 
-    If ``pbf_path`` is provided, the network is parsed from a local
-    Geofabrik snapshot (reproducible, offline). Otherwise the function
-    falls back to a live Overpass download, which is kept only for bboxes
-    that no local PBF covers.
+    With ``pbf_path``, the network comes from a local Geofabrik snapshot
+    (reproducible, offline). Without it, the function falls back to a live
+    Overpass download, which we keep around only for bboxes no local PBF
+    covers.
 
     Args:
-        bbox: Geographic bounding box
-        output_path: Path to write network.xml
+        bbox: geographic bounding box
+        output_path: where to write network.xml
         network_type: OSM network type
-        crs: Coordinate reference system
-        pbf_path: Optional path to a local ``.osm.pbf`` (preferred source).
+        crs: coordinate reference system
+        pbf_path: optional local ``.osm.pbf``, the preferred source.
 
     Returns:
-        Summary dict with node_count, link_count, osm_source, etc.
+        A summary dict with node_count, link_count, osm_source, and so on.
     """
     if pbf_path is not None:
         # PBF path is the default for all bundled cities (chicago/nyc/la have
@@ -661,24 +660,23 @@ def build_network_from_osm(
         # reproducible.
         from pipeline.network.load_network_from_pbf import load_osm_from_pbf
         # `load_osm_from_pbf` returns (graph, signal_node_ids,
-        # turn_restrictions). All three come from the SAME PBF stream that
-        # produces the way slice — no second whole-file scan, so adding
-        # extraction is essentially free even on the 1.3 GB CA PBF.
+        # turn_restrictions). All three come off the same PBF stream that
+        # produces the way slice, so there's no second whole-file scan and
+        # the extraction is basically free even on the 1.3 GB CA PBF.
         G, osm_signal_ids, osm_turn_restrictions = load_osm_from_pbf(
             pbf_path, bbox, network_type,
         )
         osm_source = {"type": "pbf", "path": str(pbf_path), "name": Path(pbf_path).name}
     else:
-        # Overpass fallback — only fires when no local PBF covers the bbox
-        # (rare; preserved for one-off experiments). osmnx.graph_from_bbox
-        # preserves node tags directly per `osmnx.settings.useful_tags_node`,
-        # so signal placement is surfaced via the graph attribute inside
-        # extract_canonical_network(). Turn-restriction relations are NOT
-        # exposed by graph_from_bbox in a structured form (they would need a
-        # separate Overpass query) — so we pass an empty list here. Networks
-        # generated via Overpass thus skip turn restrictions; the PBF path
-        # is the only one that produces them, which is fine since PBF is
-        # the default for thesis bundles.
+        # Overpass fallback, which only fires when no local PBF covers the
+        # bbox (rare; kept for one-off experiments). osmnx.graph_from_bbox
+        # keeps node tags per `osmnx.settings.useful_tags_node`, so signal
+        # placement still comes through as a graph attribute in
+        # extract_canonical_network(). Turn-restriction relations, though,
+        # aren't exposed by graph_from_bbox in any structured form (they'd
+        # need a separate Overpass query), so we pass an empty list. Networks
+        # built this way skip turn restrictions; only the PBF path produces
+        # them, which is fine, since PBF is the default for thesis bundles.
         G = download_osm_network(bbox, network_type)
         osm_signal_ids = set()
         osm_turn_restrictions = []

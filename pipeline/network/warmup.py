@@ -4,15 +4,15 @@ Pre-warm the on-disk OSM cache for every scenario in ``scenarios/``.
 Why this exists
 ---------------
 ``download_osm_network`` already pins osmnx's HTTP cache to ``<repo>/cache/``,
-so the *second* fetch for a given bbox is fast. The first fetch is bounded by
-the Overpass API and takes anywhere from 10 s to 2 min. On a fresh clone or
-after wiping ``cache/``, that latency hits the user during the very first
-benchmark run — exactly when they don't want surprises.
+so the second fetch for a given bbox is fast. The first one is at the mercy
+of the Overpass API and runs anywhere from 10 s to 2 min. On a fresh clone,
+or after wiping ``cache/``, that wait lands on the user during their very
+first benchmark run, which is exactly when they don't want a surprise.
 
-This CLI walks each scenario's ``generation_metadata.json`` (or, as a fallback,
-the bounding rectangle of its ``network.xml`` nodes), reconstructs the bbox
-``download_osm_network`` would have requested, and forces a fetch. Subsequent
-benchmark runs hit the cache and start instantly.
+This CLI reads each scenario's ``generation_metadata.json`` (or, failing
+that, the bounding rectangle of its ``network.xml`` nodes), rebuilds the bbox
+``download_osm_network`` would have asked for, and forces the fetch. After
+that, benchmark runs hit the cache and start right away.
 
 Usage
 -----
@@ -224,7 +224,7 @@ def warmup(
                 "edges": G.number_of_edges(),
                 "cache_hit": elapsed < 2.0,
             })
-        except Exception as exc:  # noqa: BLE001 — surface, don't abort batch
+        except Exception as exc:  # noqa: BLE001 (surface it, don't abort the batch)
             elapsed = time.time() - start
             logger.error(
                 "[%s] warmup failed after %.1fs: %s",

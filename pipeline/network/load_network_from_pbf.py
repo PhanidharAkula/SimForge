@@ -1,34 +1,34 @@
 """
-Load canonical road network from a local OSM PBF file.
+Load the canonical road network from a local OSM PBF file.
 
-Drop-in replacement for the Overpass-based ``download_osm_network`` in
-``build_network_from_osm.py``. Reads a hash-pinned Geofabrik snapshot from
-``osm_data/`` (see ``osm_data/manifest.json``), slices it to the requested
-bounding box, and returns a ``networkx.MultiDiGraph`` shape-compatible with
-what osmnx would have produced via Overpass — so the downstream canonical
-extraction is unchanged.
+A drop-in replacement for the Overpass-based ``download_osm_network`` in
+``build_network_from_osm.py``. It reads a hash-pinned Geofabrik snapshot
+from ``osm_data/`` (see ``osm_data/manifest.json``), slices it to the
+requested bounding box, and returns a ``networkx.MultiDiGraph`` shaped just
+like what osmnx would have built from Overpass, so nothing downstream has to
+change.
 
-Pipeline inside this module:
-  1. ``pyosmium`` (Python bindings for libosmium) scans the state PBF and
-     writes a small reference-complete ``.osm`` XML file containing every
-     highway=* way that touches the bbox, plus all nodes those ways refer
-     to. This is what ``osmium extract -b ...`` does as a CLI, expressed
+What happens in here:
+  1. ``pyosmium`` (the Python bindings for libosmium) scans the state PBF
+     and writes a small, reference-complete ``.osm`` XML holding every
+     highway=* way that touches the bbox plus all the nodes those ways
+     reference. It's what ``osmium extract -b ...`` does at the CLI, just
      through the Python API so Pitzer only needs ``pip install osmium``.
   2. ``osmnx.graph_from_xml`` parses that XML into a ``MultiDiGraph`` with
-     the same node/edge attributes (x, y, highway, length, maxspeed, lanes,
-     name, osmid) the Overpass path produced.
-  3. ``osmnx.truncate.truncate_graph_bbox`` clips edges that bleed past the
-     requested bbox (ways that pass through drag their full node set in
-     via ``BackReferenceWriter``; truncation keeps the simulation footprint
-     matched to the requested area).
+     the same node and edge attributes (x, y, highway, length, maxspeed,
+     lanes, name, osmid) the Overpass path produced.
+  3. ``osmnx.truncate.truncate_graph_bbox`` trims edges that spill past the
+     bbox (a way passing through drags its whole node set in via
+     ``BackReferenceWriter``; truncation keeps the simulation footprint
+     matched to the area we asked for).
 
-Why local PBF over live Overpass:
-  - Reproducibility: live Overpass returns a moving OSM target; a PBF
-    pinned by SHA256 fixes the exact input every run saw.
-  - Reliability: the public Overpass API rate-limits city-scale bboxes
-    and silently stalls on NYC-sized fetches (see thesis §4.3).
-  - Speed: state-PBF slice is 30-90s; the same bbox over Overpass is
-    5-30+min when it completes at all.
+Why a local PBF instead of live Overpass:
+  - Reproducibility: Overpass serves a moving OSM target, while a
+    SHA256-pinned PBF fixes the exact input every run saw.
+  - Reliability: the public Overpass API rate-limits city-scale bboxes and
+    quietly stalls on NYC-sized fetches (see thesis §4.3).
+  - Speed: a state-PBF slice is 30-90s; the same bbox over Overpass is
+    5-30+ min, if it finishes at all.
 """
 
 from pathlib import Path
@@ -54,17 +54,17 @@ def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int, se
     build the geometry).
 
     The PBF stream visits every entity once anyway (FileProcessor walks
-    nodes → ways → relations in PBF order). We piggyback signal-node
-    detection AND turn-restriction detection on the same stream so we
-    don't pay for a second whole-file pass — important on the CA PBF
-    (1.3 GB ≈ 140 s for a separate scan).
+    nodes, then ways, then relations in PBF order). We hang signal-node
+    detection and turn-restriction detection off that same pass so there's
+    no second whole-file scan, which matters on the CA PBF (1.3 GB, about
+    140 s for a separate scan).
 
     Returns ``(ways_written, nodes_referenced_count, signal_node_ids,
     turn_restrictions)`` where ``turn_restrictions`` is a list of dicts:
     ``{"restriction": "no_left_turn", "from_way": <osm_id>, "via_node":
     <osm_id>, "to_way": <osm_id>, "osm_relation_id": <osm_id>}``.
-    Only ``via=node`` restrictions are captured (``via=way`` is rare
-    and structurally different — left as future work).
+    Only ``via=node`` restrictions get captured; ``via=way`` is rare and
+    structurally different, so it's left as future work.
     """
     try:
         import osmium
@@ -107,10 +107,10 @@ def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int, se
             if obj.is_relation():
                 # Capture OSM `type=restriction` relations with `via=node`
                 # (turn restrictions like no_left_turn, only_straight_on).
-                # via=way restrictions exist but are rare and structurally
-                # different (the via is a sequence of ways) — left as
-                # future work; they affect <1% of restrictions in major US
-                # cities per OSM coverage stats.
+                # via=way restrictions exist too, but they're rare and
+                # structurally different (the via is a sequence of ways), so
+                # they're future work. Per OSM coverage stats they're under
+                # 1% of restrictions in major US cities.
                 if obj.tags.get("type") != "restriction":
                     continue
                 rtype = obj.tags.get("restriction")
@@ -127,7 +127,7 @@ def _slice_pbf_to_xml(pbf_path: Path, bbox, out_xml: Path) -> tuple[int, int, se
                         via_node = member.ref
                         via_is_node = True
                     elif mtype == "w" and role == "via":
-                        # via=way — skip this restriction
+                        # via=way: skip this restriction
                         via_is_node = False
                         break
                     elif mtype == "w" and role == "to":
@@ -183,8 +183,8 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
         ``signal_node_ids`` is the set of OSM node IDs tagged
         ``highway=traffic_signals`` inside ``bbox``, and
         ``turn_restrictions`` is the list of OSM ``type=restriction``
-        relations with ``via=node`` inside ``bbox``. All three are
-        collected on the same PBF stream as the way slice — no extra I/O.
+        relations with ``via=node`` inside ``bbox``. All three ride the same
+        PBF stream as the way slice, so there's no extra I/O.
     """
     try:
         import osmnx as ox
@@ -213,9 +213,9 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
 
     t0 = time.time()
 
-    # Slice the state PBF down to an in-bbox road network XML. We stage it
-    # under a temp file rather than keeping it on disk — the canonical
-    # network.xml downstream is the artifact we care about preserving.
+    # Slice the state PBF down to an in-bbox road-network XML. We stage it in
+    # a temp file rather than keep it around; the canonical network.xml
+    # downstream is the artifact worth preserving.
     tmp_fd, tmp_path = tempfile.mkstemp(
         prefix=f"{pbf_path.stem}_bbox_", suffix=".osm"
     )
@@ -251,11 +251,11 @@ def load_osm_from_pbf(pbf_path, bbox, network_type: str = "drive"):
     finally:
         tmp_xml.unlink(missing_ok=True)
 
-    # Clip edges that bleed past the bbox. BackReferenceWriter keeps every
-    # node a matching way refers to — including ones far outside the bbox
-    # when long ways (interstates, arterials) pass through the corner.
-    # truncate_graph_bbox removes those stub extensions so the simulated
-    # footprint matches what Overpass's graph_from_bbox would have returned.
+    # Clip edges that spill past the bbox. BackReferenceWriter keeps every
+    # node a matching way touches, including ones well outside the bbox when
+    # a long way (interstate, arterial) clips the corner. truncate_graph_bbox
+    # strips those stub extensions so the simulated footprint matches what
+    # Overpass's graph_from_bbox would have returned.
     G = ox.truncate.truncate_graph_bbox(
         G, bbox=(bbox.west, bbox.south, bbox.east, bbox.north),
         truncate_by_edge=True,

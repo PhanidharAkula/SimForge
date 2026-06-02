@@ -1,10 +1,10 @@
 """
 Generate synthetic demand (trips) from a canonical network.
 
-Supports multiple demand generation strategies:
-1. Uniform random: Random OD pairs with uniform departure times
-2. Gravity model: Trip probability proportional to node centrality
-3. Peak-hour: Concentrated departures during morning/evening peaks
+Three strategies to choose from:
+1. Uniform random: random OD pairs, uniform departure times.
+2. Gravity model: trip likelihood scales with node centrality.
+3. Peak-hour: departures bunched into the morning and evening peaks.
 
 Usage:
     python -m pipeline.demand.generate_synthetic_demand \
@@ -46,11 +46,11 @@ class NetworkStats:
 def compute_strongly_connected_component(adjacency: dict[str, list[str]],
                                          reverse_adjacency: dict[str, list[str]],
                                          node_ids: list[str]) -> set[str]:
-    """Largest strongly-connected component, via the canonical Kosaraju.
+    """The largest strongly connected component, via the canonical Kosaraju.
 
-    The previous single-source forward/backward BFS only found the SCC
-    containing one chosen seed node — wrong whenever the seed sat outside
-    the largest component, which produced unroutable demand.
+    The old single-source forward/backward BFS only found the SCC around one
+    seed node, which was wrong whenever the seed sat outside the largest
+    component and quietly produced unroutable demand.
     """
     from pipeline.network.scc import compute_largest_scc
 
@@ -84,14 +84,10 @@ def compute_reachability(adjacency: dict[str, list[str]], node_ids: list[str]) -
 
 
 def load_network_for_demand(network_path: Path) -> NetworkStats:
-    """
-    Load network.xml and extract statistics needed for demand generation.
-    
-    Args:
-        network_path: Path to canonical network.xml
-    
-    Returns:
-        NetworkStats with node IDs, coordinates, degrees, and adjacency
+    """Read network.xml and pull out the stats demand generation needs.
+
+    Returns a NetworkStats with the node IDs, coordinates, degrees, and
+    adjacency.
     """
     if not network_path.is_file():
         raise FileNotFoundError(
@@ -218,21 +214,14 @@ class DemandGenerator:
         horizon_end: int = 3600,
         mode: str = "car"
     ) -> list[dict]:
-        """
-        Generate multiple trips.
-        
-        Args:
-            num_trips: Number of trips to generate
-            horizon_start: Start time in seconds
-            horizon_end: End time in seconds
-            mode: Travel mode (car, walk, bike, etc.)
-        
-        Returns:
-            List of trip dictionaries
+        """Generate `num_trips` trips over [horizon_start, horizon_end].
+
+        `mode` is the travel mode (car, walk, bike, ...). Returns a list of
+        trip dicts.
         """
         trips = []
         attempts = 0
-        max_attempts = num_trips * 10  # Avoid infinite loops
+        max_attempts = num_trips * 10  # don't loop forever
         
         from pipeline.progress import ProgressBar
         pb = ProgressBar(total=num_trips, desc="Generating trips")
@@ -295,13 +284,11 @@ class UniformRandomGenerator(DemandGenerator):
 
 
 class GravityModelGenerator(DemandGenerator):
-    """
-    Generate trips using a gravity model.
-    
-    Trip probability is proportional to:
-    - Origin node degree (higher connectivity = more trips originate)
-    - Destination node degree (higher connectivity = more trips terminate)
-    - Inverse distance (closer nodes more likely for short trips)
+    """Generate trips with a gravity model.
+
+    A trip's probability scales with the origin's degree (busier nodes send
+    more trips), the destination's degree (busier nodes receive more), and
+    inverse distance (nearby nodes are likelier for short trips).
     """
     
     def __init__(
@@ -466,22 +453,14 @@ def generate_synthetic_demand(
     mode: str = "car",
     **kwargs
 ) -> dict:
-    """
-    Main entry point for demand generation.
-    
-    Args:
-        network_path: Path to canonical network.xml
-        output_path: Path to write demand.csv
-        num_trips: Number of trips to generate
-        strategy: Generation strategy ('uniform', 'gravity', 'peak_hour')
-        seed: Random seed for reproducibility
-        horizon_start: Simulation start time (seconds)
-        horizon_end: Simulation end time (seconds)
-        mode: Travel mode
-        **kwargs: Additional strategy-specific parameters
-    
-    Returns:
-        Summary dict with trip statistics
+    """The entry point for synthetic demand generation.
+
+    Reads `network_path`, generates `num_trips` with the chosen `strategy`
+    ('uniform', 'gravity', or 'peak_hour'), and writes demand.csv to
+    `output_path`. `seed` fixes reproducibility, `horizon_start`/`horizon_end`
+    bound the departure times (seconds), `mode` is the travel mode, and
+    `**kwargs` passes through strategy-specific knobs. Returns a summary dict
+    of trip statistics.
     """
     # Load network
     network = load_network_for_demand(network_path)

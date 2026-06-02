@@ -1,15 +1,15 @@
 """
-Canonical largest-strongly-connected-component computation.
+The largest strongly connected component, computed one way for everyone.
 
-Both the demand generators (which must only emit trips between routable
-endpoints) and the engine adapters (which validate trips just before
-simulation) need the same definition of "routable". This module is the single
-source of truth for that definition.
+The demand generators (which should only emit trips between routable
+endpoints) and the adapters (which check trips right before simulating)
+have to agree on what "routable" means, and this module is where that
+definition lives.
 
-The implementation is iterative Kosaraju's algorithm — the recursive form
-overflows Python's default recursion limit on metropolitan-scale OSM graphs
-(~10k nodes). Returning a `set` of node IDs makes O(1) membership tests cheap
-in the inner loops of both demand generation and trip filtering.
+It's iterative Kosaraju. The recursive version blows Python's default
+recursion limit on metro-scale OSM graphs (~10k nodes), so we use an
+explicit stack. The result is a `set` of node IDs, which keeps the
+membership tests in the demand and trip-filter inner loops at O(1).
 """
 
 from __future__ import annotations
@@ -62,10 +62,11 @@ def compute_largest_scc(
     nodes: Set[str],
     edges: List[Tuple[str, str]],
 ) -> Set[str]:
-    """Return the node IDs of the largest strongly-connected component.
+    """The node IDs of the largest strongly connected component.
 
-    Iterative Kosaraju: a forward DFS records finish times, then a reverse-graph
-    DFS in reverse-finish order peels off SCCs. The largest one wins.
+    Iterative Kosaraju: a forward DFS records finish times, then a DFS over
+    the reverse graph in reverse-finish order peels off the SCCs one by one.
+    Biggest one wins.
     """
     fwd: Dict[str, List[str]] = {}
     rev: Dict[str, List[str]] = {}
@@ -115,7 +116,7 @@ def compute_largest_scc(
 
 
 def largest_scc_from_network(network_path: Path) -> Tuple[Set[str], int, int, int]:
-    """Convenience: parse a network.xml and return (scc_nodes, total_nodes, total_links, scc_links)."""
+    """Parse a network.xml and return (scc_nodes, total_nodes, total_links, scc_links) in one call."""
     nodes, edges = parse_network(network_path)
     scc = compute_largest_scc(nodes, edges)
     scc_links = sum(1 for u, v in edges if u in scc and v in scc)

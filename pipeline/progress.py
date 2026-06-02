@@ -1,5 +1,5 @@
 """
-Lightweight progress bar for terminal output — no external dependencies.
+A small terminal progress bar, stdlib only, no dependencies.
 
 Usage:
     from pipeline.progress import ProgressBar
@@ -49,9 +49,9 @@ class ProgressBar:
 
     def update(self, n: int = 1) -> None:
         self.current = min(self.current + n, self.total)
-        # Suppress all output when a StickyProgress is on screen — the
-        # sticky bar's heartbeat would conflict with our \r-overwrite
-        # writes on the same TTY (see _STICKY_ACTIVE comment above).
+        # Stay quiet while a StickyProgress is up. Its heartbeat and our
+        # \r-overwrites share one TTY and would clash (see the _STICKY_ACTIVE
+        # comment above).
         if _STICKY_ACTIVE:
             return
         now = time.time()
@@ -114,7 +114,7 @@ class ProgressBar:
 
 
 # ---------------------------------------------------------------------------
-# StickyProgress — used by the entry-point CLIs (run.py, generate.py)
+# StickyProgress: used by the entry-point CLIs (run.py, generate.py)
 # ---------------------------------------------------------------------------
 #
 # A single-line progress bar that lives at the bottom of the screen while
@@ -133,8 +133,8 @@ class ProgressBar:
 #   - Flicker-free: the heartbeat redraw uses `\r + content + \033[K`
 #     (clear-to-EOL AFTER writing), so the terminal never sees a cleared
 #     frame between renders. Only print_above() does a true erase + reflow.
-#   - TTY-only: silently no-ops when stdout is piped (sbatch logs, CI
-#     captures) — print_above() then just prints the log line.
+#   - TTY-only: quietly no-ops when stdout is piped (sbatch logs, CI
+#     captures), where print_above() just prints the log line.
 
 import logging as _logging
 import threading
@@ -179,7 +179,7 @@ class _ProgressBarLogHandler(_logging.Handler):
         try:
             msg = self.format(record)
             self.progress.print_above(msg)
-        except Exception:  # noqa: BLE001 — logging mustn't crash callers
+        except Exception:  # noqa: BLE001 (logging must never crash a caller)
             self.handleError(record)
 
 
@@ -345,9 +345,9 @@ class StickyProgress:
             if level < logger.level or logger.level == _logging.NOTSET:
                 logger.setLevel(level)
 
-        # Single attachment point: the root logger. Displace EVERY
-        # StreamHandler from root (any stream — stdout, stderr, or
-        # custom) so we don't get duplicate emissions. The SimForge
+        # Single attachment point: the root logger. Displace every
+        # StreamHandler on root (any stream: stdout, stderr, or a custom
+        # one) so nothing gets emitted twice. The SimForge
         # codebase has 8+ library modules that call logging.basicConfig
         # at import time, each leaving a StreamHandler on root with
         # its own format. Without this displacement those handlers
@@ -383,12 +383,11 @@ class StickyProgress:
     # ---- rendering ---------------------------------------------------
 
     def _heartbeat(self) -> None:
-        # 20 ticks/sec — fast enough that the wall-clock-driven spinner
-        # frame visibly advances even under heavy event bursts (pytest
-        # plowing through 500+ tests). The frame itself rotates at 20 fps
-        # below; heartbeat at 50 ms guarantees a forced redraw whenever
-        # advance() / print_above() haven't fired in a while (e.g. during
-        # a single slow test).
+        # 20 ticks/sec, fast enough that the wall-clock spinner frame keeps
+        # moving even under heavy event bursts (pytest plowing through 500+
+        # tests). The frame rotates at 20 fps below; the 50 ms heartbeat
+        # forces a redraw whenever advance() / print_above() haven't fired in
+        # a while (e.g. during one slow test).
         while not self._stop.is_set():
             with self._lock:
                 if self._drawn:
@@ -410,42 +409,40 @@ class StickyProgress:
             return
         elapsed = time.time() - self.t0
         progress = self.completed
-        # Honest fill: bar width tracks the actual completed fraction,
-        # nothing more. The spinner already provides the "still alive"
-        # visual cue (cyan + animated), so we don't fake a 1-cell tip
-        # at 0% — that lied about progress (bar showed something filled
-        # while the % label said 0.0%, which was confusing). Empty bar
-        # at start, spinner spinning, percentage honest.
+        # Honest fill: the bar width tracks the actual completed fraction and
+        # nothing else. The spinner already gives the "still alive" cue (cyan
+        # and animated), so we don't fake a 1-cell tip at 0%; that used to lie
+        # (the bar showed something filled while the label said 0.0%, which
+        # was confusing). Empty bar at the start, spinner spinning, percentage
+        # honest.
         if progress >= self.total:
             filled = self.BAR_WIDTH
         else:
             filled = int(self.BAR_WIDTH * progress / self.total)
-        # Use full-block █ for filled cells and light-shade ░ for empty
-        # cells. Both glyphs fill the entire character cell vertically
-        # (so no height mismatch / boundary artefact between the two
-        # halves), but the fill DENSITY differs — solid block vs sparse
-        # texture — so the empty portion is visually obviously "not
-        # filled" even when its colour is gray. Using █ for both cells
-        # made the bar look uniformly solid at a glance because gray █
-        # on a dark terminal still reads as a full block.
+        # Full-block █ for filled cells, light-shade ░ for empty ones. Both
+        # glyphs fill the cell vertically (so there's no height mismatch or
+        # boundary artefact between the two halves), but their density
+        # differs, solid block vs sparse texture, so the empty part clearly
+        # reads as "not filled" even when it's gray. Using █ for both made the
+        # bar look uniformly solid at a glance, since a gray █ on a dark
+        # terminal still reads as a full block.
         bar = (_BAR_FILL + ("█" * filled) + _RESET
                + _BAR_EMPTY + ("░" * (self.BAR_WIDTH - filled)) + _RESET)
         pct = 100.0 * progress / self.total
-        # No ETA — SimForge runs are wildly heterogeneous (1K-trip
-        # bundle next to 500K-trip one, 10ms unit test next to 30s
-        # SUMO integration test) so a running-mean ETA swings between
-        # unhelpful extremes. The cold-start `progress < 3` shim used
-        # to mask the worst of this but couldn't fix the fundamental
-        # variance. Percentage + count + elapsed carry the same
-        # information without misleading the operator.
+        # No ETA. SimForge runs are wildly mixed (a 1K-trip bundle next to a
+        # 500K one, a 10 ms unit test next to a 30 s SUMO integration test),
+        # so a running-mean ETA just swings between useless extremes. The
+        # cold-start `progress < 3` shim hid the worst of it but couldn't fix
+        # the underlying variance. Percentage, count, and elapsed carry the
+        # same information without misleading anyone.
         if progress >= self.total:
             spinner = _SPINNER_COLOR + "✓" + _RESET
         else:
-            # Rate-limit the spinner to ~8 fps regardless of how often
-            # render is called. Renders fire from advance(), print_above(),
-            # AND the 50 ms heartbeat — without the rate limit the
-            # spinner blurs at full event-stream speed (~20+ fps under
-            # pytest). The cap gives a calm 1.25 s per Braille cycle.
+            # Rate-limit the spinner to ~8 fps no matter how often render is
+            # called. Renders come from advance(), print_above(), and the
+            # 50 ms heartbeat, and without the cap the spinner blurs at full
+            # event-stream speed (~20+ fps under pytest). The cap gives a calm
+            # 1.25 s per Braille cycle.
             now = time.monotonic()
             if now - self._spinner_last_tick >= 0.125:
                 self._spinner_idx = (self._spinner_idx + 1) % len(_SPINNER_FRAMES)
@@ -494,13 +491,12 @@ class StickyProgress:
     def _tty_write(self, text: str) -> None:
         """Write the bar to /dev/tty when available, else sys.stdout.
 
-        Bypassing sys.stdout matters under pytest: pytest's per-test
-        capfd swaps stdout to a captured file descriptor while a test
-        runs, so heartbeat writes during test bodies would be buffered
-        until the next hook boundary (~once per test). /dev/tty goes
-        straight to the controlling terminal — the heartbeat thread can
-        update the spinner at full 20 fps regardless of what pytest is
-        doing with stdout.
+        Going around sys.stdout matters under pytest: its per-test capfd
+        swaps stdout for a captured file descriptor while a test runs, so
+        heartbeat writes inside a test body would buffer until the next hook
+        boundary (about once per test). /dev/tty goes straight to the
+        controlling terminal, so the heartbeat thread keeps the spinner at a
+        full 20 fps no matter what pytest is doing with stdout.
         """
         if self._tty_fd is not None:
             try:

@@ -1,17 +1,17 @@
 """
-Parse modelgen output files (la_model.txt, nyc_model.txt, etc.).
+Parse the modelgen output files (la_model.txt, nyc_model.txt, etc.).
 
-These files are produced by an activity-based population synthesizer that
-integrates OpenStreetMap road networks, LandScan population grids, and
-U.S. Census PUMS microdata into a single flat-text model.
+An activity-based population synthesizer produces these: it fuses
+OpenStreetMap road networks, LandScan population grids, and U.S. Census
+PUMS microdata into one flat-text model.
 
-Files post-processed by the cityscape ScheduleGenerator
-(github.com/raodj/cityscape, Schedule-generator branch) additionally carry
-per-person activity schedules in the trailing field of `per` records.
+When a file has been run through the cityscape ScheduleGenerator
+(github.com/raodj/cityscape, Schedule-generator branch), the `per` records
+also carry a per-person activity schedule in their trailing field.
 
-This module extracts building, household, and person records, optionally
-filtering to a geographic bounding box, and returns structured data
-suitable for census-calibrated demand generation.
+This module pulls out the building, household, and person records,
+optionally clipping to a bounding box, and returns structured data ready
+for census-calibrated demand generation.
 
 Record format (fields are space-separated):
   bld  ID levels population attributes isHome kind sqFoot
@@ -20,20 +20,19 @@ Record format (fields are space-separated):
        #people peopleIDs...
   per  perID HldID #info AGEP WAGP JWMNP JWTRNS schedule
 
-The trailing `schedule` is an empty string `""` for persons without a
-schedule (non-workers, transit/walk/WFH/taxi/other commuters), or a
-sequence of `(dow_start dow_end time_s bld_id)` tuples for persons the
-schedule generator covered. The first two ints are day-of-week bounds
-(0=Sunday, 1=Monday, ..., 5=Friday, 6=Saturday, -1=unspecified); see
-`model_gen/ScheduleEntry.h` in the cityscape repo. In the current
-cityscape output every populated schedule is exactly two tuples —
-`(1 5 28800 <work_bld_id>)` followed by `(1 5 61200 <home_bld_id>)` —
-i.e. Monday-through-Friday, workplace at 8 AM and return home at 5 PM.
-The day range and clock times are constants set by cityscape; only the
-destination bld_id varies per person.
+The trailing `schedule` is `""` for anyone without one (non-workers, plus
+transit/walk/WFH/taxi/other commuters), or a sequence of
+`(dow_start dow_end time_s bld_id)` tuples for the people the schedule
+generator covered. The first two ints are day-of-week bounds (0=Sunday,
+1=Monday, ..., 5=Friday, 6=Saturday, -1=unspecified); see
+`model_gen/ScheduleEntry.h` in the cityscape repo. In today's cityscape
+output a populated schedule is always exactly two tuples,
+`(1 5 28800 <work_bld_id>)` then `(1 5 61200 <home_bld_id>)`: Monday to
+Friday, work at 8 AM, home at 5 PM. The days and clock times are cityscape
+constants; only the destination bld_id changes from person to person.
 
-JWTRNS codes (cityscape Schedule-generator branch — verbatim from ACS PUMS
-2021 Data Dictionary, see model_gen/ScheduleGenerator.h:211-233):
+JWTRNS codes (cityscape Schedule-generator branch, verbatim from the ACS
+PUMS 2021 Data Dictionary, see model_gen/ScheduleGenerator.h:211-233):
    1 = Car, truck, or van             (drove alone + carpool combined,
                                         merged in ACS 2019+)
    2 = Bus
@@ -47,12 +46,12 @@ JWTRNS codes (cityscape Schedule-generator branch — verbatim from ACS PUMS
   10 = Walked
   11 = Worked from home
   12 = Other method
-  -1 = N/A — not a worker  (cityscape's "bb" sentinel converted to -1
+  -1 = N/A, not a worker  (cityscape's "bb" sentinel, converted to -1
                             on emit; see PUMS.cpp / PUMSPerson::write)
 
-JWTRNS_TO_MODE below collapses these 12 codes into SimForge's 4
-simulator buckets (car/transit/bike/walk) plus a "home" sentinel that
-excludes the trip from any demand. See doc/MODELGEN_AND_MODES.md §4.
+JWTRNS_TO_MODE below folds these 12 codes into SimForge's 4 simulator
+buckets (car/transit/bike/walk) plus a "home" sentinel that keeps the trip
+out of the demand entirely. See doc/MODELGEN_AND_MODES.md §4.
 """
 
 import logging
@@ -105,8 +104,8 @@ class Household:
     bedrooms: int
     bld_type: int
     puma_id: int
-    weight: int         # WGTP — household weight for expansion
-    income: int         # HINCP — household income
+    weight: int         # WGTP: household weight for expansion
+    income: int         # HINCP: household income
     num_people: int
     person_ids: list[int] = field(default_factory=list)
 
@@ -121,11 +120,11 @@ class ScheduleActivity:
     -1=unspecified); the third is seconds from midnight; the fourth is
     the destination ``bld_id``.
 
-    In current cityscape output: a populated schedule is always two
-    activities — workplace arrival at 8 AM and home return at 5 PM,
-    Monday through Friday. Only ``bld_id`` varies per person; the day
-    bounds and clock times are constants (`dow_start=1`, `dow_end=5`,
-    `time_s` ∈ {28800, 61200}).
+    In today's cityscape output a populated schedule is always two
+    activities: arrive at work at 8 AM, home again at 5 PM, Monday through
+    Friday. Only ``bld_id`` changes per person; the day bounds and clock
+    times are constants (`dow_start=1`, `dow_end=5`,
+    `time_s` in {28800, 61200}).
     """
     dow_start: int  # day of week start (0=Sun, 1=Mon, ..., 6=Sat, -1=unspecified)
     dow_end: int    # day of week end (same encoding)
@@ -141,10 +140,10 @@ class Person:
     num_info: int
     age: int            # AGEP
     wages: int          # WAGP (-1 = N/A)
-    commute_min: int    # JWMNP — commute time in minutes (-1 = N/A)
+    commute_min: int    # JWMNP: commute time in minutes (-1 = N/A)
     transport_mode: int # JWTRNS code (-1 = N/A)
-    # Activity schedule from cityscape ScheduleGenerator (empty list for
-    # persons whose mode the generator does not cover — see module docstring).
+    # Activity schedule from the cityscape ScheduleGenerator (empty for
+    # persons whose mode the generator doesn't cover, see module docstring).
     schedule: list[ScheduleActivity] = field(default_factory=list)
 
 
@@ -159,9 +158,8 @@ class ModelData:
     # with a school-age dependent?") can see ages of *every* household
     # member, including non-commuters (kids, retirees) whose JWTRNS=-1
     # would otherwise be excluded from `persons` by the mode filter.
-    # Empty when filled at construction time without a prior all-persons
-    # pass — callers should treat absence as "data unavailable" rather
-    # than "no kids."
+    # Empty if built without a prior all-persons pass; callers should read
+    # an absence as "data unavailable", not "no kids".
     age_by_per_id: dict[int, int] = field(default_factory=dict)
     # Indexes for fast lookup
     bld_by_id: dict[int, Building] = field(default_factory=dict)
@@ -174,27 +172,26 @@ class ModelData:
         self.hld_by_bld = {}
         for h in self.households:
             self.hld_by_bld.setdefault(h.bld_id, []).append(h)
-        # Per-person home resolution: PUMS replicates SERIALNO across many
-        # synthesised households (each with its own bld_id), so a SERIALNO
-        # lookup is ambiguous. Each `hld` record's person_ids list, however,
-        # uniquely names which synthesised home holds each person — use that.
+        # Resolving each person's home: PUMS reuses SERIALNO across many
+        # synthesised households (each with its own bld_id), so looking up by
+        # SERIALNO is ambiguous. But each `hld` record's person_ids list pins
+        # exactly which home holds each person, so we use that instead.
         self.home_bld_by_per_id = {}
         for h in self.households:
             for pid in h.person_ids:
                 self.home_bld_by_per_id[pid] = h.bld_id
         self.per_by_id = {p.per_id: p for p in self.persons}
-        # If `age_by_per_id` wasn't supplied by the parser, fall back to
-        # building it from `persons` — this gives correct ages for the
-        # commuters in the dataset but won't include non-commuter
-        # household members (kids, etc.). Most call sites use the
-        # parser-supplied version; this fallback keeps direct
-        # `ModelData(...)` construction in tests working.
+        # If the parser didn't supply `age_by_per_id`, build it from
+        # `persons`. That gets the commuters' ages right but misses
+        # non-commuter household members (kids and so on). Most callers use
+        # the parser-supplied version; this fallback just keeps direct
+        # `ModelData(...)` construction working in tests.
         if not self.age_by_per_id:
             self.age_by_per_id = {p.per_id: p.age for p in self.persons}
 
 
 # ---------------------------------------------------------------------------
-# JWTRNS → canonical mode mapping
+# JWTRNS to canonical mode mapping
 # ---------------------------------------------------------------------------
 
 JWTRNS_TO_MODE = {
@@ -208,12 +205,12 @@ JWTRNS_TO_MODE = {
     8:  "car",      # Motorcycle       (road vehicle)
     9:  "bike",     # Bicycle
     10: "walk",     # Walked
-    11: "home",     # Worked from home — excluded (no commute trip)
-    12: "home",     # Other method     — excluded (unclassified)
+    11: "home",     # Worked from home: excluded (no commute trip)
+    12: "home",     # Other method:     excluded (unclassified)
 }
 
-# The four canonical simulator buckets, derived from JWTRNS_TO_MODE.
-# `home` is intentionally absent — it's the "no trip" sentinel.
+# The four canonical simulator buckets, pulled from JWTRNS_TO_MODE.
+# `home` is left out on purpose; it's the "no trip" sentinel.
 SUPPORTED_MODES = ("car", "transit", "bike", "walk")
 
 # JWTRNS codes that map to each canonical mode. Computed from the dict
@@ -271,7 +268,7 @@ def _parse_household_line(parts: list[str]) -> Optional[Household]:
     try:
         bld_id = int(parts[1])
         serial_raw = parts[2].strip('"')
-        # serial_raw is like "1,2019HU0061303" — take the part after comma
+        # serial_raw looks like "1,2019HU0061303", so keep the part after the comma
         serial_parts = serial_raw.split(",", 1)
         serial_no = serial_parts[1] if len(serial_parts) > 1 else serial_raw
         bedrooms = int(parts[3])
@@ -299,12 +296,12 @@ _SCHEDULE_TUPLE_RE = re.compile(r"\((-?\d+)\s+(-?\d+)\s+(-?\d+)\s+(-?\d+)\)")
 
 
 def _parse_schedule(raw: str) -> list[ScheduleActivity]:
-    """Extract a list of ScheduleActivity from the trailing quoted schedule field.
+    """Pull the ScheduleActivity list out of the trailing quoted schedule field.
 
-    Empty string ``""`` (the common case for non-workers and uncovered modes)
-    returns an empty list. Malformed content is silently dropped — the
-    upstream cityscape generator is the source of truth for schema, and a
-    bad tuple should not crash the whole parse.
+    An empty ``""`` (the usual case for non-workers and uncovered modes)
+    gives back an empty list. Malformed content is dropped quietly: the
+    cityscape generator owns the schema, and one bad tuple shouldn't take
+    down the whole parse.
     """
     inner = raw.strip().strip('"')
     if not inner:
@@ -321,11 +318,12 @@ def _parse_schedule(raw: str) -> list[ScheduleActivity]:
 
 
 def _parse_person_line(line: str, parts: list[str]) -> Optional[Person]:
-    """Parse a single 'per' line into a Person object.
+    """Parse one 'per' line into a Person.
 
-    ``parts`` is the whitespace-split prefix (used for the seven scalar fields);
-    ``line`` is the raw line from which we recover the trailing quoted schedule
-    field — split() would shred the parentheses inside the quotes.
+    ``parts`` is the whitespace-split prefix, which covers the seven scalar
+    fields. ``line`` is the raw line, which we need to recover the trailing
+    quoted schedule from, since split() would tear apart the parentheses
+    inside the quotes.
     """
     try:
         per_id = int(parts[1])
@@ -359,25 +357,23 @@ def parse_model_file(
     car_only: bool = True,
     modes: Optional[list[str]] = None,
 ) -> ModelData:
-    """
-    Parse a modelgen output file and return structured data.
+    """Parse a modelgen file into structured data.
 
     Args:
-        model_path: Path to the model file (e.g. la_model.txt).
-        bbox: Optional (south, north, west, east) bounding box in WGS84.
-              Only buildings whose centroid falls inside will be kept.
-              If None, all buildings are kept.
-        car_only: If True, only keep persons with car-compatible transport
-                  modes (JWTRNS in {1, 7, 8}: car/truck/van, taxicab, and
-                  motorcycle, all mapped to canonical car). Default True
-                  since SimForge simulates car traffic by default.
-                  Ignored if `modes` is provided.
-        modes: Optional list of canonical modes to keep (e.g. ["car", "transit"]).
-               When provided, overrides `car_only`.  Persons whose JWTRNS
-               maps to a mode in this list are kept.
+        model_path: the model file (e.g. la_model.txt).
+        bbox: optional (south, north, west, east) box in WGS84. With it, only
+              buildings whose centroid lands inside are kept; without it, all
+              of them are.
+        car_only: when True (the default, since SimForge runs car traffic),
+                  keep only car-compatible commuters (JWTRNS in {1, 7, 8}:
+                  car/truck/van, taxicab, motorcycle, all of which map to
+                  canonical car). Ignored when `modes` is given.
+        modes: optional list of canonical modes to keep (e.g.
+               ["car", "transit"]). When set, it overrides `car_only` and
+               keeps anyone whose JWTRNS maps into the list.
 
     Returns:
-        ModelData with buildings, households, and persons.
+        A ModelData with the buildings, households, and persons.
     """
     model_path = Path(model_path)
     if not model_path.is_file():
@@ -405,7 +401,7 @@ def parse_model_file(
                 try:
                     parts = shlex.split(line, posix=True)
                 except ValueError:
-                    # Malformed quoting in building line — skip gracefully
+                    # Bad quoting on a building line, skip it rather than crash
                     logger.debug("Skipping bld line with malformed quoting: %r", line[:80])
                     continue
                 bld = _parse_building_line(parts)
@@ -451,16 +447,16 @@ def parse_model_file(
 
     # Optionally filter to car commuters only
     if modes is not None:
-        # User specified explicit modes — filter by those
+        # Caller asked for specific modes, so filter to those.
         allowed_jwtrns = {code for code, m in JWTRNS_TO_MODE.items() if m in modes}
         filtered_persons = [
             p for p in filtered_persons
             if p.transport_mode in allowed_jwtrns and p.commute_min > 0
         ]
     elif car_only:
-        # Single source of truth — derive from JWTRNS_TO_MODE so this filter
-        # cannot drift from the dict (the bug that hid bus/WFH inflation in
-        # the car pool for months in v0–v4).
+        # Derive from JWTRNS_TO_MODE so this filter can't drift away from the
+        # dict. That drift is exactly what hid bus and WFH trips inflating the
+        # car pool for months back in v0-v4.
         car_modes = MODE_TO_JWTRNS["car"]
         filtered_persons = [
             p for p in filtered_persons
@@ -472,10 +468,10 @@ def parse_model_file(
         len(all_buildings), len(filtered_hlds), len(filtered_persons),
     )
 
-    # Capture ages for *every* parsed person (including non-commuters
-    # filtered out above by mode/car_only — kids whose JWTRNS=-1 in
-    # particular). Used for household-composition queries downstream
-    # (e.g. HBSchool detection).
+    # Capture ages for every parsed person, including the non-commuters the
+    # mode/car_only filter just dropped (kids with JWTRNS=-1 especially).
+    # Downstream household-composition queries need them, e.g. HBSchool
+    # detection.
     age_by_per_id = {p.per_id: p.age for p in all_persons}
 
     # --- Build result ---

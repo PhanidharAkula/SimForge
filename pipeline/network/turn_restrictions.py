@@ -1,37 +1,34 @@
 """
-Turn-restriction utilities for the canonical network.
+Turn restrictions for the canonical network.
 
-Reads `<turn_restriction>` elements out of `network.xml` (V5+ schema) and
-provides a state-aware BFS that respects them. The SUMO and MATSim
-adapters use this to pre-route trips around physically illegal
-movements (no-left-turn at protected intersections, no-U-turn on
-divided highways, etc.).
+Reads the `<turn_restriction>` elements from `network.xml` (V5+ schema) and
+gives a state-aware BFS that obeys them. The SUMO and MATSim adapters use
+it to route trips around movements that aren't physically legal: no-left at
+a protected intersection, no-U-turn on a divided highway, and so on.
 
-Cross-engine enforcement state (V5+):
-    - SUMO: ENFORCED. State-aware BFS replaces plain BFS at
-      `adapters/sumo/sumo_adapter.py:build_sumo_routes_xml` — the
-      prescribed route is restriction-respecting and SUMO drives it
-      verbatim.
-    - MATSim: ENFORCED. Same state-aware BFS pre-routes the plan; the
-      MATSim adapter writes `<route type="links">…</route>` inside
-      each `<leg>` so MATSim follows the prescribed path instead of
-      routing internally.
-    - DTALite: NOT ACTIVELY ENFORCED. SimForge emits a GMNS-conformant
-      `movement.csv` next to DTALite's other inputs, but path4gmns
-      0.10.0 (the DTA library SimForge runs through) doesn't ingest
-      movement.csv natively yet. DTALite's UE assignment may
-      therefore route through forbidden movements. This is the one
-      cross-engine asymmetry V5 leaves open. See
-      doc/MODELGEN_AND_MODES.md §"Cross-engine asymmetry" and
-      CHANGELOG Phase 7 for the rationale and future-work plan.
+Who enforces them (V5+):
+    - SUMO: enforced. The state-aware BFS stands in for plain BFS at
+      `adapters/sumo/sumo_adapter.py:build_sumo_routes_xml`, so the route
+      already respects the restrictions and SUMO just drives it.
+    - MATSim: enforced. Same BFS pre-routes the plan, and the MATSim adapter
+      writes `<route type="links">...</route>` inside each `<leg>` so MATSim
+      follows that path rather than routing for itself.
+    - DTALite: not actively enforced. We write a GMNS-conformant
+      `movement.csv` alongside DTALite's other inputs, but path4gmns 0.10.0
+      (the DTA library we run through) doesn't read movement.csv yet, so
+      DTALite's UE assignment can still route through a forbidden movement.
+      This is the one cross-engine asymmetry V5 leaves open;
+      doc/MODELGEN_AND_MODES.md ("Cross-engine asymmetry") and CHANGELOG
+      Phase 7 cover the why and the future-work plan.
 
-OSM restriction types accepted:
+OSM restriction types we accept:
     no_left_turn, no_right_turn, no_u_turn, no_straight_on,
     only_left_turn, only_right_turn, only_straight_on
 
-`only_*` restrictions invert: at a junction with `only_left_turn` from
-some `from_link`, every NON-left-turn movement from that `from_link`
-becomes forbidden. We expand them to forbidden-pair sets at load time.
+The `only_*` ones work backwards: with `only_left_turn` from some
+`from_link`, every movement off that `from_link` that isn't the left turn
+becomes forbidden. We expand those into forbidden-pair sets when we load
+them.
 """
 
 from __future__ import annotations
@@ -109,17 +106,15 @@ def build_forbidden_moves(
     restrictions: List[TurnRestriction],
     outgoing_links_by_node: Dict[str, List[str]],
 ) -> Dict[Tuple[str, str], FrozenSet[str]]:
-    """Compile a list of TurnRestrictions into a fast-lookup forbidden-moves table.
+    """Turn a list of TurnRestrictions into a fast forbidden-moves lookup.
 
-    Returns a mapping ``(via_node, from_link) -> frozenset[to_link]`` where
-    each entry lists the to_links that are forbidden when arriving at
-    ``via_node`` from ``from_link``.
+    Returns ``(via_node, from_link) -> frozenset[to_link]``: the to_links you
+    can't take when you reach ``via_node`` along ``from_link``.
 
-    Negative restrictions (`no_*_turn`) directly forbid the named (from, to)
-    pair. Positive restrictions (`only_*_turn`) forbid every OTHER outgoing
-    link at the via_node — i.e. the only allowed exit is the one named.
-    Expanding `only_*` requires knowing all outgoing links at the via_node,
-    which the caller must supply via ``outgoing_links_by_node``.
+    A `no_*_turn` just forbids its named (from, to) pair. An `only_*_turn`
+    forbids every other exit at the via_node, since the named one is the only
+    allowed move. Expanding `only_*` needs the full set of outgoing links at
+    the via_node, which the caller passes in as ``outgoing_links_by_node``.
     """
     forbidden: Dict[Tuple[str, str], Set[str]] = defaultdict(set)
     for r in restrictions:
@@ -143,18 +138,19 @@ def shortest_path_with_restrictions(
     edge_lookup: Dict[Tuple[str, str], object],
     forbidden_moves: Dict[Tuple[str, str], FrozenSet[str]],
 ) -> Optional[List[str]]:
-    """State-aware BFS that respects turn restrictions.
+    """State-aware BFS that obeys the turn restrictions.
 
-    State is ``(node, last_link_id)``. From each state, neighbors are
-    filtered to outgoing links not in ``forbidden_moves[(node, last_link_id)]``.
-    The initial state has no last link; its expansions are unrestricted.
+    The state is ``(node, last_link_id)``. At each state we keep only the
+    outgoing links that aren't in
+    ``forbidden_moves[(node, last_link_id)]``. The start state has no last
+    link, so its first moves are unrestricted.
 
     ``edge_lookup`` is the ``(from_node, to_node) -> link`` map from
-    ``parse_canonical_network()``. We use ``link.id`` from each entry as
-    the state's last_link_id.
+    ``parse_canonical_network()``; we read ``link.id`` off each entry for the
+    state's last_link_id.
 
-    Returns a list of node ids from origin to dest (inclusive), or None if
-    unreachable under the restrictions.
+    Returns the node ids from origin to dest inclusive, or None if dest can't
+    be reached under the restrictions.
     """
     if origin == dest:
         return [origin]
