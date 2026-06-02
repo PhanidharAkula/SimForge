@@ -1,6 +1,6 @@
 """Shared CLI display helpers used by both run.py and run_benchmark.py.
 
-Kept tiny on purpose — only formatting helpers belong here. Anything that
+Kept deliberately small: only formatting helpers belong here. Anything that
 touches scenario state, adapter calls, or filesystem layout lives in the
 runners themselves.
 """

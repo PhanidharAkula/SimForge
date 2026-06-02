@@ -42,13 +42,13 @@ class RunResult:
     """Result of a single simulation run.
 
     Three timing fields, all in seconds:
-      • runtime_s     — back-compat alias for engine_wall_s. Thesis tools
+      • runtime_s     : back-compat alias for engine_wall_s. The thesis tools
                         (analyze_benchmark, generate_plots) key off this.
-      • engine_wall_s — engine subprocess only (mobsim / UE / netsim).
-                        What Chapter 5 runtime tables cite.
-      • cell_wall_s   — full per-cell wall: adapter prep (incl. per-trip BFS
-                        routing) + engine subprocess + output parse.
-                        Sums to the harness "Wall time" total.
+      • engine_wall_s : the engine subprocess only (mobsim / UE / netsim).
+                        This is what Chapter 5's runtime tables cite.
+      • cell_wall_s   : the full per-cell wall: adapter prep (including the
+                        per-trip BFS routing) + engine subprocess + output
+                        parse. Adds up to the harness "Wall time" total.
     """
     scenario: str                       # Base scenario name (e.g. "chicago_1k_car")
     engine: str                         # "sumo", "matsim", "dtalite"
@@ -133,16 +133,16 @@ class BenchmarkResult:
 
 
 class BenchmarkHarness:
-    """Main benchmark execution harness.
+    """The main benchmark execution harness.
 
-    `output_base` controls where every artefact lives — per-cell engine
-    outputs at ``<output_base>/<scenario_id>/<engine>/<mode>/seed_<N>/`` and
-    the aggregate JSON at ``<output_base>/benchmark_results_<runspec>.json``.
+    `output_base` decides where every artefact lands: per-cell engine output
+    at ``<output_base>/<scenario_id>/<engine>/<mode>/seed_<N>/`` and the
+    aggregate JSON at ``<output_base>/benchmark_results_<runspec>.json``.
 
-    Pass ``output_base`` to override the runspec's ``output_dir:`` field —
-    e.g. when a SLURM sbatch fans out parallel-by-scenario workers, each
-    needs its own per-scenario output dir so the JSONs don't collide.
-    Pass ``None`` (the default) to fall back to the runspec's ``output_dir``.
+    Pass ``output_base`` to override the runspec's ``output_dir:`` field, for
+    instance when a SLURM sbatch fans out parallel-by-scenario workers and
+    each needs its own per-scenario output dir so the JSONs don't collide.
+    Pass ``None`` (the default) to use the runspec's ``output_dir`` instead.
     """
 
     def __init__(self, output_base: Path | None = None):
@@ -157,20 +157,19 @@ class BenchmarkHarness:
         # single harness call across the SUMO + MATSim adapters runs
         # the BFS once. On-disk JSONL persistence via
         # ``adapters.common.canonical_routes`` survives harness restarts
-        # too — the in-memory dict is just a fast path for the second
-        # adapter within the same process.
+        # too; the in-memory dict is just a fast path for the second adapter
+        # within the same process.
         self._canonical_routes_cache: Dict[str, Dict[str, List[str]]] = {}
 
     # -- BFS-prep cache (Phase 12+) ---------------------------------------
     #
     # `prepare_<engine>_inputs` does per-trip BFS routing on the canonical
     # node graph as part of converting a SimForge bundle to engine-native
-    # format. For 1K-trip bundles that takes ~30 s; for 50K-trip bundles
-    # on a 159K-node network it can take ~10 hours. The routes are
-    # *deterministic* given (scenario, engine) — they do not depend on
-    # seed, mode, or run number — so SimForge benchmarks were repeating
-    # the entire routing cost N times for N reps. With N=5 reps × 3
-    # engines that's 15× the inherent cost.
+    # format. For 1K-trip bundles that's ~30 s; for 50K-trip bundles on a
+    # 159K-node network it can run ~10 hours. The routes are deterministic
+    # given (scenario, engine): they don't depend on seed, mode, or run
+    # number, so benchmarks used to repeat the whole routing cost N times for
+    # N reps. At N=5 reps across 3 engines that's 15x the inherent cost.
     #
     # The cache stores prepared inputs at:
     #     <output_base>/.cache/<scenario_id>/<engine>/
@@ -193,9 +192,9 @@ class BenchmarkHarness:
         """Where (per-cell + per-cache) artefacts for ``scenario_id`` live.
 
         Phase 12.2: when ``output_base`` already ends in the scenario name
-        — the canonical case for parallel-by-scenario sbatch wrappers that
-        pass ``--output runs/<runspec>/<scenario>`` per worker — collapse
-        the otherwise-doubly-nested path. So instead of:
+        (the usual case for parallel-by-scenario sbatch wrappers that pass
+        ``--output runs/<runspec>/<scenario>`` per worker), collapse the
+        otherwise doubly-nested path. So instead of:
 
             runs/<runspec>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/
 
@@ -214,12 +213,12 @@ class BenchmarkHarness:
 
     @staticmethod
     def _bundle_hash(scenario_path: Path) -> str:
-        """SHA-256 of the bundle's manifest.xml — cheap proxy for "did the
-        canonical bundle change since the last prep". manifest.xml itself
-        contains SHA-256 of every other canonical file, so any data change
-        propagates into manifest.xml and therefore into this hash. Returns
-        empty string when the bundle has no manifest (synthetic / partial
-        bundles); in that case the cache is non-invalidating (best-effort).
+        """SHA-256 of the bundle's manifest.xml, a cheap proxy for "did the
+        canonical bundle change since the last prep". manifest.xml carries a
+        SHA-256 of every other canonical file, so any data change flows into
+        manifest.xml and therefore into this hash. Returns an empty string
+        when the bundle has no manifest (synthetic or partial bundles), and
+        then the cache is best-effort and won't invalidate.
         """
         manifest = Path(scenario_path) / "manifest.xml"
         if not manifest.is_file():
@@ -230,12 +229,11 @@ class BenchmarkHarness:
     def _bfs_worker_count() -> int:
         """How many subprocesses canonical_routes should spawn for BFS.
 
-        Prefers ``SLURM_CPUS_PER_TASK`` (the SBATCH-allocated CPU count)
-        so Cardinal/Pitzer jobs use exactly the cores they reserved.
-        Falls back to ``os.cpu_count() - 1`` for local dev (leave one
-        core free for the OS / progress UI). Capped at 32 — the
-        per-worker init cost dominates above that on our typical
-        bundle sizes.
+        Prefers ``SLURM_CPUS_PER_TASK`` (the SBATCH-allocated CPU count) so
+        Cardinal/Pitzer jobs use exactly the cores they reserved. For local
+        dev it falls back to ``os.cpu_count() - 1`` (leaving one core for the
+        OS and the progress UI). Capped at 32, since past that the per-worker
+        init cost dominates on our typical bundle sizes.
         """
         env = os.environ.get("SLURM_CPUS_PER_TASK")
         if env and env.isdigit():
@@ -270,16 +268,16 @@ class BenchmarkHarness:
     def _migrate_legacy_canonical_routes_cache(
         self, scenario_id: str, target_root: Path,
     ) -> None:
-        """Phase 14.13: migrate any pre-hoist cache files for this scenario
-        to the global location. Idempotent — no-op if target already has
-        the file. Logs each move at WARNING level so the operator sees
-        the one-time migration.
+        """Phase 14.13: move any pre-hoist cache files for this scenario to
+        the global location. Idempotent: a no-op if the target already has
+        the file. Logs each move at WARNING so the operator sees the one-time
+        migration.
 
-        Looks at ``<scoped_base>/.canonical_routes/canonical_routes_*.jsonl``
-        and moves each file (preserving the content-hash filename) into
-        ``cache/canonical_routes/``. The function uses ``rename`` so the
-        operation is atomic and the migration cost is O(directory entry),
-        not O(file size) — the cache file may be GB-scale.
+        It looks at ``<scoped_base>/.canonical_routes/canonical_routes_*.jsonl``
+        and moves each file (keeping its content-hash name) into
+        ``cache/canonical_routes/``. It uses ``rename``, so the move is atomic
+        and costs O(directory entry), not O(file size), which matters because
+        the cache file can be GB-scale.
         """
         legacy_root = self._scoped_base(scenario_id) / ".canonical_routes"
         if not legacy_root.is_dir():
@@ -300,10 +298,10 @@ class BenchmarkHarness:
                     legacy_file, target_file,
                 )
             except OSError as e:
-                # Cross-filesystem rename can fail; fall back to copy +
-                # delete (atomic-ish), but never block the BFS itself —
-                # if migration fails the cache miss will trigger a
-                # recompute, which is correct (if slow).
+                # A cross-filesystem rename can fail; we'd fall back to
+                # copy + delete, but never block the BFS over it. If the
+                # migration fails, the cache miss just triggers a recompute,
+                # which is correct, if slow.
                 logger.warning(
                     "[bfs] migration failed (%s): %s -> %s",
                     type(e).__name__, legacy_file, target_file,
@@ -316,28 +314,27 @@ class BenchmarkHarness:
     ) -> Dict[str, List[str]]:
         """Compute (or recall) the canonical BFS routes for a scenario.
 
-        Phase 14: SUMO and MATSim both need per-trip BFS paths through
-        the canonical network. Pre-Phase 14, each adapter ran its own
-        BFS — paying the full cost twice per scenario. This helper
-        computes the routes once and memoizes them by bundle hash so
-        the second adapter (e.g. MATSim after SUMO) gets the dict from
-        memory instead of repeating the BFS.
+        Phase 14: SUMO and MATSim both need per-trip BFS paths through the
+        canonical network. Before Phase 14 each adapter ran its own BFS,
+        paying the full cost twice per scenario. This helper runs the routes
+        once and memoizes them by bundle hash, so the second adapter (say
+        MATSim after SUMO) gets the dict from memory instead of redoing the
+        BFS.
 
-        Phase 14.5: parallelizes the BFS across SBATCH-allocated CPUs
-        via ``multiprocessing.Pool``. ~12-15× speedup at 16 cores.
-        Determinism preserved (Pool.imap-ordered + sorted chunks).
+        Phase 14.5 spreads the BFS across the SBATCH-allocated CPUs via
+        ``multiprocessing.Pool``, roughly 12-15x faster at 16 cores, with
+        determinism intact (Pool.imap order + sorted chunks).
 
-        Cross-process persistence is handled inside
-        ``compute_canonical_routes``: the result is also written to a
-        JSONL file under ``cache/canonical_routes/`` (Phase 14.13: hoisted
-        from the per-output-dir ``<scoped_base>/.canonical_routes/`` to
-        a global, content-addressable cache so all runs of the same
-        scenario share one cache regardless of output dir). A subsequent
-        harness invocation (next sbatch submission, pilot, micro re-run,
-        etc.) reads it from disk in seconds without recomputing.
+        ``compute_canonical_routes`` handles cross-process persistence: it
+        also writes the result to a JSONL under ``cache/canonical_routes/``
+        (Phase 14.13 hoisted this from the per-output-dir
+        ``<scoped_base>/.canonical_routes/`` to a global content-addressable
+        cache, so every run of a scenario shares one cache regardless of
+        output dir). The next harness call (a later sbatch, a pilot, a micro
+        re-run) reads it back from disk in seconds.
 
-        DTALite skips this path entirely — its UE assignment computes
-        its own paths internally, so SimForge BFS is irrelevant there.
+        DTALite skips all of this: its UE assignment finds its own paths, so
+        the SimForge BFS doesn't apply to it.
         """
         from adapters.common.canonical_routes import (
             compute_canonical_routes_for_scenario,
@@ -376,16 +373,15 @@ class BenchmarkHarness:
     ) -> Path:
         """Run prepare_*_inputs once per (scenario, engine) into a cache dir.
 
-        Cache is invalidated when the bundle's manifest.xml SHA changes —
+        The cache invalidates when the bundle's manifest.xml SHA changes, so
         if you regenerate ``scenarios/<scenario>/`` and reuse the same
-        ``--output``, the next call to this method automatically blows
-        away the stale cache and re-preps. No manual ``rm -rf .cache``.
+        ``--output``, the next call here wipes the stale cache and re-preps on
+        its own. No manual ``rm -rf .cache`` needed.
 
-        Phase 14+ behavior: for SUMO and MATSim, the canonical BFS routes
-        are computed once per scenario (via ``_canonical_routes_for``)
-        and passed into each adapter's prepare function. The adapters
-        skip their inline BFS pass when these routes are provided.
-        DTALite ignores them — it runs its own UE assignment.
+        Phase 14+: for SUMO and MATSim, the canonical BFS routes are computed
+        once per scenario (via ``_canonical_routes_for``) and handed to each
+        adapter's prepare function, which then skips its own inline BFS.
+        DTALite ignores them and runs its own UE assignment.
         """
         cache_dir = self._scoped_base(scenario_id) / ".cache" / engine
         sentinel = cache_dir / ".prepared"
@@ -395,9 +391,9 @@ class BenchmarkHarness:
             cached_hash = sentinel.read_text().strip()
             if cached_hash == bundle_hash:
                 return cache_dir
-            # Bundle on disk doesn't match what the cache was built from —
-            # someone regenerated the scenario. Wipe and re-prep so we
-            # don't serve stale prepped inputs.
+            # The bundle on disk no longer matches what the cache was built
+            # from, i.e. someone regenerated the scenario. Wipe and re-prep so
+            # we don't serve stale prepped inputs.
             logger.info(
                 "Cache stale for %s/%s (manifest changed); rebuilding",
                 scenario_id, engine,
@@ -407,9 +403,9 @@ class BenchmarkHarness:
         cache_dir.mkdir(parents=True, exist_ok=True)
         opts = engine_options or {}
 
-        # Phase 14: compute the shared canonical routes once per
-        # scenario before the adapter prep step (only relevant for
-        # SUMO + MATSim — DTALite computes its own paths internally).
+        # Phase 14: compute the shared canonical routes once per scenario
+        # before the adapter prep step. Only SUMO and MATSim care; DTALite
+        # finds its own paths.
         canonical_routes: Optional[Dict[str, List[str]]] = None
         if engine in ("sumo", "matsim"):
             canonical_routes = self._canonical_routes_for(scenario_path, scenario_id)
@@ -420,8 +416,8 @@ class BenchmarkHarness:
                 iterations=opts.get("iterations", 0),
                 java_heap_gb=opts.get("heap_gb", 4),
             )
-            # Seed in the cached config.xml is a placeholder — every cell
-            # rewrites config.xml in _mirror_cache_to_run_dir with its own.
+            # The seed in the cached config.xml is a placeholder; every cell
+            # rewrites config.xml with its own in _mirror_cache_to_run_dir.
             prepare_matsim_inputs(
                 scenario_path, cache_dir, cfg, random_seed=42,
                 canonical_routes=canonical_routes,
@@ -437,8 +433,8 @@ class BenchmarkHarness:
             )
             prepare_dtalite_inputs(scenario_path, cache_dir, cfg)
         elif engine == "sumo":
-            # `seed` arg of self.prepare_sumo_inputs is unused — SUMO
-            # consumes seed at run time via the --seed flag.
+            # The `seed` arg to prepare_sumo_inputs goes unused; SUMO takes
+            # the seed at run time via the --seed flag.
             self.prepare_sumo_inputs(
                 scenario_path, cache_dir, seed=0,
                 canonical_routes=canonical_routes,
@@ -593,8 +589,8 @@ class BenchmarkHarness:
         """Execute a single simulation run."""
 
         mode = "meso" if mesoscopic else "micro"
-        # Per-cell directory MUST include `mode` — without it sumo meso and
-        # sumo micro for the same seed both write to <engine>/seed_<N>/ and
+        # The per-cell directory has to include `mode`. Without it, sumo meso
+        # and sumo micro for the same seed both write to <engine>/seed_<N>/ and
         # the second call overwrites the first's tripinfo.xml +
         # feasibility_report.json + cfgs (Phase 12).
         # _scoped_base() collapses the redundant <scenario>/<scenario>
@@ -816,7 +812,7 @@ class BenchmarkHarness:
                 modes_used.append(m)
         distinct_repeats = sorted({r.repeats for r in runs_to_execute})
 
-        # Matrix banner — same look as run.py
+        # Matrix banner, same look as run.py
         print("\n" + "=" * 60)
         print("  SimForge Benchmark")
         print("=" * 60)
@@ -1007,7 +1003,7 @@ class BenchmarkHarness:
         results_path = self.output_base / f"benchmark_results_{runspec.name}.json"
         benchmark_result.save(results_path)
 
-        # Final summary — same look as run.py
+        # Final summary, same look as run.py
         print("\n" + "=" * 60)
         print("  Summary")
         print("=" * 60)
@@ -1050,17 +1046,17 @@ class BenchmarkHarness:
 
         print(f"\n  📁 Results:    {results_path}")
 
-        # Reproducibility scorecard — one-shot Markdown summary of provenance,
-        # environment, Q1 fairness, and R per cell. Guarded because the
-        # generator shells out to `git rev-parse` and reads OSM/scenario
-        # manifest files that may be absent on cluster nodes; a scorecard
-        # failure must not fail the benchmark itself.
+        # Reproducibility scorecard: a one-shot Markdown summary of
+        # provenance, environment, Q1 fairness, and R per cell. Guarded
+        # because the generator shells out to `git rev-parse` and reads
+        # OSM/scenario manifests that may be missing on cluster nodes, and a
+        # scorecard failure must not take the benchmark down with it.
         try:
             from tools.generate_scorecard import _render
             scorecard_path = self.output_base / "reproducibility_scorecard.md"
             scorecard_path.write_text(_render(results_path))
             print(f"  📋 Scorecard:  {scorecard_path}\n")
-        except Exception as e:  # noqa: BLE001 — cosmetic artefact, never block on failure
+        except Exception as e:  # noqa: BLE001 (cosmetic artefact, never block on it)
             logger.warning("Skipped reproducibility scorecard: %s", e)
             print()
         print("=" * 60 + "\n")
@@ -1140,8 +1136,8 @@ def main():
 
     args = parser.parse_args()
 
-    # Quiet adapter INFO chatter by default — the per-cell summary lines are
-    # enough for the operator. Same convention as run.py.
+    # Quiet the adapter INFO chatter by default; the per-cell summary lines
+    # are enough. Same convention as run.py.
     if args.verbose:
         logging.basicConfig(level=logging.INFO, force=True)
     else:

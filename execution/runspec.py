@@ -1,12 +1,8 @@
 """
-Run specification schema for benchmark execution.
+The runspec schema for benchmark execution.
 
-A runspec defines which scenarios to run, with which engines,
-and how many repetitions for reproducibility analysis.
-
-Supported formats:
-- YAML (recommended)
-- JSON
+A runspec says which scenarios to run, on which engines, and how many
+repeats to do for the reproducibility analysis. It's loaded from YAML.
 """
 
 from dataclasses import dataclass, field
@@ -168,7 +164,7 @@ class RunSpec:
     
     @classmethod
     def from_file(cls, path: Path) -> "RunSpec":
-        """Load runspec from file (auto-detect format)."""
+        """Load a runspec from a file (YAML only)."""
         path = Path(path)
         if path.suffix in (".yaml", ".yml"):
             return cls.from_yaml(path)
