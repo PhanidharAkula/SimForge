@@ -1,11 +1,10 @@
 """
 Cross-engine fairness audit for a SimForge benchmark run directory.
 
-For each scenario in the run directory, this script compares the inputs
-that each engine actually consumed (network nodes/links, feasibility
-verdict, trip counts) and the outputs (per-cell travel time, P95, trip
-count) so a defender can verify that "the engines were given the same
-problem and we measured each one fairly."
+For each scenario in the run, this compares what each engine actually
+consumed (network nodes/links, feasibility verdict, trip counts) and what it
+produced (per-cell travel time, P95, trip count), so you can show that the
+engines got the same problem and each was measured fairly.
 
 Usage:
     python -m evaluation.audit_fairness runs/pitzer_smoke/
@@ -21,9 +20,8 @@ canonical post-benchmark pipeline is::
     python -m evaluation.audit_fairness      <run_dir>
     python -m evaluation.generate_plots      <results.json>
 
-The script makes no edits and emits no files — pure read-only audit
-suitable for committing to thesis appendix or pasting into a defense
-slide.
+It changes nothing and writes nothing: a read-only audit you can drop into
+the thesis appendix or a defense slide.
 """
 
 from __future__ import annotations
@@ -44,7 +42,7 @@ from evaluation.demand_composition import (
 
 
 def _hms_to_seconds(hms: str) -> float:
-    """MATSim trav_time is HH:MM:SS — convert to seconds."""
+    """MATSim trav_time is HH:MM:SS; turn it into seconds."""
     try:
         h, m, s = hms.split(":")
         return int(h) * 3600 + int(m) * 60 + float(s)
@@ -53,7 +51,7 @@ def _hms_to_seconds(hms: str) -> float:
 
 
 def _count_dtalite_demand(demand_csv: Path) -> tuple[int, int]:
-    """Returns (od_pair_count, total_volume) — DTALite aggregates by OD."""
+    """Returns (od_pair_count, total_volume); DTALite aggregates by OD pair."""
     pairs = 0
     vol = 0
     with demand_csv.open() as f:
@@ -127,7 +125,7 @@ def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int,
     SimForge writes benchmark results under several layouts depending on
     the entry point, the SimForge version, and any sbatch wrapping:
 
-      A. ``python run.py``           — flat layout (mode in dir name)
+      A. ``python run.py``: flat layout (mode in the dir name)
          ``<base>/<scenario>_<engine>_<mode>_seed<N>/native_files/``
 
       B. ``python -m execution.run_benchmark`` (Phase 12+, mode-segmented)
@@ -135,16 +133,16 @@ def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int,
 
       C. Layout B inside a parallel-by-scenario sbatch wrapper
          ``<base>/<scenario>/<scenario>/<engine>/<mode>/seed_<N>/``
-         (double-nested — `--output` already includes scenario)
+         (doubly nested, since `--output` already includes the scenario)
 
       D. Pointed at the per-scenario subdir of a parallel-by-scenario run
-         ``<base>/<engine>/<mode>/seed_<N>/`` — scenario name is implicit
-         (= ``base.name``)
+         ``<base>/<engine>/<mode>/seed_<N>/``, where the scenario name is
+         implicit (= ``base.name``)
 
-      B', C', D'. Pre-Phase-12 layouts WITHOUT the ``mode`` segment —
-         ``<base>/<scenario>/<engine>/seed_<N>/`` etc. Older runs are
-         still readable; mode is unrecoverable from the path alone, so
-         the audit treats whatever's on disk as the requested ``mode``.
+      B', C', D'. Pre-Phase-12 layouts with no ``mode`` segment, e.g.
+         ``<base>/<scenario>/<engine>/seed_<N>/``. Older runs still read
+         fine, but mode can't be recovered from the path, so the audit
+         treats whatever's on disk as the requested ``mode``.
 
     Returns the path containing the per-cell prepared inputs and outputs,
     or None if no matching directory exists.
@@ -158,9 +156,9 @@ def _find_cell_dir(base: Path, scenario: str, engine: str, seed: int,
         base / scenario / scenario / engine / mode / f"seed_{seed}",
         # D (Phase 12+): pointed-at scenario subdir, with mode
         base / engine / mode / f"seed_{seed}",
-        # Back-compat fallbacks — pre-Phase-12 layouts (mode-less). Older
-        # runs only kept the LAST mode written for each (engine, seed) cell,
-        # so on-disk artefacts may belong to micro even when meso was asked.
+        # Back-compat fallbacks: the mode-less pre-Phase-12 layouts. Older
+        # runs only kept the last mode written for each (engine, seed) cell,
+        # so what's on disk may be micro even when meso was requested.
         base / scenario / engine / f"seed_{seed}",
         base / scenario / scenario / engine / f"seed_{seed}",
         base / engine / f"seed_{seed}",
@@ -206,9 +204,9 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
                 "skipped_outside_scc", "skipped_unknown_nodes",
                 "skipped_missing_fields", "skipped_unsupported_mode"]
         first_eng = next(iter(reports))
-        # Use .get(...) so reports written before mode-aware feasibility shipped
-        # (without `skipped_unsupported_mode`) still compare cleanly — they
-        # default to 0 alongside fresh reports' 0 for car-only bundles.
+        # Use .get(...) so reports from before mode-aware feasibility shipped
+        # (no `skipped_unsupported_mode`) still compare cleanly; they default
+        # to 0 alongside the fresh reports' 0 for car-only bundles.
         counts_same = all(
             reports[eng].get(k, 0) == reports[first_eng].get(k, 0)
             for eng in reports for k in keys
@@ -245,11 +243,11 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
         if n.is_file() and l.is_file():
             net["dtalite"] = (_count_csv_rows(n), _count_csv_rows(l))
     if "sumo" in cells:
-        # Prefer the pre-netconvert .nod.xml + .edg.xml — those map 1:1 to
-        # canonical nodes/links. The compiled .net.xml inflates the count
-        # with internal lane junctions (one per turn-lane connection at
-        # each intersection) and internal lane edges, which is correct
-        # SUMO behaviour but confuses a cross-engine fairness count.
+        # Prefer the pre-netconvert .nod.xml + .edg.xml; those map 1:1 to the
+        # canonical nodes and links. The compiled .net.xml pads the count with
+        # internal lane junctions (one per turn-lane connection at each
+        # intersection) and internal lane edges, which is correct SUMO
+        # behaviour but throws off a cross-engine fairness count.
         nods = list(cells["sumo"].glob("*.nod.xml"))
         edgs = list(cells["sumo"].glob("*.edg.xml"))
         if nods and edgs:
@@ -361,11 +359,11 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
               f"({'+' if ratio > 1 else ''}{(ratio-1)*100:.1f}%)")
 
     # --------------------------------------------------------------- Q5
-    # Demand composition (V5+ trip-purpose breakdown). Reads the
-    # canonical bundle's demand.csv (engines may overwrite their cell
-    # copy with engine-specific columns — DTALite drops `purpose` to
-    # use `o_zone_id, d_zone_id, volume`). Pre-V5 bundles return None
-    # and we skip the section gracefully.
+    # Demand composition (the V5+ trip-purpose breakdown). Reads the
+    # canonical bundle's demand.csv, since engines may overwrite their cell
+    # copy with engine-specific columns (DTALite drops `purpose` for
+    # `o_zone_id, d_zone_id, volume`). Pre-V5 bundles return None and we just
+    # skip the section.
     print("\n--- Q5: Demand composition (V5+ trip-purpose breakdown) ---")
     canonical_demand = find_canonical_demand(scenario)
     comp = read_demand_composition(canonical_demand)
@@ -399,8 +397,8 @@ def main() -> int:
               file=sys.stderr)
         return 1
 
-    # Iterate over (scenario, mode) pairs — Phase 12+ runs may have both meso
-    # and micro under the same scenario; pre-Phase-12 runs default to meso.
+    # Iterate over (scenario, mode) pairs. A Phase 12+ run may have both meso
+    # and micro under one scenario; pre-Phase-12 runs default to meso.
     for sc in scenarios:
         for mode in _discover_modes(base, sc):
             audit_scenario(base, sc, seed, mode=mode)
@@ -428,15 +426,15 @@ def _discover_scenarios(base: Path) -> list[str]:
     """Find scenario IDs under any supported layout (Phase 12+ and pre-12)."""
     found: set[str] = set()
 
-    # Layout D first: <base>/<engine>/[<mode>/]seed_<N> — base IS the scenario
-    # (parallel-by-scenario sbatch worker output dir).
+    # Layout D first: <base>/<engine>/[<mode>/]seed_<N>, where base IS the
+    # scenario (the parallel-by-scenario sbatch worker output dir).
     for eng in _ENGINES:
         eng_dir = base / eng
         if _has_seed_dir(eng_dir) or _has_mode_seed(eng_dir):
             found.add(base.name)
             break
 
-    # Layout A: flat run.py output — <scenario>_<engine>_<mode>_seed<N>
+    # Layout A: flat run.py output, <scenario>_<engine>_<mode>_seed<N>
     for p in base.iterdir():
         if not p.is_dir() or "_seed" not in p.name:
             continue
@@ -466,9 +464,9 @@ def _discover_scenarios(base: Path) -> list[str]:
 def _discover_modes(base: Path, scenario: str) -> list[str]:
     """Which modes have at least one engine cell on disk for this scenario.
 
-    Phase 12+ layouts encode mode in the path (`<engine>/<mode>/seed_*`).
-    Pre-Phase-12 layouts don't — mode is unrecoverable, default to ``meso``
-    (the only mode supported by MATSim and DTALite).
+    Phase 12+ layouts put the mode in the path (`<engine>/<mode>/seed_*`).
+    Pre-Phase-12 layouts don't, and mode can't be recovered, so we default to
+    ``meso`` (the only mode MATSim and DTALite support).
     """
     modes_found: set[str] = set()
     candidates_for_engine = lambda eng: [

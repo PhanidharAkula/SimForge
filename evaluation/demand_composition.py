@@ -6,9 +6,9 @@ module tallies that column so `audit_fairness` and `analyze_benchmark`
 can answer "what fraction of AM peak is school-related?" without
 re-deriving chain/peak labels from coordinates.
 
-When a demand.csv lacks the column (pre-V5 bundles),
-`read_demand_composition` returns ``None`` — callers should treat that
-as "no V5+ tags available" and skip the breakdown.
+When a demand.csv has no such column (pre-V5 bundles),
+`read_demand_composition` returns ``None``, and callers should read that as
+"no V5+ tags here" and skip the breakdown.
 """
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ from pathlib import Path
 
 from pipeline.demand.generate_census_demand import AM_PURPOSES, PM_PURPOSES
 
-# Chain legs are the four "kid-detour" labels — they're a strict subset
-# of AM_PURPOSES ∪ PM_PURPOSES. School-related trip count = sum of these.
+# The four "kid-detour" labels, a strict subset of AM_PURPOSES + PM_PURPOSES.
+# The school-related trip count is just their sum.
 CHAIN_LEG_PURPOSES: frozenset[str] = frozenset(
     {"HBSchool_AM", "HBSchool_PM", "HBW_AM_chained", "HBW_PM_chained"}
 )

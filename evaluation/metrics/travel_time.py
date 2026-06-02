@@ -1,15 +1,10 @@
 from __future__ import annotations
 
 """
-Evaluation metrics for trip-level outputs (e.g., SUMO tripinfo.xml).
+Trip-level metrics from engine output (e.g. SUMO tripinfo.xml).
 
-We focus on:
-
-- mean travel time
-- 95th percentile travel time
-- trip count
-
-The primary entrypoint is:
+Three numbers: mean travel time, 95th-percentile travel time, and trip
+count. The entry point is:
 
     parse_sumo_tripinfo(tripinfo_path: Path) -> TripTimeStats
 """
@@ -23,19 +18,16 @@ from typing import List
 
 @dataclass
 class TripTimeStats:
-    """
-    Aggregate statistics over completed trips.
-    """
+    """Aggregate statistics over the completed trips."""
     trip_count: int
     mean_travel_time_s: float
     p95_travel_time_s: float
 
 
 def _compute_p95(values: List[float]) -> float:
-    """
-    Return an approximate 95th percentile using sorted values.
+    """Approximate 95th percentile from sorted values.
 
-    For n values, index = floor(0.95 * (n - 1)).
+    For n values, the index is floor(0.95 * (n - 1)).
     """
     if not values:
         return 0.0
@@ -45,25 +37,11 @@ def _compute_p95(values: List[float]) -> float:
 
 
 def parse_sumo_tripinfo(tripinfo_path: Path) -> TripTimeStats:
-    """
-    Parse a SUMO tripinfo XML file and compute basic travel-time statistics.
+    """Parse a SUMO tripinfo XML and compute the travel-time stats.
 
-    We expect XML with one or more `<tripinfo ... />` elements, where each element
-    has:
-
-        duration="..."   (seconds)
-
-    This matches the standard SUMO tripinfo output format.
-
-    Parameters
-    ----------
-    tripinfo_path : Path
-        Path to the tripinfo XML file.
-
-    Returns
-    -------
-    TripTimeStats
-        Aggregate statistics over all tripinfo records.
+    Expects the standard SUMO format: one or more `<tripinfo ... />`
+    elements, each with a `duration="..."` (seconds). Returns a
+    TripTimeStats aggregated over every record.
     """
     tripinfo_path = tripinfo_path.resolve()
     if not tripinfo_path.is_file():

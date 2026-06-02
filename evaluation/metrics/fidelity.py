@@ -1,14 +1,14 @@
 """
-Fidelity metrics for comparing simulation outputs against observed/reference data.
+Fidelity metrics: how close a simulation's output is to reference data.
 
-Implements the thesis-defined metrics (C4):
+The three the thesis uses (C4):
 
-- RMSE (Root Mean Square Error): Measures average magnitude of errors
-- GEH (Geoffrey E. Havers statistic): Traffic-specific fit measure
-- KS (Kolmogorov-Smirnov statistic): Distribution comparison
+- RMSE: average error magnitude.
+- GEH (the Geoffrey E. Havers statistic): a traffic-specific goodness of fit.
+- KS (Kolmogorov-Smirnov): compares whole distributions.
 
-These metrics enable fair comparison of simulator outputs against ground truth
-or against each other under identical canonical inputs.
+They let us compare engines against ground truth, or against each other, on
+the same canonical inputs.
 """
 
 from __future__ import annotations
@@ -21,9 +21,7 @@ import statistics
 
 @dataclass
 class FidelityMetrics:
-    """
-    Container for fidelity comparison results.
-    """
+    """The results of a fidelity comparison."""
     rmse: float
     geh_mean: float
     geh_pct_below_5: float  # Percentage of links where GEH < 5 (acceptable)
@@ -33,27 +31,12 @@ class FidelityMetrics:
 
 
 def compute_rmse(observed: List[float], simulated: List[float]) -> float:
-    """
-    Compute Root Mean Square Error between observed and simulated values.
-    
-    RMSE = sqrt(mean((observed - simulated)^2))
-    
-    Parameters
-    ----------
-    observed : List[float]
-        Ground truth / observed values (e.g., traffic counts)
-    simulated : List[float]
-        Simulated values from the traffic simulator
-        
-    Returns
-    -------
-    float
-        RMSE value (same units as input)
-        
-    Raises
-    ------
-    ValueError
-        If lists have different lengths or are empty
+    """Root mean square error between observed and simulated values.
+
+    RMSE = sqrt(mean((observed - simulated)^2)), in the same units as the
+    input. `observed` is the ground truth (e.g. traffic counts), `simulated`
+    the engine's output. Raises ValueError if the lists differ in length or
+    are empty.
     """
     if len(observed) != len(simulated):
         raise ValueError(
@@ -69,28 +52,14 @@ def compute_rmse(observed: List[float], simulated: List[float]) -> float:
 
 def compute_geh(observed: float, simulated: float) -> float:
     """
-    Compute the GEH statistic for a single observation pair.
-    
-    GEH = sqrt(2 * (simulated - observed)^2 / (simulated + observed))
-    
-    The GEH statistic is widely used in traffic engineering (UK DfT standard).
-    
-    Interpretation:
-    - GEH < 5: Acceptable fit
-    - GEH 5-10: Warrants investigation
-    - GEH > 10: Poor fit
-    
-    Parameters
-    ----------
-    observed : float
-        Observed traffic count (must be > 0)
-    simulated : float
-        Simulated traffic count (must be > 0)
-        
-    Returns
-    -------
-    float
-        GEH statistic value
+    GEH for one observation pair.
+
+    GEH = sqrt(2 * (simulated - observed)^2 / (simulated + observed)).
+    It's a standard traffic-engineering fit measure (the UK DfT one). Both
+    counts must be > 0. How to read it:
+    - GEH < 5: acceptable fit
+    - GEH 5-10: worth a look
+    - GEH > 10: poor fit
     """
     if observed <= 0 or simulated <= 0:
         # GEH is undefined for zero/negative counts
@@ -106,22 +75,10 @@ def compute_geh_batch(
     observed: List[float], 
     simulated: List[float]
 ) -> Tuple[float, float, List[float]]:
-    """
-    Compute GEH statistics for multiple observation pairs.
-    
-    Parameters
-    ----------
-    observed : List[float]
-        List of observed traffic counts
-    simulated : List[float]
-        List of simulated traffic counts
-        
-    Returns
-    -------
-    Tuple[float, float, List[float]]
-        - Mean GEH across all pairs
-        - Percentage of pairs with GEH < 5 (acceptable fit)
-        - List of individual GEH values
+    """GEH over many observation pairs.
+
+    Returns (mean GEH across the pairs, percentage of pairs with GEH < 5,
+    the list of per-pair GEH values).
     """
     if len(observed) != len(simulated):
         raise ValueError(
@@ -148,29 +105,15 @@ def compute_ks_statistic(
     distribution_a: List[float], 
     distribution_b: List[float]
 ) -> Tuple[float, Optional[float]]:
-    """
-    Compute the Kolmogorov-Smirnov statistic between two distributions.
-    
-    The KS statistic measures the maximum difference between the empirical
-    cumulative distribution functions (ECDFs) of two samples.
-    
-    Parameters
-    ----------
-    distribution_a : List[float]
-        First sample (e.g., observed travel times)
-    distribution_b : List[float]
-        Second sample (e.g., simulated travel times)
-        
-    Returns
-    -------
-    Tuple[float, Optional[float]]
-        - KS statistic (D): max |ECDF_a(x) - ECDF_b(x)|
-        - Critical value at α=0.05 for the given sample sizes
-        
-    Notes
-    -----
-    Critical value approximation: c(α) * sqrt((n+m)/(n*m))
-    where c(0.05) ≈ 1.36
+    """The Kolmogorov-Smirnov statistic between two distributions.
+
+    KS is the largest gap between the two samples' empirical CDFs.
+    `distribution_a` and `distribution_b` are the two samples (e.g. observed
+    vs simulated travel times).
+
+    Returns (D, critical_value): D is max |ECDF_a(x) - ECDF_b(x)|, and the
+    critical value at α=0.05 is approximated as c(α) * sqrt((n+m)/(n*m))
+    with c(0.05) about 1.36.
     """
     if not distribution_a or not distribution_b:
         raise ValueError("Cannot compute KS statistic on empty distributions")
@@ -206,24 +149,11 @@ def compute_fidelity_metrics(
     observed_travel_times: Optional[List[float]] = None,
     simulated_travel_times: Optional[List[float]] = None,
 ) -> FidelityMetrics:
-    """
-    Compute all fidelity metrics comparing observed vs simulated data.
-    
-    Parameters
-    ----------
-    observed_counts : List[float]
-        Observed link-level traffic counts
-    simulated_counts : List[float]
-        Simulated link-level traffic counts
-    observed_travel_times : Optional[List[float]]
-        Observed trip travel times (for KS test)
-    simulated_travel_times : Optional[List[float]]
-        Simulated trip travel times (for KS test)
-        
-    Returns
-    -------
-    FidelityMetrics
-        Container with RMSE, GEH, and KS statistics
+    """All the fidelity metrics for one observed-vs-simulated comparison.
+
+    `*_counts` are the link-level traffic counts (RMSE and GEH). The optional
+    `*_travel_times` are trip travel-time samples; pass both to also run the
+    KS test. Returns a FidelityMetrics with RMSE, GEH, and KS.
     """
     # RMSE
     rmse = compute_rmse(observed_counts, simulated_counts)
@@ -251,7 +181,7 @@ def compute_fidelity_metrics(
 
 
 def interpret_geh(geh_value: float) -> str:
-    """Return human-readable interpretation of GEH value."""
+    """A plain-English reading of a GEH value."""
     if geh_value < 5:
         return "acceptable"
     elif geh_value < 10:
@@ -261,7 +191,7 @@ def interpret_geh(geh_value: float) -> str:
 
 
 def interpret_ks(ks_stat: float, critical_value: Optional[float]) -> str:
-    """Return human-readable interpretation of KS test result."""
+    """A plain-English reading of a KS test result."""
     if critical_value is None:
         return "no test performed"
     if ks_stat < critical_value:

@@ -1,18 +1,11 @@
 """
-Reproducibility metrics for evaluating run-to-run consistency.
+Reproducibility metrics: how consistent a run is from one repeat to the next.
 
-Implements the thesis-defined metric (C4):
-
-- R = 1 - σ/μ (Reproducibility index)
-
-Where:
-- μ = mean of a KPI across repeated runs
-- σ = standard deviation across repeated runs
-- R approaches 1.0 for perfectly reproducible runs
-- R approaches 0.0 (or negative) for highly variable runs
-
-These metrics quantify the consistency of simulation outputs when
-executed with fixed seeds and identical inputs.
+The thesis metric (C4) is the reproducibility index R = 1 - σ/μ, where μ is
+a KPI's mean across the repeats and σ its standard deviation. R sits near
+1.0 when the runs are perfectly reproducible and drops toward 0.0 (or below)
+as they vary. It's a measure of how steady the output is under fixed seeds
+and identical inputs.
 """
 
 from __future__ import annotations
@@ -24,9 +17,7 @@ from typing import List, Dict, Optional, Any
 
 @dataclass
 class ReproducibilityMetrics:
-    """
-    Container for reproducibility measurement results.
-    """
+    """One KPI's reproducibility measurement."""
     # Core metric
     reproducibility_index: float  # R = 1 - σ/μ
     
@@ -50,9 +41,7 @@ class ReproducibilityMetrics:
 
 @dataclass
 class MultiKPIReproducibility:
-    """
-    Reproducibility results across multiple KPIs.
-    """
+    """Reproducibility results across several KPIs."""
     kpi_results: Dict[str, ReproducibilityMetrics] = field(default_factory=dict)
     overall_reproducibility: float = 0.0
     n_runs: int = 0
@@ -61,25 +50,11 @@ class MultiKPIReproducibility:
 
 
 def compute_reproducibility_index(values: List[float]) -> float:
-    """
-    Compute the reproducibility index R = 1 - σ/μ.
-    
-    Parameters
-    ----------
-    values : List[float]
-        KPI values from repeated simulation runs
-        
-    Returns
-    -------
-    float
-        Reproducibility index (higher is better, max 1.0)
-        Returns 1.0 if all values are identical
-        Returns 0.0 or negative if highly variable
-        
-    Raises
-    ------
-    ValueError
-        If fewer than 2 values provided
+    """The reproducibility index R = 1 - σ/μ for one KPI's repeated values.
+
+    Higher is better, capped at 1.0: identical values give 1.0, wildly
+    varying ones give 0.0 or negative. Needs at least 2 values, else raises
+    ValueError.
     """
     if len(values) < 2:
         raise ValueError("Need at least 2 values to compute reproducibility")
@@ -105,20 +80,10 @@ def compute_reproducibility_metrics(
     values: List[float],
     kpi_name: str = "unknown",
 ) -> ReproducibilityMetrics:
-    """
-    Compute comprehensive reproducibility metrics for a KPI.
-    
-    Parameters
-    ----------
-    values : List[float]
-        KPI values from repeated simulation runs
-    kpi_name : str
-        Name of the KPI being measured
-        
-    Returns
-    -------
-    ReproducibilityMetrics
-        Full reproducibility analysis
+    """The full reproducibility breakdown for one KPI's repeated values.
+
+    `kpi_name` just labels the result. Returns a ReproducibilityMetrics with
+    the index, mean, std, CV, range, and a plain-English interpretation.
     """
     if len(values) < 2:
         raise ValueError("Need at least 2 values to compute reproducibility")
@@ -171,27 +136,16 @@ def compute_multi_kpi_reproducibility(
     scenario_id: Optional[str] = None,
     engine: str = "unknown",
 ) -> MultiKPIReproducibility:
-    """
-    Compute reproducibility across multiple KPIs from repeated runs.
-    
-    Parameters
-    ----------
-    run_results : List[Dict[str, float]]
-        List of dictionaries, each containing KPI values from one run.
-        Example: [
+    """Reproducibility across several KPIs at once.
+
+    `run_results` is one dict of KPI values per run, e.g.
+        [
             {"travel_time": 12.5, "throughput": 100},
             {"travel_time": 12.3, "throughput": 102},
             {"travel_time": 12.6, "throughput": 99},
         ]
-    scenario_id : Optional[str]
-        Identifier for the scenario
-    engine : str
-        Name of the simulation engine
-        
-    Returns
-    -------
-    MultiKPIReproducibility
-        Reproducibility analysis for all KPIs
+    `scenario_id` and `engine` just label the result. Returns a
+    MultiKPIReproducibility covering every KPI.
     """
     if len(run_results) < 2:
         raise ValueError("Need at least 2 runs to compute reproducibility")
@@ -229,18 +183,7 @@ def compute_multi_kpi_reproducibility(
 
 
 def format_reproducibility_report(metrics: ReproducibilityMetrics) -> str:
-    """
-    Format reproducibility metrics as a human-readable report.
-    
-    Parameters
-    ----------
-    metrics : ReproducibilityMetrics
-        Computed reproducibility metrics
-        
-    Returns
-    -------
-    str
-        Formatted report string
+    """Format one KPI's reproducibility metrics as a readable report.
     """
     lines = [
         f"REPRODUCIBILITY: {metrics.kpi_name}",
@@ -257,18 +200,7 @@ def format_reproducibility_report(metrics: ReproducibilityMetrics) -> str:
 
 
 def format_multi_kpi_report(results: MultiKPIReproducibility) -> str:
-    """
-    Format multi-KPI reproducibility results as a report.
-    
-    Parameters
-    ----------
-    results : MultiKPIReproducibility
-        Multi-KPI reproducibility analysis
-        
-    Returns
-    -------
-    str
-        Formatted report string
+    """Format a multi-KPI reproducibility result as a readable report.
     """
     lines = [
         "=" * 50,
@@ -299,19 +231,6 @@ def is_reproducible(
     metrics: ReproducibilityMetrics,
     threshold: float = 0.95,
 ) -> bool:
-    """
-    Check if a KPI meets the reproducibility threshold.
-    
-    Parameters
-    ----------
-    metrics : ReproducibilityMetrics
-        Computed reproducibility metrics
-    threshold : float
-        Minimum R index to be considered reproducible (default 0.95)
-        
-    Returns
-    -------
-    bool
-        True if reproducibility index meets threshold
+    """True if the KPI's R index clears `threshold` (default 0.95).
     """
     return metrics.reproducibility_index >= threshold

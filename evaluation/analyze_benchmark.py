@@ -35,8 +35,8 @@ class ScenarioStats:
     avg_travel_time: float
     std_travel_time: float
     reproducibility_score: float
-    # 95 % confidence-interval half-widths on the mean — plan §3.5
-    # commits to reporting these on every KPI.
+    # 95 % CI half-widths on the mean. Plan §3.5 commits to reporting
+    # these on every KPI.
     ci95_runtime: float = 0.0
     ci95_travel_time: float = 0.0
 
@@ -112,9 +112,9 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
     """Analyze benchmark results and compute statistics."""
     stats_list = []
 
-    # Group runs by (scenario, engine, mode) — meso and micro are different
-    # simulators behaviorally, so collapsing them inflates std and crushes the
-    # R-score. Keeping mode in the key preserves an apples-to-apples comparison.
+    # Group runs by (scenario, engine, mode). Meso and micro behave like
+    # different simulators, so collapsing them inflates the std and crushes
+    # the R-score. Keeping mode in the key keeps the comparison honest.
     by_group: dict[tuple[str, str, str], list[dict]] = {}
     for run in results.get("results", results.get("runs", [])):
         scenario, engine, mode = _resolve_identity(run)
@@ -326,7 +326,7 @@ def print_demand_composition_table(stats_list: list[ScenarioStats]) -> str:
 
     tagged = [(name, comp) for name, comp in seen.items() if comp is not None]
     if not tagged:
-        return ""  # no V5+ bundles — silently omit the section
+        return ""  # no V5+ bundles, so leave the section out
 
     lines = []
     lines.append("\n" + "=" * 80)

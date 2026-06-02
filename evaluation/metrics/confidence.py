@@ -12,25 +12,25 @@ For N independent draws from an approximately-normal population,
     half_width = t_{α/2, N-1} * σ / √N
     CI = mean ± half_width
 
-where t_{α/2, df} is the two-tailed Student's t critical value. We hard-code
-the table for α = 0.05 (95 % confidence) rather than depend on scipy, both
-to keep `requirements.lock` minimal and to make the math auditable in the
-thesis appendix. For N > 31 we fall back to the normal-distribution Z = 1.960
-limit, which differs from t_{29} by ≤ 5 %.
+where t_{α/2, df} is the two-tailed Student's t critical value. We keep the
+table for α = 0.05 (95 % confidence) inline instead of pulling in scipy,
+both to keep `requirements.lock` small and to make the math easy to audit in
+the thesis appendix. Past N = 31 we use the normal-distribution Z = 1.960
+limit, which is within 5 % of t_{29}.
 
 Edge cases:
-  * N == 0 → cannot compute anything meaningful; raise ValueError.
-  * N == 1 → CI is undefined (no sample variance); we return half_width = 0
-    so callers can render "203.5 ± 0.0" without special-casing.
+  * N == 0: nothing meaningful to compute, so raise ValueError.
+  * N == 1: the CI is undefined (no sample variance), so we hand back
+    half_width = 0 and callers can print "203.5 ± 0.0" without special-casing.
 
-For our standard runspecs (N=3 SUMO, N=2 MATSim, N=10 target after advisor
-sign-off), the relevant t-critical values are:
+For our usual runspecs (N=3 SUMO, N=2 MATSim, N=10 target after advisor
+sign-off), the t-critical values that come up are:
 
-  N=2  → t = 12.706   (CI is huge — flagged in the thesis as a known limit
-                       of the deterministic MATSim cell.)
-  N=3  → t =  4.303
-  N=5  → t =  2.776
-  N=10 → t =  2.262
+  N=2:  t = 12.706   (the CI is enormous, which the thesis flags as a known
+                      limit of the deterministic MATSim cell.)
+  N=3:  t =  4.303
+  N=5:  t =  2.776
+  N=10: t =  2.262
 
 See `tests/test_confidence.py` for the validation suite.
 """
@@ -84,11 +84,10 @@ _Z_CRITICAL_95: float = 1.960
 
 
 def t_critical_95(n: int) -> float:
-    """
-    Return the two-tailed t-critical value at α = 0.05 for a sample of size N.
+    """The two-tailed t-critical value at α = 0.05 for a sample of size N.
 
-    For N == 1 returns 0.0 (CI undefined; caller will format as ± 0.0).
-    For N > 31 returns the normal-distribution Z = 1.960 limit.
+    N == 1 returns 0.0 (the CI is undefined; the caller formats it as ± 0.0),
+    and N > 31 returns the normal-distribution Z = 1.960 limit.
     """
     if n < 1:
         raise ValueError(f"sample size must be >= 1, got {n}")
@@ -122,12 +121,11 @@ class ConfidenceInterval:
 
 
 def confidence_interval_95(values: list[float] | tuple[float, ...]) -> ConfidenceInterval:
-    """
-    Compute the 95 % CI on the mean of `values` using Student's t.
+    """The 95 % CI on the mean of `values`, via Student's t.
 
-    Returns a `ConfidenceInterval(mean, half_width, n)`. With `n == 1` the
-    half-width is 0 (sample variance is undefined; caller renders as ± 0.0).
-    With `n == 0` raises `ValueError` — there is no mean to report.
+    Returns a `ConfidenceInterval(mean, half_width, n)`. At `n == 1` the
+    half-width is 0 (sample variance is undefined; the caller prints ± 0.0).
+    At `n == 0` it raises `ValueError`, since there's no mean to report.
     """
     n = len(values)
     if n == 0:

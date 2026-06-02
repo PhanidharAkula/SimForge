@@ -1,15 +1,15 @@
 """
-Scalability metrics for evaluating simulation performance.
+Scalability metrics: how fast a simulation runs.
 
-Implements the thesis-defined metrics (C4):
+The thesis metrics (C4):
 
-- Runtime measurement (wall-clock time)
-- Throughput (vehicles/sec, trips/sec)
-- Simulated-to-Real-Time ratio (SRT)
-- Per-core and per-watt normalization (when hardware info available)
+- Runtime (wall-clock time).
+- Throughput (vehicles/sec, trips/sec).
+- Simulated-to-real-time ratio (SRT).
+- Per-core and per-watt figures, when we know the hardware.
 
-These metrics enable fair comparison of computational efficiency across
-CPU, GPU, and HPC environments.
+Together they let us compare computational efficiency across CPU, GPU, and
+HPC setups on equal footing.
 """
 
 from __future__ import annotations
@@ -25,9 +25,7 @@ import os
 
 @dataclass
 class HardwareInfo:
-    """
-    Hardware information for normalization.
-    """
+    """Hardware details, used to normalize the per-core and per-watt figures."""
     cpu_model: str = "unknown"
     cpu_cores: int = 1
     cpu_threads: int = 1
@@ -39,9 +37,7 @@ class HardwareInfo:
 
 @dataclass
 class ScalabilityMetrics:
-    """
-    Container for scalability measurement results.
-    """
+    """The results of a scalability measurement."""
     # Basic timing
     wall_clock_seconds: float
     simulated_time_seconds: float
@@ -90,13 +86,7 @@ class SimulationTimer:
 
 
 def get_hardware_info() -> HardwareInfo:
-    """
-    Detect hardware information for the current system.
-    
-    Returns
-    -------
-    HardwareInfo
-        Detected hardware specifications
+    """Detect the current machine's hardware (CPU, memory, GPU if present).
     """
     info = HardwareInfo()
     
@@ -141,28 +131,12 @@ def compute_scalability_metrics(
     scenario_id: Optional[str] = None,
     engine: str = "unknown",
 ) -> ScalabilityMetrics:
-    """
-    Compute scalability metrics from a simulation run.
-    
-    Parameters
-    ----------
-    wall_clock_seconds : float
-        Wall-clock runtime of the simulation
-    simulated_time_seconds : float
-        Simulated time horizon (e.g., 3600 for 1-hour simulation)
-    vehicles_completed : int
-        Number of vehicles/trips that completed
-    hardware_info : Optional[HardwareInfo]
-        Hardware specifications for normalization
-    scenario_id : Optional[str]
-        Identifier for the scenario
-    engine : str
-        Name of the simulation engine (e.g., "sumo", "matsim")
-        
-    Returns
-    -------
-    ScalabilityMetrics
-        Computed scalability metrics
+    """Scalability metrics for one run.
+
+    `wall_clock_seconds` is the measured runtime, `simulated_time_seconds`
+    the simulated horizon (e.g. 3600 for a 1-hour sim), `vehicles_completed`
+    the finished trip count. Pass `hardware_info` to also get the per-core
+    and per-watt figures; `scenario_id` and `engine` just label the result.
     """
     # Basic throughput
     trips_per_second = vehicles_completed / wall_clock_seconds if wall_clock_seconds > 0 else 0.0
@@ -195,18 +169,7 @@ def compute_scalability_metrics(
 
 
 def format_scalability_report(metrics: ScalabilityMetrics) -> str:
-    """
-    Format scalability metrics as a human-readable report.
-    
-    Parameters
-    ----------
-    metrics : ScalabilityMetrics
-        Computed scalability metrics
-        
-    Returns
-    -------
-    str
-        Formatted report string
+    """Format scalability metrics as a readable report.
     """
     lines = [
         "=" * 50,
@@ -256,20 +219,7 @@ def compare_scalability(
     baseline: ScalabilityMetrics,
     comparison: ScalabilityMetrics,
 ) -> Dict[str, Any]:
-    """
-    Compare two scalability measurement results.
-    
-    Parameters
-    ----------
-    baseline : ScalabilityMetrics
-        Baseline/reference metrics
-    comparison : ScalabilityMetrics
-        Metrics to compare against baseline
-        
-    Returns
-    -------
-    Dict[str, Any]
-        Comparison results with speedup/slowdown factors
+    """Compare two scalability results, reporting speedup/slowdown factors.
     """
     def safe_ratio(a: float, b: float) -> Optional[float]:
         if b == 0:

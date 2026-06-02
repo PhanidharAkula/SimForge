@@ -2,27 +2,27 @@
 """
 Generate thesis-ready plots from benchmark results.
 
-All per-(city, engine) plots facet by *mode* so meso and micro never collapse
-into a single bar. Missing cells in the reproducibility heatmap render as
-hatched grey ("not run") instead of red ("R=0"), to keep absent data from
-looking like a failure.
+Every per-(city, engine) plot facets by *mode* so meso and micro never end
+up in one bar. Missing cells in the reproducibility heatmap render as hatched
+grey ("not run") rather than red ("R=0"), so absent data doesn't read as a
+failure.
 
 Figures
 -------
-5.1   Engine runtime comparison    — facets by mode, bars by (city, engine);
+5.1   Engine runtime comparison:    facets by mode, bars by (city, engine);
                                      engine subprocess only (matches Chapter 5)
-5.2   Reproducibility heatmap      — rows are (engine, mode); NaN = grey
-5.3   Travel time comparison       — facets by mode
-5.4   Speedup vs MATSim            — within-mode (avoids meso/micro mixing)
-5.5   Micro vs Meso engine runtime — explicit mode comparison per engine
-5.6   Engine runtime variability   — boxplot per (engine, mode)
-5.7   P95 tail latency vs mean     — facets by mode
-5.8   Trip-count parity            — completed trips per (engine, mode);
-                                     validates the SCC/feasibility filter
-                                     by showing every engine ran the same N
-5.9   Demand composition           — per-scenario stacked bar of the V5+ trip
+5.2   Reproducibility heatmap:      rows are (engine, mode); NaN = grey
+5.3   Travel time comparison:       facets by mode
+5.4   Speedup vs MATSim:            within-mode (avoids mixing meso and micro)
+5.5   Micro vs Meso engine runtime: explicit mode comparison per engine
+5.6   Engine runtime variability:   boxplot per (engine, mode)
+5.7   P95 tail latency vs mean:     facets by mode
+5.8   Trip-count parity:            completed trips per (engine, mode);
+                                     confirms the SCC/feasibility filter by
+                                     showing every engine ran the same N
+5.9   Demand composition:           per-scenario stacked bar of the V5+ trip
                                      purpose taxonomy (HBW + HBSchool + chains)
-5.10  Wall vs engine breakdown     — per-cell stacked bar showing where time
+5.10  Wall vs engine breakdown:     per-cell stacked bar of where the time
                                      goes: adapter prep + engine + parse
 
 Usage
@@ -64,7 +64,7 @@ except ImportError:
 ENGINE_COLORS = {
     'sumo': '#1f77b4',     # blue
     'matsim': '#2ca02c',   # green
-    'dtalite': '#d62728',  # red — DTA equilibrium comparator
+    'dtalite': '#d62728',  # red, the DTA equilibrium comparator
 }
 MODE_COLORS = {'meso': '#ff7f0e', 'micro': '#2ca02c'}
 KNOWN_ENGINES = ('sumo', 'matsim', 'dtalite')
@@ -107,7 +107,7 @@ def load_results(results_path: Path) -> dict:
 
 
 def extract_city_engine(scenario_id: str) -> tuple[str, str, str]:
-    """Parse scenario_id → (city, engine, mode). Used only as a fallback."""
+    """Parse scenario_id into (city, engine, mode). Only used as a fallback."""
     engine = "unknown"
     for eng in KNOWN_ENGINES:
         if f"_{eng}" in scenario_id:
@@ -250,7 +250,7 @@ def _save(name: str, output_dir: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.1 — Runtime comparison (faceted by mode)
+# Figure 5.1: Runtime comparison (faceted by mode)
 # ---------------------------------------------------------------------------
 
 def plot_runtime_comparison(metrics: list[ScenarioMetrics],
@@ -304,7 +304,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.2 — Reproducibility heatmap (rows = engine × mode, NaN = grey)
+# Figure 5.2: Reproducibility heatmap (rows = engine × mode, NaN = grey)
 # ---------------------------------------------------------------------------
 
 def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics],
@@ -384,7 +384,7 @@ def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.3 — Travel time comparison (faceted by mode)
+# Figure 5.3: Travel time comparison (faceted by mode)
 # ---------------------------------------------------------------------------
 
 def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
@@ -436,7 +436,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.4 — Speedup vs MATSim baseline (within-mode)
+# Figure 5.4: Speedup vs MATSim baseline (within-mode)
 # ---------------------------------------------------------------------------
 
 def plot_speedup_analysis(metrics: list[ScenarioMetrics],
@@ -521,7 +521,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.5 — Micro vs Meso runtime per engine
+# Figure 5.5: Micro vs Meso runtime per engine
 # ---------------------------------------------------------------------------
 
 def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
@@ -584,7 +584,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.6 — Runtime variability (boxplot per engine × mode)
+# Figure 5.6: Runtime variability (boxplot per engine × mode)
 # ---------------------------------------------------------------------------
 
 def plot_runtime_variability(results_paths: list[Path],
@@ -637,7 +637,7 @@ def plot_runtime_variability(results_paths: list[Path],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.7 — P95 tail latency vs mean (faceted by mode)
+# Figure 5.7: P95 tail latency vs mean (faceted by mode)
 # ---------------------------------------------------------------------------
 
 def plot_p95_travel_time(metrics: list[ScenarioMetrics],
@@ -706,7 +706,7 @@ def plot_p95_travel_time(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.8 — Trip-count parity (validates the SCC/feasibility filter)
+# Figure 5.8: Trip-count parity (validates the SCC/feasibility filter)
 # ---------------------------------------------------------------------------
 
 def plot_trip_count_parity(metrics: list[ScenarioMetrics],
@@ -770,7 +770,7 @@ def plot_trip_count_parity(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.9 — Demand composition (V5+ purpose taxonomy)
+# Figure 5.9: Demand composition (V5+ purpose taxonomy)
 # ---------------------------------------------------------------------------
 
 # Stack order (bottom → top): work-AM family, then school-AM, then PM family,
@@ -861,19 +861,19 @@ def plot_demand_composition(metrics: list[ScenarioMetrics],
 
 
 # ---------------------------------------------------------------------------
-# Figure 5.10 — Wall vs engine breakdown (Phase 11.6 timing split)
+# Figure 5.10: Wall vs engine breakdown (Phase 11.6 timing split)
 # ---------------------------------------------------------------------------
 
 def plot_wall_vs_engine(results_paths: list[Path],
                         output_dir: Path) -> Optional[Path]:
-    """Per-cell stacked bar: engine subprocess at the bottom, adapter
-    prep + output parsing on top. Documents where time actually goes
-    after the wall/engine split shipped in Phase 11.6 — Chapter 5
-    runtime tables cite the engine portion only, but adapter prep
-    (per-trip BFS routing) dominates for large scenarios.
+    """Per-cell stacked bar: the engine subprocess on the bottom, adapter
+    prep and output parsing on top. Shows where the time really goes once
+    the wall/engine split landed in Phase 11.6. Chapter 5's runtime tables
+    quote only the engine portion, but for large scenarios the adapter prep
+    (per-trip BFS routing) dominates.
 
-    Skipped when no run carries the new ``cell_wall_s`` /
-    ``engine_wall_s`` fields (pre-Phase 11.6 result files).
+    Skipped when no run carries the newer ``cell_wall_s`` / ``engine_wall_s``
+    fields (pre-Phase 11.6 result files).
     """
     _require_matplotlib()
     setup_style()
