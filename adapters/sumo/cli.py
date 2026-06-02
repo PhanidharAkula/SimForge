@@ -1,8 +1,8 @@
 """
-Command-line interface for the SUMO adapter.
+Command-line front end for the SUMO adapter.
 
-Usage (from repo root):
-    python -m adapters.sumo.cli scenarios/toy_2x2_grid out/sumo_toy
+Run it from the repo root:
+    python -m adapters.sumo.cli scenarios/chicago_1k_car out/sumo_chi
     python -m adapters.sumo.cli scenarios/chicago_1k_car out/sumo_chi --run
     python -m adapters.sumo.cli scenarios/chicago_1k_car out/sumo_chi --run --mesoscopic
 """
@@ -28,12 +28,11 @@ def _run_sumo(
     seed: int,
     timeout_s: int,
 ) -> tuple[bool, float, str | None]:
-    """
-    Invoke the `sumo` binary on a generated `.sumocfg` file.
+    """Run the `sumo` binary on a generated `.sumocfg`.
 
-    Always passes --ignore-route-errors because the adapter pre-computes routes
-    via BFS on the canonical node graph, which can disagree with SUMO's
-    edge-level lane connectivity on large real-world networks.
+    We always pass --ignore-route-errors. The adapter precomputes routes by
+    BFS over the canonical node graph, and on big real-world networks that
+    can disagree with SUMO's own edge-level lane connectivity.
     """
     if shutil.which("sumo") is None:
         return (
@@ -68,7 +67,8 @@ def _run_sumo(
         return False, time.time() - start, f"SUMO timed out after {timeout_s}s"
 
     runtime = time.time() - start
-    # SUMO returns non-zero for non-fatal warnings; treat hard errors in stderr as failure.
+    # SUMO exits non-zero even on harmless warnings, so only count it failed
+    # when stderr actually carries an "Error:" line.
     if result.returncode != 0:
         error_lines = [
             line for line in (result.stderr or "").splitlines()
@@ -80,7 +80,7 @@ def _run_sumo(
 
 
 def _summarize_tripinfo(tripinfo_path: Path) -> dict | None:
-    """Return mean/median/p95/min/max travel time from tripinfo.xml, or None."""
+    """Mean/median/p95/min/max travel time from tripinfo.xml, or None if there's nothing to read."""
     if not tripinfo_path.is_file():
         return None
     try:

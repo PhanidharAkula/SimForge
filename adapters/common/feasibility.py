@@ -1,41 +1,31 @@
-"""
-Shared trip feasibility filter used by every engine adapter.
+"""The one trip filter every adapter is required to use.
 
-SimForge's primary goal is a fair, apples-to-apples comparison. That only holds
-if every simulator is asked to run the *same* trip set. Different engines have
-different tolerance for unroutable demand:
+A fair comparison only means something if all three engines run the same
+trips. The trouble is they don't agree on what "runnable" means on their
+own. SUMO quietly skips any trip with no path; MATSim refuses to start at
+all on an unroutable plan, so its adapter pulls the largest strongly
+connected component and throws out trips with an endpoint outside it. Two
+different filters, two different trip sets: on chicago_1k_car that was
+SUMO at ~988/1000 and MATSim at ~981/1000.
 
-  - SUMO silently skips trips with no BFS-reachable path.
-  - MATSim crashes on unroutable plans, so its adapter extracts the largest
-    strongly-connected component and drops trips with endpoints outside it.
+So we decide feasibility once, here, and every adapter runs exactly that
+set. A trip survives only if both endpoints sit inside the SCC of the
+canonical network.
 
-Those two filters differ, so SUMO and MATSim were historically simulating
-*different* trip subsets — SUMO ~988/1000, MATSim ~981/1000 on chicago_1k_car.
-This module centralises the filter: every adapter computes the *same* set of
-feasible trip IDs and simulates exactly that subset. The filter is the
-intersection of both constraints: both endpoints must lie inside the largest
-strongly connected component of the canonical network.
+Why the SCC instead of plain origin-to-dest reachability? Three reasons.
+It's symmetric, so if a->b is feasible then b->a is too, which kills the
+last bit of asymmetry between directed engines. MATSim treats a missing
+return leg as a hard error, so a one-way reachability check would still be
+too loose for it. And on real urban OSM networks the SCC keeps 99%+ of the
+nodes anyway, so the cost is small and, crucially, identical for everyone.
 
-Why SCC (and not just BFS-reachable origin→dest)?
-
-  - SCC is symmetric: if a trip a→b is feasible, b→a is too. That removes the
-    last source of asymmetry between directed engines.
-  - MATSim's queue-based mobsim treats a missing return leg as a hard error,
-    so a strict origin→dest reachability check would still be too permissive
-    for MATSim.
-  - Empirically the SCC on realistic urban OSM networks keeps ≥99% of nodes,
-    so the loss is small and equal across engines.
-
-Mode-aware filtering
---------------------
-SimForge's three engines today only handle car traffic; multi-mode bundles
-(e.g. la_50k_car contains only car trips, but a bundle requested with
-``--modes car,transit`` would carry transit + bike rows in demand.csv).
-Each adapter declares which travel modes it supports; the feasibility
-filter optionally restricts the feasible set to trips whose ``mode``
-column is in that set. Engines then simulate exactly the same
-mode-filtered subset, and ``audit_fairness`` Q3 compares each engine's
-simulated count against this same per-engine target.
+Modes
+-----
+The engines only do cars today, but a bundle asked for with
+``--modes car,transit`` will still carry transit and bike rows in
+demand.csv. Each adapter says which modes it handles, and the filter can
+drop trips whose ``mode`` falls outside that set. ``audit_fairness`` Q3
+then checks each engine's simulated count against this same target.
 
 Usage
 -----
@@ -43,14 +33,14 @@ Usage
 
     feasible, report = feasible_trip_ids(
         network_path, demand_path,
-        supported_modes={"car"},     # engine-declared filter
+        supported_modes={"car"},     # what this engine handles
     )
     for row in demand_rows:
         if row["trip_id"] in feasible:
             ...  # render for this engine
 
-Every adapter MUST use this filter and nothing else for routability decisions,
-otherwise cross-engine counts will drift again.
+Use this and only this to decide routability. Roll your own and the
+cross-engine counts drift apart again.
 """
 
 from __future__ import annotations
@@ -88,8 +78,8 @@ class FeasibilityReport:
     skipped_outside_scc: int = 0
     skipped_unsupported_mode: int = 0
     skipped_trip_ids: List[str] = field(default_factory=list)
-    # Modes this engine accepts. Empty set means "all modes" (legacy /
-    # mode-agnostic behavior, kept for back-compat with external callers).
+    # Modes this engine accepts. Empty means "all modes", which is the old
+    # mode-agnostic behaviour we keep around for outside callers.
     supported_modes: List[str] = field(default_factory=list)
 
     @property
@@ -119,26 +109,19 @@ def feasible_trip_ids(
     demand_path: Path,
     supported_modes: Set[str] | None = None,
 ) -> Tuple[Set[str], FeasibilityReport]:
-    """
-    Compute the shared set of feasible trip IDs for a scenario.
+    """The shared set of feasible trip IDs for one scenario.
 
-    A trip is feasible when *both* its origin and destination nodes lie in the
-    largest strongly-connected component of the canonical network, and (when
-    ``supported_modes`` is provided) its ``mode`` column is in that set.
-    Every engine adapter must simulate exactly this set so cross-engine
-    results compare trips 1-to-1.
+    A trip makes the cut when both its endpoints are in the SCC of the
+    canonical network and, if ``supported_modes`` is given, its ``mode`` is
+    in that set. Every adapter runs exactly this set, which is what lets the
+    cross-engine results line up trip for trip.
 
-    Args:
-        network_path:    canonical network.xml.
-        demand_path:     canonical demand.csv (with ``mode`` column).
-        supported_modes: which travel modes this engine handles; trips with
-                         a ``mode`` column outside this set are dropped from
-                         the feasible set. ``None`` (default) disables the
-                         filter — kept for back-compat with mode-agnostic
-                         callers; new code should always pass an explicit set.
+    Pass ``supported_modes`` as the modes this engine handles; trips outside
+    it get dropped. ``None`` turns the mode filter off, which is only there
+    for old mode-agnostic callers, new code should always pass a set.
 
-    Returns (feasible_trip_ids, report). The report contains counts and a list
-    of skipped trip IDs for auditability.
+    Returns (feasible_trip_ids, report); the report carries the counts and
+    the skipped IDs so a run can be audited after the fact.
     """
     network_path = Path(network_path)
     demand_path = Path(demand_path)
@@ -170,9 +153,9 @@ def feasible_trip_ids(
             raise ValueError(
                 f"demand.csv at {demand_path} missing columns: {', '.join(sorted(missing))}"
             )
-        # Mode column is optional in single-mode bundles authored before the
-        # multi-mode pipeline shipped, so don't require it — but if it exists
-        # *and* the caller asked for a mode filter, apply it.
+        # Older single-mode bundles predate the multi-mode pipeline and have
+        # no mode column, so it's optional. Filter on it only when it's both
+        # present and the caller asked for one.
         has_mode_column = "mode" in (reader.fieldnames or [])
 
         for row in reader:
@@ -218,7 +201,7 @@ def write_feasibility_report(
 
 
 def log_report(report: FeasibilityReport, engine: str) -> None:
-    """Log the feasibility summary at WARNING level when trips are dropped."""
+    """Log the feasibility summary, bumping to WARNING when trips got dropped."""
     if report.feasible_trips == report.total_trips:
         logger.info("[%s] %s", engine, report.summary_line())
         return
@@ -235,12 +218,9 @@ def log_report(report: FeasibilityReport, engine: str) -> None:
 
 
 def resolve_network_and_demand(scenario_root: Path) -> Tuple[Path, Path]:
-    """
-    Resolve canonical network/demand paths from a scenario's manifest.xml.
-
-    Kept here so adapters can call a single helper instead of each re-parsing
-    the manifest just to run the feasibility filter.
-    """
+    """Pull the canonical network and demand paths out of a scenario's
+    manifest.xml, so each adapter doesn't reparse the manifest itself just to
+    run the filter."""
     manifest = scenario_root / "manifest.xml"
     if not manifest.is_file():
         raise FileNotFoundError(f"manifest.xml not found at {manifest}")

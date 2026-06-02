@@ -1,4 +1,4 @@
-"""MATSim Adapter - Activity-based mesoscopic traffic simulation."""
+"""MATSim adapter: activity-based mesoscopic traffic simulation."""
 
 from adapters.matsim.matsim_adapter import (
     MATSimConfig,

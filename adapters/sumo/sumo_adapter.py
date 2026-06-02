@@ -1,17 +1,18 @@
 """
 SUMO adapter for SimForge.
 
-For v0, this module:
+What this module does:
 
-- Loads a canonical scenario bundle (manifest, network, demand, config, optional signals).
-- Builds a simple summary of the scenario (node count, link count, trip count, time horizon, etc.).
-- Generates basic SUMO input files into an output directory:
-    - net.net.xml  : edges + lanes derived from canonical network.xml
-    - routes.rou.xml: vehicles + routes derived from canonical demand.csv
-    - toy.sumocfg   : SUMO configuration wiring them together
+- Reads a canonical scenario bundle (manifest, network, demand, config, and
+  signals if present).
+- Summarizes it: node/link/trip counts, time horizon, that sort of thing.
+- Writes the SUMO inputs into an output directory:
+    - net.net.xml   : edges and lanes from the canonical network.xml
+    - routes.rou.xml: vehicles and routes from the canonical demand.csv
+    - toy.sumocfg   : the SUMO config that ties them together
 
-This is still a simplified mapping, but unlike the pure placeholders, the files now
-reflect the actual canonical content of the toy scenario.
+The mapping is deliberately lean, but every file reflects the real canonical
+content of the bundle.
 """
 
 from __future__ import annotations
@@ -47,13 +48,10 @@ class ScenarioSummary:
 # ---------------------------------------------------------------------------
 
 def load_canonical_paths(scenario_root: Path) -> dict[str, Path]:
-    """
-    Resolve canonical file paths from manifest.xml.
+    """Resolve the canonical file paths from manifest.xml.
 
-    Expected:
-      - manifest.xml exists at scenario_root
-      - <canonical_files> section lists at least network, demand, config
-      - signals is optional
+    Assumes manifest.xml is at scenario_root and its <canonical_files> section
+    lists at least network, demand, and config. Signals is optional.
     """
     manifest_path = scenario_root / "manifest.xml"
     if not manifest_path.is_file():
@@ -76,20 +74,18 @@ def load_canonical_paths(scenario_root: Path) -> dict[str, Path]:
             continue
         resolved[file_type] = (manifest_path.parent / rel_path).resolve()
 
-    # Basic expectations for v0
+    # These three are mandatory; signals is allowed to be absent.
     for required_type in ("network", "demand", "config"):
         if required_type not in resolved:
             raise ValueError(f"manifest.xml does not define canonical '{required_type}' file")
 
-    # signals is optional
     return resolved
 
 
 def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
-    """
-    Load the canonical bundle and return a high-level summary.
+    """Load the bundle and hand back a high-level summary.
 
-    Uses canonical config, network, demand, and optional signals.
+    Pulls from config, network, demand, and signals if there is one.
     """
     paths = load_canonical_paths(scenario_root)
 
@@ -241,9 +237,7 @@ class NetworkGraph:
 
 
 def parse_canonical_network(network_path: Path) -> NetworkGraph:
-    """
-    Parse canonical network.xml into a simple directed graph representation.
-    """
+    """Parse network.xml into a plain directed-graph representation."""
     try:
         tree = ET.parse(network_path)
     except ET.ParseError as e:
@@ -299,13 +293,13 @@ def parse_canonical_network(network_path: Path) -> NetworkGraph:
                 speed = 13.9
             try:
                 lanes = int(lanes_raw)
-                lanes = max(1, lanes)  # Ensure at least 1 lane
+                lanes = max(1, lanes)  # at least one lane
             except ValueError:
                 lanes = 1
 
-            # Ensure minimum values for SUMO compatibility
-            length = max(0.1, length)  # Minimum 0.1m length
-            speed = max(0.1, speed)    # Minimum 0.1 m/s speed
+            # SUMO rejects zero-length or zero-speed edges, so floor both.
+            length = max(0.1, length)
+            speed = max(0.1, speed)
 
             link = CanonicalLink(
                 id=link_id,
@@ -333,17 +327,17 @@ def shortest_path_nodes(
     origin: str,
     dest: str,
 ) -> Optional[List[str]]:
-    """
-    Simple BFS shortest path on the node graph.
+    """BFS shortest path over the node graph.
 
-    Returns list of node ids from origin to dest (inclusive), or None if unreachable.
+    Hands back the node ids from origin to dest inclusive, or None if dest
+    isn't reachable.
     """
     if origin == dest:
         return [origin]
 
     if origin not in adjacency:
-        # Origin may still have incoming edges only; treat as no outgoing path
-        # For tiny toy networks we assume adjacency is enough.
+        # An origin with only incoming edges has nowhere to go; the BFS below
+        # just returns None for it.
         pass
 
     visited: Set[str] = set()
@@ -379,9 +373,7 @@ def shortest_path_nodes(
 # ---------------------------------------------------------------------------
 
 def build_sumo_nodes_xml(graph: NetworkGraph) -> str:
-    """
-    Build a SUMO nodes XML file (input for netconvert).
-    """
+    """Build the SUMO nodes XML that feeds netconvert."""
     lines: List[str] = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
     lines.append('<nodes>')
@@ -393,14 +385,13 @@ def build_sumo_nodes_xml(graph: NetworkGraph) -> str:
 
 
 def build_sumo_edges_xml(graph: NetworkGraph) -> str:
-    """
-    Build a SUMO edges XML file (input for netconvert).
+    """Build the SUMO edges XML that feeds netconvert.
 
-    Self-looped links (from_node == to_node) are filtered out: SUMO
-    1.26's netconvert exits non-zero with no output file when it sees
-    them, even though it only emits Warning lines. The canonical SCC
-    computation already drops self-loops, so this filter just keeps the
-    SUMO build path consistent with the routable subgraph.
+    Self-loops (from_node == to_node) get filtered out. SUMO 1.26's
+    netconvert exits non-zero and writes no output when it hits one, even
+    though it only logs a Warning about it. The canonical SCC already drops
+    self-loops, so this just keeps the SUMO build in step with the routable
+    subgraph.
     """
     lines: List[str] = []
     lines.append('<?xml version="1.0" encoding="UTF-8"?>')
@@ -423,28 +414,24 @@ def build_sumo_routes_xml(
     feasible: Set[str],
     canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> str:
-    """
-    Build a SUMO routes file based on canonical demand.csv and the network graph.
+    """Build the SUMO routes file from demand.csv and the network graph.
 
-    Only trips in ``feasible`` (the shared cross-engine feasibility set) are
-    routed.
+    Only trips in ``feasible`` (the shared cross-engine set) get routed.
 
-    Phase 14+ behavior:
-      - When ``canonical_routes`` is provided (the shared BFS output from
-        ``adapters.common.canonical_routes.compute_canonical_routes``),
-        this function skips its inline BFS pass and consumes the
-        pre-computed ``Dict[trip_id, List[node_id]]`` directly. Both
-        SUMO and MATSim adapters can take the same dict, so each
-        scenario pays the BFS cost once instead of twice.
-      - When ``canonical_routes`` is ``None`` (legacy / standalone CLI
-        usage), this function falls back to running its own state-aware
-        BFS in-loop — pre-Phase-14 behavior preserved for back-compat.
+    There are two ways routes get computed. If ``canonical_routes`` is
+    passed in (the shared BFS output from
+    ``adapters.common.canonical_routes.compute_canonical_routes``), we skip
+    the inline BFS and just read the pre-computed
+    ``Dict[trip_id, List[node_id]]``. Both the SUMO and MATSim adapters
+    accept the same dict, so a scenario pays the BFS cost once, not twice.
+    If it's ``None`` (the standalone CLI path), we run our own state-aware
+    BFS in the loop, same as before Phase 14.
 
-    State-aware BFS notes (apply to both paths above): the V5+ pass
-    respects OSM turn restrictions; when no restricted-aware path
-    exists we fall back to plain BFS so the trip is still rendered
-    (consistent with pre-V5 behavior — turn restrictions don't
-    disconnect ODs in practice on real OSM networks).
+    Either way the BFS is state-aware (V5+): it honors OSM turn
+    restrictions, and when no restriction-respecting path exists it falls
+    back to plain BFS so the trip still gets rendered. On real OSM networks
+    turn restrictions don't actually disconnect any OD pair, so this
+    fallback is rare.
     """
     from pipeline.network.turn_restrictions import (
         parse_turn_restrictions, build_forbidden_moves,
@@ -460,25 +447,22 @@ def build_sumo_routes_xml(
     lines.append("<!-- SUMO routes generated from canonical demand.csv -->")
     lines.append(f"<!-- Scenario: {summary.scenario_id}, trips: {summary.trip_count} -->")
     lines.append("<routes>")
-    # V11+ canonical SimForge vehicle type — see adapters/common/vehicle_types.py
-    # for the cross-engine alignment rationale (SUMO physical length+minGap
-    # ≡ MATSim effective length ≡ DTALite PCE).
+    # The shared SimForge car type (V11+). See adapters/common/vehicle_types.py
+    # for why the three engines line up: SUMO length+minGap, MATSim effective
+    # length, and DTALite PCE all describe the same car.
     lines.append(sumo_vtype_xml())
 
-    # Phase 14: when the harness pre-computed routes via the shared
-    # BFS, skip the inline BFS entirely. Set up local state to mirror
-    # the legacy path's logging so downstream observers see the same
-    # counters either way.
+    # If the harness already ran the shared BFS, skip ours. We still set up
+    # the same local counters so the logging looks identical on both paths.
     using_shared_routes = canonical_routes is not None
     forbidden_moves: dict = {}
     network_path = demand_path.parent / "network.xml"
     if not using_shared_routes:
-        # Load OSM turn restrictions (V5+). Pre-V5 networks return
-        # empty list, in which case state-aware BFS reduces to plain
-        # BFS — back-compat.
+        # Turn restrictions are a V5+ thing; older networks hand back an empty
+        # list, and then state-aware BFS is just plain BFS.
         restrictions = parse_turn_restrictions(network_path)
         if restrictions:
-            # Build outgoing-links-by-node for `only_*_turn` expansion.
+            # Outgoing links per node, needed to expand the `only_*_turn` rules.
             outgoing_links_by_node: dict = {}
             for u, neighbors in graph.adjacency.items():
                 outgoing_links_by_node[u] = [
@@ -514,11 +498,9 @@ def build_sumo_routes_xml(
             dest = (row.get("destination_node_id") or "").strip()
             depart = (row.get("departure_time_s") or "").strip()
 
-            # Phase 14: consume pre-computed routes when available;
-            # otherwise run the legacy inline BFS. The pre-computed
-            # routes are byte-identical to what the inline BFS would
-            # produce per trip_id (pinned by
-            # tests/test_canonical_routes.py::TestByteIdentityVsLegacy).
+            # Use the pre-computed route if we have one, else run the inline
+            # BFS. The two produce byte-identical paths per trip_id, which
+            # tests/test_canonical_routes.py::TestByteIdentityVsLegacy pins down.
             if using_shared_routes:
                 path_nodes = canonical_routes.get(trip_id) or None
             elif forbidden_moves:
@@ -567,8 +549,8 @@ def build_sumo_routes_xml(
             restriction_fallbacks, len(feasible) - len(route_failures),
         )
 
-    # Any failure here means the shared SCC filter disagrees with SUMO's BFS —
-    # that should never happen, so loudly surface it instead of silently dropping.
+    # If anything lands here, the shared SCC filter and SUMO's BFS disagree,
+    # which shouldn't be possible. Make noise rather than drop trips quietly.
     if route_failures:
         logger.error(
             "SUMO could not route %d feasible trips — this contradicts the "
@@ -595,19 +577,15 @@ def prepare_sumo_inputs(
     output_dir: Path,
     canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> ScenarioSummary:
-    """
-    Prepare SUMO input files for the given canonical scenario.
+    """Write the SUMO input files for a canonical scenario.
 
-    v0 behavior:
-      - Ensure output_dir exists.
-      - Compute a ScenarioSummary.
-      - Parse canonical network into a simple graph.
-      - Generate:
-          - nodes.nod.xml (SUMO nodes input for netconvert)
-          - edges.edg.xml (SUMO edges input for netconvert)
-          - net.net.xml   (generated by netconvert)
-          - routes.rou.xml (vehicles + routes for each trip with a valid path)
-          - toy.sumocfg   (linking net + routes with correct time horizon)
+    Makes output_dir, builds a ScenarioSummary, parses the network into a
+    graph, and writes:
+      - nodes.nod.xml  (SUMO nodes, input to netconvert)
+      - edges.edg.xml  (SUMO edges, input to netconvert)
+      - net.net.xml    (netconvert's output)
+      - routes.rou.xml (a vehicle and route per trip that has a valid path)
+      - toy.sumocfg    (ties net and routes together with the time horizon)
     """
     scenario_root = scenario_root.resolve()
     output_dir = output_dir.resolve()
@@ -624,17 +602,14 @@ def prepare_sumo_inputs(
     # Network graph for routing + edge mapping
     graph = parse_canonical_network(network_path)
 
-    # Cross-engine fairness: prune to the largest SCC before emitting,
-    # matching what MATSim's clean_network and DTALite's prepare path
-    # do. Without this filter, SUMO would emit the full canonical
-    # network (with non-SCC dead-end stubs) while MATSim and DTALite
-    # emit only the SCC subset — a documented fairness gap that made
-    # SUMO's input network read 314 nodes / 346 links larger than the
-    # other two on chicago_1k_car. The trips themselves are already
-    # restricted to SCC origins/destinations by the shared feasibility
-    # filter, so the dropped non-SCC nodes are unused either way; this
-    # change just makes the input artefacts byte-comparable across
-    # engines for the audit_fairness Q2 check.
+    # Fairness: prune to the largest SCC before writing anything, the same as
+    # MATSim's clean_network and DTALite's prepare path. Skip this and SUMO
+    # would write the full canonical network, dead-end stubs and all, while
+    # the other two write only the SCC subset. That gap once made SUMO's
+    # input network read 314 nodes / 346 links bigger than the others on
+    # chicago_1k_car. The trips are already pinned to SCC endpoints by the
+    # feasibility filter, so the pruned nodes were unused anyway; this just
+    # makes the input files byte-comparable for the audit_fairness Q2 check.
     from pipeline.network.scc import compute_largest_scc
     scc_node_ids = compute_largest_scc(
         set(graph.nodes.keys()),
@@ -643,13 +618,12 @@ def prepare_sumo_inputs(
     scc_nodes = {nid: n for nid, n in graph.nodes.items() if nid in scc_node_ids}
     scc_links = [lk for lk in graph.links
                  if lk.from_node in scc_node_ids and lk.to_node in scc_node_ids]
-    # Critical: rebuild adjacency + edge_lookup against the filtered link
-    # set. These two indices are consumed by shortest_path_nodes (BFS) when
-    # SUMO's prepare path routes every trip; leaving them empty made BFS
-    # return no edges, which silently dropped every trip into the
-    # "SCC-feasible but SUMO failed to route" bucket and produced an empty
-    # routes.rou.xml. Diagnosed via audit_fairness Q3=0 on chicago_1k_car
-    # smoke2 (Pitzer 2026-04-27).
+    # Rebuild adjacency and edge_lookup against the filtered links, and don't
+    # skip this. shortest_path_nodes (the BFS) reads these two indices to
+    # route every trip; leave them stale and the BFS finds no edges, every
+    # trip falls into the "SCC-feasible but SUMO failed to route" bucket, and
+    # routes.rou.xml comes out empty. Found via audit_fairness Q3=0 on
+    # chicago_1k_car smoke2 (Pitzer 2026-04-27).
     scc_adjacency: Dict[str, List[str]] = {}
     scc_edge_lookup: Dict[Tuple[str, str], CanonicalLink] = {}
     for lk in scc_links:
@@ -718,19 +692,18 @@ def prepare_sumo_inputs(
             "  Then verify:   netconvert --version"
         ) from exc
 
-    # Compute the shared feasibility set — every engine must simulate exactly this subset.
-    # SUMO adapter currently only handles car traffic — non-car trips
-    # (transit / bike / walk) are dropped from the feasibility set so
-    # cross-engine Q3 audit compares all engines on the same target.
+    # The shared feasibility set: every engine simulates exactly this subset.
+    # SUMO only does cars for now, so transit/bike/walk trips drop out of the
+    # set here, which keeps the cross-engine Q3 audit on one common target.
     feasible, feas_report = _feasibility.feasible_trip_ids(
         network_path, demand_path, supported_modes={"car"},
     )
     _feasibility.log_report(feas_report, engine="sumo")
     _feasibility.write_feasibility_report(feas_report, output_dir / "feasibility_report.json")
 
-    # Build SUMO routes. Phase 14+: if the caller pre-computed canonical
-    # routes via adapters.common.canonical_routes.compute_canonical_routes,
-    # consume them here and skip the inline BFS — Phase 14.2.
+    # Build the routes. If the caller already computed canonical routes via
+    # adapters.common.canonical_routes.compute_canonical_routes, we use those
+    # and skip the inline BFS.
     routes_content = build_sumo_routes_xml(
         summary, graph, demand_path, feasible,
         canonical_routes=canonical_routes,
@@ -773,13 +746,13 @@ def run_sumo(
     ignore_route_errors: bool = True,
     mesoscopic: bool = False,
 ) -> Tuple[bool, float, Optional[str]]:
-    """Run a SUMO simulation against a prepared `.sumocfg`.
+    """Run SUMO against a prepared `.sumocfg`.
 
-    Mirrors the three-function adapter contract documented at
-    `doc/engines/THIRD_ENGINE_OPTIONS.md` ("Adapter pattern"):
-    `prepare_<engine>_inputs / run_<engine> / parse_<engine>_output`.
-    Used by `execution.run_benchmark.BenchmarkHarness.run_sumo` which
-    delegates to this function so behaviour stays in the adapter module.
+    This is the run half of the three-function adapter contract
+    (`prepare_<engine>_inputs / run_<engine> / parse_<engine>_output`,
+    written up in `doc/engines/THIRD_ENGINE_OPTIONS.md`).
+    `execution.run_benchmark.BenchmarkHarness.run_sumo` just delegates here
+    so the actual behaviour stays in the adapter.
 
     Returns (success, runtime_seconds, error_message_or_None).
     """
@@ -824,11 +797,11 @@ def run_sumo(
 
 
 def parse_sumo_output(output_dir: Path) -> dict:
-    """Parse SUMO output dir into the standard metrics dict.
+    """Read the SUMO output dir into the standard metrics dict.
 
-    Delegates to `evaluation.metrics.travel_time.parse_sumo_tripinfo`
-    and returns the same dict shape as `parse_matsim_output` and
-    `parse_dtalite_output` for cross-engine homogeneity:
+    Hands off to `evaluation.metrics.travel_time.parse_sumo_tripinfo` and
+    returns the same shape as `parse_matsim_output` and
+    `parse_dtalite_output` so the engines stay interchangeable:
     ``{"travel_time": {"mean": float, "p95": float, "trip_count": int}}``
     """
     from evaluation.metrics.travel_time import parse_sumo_tripinfo

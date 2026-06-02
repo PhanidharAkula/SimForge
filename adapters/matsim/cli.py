@@ -1,9 +1,9 @@
 """
-CLI for MATSim adapter.
+Command-line front end for the MATSim adapter.
 
-Usage:
-    python -m adapters.matsim.cli scenarios/toy_2x2_grid out/matsim
-    python -m adapters.matsim.cli scenarios/sioux_falls_tier50k out/matsim --run
+Run it from the repo root:
+    python -m adapters.matsim.cli scenarios/chicago_1k_car out/matsim
+    python -m adapters.matsim.cli scenarios/nyc_10k_car out/matsim --run
 """
 
 import argparse

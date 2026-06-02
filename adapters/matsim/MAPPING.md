@@ -97,7 +97,7 @@ trip_1,n1,n4,28800,car
 - `mode` → `leg.mode`
 - V5+ `purpose` and `dest_source` columns: read by name and ignored.
   Chain semantics from `HBSchool_AM` + `HBW_AM_chained` rows are not
-  preserved — each row produces an independent `<person>` with its
+  preserved, each row produces an independent `<person>` with its
   own 2-activity plan, even though both legs were emitted by the same
   parent's chain.
 
@@ -112,7 +112,7 @@ prescribed route verbatim and never crosses a forbidden movement.
 Falls back to plain BFS when no restriction-respecting path exists
 (rare; SCC-feasible by construction).
 
-> Note: pre-V11.2 used the plans_v4 DTD — V11.2 corrected it to
+> Note: pre-V11.2 used the plans_v4 DTD, V11.2 corrected it to
 > population_v6 because plans_v4's `<route>` element only accepts
 > cost-optimisation `type` values (`dist|trav-time|num-nodes|num-intersects`)
 > and treats text content as a *node* sequence, breaking V5 Phase 7's
@@ -123,7 +123,7 @@ Falls back to plain BFS when no restriction-respecting path exists
 ### Vehicle type (V11+)
 
 `build_matsim_vehicles_xml` emits a single `<vehicleType id="car">`
-sourced from `adapters/common/vehicle_types.py` — the same module SUMO
+sourced from `adapters/common/vehicle_types.py`, the same module SUMO
 and DTALite read for their canonical values. MATSim's `<length>`
 attribute is the *effective* spacing (physical + safety gap, per
 MATSim convention), so it equals SUMO's `length + minGap` and the two
@@ -148,7 +148,7 @@ MATSim's queue mobsim. V11+ centralises and corrects both. See
 `CHANGELOG.md` Phase 11 for the full history.
 
 **Within-bucket heterogeneity** (taxis JWTRNS=7, motorcycles JWTRNS=8,
-trucks/vans within JWTRNS=1, carpool occupancy) is *not* modeled — every
+trucks/vans within JWTRNS=1, carpool occupancy) is *not* modeled, every
 car-bucket trip uses the same `<vehicleType id="car">`. See
 `doc/SCENARIO_GENERATION.md` §"Vehicle-type realism" for the V12
 improvement path.
@@ -161,7 +161,7 @@ MATSim has a separate signals extension. For v0, we can:
 2. **Future**: Map to MATSim's `signalSystems.xml`, `signalGroups.xml`, `signalControl.xml`
 
 V5+ note: signal *placement* in the canonical `signals.xml` is now
-OSM-grounded (`has_signal="true"` only — Phase 6), so when the future
+OSM-grounded (`has_signal="true"` only, Phase 6), so when the future
 mapping lands it will signalize the same set of intersections that
 SUMO's TLS does.
 

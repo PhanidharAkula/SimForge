@@ -1,38 +1,37 @@
 """
-DTALite Adapter for SimForge.
+DTALite adapter for SimForge.
 
-DTALite is the C++ open-source mesoscopic Dynamic Traffic Assignment engine
-distributed as a bundled binary inside the `path4gmns` Python package
-(https://github.com/jdlph/Path4GMNS). It fills the third-engine slot in
-SimForge's Version_5 matrix after LPSim was abandoned (see
+DTALite is an open-source C++ mesoscopic dynamic-traffic-assignment engine,
+shipped as a bundled binary inside the `path4gmns` Python package
+(https://github.com/jdlph/Path4GMNS). It took the third-engine slot in the
+Version_5 matrix once LPSim was abandoned (the story is in
 `doc/engines/LPSIM_RETROSPECTIVE.md`).
 
-DTALite consumes the GMNS (General Modeling Network Specification) open
-data standard:
+It speaks GMNS (the General Modeling Network Specification):
 
-  * ``node.csv`` columns: ``node_id, x_coord, y_coord, zone_id``
-  * ``link.csv`` columns: ``link_id, from_node_id, to_node_id, length,
-                           lanes, capacity, free_speed, link_type, VDF_*``
-  * ``demand.csv`` columns: ``o_zone_id, d_zone_id, volume``
-  * ``settings.yml``: agents / demand_periods / demand_files config
+  * ``node.csv``: ``node_id, x_coord, y_coord, zone_id``
+  * ``link.csv``: ``link_id, from_node_id, to_node_id, length, lanes,
+                   capacity, free_speed, link_type, VDF_*``
+  * ``demand.csv``: ``o_zone_id, d_zone_id, volume``
+  * ``settings.yml``: agents, demand periods, demand files
 
-DTALite is **CPU-only**, **deterministic**, and runs natively on Mac
-(arm64 / x86_64), Linux x86_64, and Windows. The bundled binary in
-path4gmns/bin/ is selected at run time by ctypes based on platform.
-On Mac the OpenMP runtime is required: ``brew install libomp``.
+DTALite is CPU-only, deterministic, and runs natively on Mac (arm64 and
+x86_64), Linux x86_64, and Windows. ctypes picks the right bundled binary
+from path4gmns/bin/ at run time. On Mac you need the OpenMP runtime:
+``brew install libomp``.
 
-Outputs (in the run directory):
+What it writes into the run directory:
 
-  * ``link_performance.csv`` — per-link volume, travel_time (min), VOC
-  * ``agent.csv`` — per-agent path_id, volume, travel_time (min),
-                     distance (km), node_sequence, link_sequence
+  * ``link_performance.csv``: per-link volume, travel time (min), VOC
+  * ``agent.csv``: per-agent path_id, volume, travel time (min),
+                   distance (km), node and link sequences
   * ``od_performance.csv``, ``log_main.txt``, ``log_DTA.txt``
 
-Note on units: DTALite uses **kilometres** for length and **km/h** for
-speed, while SimForge's canonical schema uses meters and m/s. The writers
-below convert at the boundary. Travel time in DTALite output is in
-**minutes**; ``parse_dtalite_output`` converts to seconds for the
-cross-engine TripStats schema.
+One thing to watch: DTALite measures length in kilometres and speed in
+km/h, while the canonical schema is meters and m/s, so the writers below
+convert at the boundary. DTALite's travel times come out in minutes, and
+``parse_dtalite_output`` turns them back into seconds for the shared
+TripStats schema.
 
 Usage::
 
@@ -69,14 +68,14 @@ from pipeline.network.scc import compute_largest_scc
 
 
 def _import_path4gmns():
-    """Import path4gmns without its noisy `path4gmns, version 0.10.0`
-    print on stdout. The package's __init__.py unconditionally calls
-    `print(f'path4gmns, version {__version__}')` at module-load time;
-    we suppress that single line by redirecting stdout for the duration
-    of the import. Subsequent imports are no-ops (module is cached) so
-    the suppression is paid exactly once per Python process.
+    """Import path4gmns quietly.
 
-    Returns the path4gmns module, or raises ImportError if missing.
+    Its __init__.py prints `path4gmns, version 0.10.0` to stdout on import,
+    every time, with no way to turn it off. We swallow that one line by
+    redirecting stdout just for the import. After the first call the module
+    is cached, so the cost is paid once per process.
+
+    Returns the path4gmns module, or raises ImportError if it's missing.
     """
     import io
     saved = sys.stdout
@@ -92,7 +91,7 @@ logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
-# Unit conversions — canonical (m, m/s) → GMNS (km, km/h)
+# Unit conversions: canonical (m, m/s) -> GMNS (km, km/h)
 # ---------------------------------------------------------------------------
 
 _M_TO_KM = 1.0 / 1000.0
@@ -100,46 +99,46 @@ _MS_TO_KMH = 3.6  # 1 m/s = 3.6 km/h
 _MIN_TO_SEC = 60.0
 _KM_TO_M = 1000.0
 
-# DTALite's GMNS link.csv loader rejects zero-length links. The canonical
-# extract drops length<=0 already (see pipeline/network/build_network_from_osm.py)
-# but some sub-meter edges survive; floor to 1 m so DTA's free-flow time
-# (length/free_speed) is non-zero per-link.
+# DTALite's GMNS link.csv loader won't take zero-length links. The canonical
+# extract already drops length<=0 (see pipeline/network/build_network_from_osm.py),
+# but a few sub-meter edges slip through, so floor to 1 m and DTA's free-flow
+# time (length/free_speed) stays non-zero on every link.
 _DTALITE_MIN_EDGE_LENGTH_M = 1.0
 
-# Per-lane hourly capacity default. GMNS does not preserve capacity from
-# OSM, so we use the standard urban-arterial value used by the FHWA HCM
-# (1800 vph/lane). DTALite's BPR VDF re-derives realised capacity from
-# this baseline plus the calibrated alpha/beta.
+# Default per-lane hourly capacity. GMNS doesn't carry capacity over from OSM,
+# so we use the standard urban-arterial figure from the FHWA HCM (1800 vph per
+# lane). DTALite's BPR VDF works realised capacity back out from this plus the
+# calibrated alpha/beta.
 _DEFAULT_CAPACITY_VPH_PER_LANE = 1800
 
-# Free-flow speed floor — DTALite's BPR cost function divides by
-# free_speed; below ~1 km/h numerical issues appear. Canonical road
-# speeds are always at least walking pace.
+# Free-flow speed floor. DTALite's BPR cost divides by free_speed, and below
+# ~1 km/h that gets numerically nasty. Real road speeds are always at least
+# walking pace anyway.
 _DTALITE_MIN_SPEED_KMH = 5.0
 
 
 @dataclass
 class DTALiteConfig:
-    """Subset of DTALite's ``settings.yml`` that SimForge controls.
+    """The part of DTALite's ``settings.yml`` that SimForge sets.
 
-    DTALite's two key knobs are ``number_of_iterations`` (outer DTA
-    iterations seeking user equilibrium) and
+    The two knobs that matter are ``number_of_iterations`` (outer DTA
+    iterations chasing user equilibrium) and
     ``number_of_column_updating_iterations`` (inner column-pool refinement
-    per outer iteration). At SimForge scenario sizes the defaults below
-    converge UE to under 1% gap in well under a minute.
+    within each outer iteration). At our scenario sizes the defaults below
+    get UE under a 1% gap in well under a minute.
     """
 
     iterations: int = 5
     column_updating_iterations: int = 5
-    # 0 = assignment only; 1 = also write per-link/per-agent performance.
-    # SimForge needs the per-agent output for travel-time stats.
+    # 0 = assignment only; 1 = also write per-link and per-agent performance.
+    # We need the per-agent output for travel-time stats.
     simulation_output: int = 1
-    # UE convergence percentage — DTA stops when relative gap < this.
+    # UE convergence percent: DTA stops once the relative gap drops below this.
     ue_convergence_percent: float = 0.1
     number_of_cpu_processors: int = 4
-    # Demand period (24-hour clock, 4-digit). Width must contain every trip's
-    # canonical departure_time; we pick 0700-0800 by default to match the
-    # bundled scenarios' morning-peak focus.
+    # Demand period (4-digit, 24-hour clock). It has to span every trip's
+    # departure_time; the 0700-0800 default matches the bundled scenarios'
+    # morning-peak focus.
     demand_period_start_hhmm: str = "0700"
     demand_period_end_hhmm: str = "0800"
 
@@ -161,13 +160,12 @@ class DTALiteConfig:
 
 
 def is_dtalite_available() -> bool:
-    """Return True if path4gmns is importable AND its bundled binary works.
+    """True when path4gmns imports and its bundled binary is actually there.
 
-    The bundled binary is platform-specific (arm.dylib / x86.dylib on
-    Mac, .so on Linux, .dll on Windows). path4gmns's ctypes loader picks
-    the right one at run time. We also check the platform-specific
-    binary file actually exists, since pip's wheel could ship a broken
-    layout.
+    The binary is platform-specific (arm.dylib / x86.dylib on Mac, .so on
+    Linux, .dll on Windows), and path4gmns's ctypes loader picks the right
+    one at run time. We also confirm the file exists, in case pip's wheel
+    shipped a broken layout.
     """
     try:
         _import_path4gmns()
@@ -177,15 +175,14 @@ def is_dtalite_available() -> bool:
 
 
 def find_dtalite_binary() -> Optional[Path]:
-    """Locate the bundled DTALiteMM binary for the current platform.
+    """Find the bundled DTALiteMM binary for this platform.
 
-    Returns the path to the .so / .dylib / .dll that path4gmns will
-    dlopen at run time. Used by ``tools/env_report.py`` to surface which
-    binary will execute, not by ``run_dtalite`` itself (which delegates
-    binary selection to path4gmns).
+    Returns the .so / .dylib / .dll that path4gmns will dlopen at run time.
+    ``tools/env_report.py`` uses this to show which binary will run;
+    ``run_dtalite`` doesn't, since it lets path4gmns pick.
 
-    Returns None if path4gmns is not installed or the platform-specific
-    binary is missing from the package.
+    Returns None if path4gmns isn't installed or the binary for this
+    platform isn't in the package.
     """
     try:
         pg = _import_path4gmns()
@@ -197,7 +194,7 @@ def find_dtalite_binary() -> Optional[Path]:
     system = platform.system()
     machine = platform.machine().lower()
     if system == "Darwin":
-        # Mac: arm64 → DTALiteMM_arm.dylib, x86_64 → DTALiteMM_x86.dylib
+        # Mac: arm64 wants DTALiteMM_arm.dylib, x86_64 wants DTALiteMM_x86.dylib.
         suffix = "arm" if machine in ("arm64", "aarch64") else "x86"
         cand = bin_dir / f"DTALiteMM_{suffix}.dylib"
     elif system == "Linux":
@@ -210,7 +207,7 @@ def find_dtalite_binary() -> Optional[Path]:
 
 
 # ---------------------------------------------------------------------------
-# Index helpers — canonical "n123" / "l456" → GMNS integer node/link IDs
+# Index helpers: canonical "n123" / "l456" -> GMNS integer node/link IDs
 # ---------------------------------------------------------------------------
 
 
@@ -323,17 +320,17 @@ def write_dtalite_link_csv(graph: NetworkGraph, out_path: Path) -> int:
           VDF_fftt1, VDF_cap1, VDF_alpha1, VDF_beta1``
 
     Conversions at the boundary:
-      * length: canonical meters → GMNS kilometers
-      * speed:  canonical m/s   → GMNS km/h
+      * length: canonical meters to GMNS kilometers
+      * speed:  canonical m/s to GMNS km/h
 
-    Self-loops (u == v) and sub-meter edges are dropped — same filters
-    we used for LPSim, applied here for DTA's sake (zero-length links
-    cause divide-by-zero in the BPR cost function).
+    We drop self-loops (u == v) and sub-meter edges, the same filters we
+    used for LPSim. Zero-length links would divide by zero in the BPR cost
+    function.
 
-    VDF (Volume Delay Function) parameters use the canonical BPR form
+    The VDF (volume delay function) parameters use the standard BPR form
     with FHWA HCM defaults: ``alpha=0.15, beta=4`` and capacity = lanes
-    × 1800 vph. ``VDF_fftt1`` is the free-flow travel time in minutes
-    (length_km / free_speed_kmh × 60).
+    times 1800 vph. ``VDF_fftt1`` is the free-flow travel time in minutes
+    (length_km / free_speed_kmh times 60).
     """
     rows = 0
     skipped_self = 0
@@ -392,23 +389,21 @@ def write_dtalite_movement_csv(
         ``mvmt_id, node_id, ib_link_id, ob_link_id, type, penalty,
         capacity, ctrl_type, geometry``
 
-    SimForge emits one row per ``<turn_restriction>`` entry in
-    ``network.xml``. ``capacity=0`` and ``penalty=99999`` flag the
-    movement as forbidden — most GMNS loaders treat either as a hard
-    block.
+    One row per ``<turn_restriction>`` in ``network.xml``. ``capacity=0``
+    and ``penalty=99999`` mark the movement forbidden; most GMNS loaders
+    treat either one as a hard block.
 
-    Note (V5): ``path4gmns 0.10.0`` (the DTA backend SimForge uses for
-    DTALite) does not yet ingest ``movement.csv`` natively, so this
-    file is currently *documentary* — it preserves the OSM ground truth
-    in the engine bundle for cross-tool conformance and downstream audit
-    use, but DTALite's UE assignment will not actively avoid the
-    restricted movements. SUMO and MATSim both pre-route via SimForge's
-    state-aware BFS and therefore do enforce restrictions; this is the
-    one cross-engine asymmetry that V5 leaves open. See doc/MODELGEN_AND_MODES.md
-    §future-work for the path-4gmns enhancement that would close it.
+    A V5 caveat: path4gmns 0.10.0 (our DTA backend) doesn't read
+    ``movement.csv`` yet, so for now this file is documentary. It keeps the
+    OSM ground truth in the bundle for cross-tool conformance and later
+    audits, but DTALite's UE assignment won't actually steer around the
+    restricted movements. SUMO and MATSim both pre-route via the
+    state-aware BFS, so they do enforce them; this is the one cross-engine
+    asymmetry V5 leaves open. doc/MODELGEN_AND_MODES.md (future work) covers
+    the path4gmns change that would close it.
 
-    Returns the number of movement rows written. Returns 0 silently
-    when the canonical network has no ``<turn_restrictions>`` block.
+    Returns how many movement rows were written, or 0 (quietly) when the
+    network has no ``<turn_restrictions>`` block.
     """
     from pipeline.network.turn_restrictions import parse_turn_restrictions
 
@@ -417,9 +412,8 @@ def write_dtalite_movement_csv(
 
     restrictions = parse_turn_restrictions(network_path)
     if not restrictions:
-        # Don't emit an empty file — DTA tools sometimes choke on
-        # header-only CSVs and the absence of the file is unambiguous
-        # (no restrictions in this network).
+        # Skip the file rather than write a header-only CSV, which some DTA
+        # tools choke on. A missing file is unambiguous: no restrictions here.
         return 0
 
     # Map OSM restriction values to GMNS movement types when possible.
@@ -439,7 +433,7 @@ def write_dtalite_movement_csv(
         w.writerow([
             "mvmt_id", "node_id", "ib_link_id", "ob_link_id",
             "type", "penalty", "capacity", "ctrl_type", "geometry",
-            "osm_restriction",  # provenance — non-standard but useful
+            "osm_restriction",  # provenance, non-standard but handy
         ])
         # Sort by (via_node, from_link, to_link) for deterministic output.
         for i, r in enumerate(sorted(
@@ -465,13 +459,12 @@ def write_dtalite_demand_csv(
 
     Schema: ``o_zone_id, d_zone_id, volume``.
 
-    Aggregates canonical per-trip demand to (origin, destination) → trip
-    count. DTALite's UE assignment treats `volume` as the matrix entry
-    in vehicles per demand period; one canonical trip = one vehicle.
+    Rolls the per-trip demand up into (origin, destination) trip counts.
+    DTALite's UE assignment reads `volume` as the OD-matrix entry in
+    vehicles per demand period, and one canonical trip is one vehicle.
 
-    Only feasible trips (per the cross-engine SCC filter) are emitted —
-    same filter SUMO and MATSim use, so every engine simulates the same
-    trip set.
+    Only feasible trips go in, per the cross-engine SCC filter, the same
+    one SUMO and MATSim use, so every engine runs the same trip set.
     """
     od_counts: Counter = Counter()
     with demand_path.open(encoding="utf-8", newline="") as in_f:
@@ -490,16 +483,16 @@ def write_dtalite_demand_csv(
             except ValueError:
                 continue
             if o_idx == d_idx:
-                # Skip intra-zonal trips — DTALite treats them as zero-cost
-                # which inflates the agreement metric without simulating
-                # anything; SUMO and MATSim drop them too.
+                # Skip intra-zonal trips. DTALite calls them zero-cost, which
+                # pads the agreement metric without simulating anything, and
+                # SUMO and MATSim drop them too.
                 continue
             od_counts[(o_idx, d_idx)] += 1
     with out_path.open("w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow(["o_zone_id", "d_zone_id", "volume"])
-        # Sort for determinism — adapter outputs must be byte-identical
-        # across re-runs (matches test_adapter_determinism in the suite).
+        # Sort so the output is deterministic: adapter files have to be
+        # byte-identical across re-runs (test_adapter_determinism checks this).
         for (o, d), volume in sorted(od_counts.items()):
             w.writerow([o, d, volume])
     return len(od_counts)
@@ -553,20 +546,19 @@ def write_dtalite_settings_csv(
 ) -> None:
     """Write DTALite ``settings.csv`` (the section file the C++ binary reads).
 
-    DTALite's C++ binary reads its assignment parameters, agent type,
-    link type, demand period, and demand file list from this
-    sectioned-CSV file. The format is deliberately spreadsheet-friendly
-    (each section header in one column with the rest blank, then a
-    column header row, then data rows). path4gmns's Python wrapper
-    reads ``settings.yml`` instead but DTALite itself ignores the YAML
-    for these sections — both files must be present.
+    DTALite's C++ binary reads its assignment parameters, agent type, link
+    type, demand period, and demand file list from this sectioned CSV. The
+    layout is deliberately spreadsheet-friendly: a section header alone in
+    one column, then a column-header row, then data rows. path4gmns's Python
+    wrapper reads ``settings.yml`` instead, but the C++ binary ignores the
+    YAML for these sections, so both files have to be present.
 
     Sections written:
-      * ``[assignment]`` — DTA mode + iteration counts + UE gap
-      * ``[agent_type]`` — single auto agent (cars only)
-      * ``[link_type]`` — Highway/Expressway with type_code=f, traffic=0
-      * ``[demand_period]`` — single AM period 0700-0800
-      * ``[demand_file_list]`` — points at demand.csv with agent_type=p
+      * ``[assignment]``: DTA mode, iteration counts, UE gap
+      * ``[agent_type]``: a single auto agent (cars only)
+      * ``[link_type]``: Highway/Expressway with type_code=f, traffic=0
+      * ``[demand_period]``: a single AM period, 0700-0800
+      * ``[demand_file_list]``: points at demand.csv with agent_type=p
     """
     period_window = (
         f"{config.demand_period_start_hhmm}_{config.demand_period_end_hhmm}"
@@ -579,10 +571,11 @@ def write_dtalite_settings_csv(
         ["", "", "ue", config.iterations, config.column_updating_iterations,
          -1, 0, "assignment_mode can be ue, dta or odme"],
         ["", "", "", "", "", "", "", ""],
-        # [agent_type] — V11+ PCE pulled from adapters/common/vehicle_types.py
-        # (CAR_PCE = 1.0). DTALite has no length/width — link capacity
-        # expresses the storage/spacing equivalent of SUMO's length+minGap
-        # and MATSim's effective length. PCE = 1.0 matches both.
+        # [agent_type]. Since V11 the PCE comes from
+        # adapters/common/vehicle_types.py (CAR_PCE = 1.0). DTALite has no
+        # length or width of its own; link capacity carries the storage and
+        # spacing that SUMO's length+minGap and MATSim's effective length do,
+        # and PCE = 1.0 lines up with both.
         ["[agent_type]", "agent_type", "name", "", "VOT", "flow_type",
          "PCE", ""],
         ["", "p", "passenger", "", 10, 0, _CAR_PCE, ""],
@@ -646,10 +639,10 @@ def prepare_dtalite_inputs(
     summary = summarize_scenario(scenario_path)
     graph = parse_canonical_network(network_path)
 
-    # Cross-engine feasibility filter — same one SUMO and MATSim use,
-    # ensures every engine simulates the same trip subset. DTALite is
-    # car-only by design (CPU mesoscopic DTA, single-mode demand), so
-    # transit/bike/walk trips are dropped here too.
+    # The cross-engine feasibility filter, the same one SUMO and MATSim use,
+    # so every engine runs the same trip subset. DTALite is car-only by
+    # design (CPU mesoscopic DTA, single-mode demand), so transit/bike/walk
+    # drop out here too.
     feasible, feas_report = _feasibility.feasible_trip_ids(
         network_path, demand_path, supported_modes={"car"},
     )
@@ -658,14 +651,12 @@ def prepare_dtalite_inputs(
         feas_report, output_dir / "feasibility_report.json"
     )
 
-    # Cross-engine fairness: prune the network to the largest SCC
-    # before writing it. This is the SAME filter the shared feasibility
-    # check uses, and matches what the MATSim adapter emits — so all
-    # three engines see byte-identical node and link sets, not just
-    # byte-identical trip sets. Without this filter, DTALite would emit
-    # the full canonical network (with non-SCC dead-ends) while MATSim
-    # emits the SCC-only network — a fairness gap that contaminates the
-    # cross-engine travel-time comparison.
+    # Fairness: prune to the largest SCC before writing the network. It's the
+    # same filter the feasibility check uses, and the same set MATSim emits,
+    # so all three engines see byte-identical node and link sets, not just
+    # identical trips. Skip it and DTALite would write the full canonical
+    # network, dead-ends included, while MATSim writes only the SCC, and that
+    # gap would taint the cross-engine travel-time comparison.
     scc_node_ids = compute_largest_scc(
         set(graph.nodes.keys()),
         [(lk.from_node, lk.to_node) for lk in graph.links],
@@ -678,10 +669,10 @@ def prepare_dtalite_inputs(
         edge_lookup={},
     )
 
-    # Compute zone set FIRST so write_dtalite_node_csv knows which
-    # nodes to promote. DTALite's UE iteration cost is linear in the
-    # number of zones, so restricting to demand-carrying nodes is the
-    # difference between a 5-second run and a 5-minute run on chicago_1k.
+    # Work out the zone set first, so write_dtalite_node_csv knows which
+    # nodes to promote. DTALite's UE iteration cost is linear in the zone
+    # count, so keeping only the demand-carrying nodes is the difference
+    # between a 5-second and a 5-minute run on chicago_1k.
     demand_node_ids = collect_demand_node_ids(demand_path, feasible)
     nodes_written = write_dtalite_node_csv(
         scc_graph, output_dir / "node.csv", zone_node_ids=demand_node_ids
@@ -690,9 +681,9 @@ def prepare_dtalite_inputs(
     od_pairs_written = write_dtalite_demand_csv(
         demand_path, output_dir / "demand.csv", feasible
     )
-    # V5+: emit GMNS movement.csv for OSM turn-restriction provenance.
-    # See `write_dtalite_movement_csv` docstring for the path4gmns 0.10.0
-    # caveat — file is currently documentary, not actively enforced.
+    # V5+: write GMNS movement.csv to carry the OSM turn-restriction
+    # provenance. See write_dtalite_movement_csv for the path4gmns 0.10.0
+    # caveat; the file is documentary for now, not enforced.
     movement_rows = write_dtalite_movement_csv(
         network_path, output_dir / "movement.csv",
     )
@@ -732,20 +723,19 @@ def run_dtalite(
 
     DTALite reads ``settings.csv + node.csv + link.csv + demand.csv``
     from the current working directory and writes its outputs there.
-    We invoke it as a subprocess so the per-run cwd / timeout / stderr
-    can be cleanly isolated (path4gmns's in-process API would chdir
-    globally and tangle multi-run pytest sessions).
+    We run it as a subprocess so each run gets its own cwd, timeout, and
+    stderr (path4gmns's in-process API chdirs the whole process, which
+    tangles multi-run pytest sessions).
 
-    Implementation note: we use ``DTALiteClassic`` rather than the newer
-    ``DTALiteMultimodal`` (a.k.a. ``run_DTALite``). path4gmns 0.10.0's
-    Multimodal binary has a regression that demands a ``mode_type.csv``
-    file in a schema the upstream has not published — even path4gmns's
-    own bundled samples fail with ``[ERROR] File mode_type does not have
-    information`` when invoked fresh. DTALiteClassic is the stable
-    code path and takes (assignment_mode, column_gen_num, column_upd_num)
-    as direct arguments. Mode 1 = path-based UE → produces both
-    ``link_performance.csv`` AND ``agent.csv`` (per-route output) which
-    we need for travel-time stats.
+    Why ``DTALiteClassic`` and not the newer ``DTALiteMultimodal`` (aka
+    ``run_DTALite``): in path4gmns 0.10.0 the Multimodal binary has a
+    regression that wants a ``mode_type.csv`` in a schema upstream never
+    published. Even path4gmns's own bundled samples fail with ``[ERROR]
+    File mode_type does not have information`` on a fresh run. Classic is
+    the stable path; it takes (assignment_mode, column_gen_num,
+    column_upd_num) directly, and mode 1 (path-based UE) writes both
+    ``link_performance.csv`` and ``agent.csv``, which is what we need for
+    the travel-time stats.
 
     Returns ``(success, runtime_seconds, error_message)``.
     """
@@ -783,22 +773,21 @@ def run_dtalite(
             check=False,
         )
         elapsed = time.time() - start
-        # Success detection is output-file-driven, not exit-code-driven.
+        # We decide success from the output files, not the exit code.
         # path4gmns 0.10.0's DTALiteClassic wrapper has a macOS
-        # multiprocessing bug that raises a SemLock error AFTER the
-        # binary has already produced full output (the wrapper tries to
-        # spawn a `multiprocessing.Process` for the binary call, but
-        # macOS+Python3.8+ rejects the start). The DTALite C++ binary
-        # itself completes the assignment in-process before that fork
-        # attempt and writes link_performance.csv + agent.csv to disk.
-        # We therefore trust the file artifacts, not the wrapper's
-        # return code.
+        # multiprocessing bug: it raises a SemLock error AFTER the binary has
+        # already written full output. The wrapper tries to spawn a
+        # `multiprocessing.Process` for the call, and macOS on Python 3.8+
+        # refuses the start, but the DTALite C++ binary finishes the
+        # assignment in-process before that fork and has already dropped
+        # link_performance.csv and agent.csv on disk. So we trust the files,
+        # not the return code.
         link_perf = output_dir / "link_performance.csv"
         if link_perf.is_file() and link_perf.stat().st_size > 0:
             return True, elapsed, None
 
-        # Real failure — no output file. Surface either an [ERROR] line
-        # from the log or the wrapper's stderr.
+        # A real failure: no output file. Surface an [ERROR] line from the
+        # log if there is one, else the wrapper's stderr.
         log_text = ""
         for log_name in ("log.txt", "log_main.txt", "log_DTA.txt"):
             p = output_dir / log_name
@@ -842,18 +831,16 @@ def parse_dtalite_output(output_dir: Path) -> Optional[DTALiteTripStats]:
           demand_period, volume, toll, travel_time, distance,
           node_sequence, link_sequence, time_sequence, ...``
 
-    DTALite's ``agent.csv`` is one row per OD pair (NOT per individual
-    trip), with ``volume`` = number of vehicles assigned to the path.
-    We therefore expand each row by ``volume`` when computing trip-level
-    statistics so the means are comparable to SUMO/MATSim's per-vehicle
-    outputs.
+    DTALite's ``agent.csv`` has one row per OD pair, not per trip, with
+    ``volume`` being the number of vehicles on that path. So we expand each
+    row by ``volume`` for the trip-level stats, which keeps the means
+    comparable to SUMO's and MATSim's per-vehicle output.
 
-    Units in the file are MINUTES for travel_time and KILOMETERS for
-    distance. We convert to seconds and meters for the SimForge cross-
-    engine TripStats schema.
+    The file is in minutes for travel_time and kilometers for distance; we
+    convert to seconds and meters for the shared TripStats schema.
 
-    Returns ``None`` if no ``agent.csv`` was produced (DTALite failed
-    or simulation_output=0 was set in settings.yml).
+    Returns ``None`` when there's no ``agent.csv`` (DTALite failed, or
+    simulation_output=0 in settings.yml).
     """
     output_dir = Path(output_dir)
     agent_csv = output_dir / "agent.csv"

@@ -1,68 +1,60 @@
 """Shared canonical-routes BFS (Phase 14).
 
-Both the SUMO and MATSim adapters need to know, for every feasible
-trip, the shortest path through the canonical network — under OSM
-turn restrictions when V5+ Phase 7 metadata is present. Until
-Phase 14 each adapter ran its own copy of the same BFS over the
-same network. This module deduplicates that work: compute the
-canonical routes once per ``(scenario, feasible_trip_set)``, cache
-them to a JSONL file keyed by content hash, and let both adapters
-consume the same `Dict[trip_id, List[node_id]]`.
+For every feasible trip, both the SUMO and MATSim adapters need its
+shortest path through the canonical network, honoring OSM turn
+restrictions when the V5+ Phase 7 metadata is there. Before Phase 14 each
+adapter ran its own copy of that same BFS over the same network. This
+module does it once: compute the routes per ``(scenario,
+feasible_trip_set)``, cache them to a JSONL file keyed by content hash,
+and hand both adapters the same `Dict[trip_id, List[node_id]]`.
 
-The byte-identity invariant — adapters must produce route XML
-byte-identical to their pre-Phase-14 output — is pinned by
-``tests/test_canonical_routes.py::TestByteIdentityVsLegacy``. See
-``doc/PHASE_14_DESIGN.md`` for the architectural rationale,
-cache-key derivation, and Phase 14.x sub-commit plan.
+The byte-identity rule (an adapter's route XML must match what it produced
+before Phase 14) is pinned by
+``tests/test_canonical_routes.py::TestByteIdentityVsLegacy``.
+``doc/PHASE_14_DESIGN.md`` has the design rationale, the cache-key
+derivation, and the Phase 14.x sub-commit plan.
 
-Phase 14.5 (this file): serial + parallel BFS + JSONL cache.
-``workers > 1`` dispatches to ``multiprocessing.Pool``. Parallel
-output is byte-identical to serial output regardless of worker count
-(pinned by TestParallelDeterminism in tests/test_canonical_routes.py).
+This file is Phase 14.5: serial and parallel BFS plus the JSONL cache.
+Pass ``workers > 1`` and it fans out to a ``multiprocessing.Pool``; the
+parallel output is byte-identical to the serial output at any worker count
+(TestParallelDeterminism pins that).
 
-Parallelism architecture (full detail in doc/PHASE_14_DESIGN.md §2.3):
+How the parallelism works (full detail in doc/PHASE_14_DESIGN.md §2.3):
 
-  This is *task parallelism over trips*, NOT data parallelism over
-  the network. The canonical graph is fully replicated in each
-  worker; only the trip list is partitioned. Workers never exchange
-  information during BFS execution — each one is a self-contained
-  BFS session that happens to be running simultaneously with the
-  others. Specifically:
+  This is task parallelism over trips, not data parallelism over the
+  network. Every worker gets the whole graph; only the trip list is split
+  up. Workers never talk to each other mid-BFS, each is a self-contained
+  BFS session that just happens to be running at the same time as the
+  others. In detail:
 
-    - **Replicated graph.** Each worker holds the full SCC-filtered
-      canonical graph in its own heap (~150 MB on chicago_200k,
-      ~250 MB on nyc_500k). At 16 workers that's ~2.4 GB / ~4 GB
-      of RAM, negligible against Cardinal cpu's 503 GB/node.
-    - **Partitioned trips.** The feasibility-filtered trip list,
-      sorted by trip_id, is split into ~1,000 small chunks of
-      ~200 trips each. ``Pool.imap`` dispatches them dynamically;
-      workers grab the next pending chunk when they finish one,
-      giving free load balancing if cores run at slightly different
-      speeds (NUMA effects, neighbouring processes, etc.).
-    - **No worker-to-worker IPC.** The only inter-process
-      communication is main→worker (chunk_in) and worker→main
-      (chunk_out). Workers cannot race on shared state because no
-      shared state exists.
-    - **Determinism reduces to a pure-function argument.** Each
+    - **Replicated graph.** Each worker keeps the full SCC-filtered graph
+      in its own heap (~150 MB on chicago_200k, ~250 MB on nyc_500k). At 16
+      workers that's ~2.4 GB / ~4 GB, nothing against Cardinal cpu's
+      503 GB per node.
+    - **Partitioned trips.** The feasible trip list, sorted by trip_id, is
+      cut into ~1,000 small chunks of ~200 trips. ``Pool.imap`` hands them
+      out as workers finish, so cores running at slightly different speeds
+      (NUMA, neighbouring jobs) balance themselves for free.
+    - **No worker-to-worker IPC.** The only traffic is main to worker
+      (chunk in) and worker to main (chunk out). There's no shared state
+      for workers to race on, because there isn't any.
+    - **Determinism is just a pure-function argument.** Every
       ``shortest_path_with_restrictions(origin, dest, adjacency,
-      edge_lookup, forbidden_moves)`` call is a deterministic function
-      of inputs that are bit-identical across workers (all read from
-      the hash-pinned canonical bundle). The merged route dict is
-      therefore bit-identical to a serial run regardless of worker
-      count — ``TestParallelDeterminism`` pins this on
-      chicago_1k_car for workers ∈ {1, 2, 4}.
-    - **`spawn` start method (forced).** We use
-      ``multiprocessing.get_context("spawn")`` rather than the
-      platform default so workers behave identically on macOS (where
-      Python 3.8+ defaults to spawn) and Linux (where the default is
-      fork). Each worker boots a fresh interpreter and rebuilds its
-      state via ``_init_worker(network_path)`` — costs ~1-2 s per
-      worker at startup, irrelevant against the multi-hour BFS work
-      each one will then do.
+      edge_lookup, forbidden_moves)`` is a pure function of inputs that are
+      bit-identical across workers (all read from the hash-pinned bundle),
+      so the merged dict matches a serial run no matter how many workers
+      ran it. ``TestParallelDeterminism`` checks this on chicago_1k_car for
+      workers in {1, 2, 4}.
+    - **Forced `spawn` start method.** We use
+      ``multiprocessing.get_context("spawn")`` instead of the platform
+      default so workers behave the same on macOS (spawn since Python 3.8+)
+      and Linux (fork by default). Each worker boots a fresh interpreter
+      and rebuilds its state in ``_init_worker(network_path)``, ~1-2 s at
+      startup, which is nothing next to the multi-hour BFS it then runs.
 
-  See doc/PHASE_14_DESIGN.md §2.3 for the diagram, the rejected
-  alternatives (threads/GIL, shared_memory, network partitioning),
-  and the empirical per-worker efficiency measurement on Cardinal.
+  doc/PHASE_14_DESIGN.md §2.3 has the diagram, the alternatives we turned
+  down (threads/GIL, shared_memory, partitioning the network), and the
+  measured per-worker efficiency on Cardinal.
 """
 
 from __future__ import annotations
@@ -102,12 +94,11 @@ _CACHE_SCHEMA_VERSION = 1
 # tight enough that the operator sees the job is alive.
 _PROGRESS_INTERVAL_S = 60.0
 
-# Progress lines are emitted at WARNING level so they're visible
-# without --verbose. WARNING isn't a semantic complaint here — it's
-# the only stdlib level that the StickyProgress capture_logs handler
-# always routes above the sticky bar regardless of the user's
-# verbosity choice. (The harness drops the threshold to INFO when
-# --verbose is set, but progress should be visible either way.)
+# Progress lines go out at WARNING so they show without --verbose. It isn't
+# WARNING because anything's wrong; it's just the only stdlib level the
+# StickyProgress capture_logs handler always routes above the sticky bar,
+# whatever verbosity the user picked. (The harness drops the threshold to
+# INFO under --verbose, but progress should be visible either way.)
 _BFS_LOGGER_NAME = "adapters.common.canonical_routes"
 logger = logging.getLogger(_BFS_LOGGER_NAME)
 
@@ -160,10 +151,9 @@ def compute_canonical_routes(
         of ``adapters.common.feasibility.feasible_trip_ids``. Only
         these trip IDs are routed.
     workers:
-        Number of subprocesses for parallel BFS. ``1`` (default) runs
-        serially in the calling process. Phase 14.1 accepts the
-        argument but always runs serially regardless; Phase 14.5
-        wires in ``multiprocessing.Pool``.
+        How many subprocesses to fan the BFS out to. ``1`` (default) runs
+        serially in the calling process; more than that uses a
+        ``multiprocessing.Pool``.
     cache_root:
         Directory under which the JSONL cache file is written. When
         ``None`` (default), no caching is performed and every call
@@ -179,11 +169,10 @@ def compute_canonical_routes(
     Returns
     -------
     Dict[str, List[str]]:
-        Routes keyed by trip_id. For trips with no restriction-
-        respecting path, falls back to plain BFS (matching the
-        legacy adapter behaviour). Unrouteable trips (which the
-        feasibility filter is supposed to exclude) map to an empty
-        list — adapters can detect and surface these as failures.
+        Routes keyed by trip_id. A trip with no restriction-respecting path
+        falls back to plain BFS, same as the old adapters did. A trip that's
+        genuinely unroutable (which the feasibility filter should have caught
+        already) maps to an empty list, so adapters can spot it and report it.
     """
     scenario_dir = Path(scenario_dir).resolve()
     network_path = scenario_dir / "network.xml"
@@ -215,11 +204,10 @@ def compute_canonical_routes(
             _fmt_int(len(feasible_trip_ids)), workers,
         )
 
-    # Compute. Phase 14.5: ``workers > 1`` dispatches to
-    # multiprocessing.Pool with one chunk per worker. Below the
-    # threshold, the IPC overhead dominates the BFS savings, so we
-    # fall back to serial — but never silently for tests, which set
-    # workers explicitly and expect the parallel path to actually run.
+    # Compute. ``workers > 1`` dispatches to multiprocessing.Pool with one
+    # chunk per worker. Below that the IPC overhead would swamp the BFS
+    # savings, so we run serial instead, just never quietly for tests, which
+    # set workers on purpose and expect the parallel path to actually run.
     t0 = time.monotonic()
     if workers > 1:
         routes = _compute_parallel(
@@ -378,7 +366,7 @@ def _write_cache(
 
 
 # ---------------------------------------------------------------------------
-# Network parsing — minimal subset, no dep on any specific adapter
+# Network parsing: minimal subset, no dependency on any specific adapter
 # ---------------------------------------------------------------------------
 
 
@@ -393,10 +381,11 @@ class _LinkRef:
 def _parse_network_for_routing(
     network_path: Path,
 ) -> Tuple[Set[str], Dict[str, List[str]], Dict[Tuple[str, str], _LinkRef]]:
-    """Minimal canonical-network parse: returns (nodes, adjacency,
-    edge_lookup).  Skips coordinate, length, speed, lane attributes —
-    they aren't needed for BFS routing. Centralised so canonical_routes
-    has no dependency on any specific adapter package.
+    """A bare-bones network parse, returning (nodes, adjacency, edge_lookup).
+
+    It ignores coordinates, length, speed, and lanes, none of which the BFS
+    needs. Living here keeps canonical_routes free of any dependency on a
+    specific adapter package.
     """
     nodes: Set[str] = set()
     adjacency: Dict[str, List[str]] = {}
@@ -454,7 +443,7 @@ def _scc_filter(
 
 
 # ---------------------------------------------------------------------------
-# Plain BFS — fallback when the state-aware version can't find a path
+# Plain BFS: the fallback when the state-aware version can't find a path
 # ---------------------------------------------------------------------------
 
 
@@ -529,11 +518,10 @@ def _compute_serial(
             len(restrictions), _fmt_int(len(forbidden_moves)),
         )
 
-    # Read the demand once into a list of (trip_id, origin, dest)
-    # filtered by the feasibility set. We sort by trip_id so the BFS
-    # order is deterministic regardless of dict iteration order
-    # downstream (also a prerequisite for the parallel implementation
-    # in Phase 14.5 — chunking must be deterministic).
+    # Read the demand once into a list of (trip_id, origin, dest), keeping
+    # only the feasible trips. Sorting by trip_id makes the BFS order
+    # deterministic no matter how dicts iterate downstream, and the parallel
+    # path needs it too, since the chunking has to be deterministic.
     work: List[Tuple[str, str, str]] = []
     with demand_path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
@@ -550,9 +538,9 @@ def _compute_serial(
     total = len(work)
     fallback_count = 0
     bfs_start = time.monotonic()
-    # Init to -inf so the first eligible emission fires immediately —
-    # otherwise short jobs (1K bundle finishing in ~3 s) would never
-    # see a heartbeat at all, only the final "done" line.
+    # Start at -inf so the first heartbeat fires right away. Otherwise a
+    # short job (the 1K bundle finishes in ~3 s) would never show one, just
+    # the final "done" line.
     last_progress_at = float("-inf")
     for i, (tid, origin, dest) in enumerate(work, start=1):
         path: Optional[List[str]]
@@ -570,11 +558,11 @@ def _compute_serial(
             path = _plain_bfs(adjacency, origin, dest)
         routes[tid] = path or []
 
-        # Progress: emit a structured heartbeat every _PROGRESS_INTERVAL_S
-        # wall-clock seconds (not every N trips — wall-clock rate gives a
-        # stable cadence across hardware speeds). Routed via logger so
-        # StickyProgress.print_above() puts it cleanly above the sticky
-        # bar instead of competing with the bar's TTY writes.
+        # Heartbeat every _PROGRESS_INTERVAL_S wall-clock seconds, not every
+        # N trips, so the cadence stays steady no matter how fast the
+        # hardware is. It goes through the logger so
+        # StickyProgress.print_above() lands it cleanly above the sticky bar
+        # rather than fighting the bar's TTY writes.
         now = time.monotonic()
         if progress and (now - last_progress_at) >= _PROGRESS_INTERVAL_S:
             _emit_progress(i, total, bfs_start, now, workers=1)
@@ -613,30 +601,28 @@ def _emit_progress(
 
 
 # ---------------------------------------------------------------------------
-# Parallel driver — multiprocessing.Pool with one chunk per worker
+# Parallel driver: multiprocessing.Pool with one chunk per worker
 # ---------------------------------------------------------------------------
 
 
-# Worker-local state. Each subprocess (re)loads the network on import
-# of this module via _init_worker, then keeps the data in this dict
-# across all _route_chunk calls in the worker's lifetime. The dict is
-# private to each worker — no IPC after init.
+# Worker-local state. Each subprocess loads the network once via
+# _init_worker, then keeps it in this dict for every _route_chunk call it
+# handles. The dict is private to the worker; there's no IPC after init.
 _WORKER_STATE: Dict[str, object] = {}
 
 
 def _init_worker(network_path_str: str) -> None:
-    """Pool initializer: load network + restrictions once per worker.
+    """Pool initializer: load the network and restrictions once per worker.
 
-    Workers receive only the network_path; everything else is rebuilt
-    from disk to keep the pickled `initargs` small. The graph parse +
-    SCC filter + forbidden_moves build typically costs 1-2 s for
-    chicago_200k (~50K nodes); amortized across thousands of trips
-    in the worker's lifetime, it's negligible.
+    A worker is handed only the network_path and rebuilds everything else
+    from disk, which keeps the pickled `initargs` small. The parse, SCC
+    filter, and forbidden_moves build run ~1-2 s for chicago_200k (~50K
+    nodes), and spread over thousands of trips that's nothing.
 
-    Stored in module-global ``_WORKER_STATE`` rather than passed
-    per-chunk because subprocesses don't share memory — global state
-    is the cheapest way to make the graph reachable from
-    ``_route_chunk`` without re-pickling per call.
+    We stash it in the module-global ``_WORKER_STATE`` instead of passing it
+    per chunk because subprocesses don't share memory, and a global is the
+    cheapest way to reach the graph from ``_route_chunk`` without re-pickling
+    it on every call.
     """
     network_path = Path(network_path_str)
     nodes, adjacency, edge_lookup = _parse_network_for_routing(network_path)
@@ -727,23 +713,20 @@ def _compute_parallel(
     if not work:
         return {}
 
-    # Phase 14.10: aim for ~1,000 chunks total so each worker handles
-    # many small chunks rather than one massive slab. Two reasons:
-    #  1. PROGRESS VISIBILITY. The progress emitter only fires when a
-    #     chunk returns. One-chunk-per-worker (the original design)
-    #     meant the first heartbeat didn't appear until the first
-    #     worker finished its entire share — ~4 hours into a 200K
-    #     run, by which point ~25% of work was already done. Smaller
-    #     chunks → more frequent returns → progress visible within
-    #     minutes.
-    #  2. LOAD BALANCING. If one worker hits a slower CPU or a noisy
-    #     neighbour, its big slab takes longer than the others and
-    #     drags the whole job's wall. Fine-grained chunks let the
-    #     other workers steal forward and absorb the imbalance.
-    # Floor at 100 trips per chunk so the per-chunk IPC overhead
-    # (pickle the chunk in, pickle the result back) stays negligible
-    # vs the in-chunk BFS time (~100 × 1.2 s = ~2 minutes of BFS
-    # per chunk on a 200K bundle, ~1 ms of IPC).
+    # Aim for ~1,000 chunks total, so each worker chews through many small
+    # chunks instead of one giant slab. Two reasons:
+    #  1. Progress visibility. The progress emitter only fires when a chunk
+    #     returns. With one chunk per worker (the first design) the first
+    #     heartbeat didn't show until a worker finished its whole share,
+    #     ~4 hours into a 200K run, when ~25% of the work was already done.
+    #     Smaller chunks return more often, so progress shows within minutes.
+    #  2. Load balancing. If one worker draws a slow CPU or a noisy
+    #     neighbour, its big slab finishes late and drags out the whole job's
+    #     wall. Fine-grained chunks let the others push ahead and soak up the
+    #     imbalance.
+    # Floor at 100 trips per chunk so the per-chunk IPC (pickle in, pickle the
+    # result back) stays tiny next to the BFS time (~100 * 1.2 s = ~2 minutes
+    # of BFS per chunk on a 200K bundle, against ~1 ms of IPC).
     n = len(work)
     target_chunks = 1_000
     chunk_size = max(100, (n + target_chunks - 1) // target_chunks)
@@ -753,9 +736,9 @@ def _compute_parallel(
     routes: Dict[str, List[str]] = {}
     completed = 0
     bfs_start = time.monotonic()
-    # -inf so the first chunk return always emits — gives the operator
-    # an early "alive + on track" signal instead of waiting a full
-    # _PROGRESS_INTERVAL_S before the first heartbeat.
+    # -inf so the first returned chunk always emits, giving an early "alive
+    # and on track" signal instead of waiting a full _PROGRESS_INTERVAL_S for
+    # the first heartbeat.
     last_progress_at = float("-inf")
     with ctx.Pool(
         processes=workers,

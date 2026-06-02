@@ -1,7 +1,7 @@
 """
-CLI for DTALite adapter.
+Command-line front end for the DTALite adapter.
 
-Usage:
+Run it from the repo root:
     python -m adapters.dtalite.cli scenarios/chicago_1k_car out/dtalite
     python -m adapters.dtalite.cli scenarios/chicago_1k_car out/dtalite --run
 """

@@ -1,19 +1,20 @@
 """
-MATSim Adapter for SimForge.
+MATSim adapter for SimForge.
 
-MATSim is an activity-based, mesoscopic traffic simulator that models agents
-and their daily activity plans. This adapter converts canonical bundles to
-MATSim input formats.
+MATSim is an activity-based mesoscopic simulator: it models agents and the
+daily activity plans they follow, not just vehicles. This adapter turns a
+canonical bundle into MATSim's input formats.
 
-Key differences from SUMO:
-- Agent-based (not vehicle-based)
-- Activity plans (not simple OD trips)
-- Queue-based mesoscopic traffic model
-- Multi-iteration with replanning (disabled for single-run comparison)
+Where it differs from SUMO:
+- agents, not vehicles
+- activity plans, not bare OD trips
+- a queue-based mesoscopic traffic model
+- normally iterates with replanning, which we switch off so the comparison
+  is a single run
 
 Usage:
     from adapters.matsim import prepare_matsim_inputs
-    prepare_matsim_inputs("scenarios/toy_2x2_grid", "out/matsim")
+    prepare_matsim_inputs("scenarios/chicago_1k_car", "out/matsim")
 """
 
 import csv
@@ -60,7 +61,7 @@ class MATSimConfig:
 
 
 def find_matsim_jar() -> Optional[Path]:
-    """Find MATSim JAR file in common locations."""
+    """Look for the MATSim JAR in the usual places."""
     import os
     
     possible_paths = [
@@ -100,7 +101,7 @@ def find_matsim_jar() -> Optional[Path]:
 
 
 def check_java_available() -> Tuple[bool, str]:
-    """Check if Java is available and get version."""
+    """Is Java on PATH, and if so what version."""
     try:
         result = subprocess.run(
             ["java", "-version"],
@@ -130,7 +131,7 @@ def seconds_to_time_string(seconds: int) -> str:
 
 
 def load_canonical_network(network_path: Path) -> Tuple[Dict, List]:
-    """Load canonical network.xml and return nodes and links."""
+    """Read network.xml, hand back its nodes and links."""
     tree = ET.parse(network_path)
     root = tree.getroot()
     
@@ -165,12 +166,13 @@ def load_canonical_network(network_path: Path) -> Tuple[Dict, List]:
 
 
 def _largest_strongly_connected_component(nodes: Dict, links: List) -> set:
-    """
-    Find the largest strongly connected component in the network.
-    Returns the set of node IDs in that component.
+    """The largest strongly connected component, as a set of node IDs.
+
+    Plain Kosaraju: one DFS pass forward to get a finish order, a second
+    pass over the reverse graph in that order to peel off components.
     """
 
-    # Build adjacency (forward and reverse)
+    # Adjacency both ways, forward and reverse.
     fwd = {}
     rev = {}
     for link in links:
@@ -227,8 +229,8 @@ def _largest_strongly_connected_component(nodes: Dict, links: List) -> set:
 
 
 def clean_network(nodes: Dict, links: List) -> tuple:
-    """
-    Clean network by keeping only the largest strongly connected component.
+    """Keep only the largest SCC, drop everything else.
+
     Returns (filtered_nodes, filtered_links, reachable_node_ids).
     """
     reachable = _largest_strongly_connected_component(nodes, links)
@@ -255,16 +257,16 @@ def clean_network(nodes: Dict, links: List) -> tuple:
 def build_matsim_link_indices(
     valid_links: List[dict], link_adjacency: dict,
 ) -> Dict[str, object]:
-    """Phase 14.12: pre-build O(1) lookup tables for link finding.
+    """Pre-build the O(1) lookup tables used to find links per trip.
 
-    Replaces a per-trip O(N) linear scan with a one-time O(N) index build
-    plus per-trip O(1) dict lookups. On chicago_200k_car (~1M valid_links,
-    200K trips) the old approach spent ~64 h in find_link_for_*; with
-    these indices it's <1 second. Output is byte-identical because each
-    index stores the *first* match in original ``valid_links`` order,
-    which is exactly what the linear scans returned.
+    The old code did a per-trip O(N) linear scan; this builds the index
+    once up front and then every trip is a dict lookup. On chicago_200k_car
+    (~1M links, 200K trips) that scan used to burn ~64 h in find_link_for_*,
+    and it's under a second now. The output is byte-identical because each
+    table records the *first* match in the original ``valid_links`` order,
+    which is exactly what the linear scan returned.
 
-    Returns a dict with five lookup tables + one fallback link id:
+    Returns a dict of five lookup tables plus one fallback link id:
 
     - ``nodes_with_outgoing``: set of node_ids that appear as a from-node
       in at least one link (i.e., have outgoing edges).
@@ -318,24 +320,23 @@ def build_matsim_link_indices(
 
 
 def find_link_for_origin(node_id: str, idx: Dict[str, object]) -> Optional[str]:
-    """O(1) version (Phase 14.12). See ``build_matsim_link_indices`` for
-    the precomputed lookup structure. Preserves byte-identical behavior
-    to the pre-14.12 linear-scan implementation:
+    """The O(1) lookup; see ``build_matsim_link_indices`` for the tables it
+    reads. Byte-for-byte the same answer the old linear scan gave.
 
-    In MATSim, the agent departs from the TO-node of the activity link.
-    We need a link whose TO-node is our origin AND has outgoing edges.
+    A MATSim agent departs from the TO-node of its activity link, so we want
+    a link whose TO-node is the origin and that has somewhere to go next.
     """
     nodes_with_outgoing = idx["nodes_with_outgoing"]
-    # Priority 1: link ending at origin node (TO=origin) where origin has outgoing edges.
+    # First choice: a link ending at the origin (TO=origin) that has outgoing edges.
     if node_id in nodes_with_outgoing:
         link_id = idx["origin_links_by_to_first"].get(node_id)
         if link_id is not None:
             return link_id
-    # Priority 2: link starting from origin (FROM=origin), where the TO end has outgoing edges.
+    # Second choice: a link starting at the origin (FROM=origin) whose TO end can go on.
     link_id = idx["origin_links_by_from_filt_first"].get(node_id)
     if link_id is not None:
         return link_id
-    # Fallback: any link connected to this node (to or from).
+    # Last resort: any link touching the node at all.
     link_id = idx["origin_links_touching_first"].get(node_id)
     if link_id is not None:
         return link_id
@@ -343,10 +344,11 @@ def find_link_for_origin(node_id: str, idx: Dict[str, object]) -> Optional[str]:
 
 
 def find_link_for_destination(node_id: str, idx: Dict[str, object]) -> Optional[str]:
-    """O(1) version (Phase 14.12). See ``build_matsim_link_indices``.
+    """The O(1) lookup; see ``build_matsim_link_indices``.
 
-    In MATSim, routing goes from origin TO-node to destination FROM-node.
-    So we need a link whose FROM-node is our destination (or TO-node as fallback).
+    MATSim routes from the origin's TO-node to the destination's FROM-node,
+    so we want a link whose FROM-node is the destination, falling back to its
+    TO-node.
     """
     link_id = idx["dest_links_by_from_first"].get(node_id)
     if link_id is not None:
@@ -358,21 +360,19 @@ def find_link_for_destination(node_id: str, idx: Dict[str, object]) -> Optional[
 
 
 def build_matsim_vehicles_xml() -> str:
-    """Build MATSim vehicles.xml with the canonical SimForge car type.
+    """Build MATSim vehicles.xml with the shared SimForge car type.
 
-    V11+ uses ``adapters/common/vehicle_types.py`` so SUMO, MATSim, and
-    DTALite share a single source of truth for vehicle parameters.
-    MATSim's ``length`` here is the *effective* spacing (physical length
-    + comfort gap) per its convention — equivalent to SUMO's
-    ``length + minGap``. See the module docstring for the cross-engine
-    alignment rationale.
+    Since V11 the numbers come from ``adapters/common/vehicle_types.py``, so
+    all three engines agree on the car. MATSim's ``length`` here is the
+    effective spacing (body plus comfort gap), which is its convention and
+    matches SUMO's ``length + minGap``.
     """
     from adapters.common.vehicle_types import matsim_vehicle_type_xml
     return matsim_vehicle_type_xml()
 
 
 def build_matsim_network_xml(nodes: Dict, links: List) -> str:
-    """Build MATSim network.xml from canonical network data."""
+    """Build MATSim network.xml from the canonical nodes and links."""
     lines = []
     lines.append('<?xml version="1.0" encoding="utf-8"?>')
     lines.append('<!DOCTYPE network SYSTEM "http://www.matsim.org/files/dtd/network_v2.dtd">')
@@ -384,17 +384,17 @@ def build_matsim_network_xml(nodes: Dict, links: List) -> str:
         lines.append(f'    <node id="{node_id}" x="{node["x"]}" y="{node["y"]}"/>')
     lines.append('  </nodes>')
     
-    # Links - use capperiod for capacity interpretation
-    # Filter out self-loop links (from == to) which are invalid in MATSim
+    # capperiod sets the window the capacity number applies to.
+    # MATSim rejects self-loops (from == to), so drop them.
     valid_links = [link for link in links if link["from"] != link["to"]]
-    
+
     lines.append('  <links capperiod="01:00:00">')
     for link in valid_links:
-        # MATSim capacity = lanes * 1800 veh/hour (typical saturation flow)
-        lanes = max(1, link["lanes"])  # Ensure at least 1 lane
+        # Capacity = lanes * 1800 veh/h, a typical saturation flow.
+        lanes = max(1, link["lanes"])  # at least one lane
         capacity = lanes * 1800
-        length = max(1.0, link["length"])  # Ensure minimum length of 1m
-        # Add modes="car" for routing to work
+        length = max(1.0, link["length"])  # floor at 1 m
+        # modes="car" is what makes the link routable.
         lines.append(
             f'    <link id="{link["id"]}" '
             f'from="{link["from"]}" to="{link["to"]}" '
@@ -411,9 +411,9 @@ def build_matsim_network_xml(nodes: Dict, links: List) -> str:
 
 
 class _LinkRef:
-    """Tiny adapter so MATSim's dict-style links plug into the generic
+    """Tiny shim so MATSim's dict-style links work with the generic
     `pipeline.network.turn_restrictions.shortest_path_with_restrictions`
-    BFS, which expects each edge_lookup value to expose `.id`."""
+    BFS, which just wants each edge_lookup value to have an `.id`."""
     __slots__ = ("id",)
 
     def __init__(self, link_id: str):
@@ -427,37 +427,27 @@ def build_matsim_plans_xml(
     network_path: Optional[Path] = None,
     canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> str:
-    """Build MATSim plans.xml from canonical demand.csv.
+    """Build MATSim plans.xml from demand.csv.
 
-    Only trips in ``feasible`` (the shared cross-engine feasibility set) are
-    emitted. This keeps MATSim's trip set identical to every other engine.
+    Only trips in ``feasible`` (the shared cross-engine set) get written, so
+    MATSim runs the same trips as everyone else.
 
-    Phase 14+ behavior:
-      - When ``canonical_routes`` is provided (the shared BFS output
-        from ``adapters.common.canonical_routes.compute_canonical_routes``),
-        this function skips its inline state-aware BFS pass and looks
-        up path_nodes per trip_id from the pre-computed dict. SUMO and
-        MATSim adapters share the same dict, so each scenario pays the
-        BFS cost once instead of twice.
-      - When ``canonical_routes`` is ``None`` (legacy / standalone CLI
-        usage), this function falls back to running its own state-aware
-        BFS in-loop using ``network_path`` to load turn restrictions —
-        pre-Phase-14 behavior preserved for back-compat.
+    Like the SUMO adapter, routes come from one of two places. If
+    ``canonical_routes`` is passed in (the shared BFS output from
+    ``adapters.common.canonical_routes.compute_canonical_routes``), we look
+    up each trip's path there and skip the inline BFS; both adapters share
+    that dict, so the scenario pays the BFS cost once. If it's ``None`` (the
+    standalone CLI path), we run our own state-aware BFS in the loop, loading
+    turn restrictions from ``network_path``.
 
-    V5+ state-aware BFS behavior (applies in both paths above):
-      - When the canonical network.xml carries an OSM
-        `<turn_restrictions>` block, plans are pre-routed via the same
-        state-aware BFS the SUMO adapter uses and the resulting link
-        sequence is written into MATSim's `<route type="links">`
-        element. MATSim then drives the prescribed path verbatim
-        instead of routing internally, so SUMO and MATSim consume
-        identical paths and the cross-engine TT comparison stays
-        apples-to-apples while both engines respect real-world turn
-        restrictions.
-      - When the network has no ``<turn_restrictions>`` block (legacy
-        bundles, synthetic networks), MATSim is left to do its own
-        routing on its MATSim-format network — pre-V5 behavior
-        preserved as fallback.
+    Either way, when the network.xml carries an OSM ``<turn_restrictions>``
+    block we pre-route with the same state-aware BFS the SUMO adapter uses
+    and write the link sequence straight into MATSim's
+    ``<route type="links">``. MATSim then drives that exact path instead of
+    routing itself, so SUMO and MATSim run identical paths and the
+    cross-engine travel-time comparison stays honest, both respecting real
+    turn restrictions. Older bundles and synthetic networks have no such
+    block, and there MATSim just routes on its own.
     """
     from pipeline.network.turn_restrictions import (
         parse_turn_restrictions, build_forbidden_moves,
@@ -466,13 +456,13 @@ def build_matsim_plans_xml(
 
     lines = []
     lines.append('<?xml version="1.0" ?>')
-    # population_v6 (MATSim 15-shipped DTD). Pre-V11.2 we used plans_v4,
-    # but plans_v4's <route> element only accepts cost-optimisation
-    # `type` values (dist|trav-time|num-nodes|num-intersects) and treats
-    # the text content as a *node* sequence, not a link sequence — both
-    # break V5 Phase 7's pre-routed-link-sequence intent. population_v6
-    # accepts `type="links" start_link="..." end_link=".."` natively
-    # and PopulationReaderMatsimV6 ships in the same MATSim 15 JAR.
+    # population_v6, the DTD that ships with MATSim 15. We used plans_v4
+    # before V11.2, but its <route> only takes cost-optimisation `type`
+    # values (dist|trav-time|num-nodes|num-intersects) and reads the text as
+    # a node sequence, not a link sequence. Both of those fight V5 Phase 7's
+    # whole point of feeding in a pre-routed link sequence. population_v6
+    # takes `type="links" start_link="..." end_link=".."` directly, and
+    # PopulationReaderMatsimV6 is in the same MATSim 15 JAR.
     lines.append('<!DOCTYPE population SYSTEM "http://www.matsim.org/files/dtd/population_v6.dtd">')
     lines.append('<population>')
 
@@ -482,19 +472,18 @@ def build_matsim_plans_xml(
     for link in valid_links:
         link_adjacency.setdefault(link["from"], []).append(link["to"])
 
-    # edge_lookup for state-aware BFS: (from_node, to_node) → object-with-id.
+    # edge_lookup for the state-aware BFS: (from_node, to_node) -> object-with-id.
     edge_lookup: Dict[Tuple[str, str], _LinkRef] = {
         (link["from"], link["to"]): _LinkRef(link["id"])
         for link in valid_links
     }
 
-    # Phase 14: when the harness pre-computed routes via the shared
-    # BFS, skip the inline turn-restriction BFS setup entirely. Track
-    # the flag so the per-trip loop below picks the right code path.
+    # If the harness already ran the shared BFS, skip the turn-restriction
+    # setup. The flag tells the per-trip loop below which path to take.
     using_shared_routes = canonical_routes is not None
     forbidden_moves: dict = {}
     if not using_shared_routes:
-        # Load OSM turn restrictions (V5+) when network_path is provided.
+        # Turn restrictions (V5+), when we were handed a network_path.
         restrictions = parse_turn_restrictions(network_path) if network_path else []
         if restrictions:
             outgoing_links_by_node: dict = {}
@@ -515,11 +504,11 @@ def build_matsim_plans_xml(
             len(canonical_routes),
         )
 
-    # Phase 14.12: build O(1) link-finding indices once. Pre-14.12, each
-    # of the 200K trips paid two O(N) linear scans over ~1M valid_links
-    # inside find_link_for_origin/find_link_for_destination — accounting
-    # for ~64 h of the 73 h MATSim cold-prep wall on chicago_200k. The
-    # index build below is one O(N) pass; per-trip lookups become O(1).
+    # Build the O(1) link-finding indices once. Before this, each of the
+    # 200K trips ran two O(N) scans over ~1M links inside
+    # find_link_for_origin/find_link_for_destination, which was ~64 h of the
+    # 73 h MATSim cold-prep wall on chicago_200k. This is a single O(N) pass,
+    # and then every per-trip lookup is O(1).
     link_indices = build_matsim_link_indices(valid_links, link_adjacency)
     logger.info(
         "[matsim] built link-finding indices: %d nodes with outgoing edges, "
@@ -554,15 +543,15 @@ def build_matsim_plans_xml(
             origin_link = find_link_for_origin(origin, link_indices)
             dest_link = find_link_for_destination(dest, link_indices)
 
-            # Both endpoints are in the SCC, so a valid link must exist; surface
-            # the symmetry violation loudly if somehow it doesn't.
+            # Both endpoints are in the SCC, so there has to be a link for
+            # each. If there somehow isn't, count it and move on rather than
+            # hide it.
             if not origin_link or not dest_link:
                 missing_link += 1
                 continue
 
-            # Pre-route when restrictions are present (or when the
-            # harness pre-computed canonical routes — Phase 14) so
-            # MATSim drives the prescribed path verbatim.
+            # Pre-route when we have turn restrictions, or when the harness
+            # handed us canonical routes, so MATSim drives the exact path.
             route_link_ids: Optional[List[str]] = None
             path_nodes: Optional[List[str]] = None
             if using_shared_routes:
@@ -592,32 +581,29 @@ def build_matsim_plans_xml(
             lines.append('  <plan>')
             lines.append(f'    <activity type="h" link="{origin_link}" end_time="{end_time}"/>')
             if route_link_ids:
-                # MATSim 15 / population_v6 <route type="links"> format:
-                # the text content is the *FULL* link sequence (NOT just
-                # interior), including the start_link as the first token
-                # and the end_link as the last token. Confirmed against
-                # MATSim's own output_plans.xml.gz format:
+                # MATSim 15 / population_v6 wants the FULL link sequence in
+                # the <route type="links"> text, start_link and end_link
+                # included, not just the interior. Confirmed against MATSim's
+                # own output_plans.xml.gz:
                 #     <route type="links" start_link="A" end_link="Z">
                 #         A B C D E ... X Y Z
                 #     </route>
-                # The first/last tokens redundantly mirror the
-                # start_link/end_link attributes — that's the canonical
-                # idiom. Pre-V12 SimForge emitted only "B C D ... Y" in
-                # the text (excluding A and Z), and MATSim's mobsim then
-                # rejected every transition because its parsed route was
-                # disjoint from the agent's start position.
-                # `DefaultTurnAcceptanceLogic` warnings flooded the log
-                # ("Cannot move vehicle person_t82 from link l1502 to
-                # link l28738") and output_trips.csv.gz ended up empty —
-                # std-of-zero gave R = 1.0000 for every MATSim cell,
-                # which read as "perfect determinism" in the analyzer
-                # but was actually no determinism at all.
-                # Discovered 2026-05-02 (Phase 12).
+                # Yes, the first and last tokens repeat the start_link and
+                # end_link attributes; that redundancy is just how MATSim
+                # writes it. We learned this the hard way. Pre-V12 we emitted
+                # only "B C D ... Y" (no A or Z), MATSim's mobsim saw a route
+                # disjoint from where the agent actually stood, and it
+                # rejected every transition. The log filled with
+                # `DefaultTurnAcceptanceLogic` warnings ("Cannot move vehicle
+                # person_t82 from link l1502 to link l28738") and
+                # output_trips.csv.gz came out empty. Zero trips means zero
+                # variance, so every MATSim cell scored R = 1.0000, which the
+                # analyzer happily read as perfect determinism when it was
+                # really no data at all. Found 2026-05-02 (Phase 12).
                 #
-                # The agent's physical traversal is
-                # [origin_link, *route_link_ids, dest_link]; we de-dup
-                # in case BFS happened to land on origin_link or
-                # dest_link directly (rare).
+                # The real traversal is [origin_link, *route_link_ids,
+                # dest_link]; we de-dup in case the BFS already landed on
+                # origin_link or dest_link (rare).
                 full_path = []
                 if not route_link_ids or route_link_ids[0] != origin_link:
                     full_path.append(origin_link)
@@ -634,7 +620,7 @@ def build_matsim_plans_xml(
                 )
                 lines.append(f'    </leg>')
             else:
-                # Fallback: let MATSim route itself (legacy/back-compat).
+                # No pre-route, so let MATSim do its own routing.
                 lines.append(f'    <leg mode="{mode}"/>')
             lines.append(f'    <activity type="w" link="{dest_link}"/>')
             lines.append('  </plan>')
@@ -673,7 +659,7 @@ def build_matsim_config_xml(
     output_dir: str = "./output",
     random_seed: int = 42
 ) -> str:
-    """Build MATSim config.xml."""
+    """Build MATSim config.xml from a MATSimConfig."""
     start_time = seconds_to_time_string(config.start_time_s)
     end_time = seconds_to_time_string(config.end_time_s)
     
@@ -761,7 +747,7 @@ def build_matsim_config_xml(
 
 
 def load_canonical_paths(scenario_root: Path) -> Dict[str, Path]:
-    """Load file paths from manifest.xml."""
+    """Pull the canonical file paths out of manifest.xml."""
     manifest_path = scenario_root / "manifest.xml"
     if not manifest_path.exists():
         raise FileNotFoundError(f"manifest.xml not found at {manifest_path}")
@@ -790,23 +776,15 @@ def prepare_matsim_inputs(
     random_seed: int = 42,
     canonical_routes: Optional[Dict[str, List[str]]] = None,
 ) -> Path:
-    """
-    Prepare inputs for MATSim simulation.
+    """Write the MATSim inputs for a scenario and return the config path.
 
-    Args:
-        scenario_path: Path to canonical scenario bundle
-        output_dir: Output directory for generated files
-        config: MATSim configuration options
-        random_seed: Random seed for simulation
-        canonical_routes: Phase 14+ optional pre-computed shared BFS
-            routes (``Dict[trip_id, List[node_id]]``). When provided,
-            the inline state-aware BFS in build_matsim_plans_xml is
-            skipped; the plans consume these routes directly. When
-            ``None`` (default / legacy), MATSim's plan builder runs
-            its own BFS.
+    ``scenario_path`` is the canonical bundle, ``output_dir`` is where the
+    generated files go, ``config`` and ``random_seed`` tune the run.
 
-    Returns:
-        Path to the generated MATSim config file
+    ``canonical_routes`` is the optional shared BFS output
+    (``Dict[trip_id, List[node_id]]``). Pass it and build_matsim_plans_xml
+    reads routes straight from it instead of running its own BFS; leave it
+    ``None`` and the plan builder routes for itself.
     """
     scenario_path = Path(scenario_path)
     output_dir = Path(output_dir)
@@ -827,9 +805,8 @@ def prepare_matsim_inputs(
     if not demand_path or not demand_path.exists():
         raise FileNotFoundError(f"Demand file not found: {demand_path}")
     
-    # Compute the shared feasibility set — same trip subset every engine
-    # simulates. MATSim adapter currently only handles car traffic, so
-    # transit/bike/walk trips are dropped here too.
+    # The shared feasibility set: the trips every engine runs. MATSim only
+    # does cars for now, so transit/bike/walk drop out here too.
     feasible, feas_report = _feasibility.feasible_trip_ids(
         network_path, demand_path, supported_modes={"car"},
     )
@@ -840,10 +817,9 @@ def prepare_matsim_inputs(
     logger.info("Converting network to MATSim format...")
     nodes, links = load_canonical_network(network_path)
 
-    # MATSim's network input must itself be SCC — its mobsim crashes on
-    # dangling links — so we still prune the network to the largest SCC.
-    # The SCC we prune to is the same one the shared feasibility filter uses,
-    # which keeps trip feasibility and emitted network consistent.
+    # MATSim's mobsim crashes on dangling links, so its network input has to
+    # be the SCC. We prune to the same SCC the feasibility filter uses, which
+    # keeps the trips and the emitted network consistent.
     nodes, links, _reachable = clean_network(nodes, links)
 
     network_xml = build_matsim_network_xml(nodes, links)
@@ -851,12 +827,11 @@ def prepare_matsim_inputs(
     network_out.write_text(network_xml, encoding="utf-8")
     logger.info("  Created: %s", network_out)
 
-    # Convert demand to plans (only feasible trips; subset matches every engine).
-    # Pass `network_path` so V5+ turn-restriction enforcement can pre-route
-    # via the same state-aware BFS the SUMO adapter uses (cross-engine
-    # paths align when restrictions are present). Phase 14+: when the
-    # harness pre-computed routes via the shared canonical_routes
-    # module, pass them in to skip the inline BFS entirely.
+    # Demand to plans, feasible trips only, so the subset matches every
+    # engine. We hand over `network_path` so the V5+ turn-restriction
+    # pre-routing can run the same state-aware BFS the SUMO adapter uses and
+    # the cross-engine paths line up. If the harness already computed the
+    # shared routes, passing them in skips the inline BFS.
     logger.info("Converting demand to MATSim plans...")
     plans_xml = build_matsim_plans_xml(
         demand_path, links, feasible, network_path=network_path,
@@ -900,16 +875,11 @@ def run_matsim(
     timeout_s: int = 86400,
     java_heap_gb: int = 4
 ) -> Tuple[bool, float, Optional[str]]:
-    """
-    Run MATSim simulation.
-    
-    Args:
-        config_path: Path to MATSim config file
-        timeout_s: Maximum runtime in seconds
-        java_heap_gb: Java heap size in GB
-        
-    Returns:
-        Tuple of (success, runtime_seconds, error_message)
+    """Run MATSim against a prepared config.
+
+    ``config_path`` is the MATSim config, ``timeout_s`` caps the runtime, and
+    ``java_heap_gb`` sizes the JVM heap. Returns
+    (success, runtime_seconds, error_message).
     """
     import time
     
@@ -933,15 +903,15 @@ def run_matsim(
     matsim_dir = matsim_jar.parent
     libs_dir = matsim_dir / "libs"
     
-    # Build classpath by explicitly listing all JARs (wildcards don't work reliably with spaces in paths)
+    # List every JAR by hand. Classpath wildcards are flaky when the path has
+    # spaces in it (and ours does, thanks to iCloud).
     classpath_parts = [str(matsim_jar)]
     if libs_dir.exists():
-        # Add all JARs from libs directory
         for jar in libs_dir.glob("*.jar"):
             classpath_parts.append(str(jar))
     classpath = ":".join(classpath_parts)
-    
-    # Build command - use RunMatsim instead of Controler for MATSim 15+
+
+    # MATSim 15+ entry point is RunMatsim, not the old Controler.
     cmd = [
         "java",
         f"-Xmx{java_heap_gb}g",
@@ -979,21 +949,15 @@ def run_matsim(
 
 
 def parse_matsim_output(output_dir: Path) -> dict:
-    """
-    Parse MATSim output to extract travel time statistics.
-    
-    Args:
-        output_dir: Path to MATSim output directory
-        
-    Returns:
-        Dictionary with travel time statistics
+    """Read MATSim's output dir and pull out travel-time stats.
+
+    Returns a dict of stats, or an empty dict if there's nothing to read.
     """
     import gzip
-    
-    # Look for output_trips.csv.gz
+
+    # Prefer the gzipped trips file, fall back to uncompressed.
     trips_file = output_dir / "output_trips.csv.gz"
     if not trips_file.exists():
-        # Try uncompressed
         trips_file = output_dir / "output_trips.csv"
     
     if not trips_file.exists():

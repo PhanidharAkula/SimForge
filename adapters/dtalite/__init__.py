@@ -1,4 +1,4 @@
-"""DTALite Adapter — CPU mesoscopic Dynamic Traffic Assignment via path4gmns."""
+"""DTALite adapter: CPU mesoscopic dynamic traffic assignment, via path4gmns."""
 
 from adapters.dtalite.dtalite_adapter import (
     DTALiteConfig,

@@ -102,12 +102,12 @@ This generates:
 | `origin_node_id`      | (route computation)    | Used as BFS start         |
 | `destination_node_id` | (route computation)    | Used as BFS end           |
 | `departure_time_s`    | `vehicle/@depart`      | Direct copy (seconds)     |
-| `mode`                | `vehicle/@type`        | `car` → `simforge_car` (V11+ canonical vType — see below) |
+| `mode`                | `vehicle/@type`        | `car` → `simforge_car` (V11+ canonical vType, see below) |
 
 ### Route Computation
 
 The adapter computes routes using **state-aware BFS shortest path**
-(V5+ Phase 7) — a BFS over `(node, last_link)` states that respects
+(V5+ Phase 7), a BFS over `(node, last_link)` states that respects
 the V5+ `<turn_restrictions>` block in `network.xml`:
 
 1. Build adjacency list from canonical links
@@ -115,7 +115,7 @@ the V5+ `<turn_restrictions>` block in `network.xml`:
    `pipeline/network/turn_restrictions.build_forbidden_moves`
 3. For each trip, run state-aware BFS from origin to destination via
    `pipeline/network/turn_restrictions.shortest_path_with_restrictions`
-   — never traversing a `(from_link, via_node, to_link)` triple
+never traversing a `(from_link, via_node, to_link)` triple
    present in the forbidden set.
 4. **Fallback:** if no restriction-respecting path exists, retry with
    plain BFS (the bundle-validation contract guarantees the trip is
@@ -125,7 +125,7 @@ the V5+ `<turn_restrictions>` block in `network.xml`:
 
 Pre-V5 behaviour was plain BFS (turn restrictions were not extracted).
 The `purpose` and `dest_source` columns on `demand.csv` (V5+ Phase 9)
-are read-by-name and ignored — they don't affect route computation.
+are read-by-name and ignored, they don't affect route computation.
 
 **Example:**
 
@@ -166,12 +166,12 @@ parameters) and inconsistent with the MATSim adapter's hardcoded values.
 
 V11+ emits an explicit ``<vType id="simforge_car" .../>`` block at the
 top of ``routes.rou.xml`` and references it on every ``<vehicle>``. The
-parameters are pulled from ``adapters/common/vehicle_types.py`` — a
+parameters are pulled from ``adapters/common/vehicle_types.py``, a
 single source of truth shared across SUMO, MATSim, and DTALite. See
 that module's docstring for the cross-engine alignment rationale and
 ``CHANGELOG.md`` Phase 11 for the full history.
 
-Canonical values (SUMO idiom — physical length + safety gap separate):
+Canonical values (SUMO idiom, physical length + safety gap separate):
 
 | Attribute   | Value | Meaning |
 |---|---|---|
@@ -293,8 +293,8 @@ diff out/run1/routes.rou.xml out/run2/routes.rou.xml
 ## Limitations (v0)
 
 1. **Signals:** Placement is OSM-grounded (V5+ Phase 6), but timing is a fixed-time 2-phase 90 s placeholder, not real coordinated timing.
-2. **Vehicle types:** All vehicles use the canonical `simforge_car` vType (V11+; pre-V11 used SUMO's implicit `DEFAULT_VEHTYPE`). Within-bucket heterogeneity (taxis, motorcycles, trucks, carpools — all collapsed into the `car` JWTRNS bucket) is not modeled — every car-bucket trip simulates as the same sedan. See `doc/SCENARIO_GENERATION.md` §"Vehicle-type realism" for the V12 improvement path.
-3. **Turn restrictions:** Enforced via state-aware BFS pre-routing (V5+ Phase 7) — see "Route Computation" above. Restrictions that fully wall off an SCC-feasible trip cause a fall-back to plain BFS (rare).
+2. **Vehicle types:** All vehicles use the canonical `simforge_car` vType (V11+; pre-V11 used SUMO's implicit `DEFAULT_VEHTYPE`). Within-bucket heterogeneity (taxis, motorcycles, trucks, carpools, all collapsed into the `car` JWTRNS bucket) is not modeled, every car-bucket trip simulates as the same sedan. See `doc/SCENARIO_GENERATION.md` §"Vehicle-type realism" for the V12 improvement path.
+3. **Turn restrictions:** Enforced via state-aware BFS pre-routing (V5+ Phase 7), see "Route Computation" above. Restrictions that fully wall off an SCC-feasible trip cause a fall-back to plain BFS (rare).
 4. **Trip chains:** V5+ Phase 9b/9c emits HBSchool chains as two separate `<vehicle>` rows; SUMO models them as independent vehicles, so chain agency is not preserved at simulation time.
 5. **Multi-modal:** Only `car` mode supported (transit/bike/walk rows are filtered out by `feasibility.py` before reaching the SUMO writer).
 6. **Large networks:** BFS routing may be slow for city-scale networks.
