@@ -100,10 +100,10 @@ WORKDIR /workspace/SimForge
 COPY requirements.lock pyproject.toml ./
 RUN uv pip install --system --no-cache -r requirements.lock
 
-# eclipse-sumo wheel is NOT in requirements.lock (host installs SUMO via
-# brew/apt per SETUP.md; the lockfile only covers Python-only deps). For
-# the container we install the pinned eclipse-sumo wheel directly so SUMO
-# is part of the immutable image.
+# eclipse-sumo is already pinned in requirements.lock, so the step above
+# installed it. We re-assert the exact version here (a no-op if satisfied)
+# only to anchor the binary-verification check below, since SUMO living in
+# the immutable image is load-bearing for the container.
 #
 # Note on sumolib: eclipse-sumo wheel installs the SUMO binaries to
 # /usr/local/bin/ (sumo, netconvert, duarouter, etc.) but does NOT put

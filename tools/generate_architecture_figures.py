@@ -810,7 +810,7 @@ def fig_3_11_container_chain(output_dir):
     # Five horizontal stages
     stages = [
         ("Dockerfile\n(repo root)",
-         "python:3.13-slim-bookworm\n+ openjdk-17 + libgomp1\n+ uv → 35 lockfile pkgs\n+ eclipse-sumo==1.26.0\n+ MATSim 15.0 JAR",
+         "python:3.13-slim-bookworm\n+ openjdk-17 + libgomp1\n+ uv: 36 lockfile pkgs\n  (incl eclipse-sumo 1.26.0)\n+ MATSim 15.0 JAR",
          "#fce4ec"),
         ("GitHub Actions\n(build-container.yml)",
          "On push to main or\nphase-14-canonical-routes\n→ docker build\n→ tag with git SHA",

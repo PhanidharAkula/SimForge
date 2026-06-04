@@ -902,8 +902,7 @@ uv python install 3.13                       # Pitzer modules only offer 3.10/3.
 
 module load openjdk/21.0.3_9                  # for MATSim, Pitzer's lmod requires an explicit version
 uv venv --python 3.13 .venv && source .venv/bin/activate
-uv pip install -r requirements.lock          # 35 lockfile-pinned packages
-uv pip install eclipse-sumo==1.26.0          # SUMO wheel (separate; manylinux_2_28 only)
+uv pip install -r requirements.lock          # 36 pinned deps, eclipse-sumo included
 
 # From your local machine, ship the gitignored binaries over:
 rsync -avh osm_data/ pitzer:SimForge/osm_data/

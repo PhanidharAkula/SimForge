@@ -42,7 +42,7 @@ Python dependencies (installed via `requirements.txt`):
 
 ## Quick Setup (5 minutes)
 
-The canonical install path uses **`uv` + [`requirements.lock`](../requirements.lock)** so every machine ends up on byte-identical dep versions (Python 3.13.13 + 35 lockfile-pinned packages, plus `eclipse-sumo==1.26.0` installed separately because the eclipse-sumo wheel is manylinux_2_28_x86_64-only and cannot ship in a cross-platform lockfile).
+The canonical install path uses **`uv` + [`requirements.lock`](../requirements.lock)** so every machine ends up on byte-identical dep versions (Python 3.13.13 + 36 lockfile-pinned packages, including the `eclipse-sumo==1.26.0` wheel that ships the SUMO binaries). The lock is version-pinned (not hash-pinned), so pip resolves the right platform wheel on macOS arm64 and Linux x86_64 alike, the same way it does for numpy, lxml, and the other platform-specific wheels.
 
 > **Alternative:** for bit-identical reproduction of the thesis numbers, pull the pinned-digest container instead of installing host-side. See [`doc/CONTAINER_USAGE.md`](CONTAINER_USAGE.md) for the full workflow; the thesis-default image is `ghcr.io/phanidharakula/simforge:db8d786` and is recorded in [`lib/container/manifest.json`](../lib/container/manifest.json).
 
@@ -59,8 +59,7 @@ uv venv --python 3.13 .venv
 source .venv/bin/activate
 
 uv pip install --upgrade pip
-uv pip install -r requirements.lock             # 35 lockfile-pinned packages
-uv pip install eclipse-sumo==1.26.0             # SUMO wheel (separate; manylinux_2_28 only)
+uv pip install -r requirements.lock             # 36 pinned deps, eclipse-sumo included
 
 # Fetch the hash-pinned OSM PBFs (~2.1 GB across IL / NY / CA state extracts).
 # Required before regenerating any scenario; skipped if files are already present.

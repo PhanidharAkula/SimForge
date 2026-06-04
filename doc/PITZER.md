@@ -177,8 +177,7 @@ echo 'module load openjdk/21.0.3_9' >> ~/.bashrc     # persist across logins
 uv venv --python 3.13 .venv
 source .venv/bin/activate
 uv pip install --upgrade pip
-uv pip install -r requirements.lock                  # 35 lockfile-pinned packages
-uv pip install eclipse-sumo==1.26.0                  # SUMO wheel (separate; manylinux_2_28 only)
+uv pip install -r requirements.lock                  # 36 pinned deps, eclipse-sumo included
 
 # 4.6, download MATSim 15.0 JAR (~65 MB; gitignored)
 mkdir -p lib
