@@ -55,12 +55,12 @@ from pipeline.demand.parse_model_file import parse_model_file
 from pipeline.signals.build_signals_default import build_signals_default
 from pipeline.modelgen_scanner import scan_modelgen_dir
 
-# force=True + explicit stream because library modules under pipeline/ call
-# basicConfig at import time; without force this entry-point config would be a
-# no-op and logs would land on stderr (SLURM .err) instead of stdout (.out).
-# Default level is WARNING so the user-facing print() banners aren't drowned
-# in pipeline INFO chatter (osmnx, demand, signals). Pass --verbose on the
-# CLI to restore INFO and see the firehose for debugging.
+# force=True plus an explicit stream because the library modules under
+# pipeline/ call basicConfig at import time; without force, this entry-point
+# config would be a no-op and logs would land on stderr (the SLURM .err)
+# instead of stdout (.out). The default level is WARNING so the print()
+# banners aren't buried under pipeline INFO chatter (osmnx, demand, signals).
+# Pass --verbose to restore INFO and get the whole firehose for debugging.
 logging.basicConfig(
     level=logging.WARNING,
     format="%(levelname)s  %(message)s",
@@ -76,15 +76,15 @@ _TOTAL_STEPS = 4
 
 
 def _display_path(p: Path) -> str:
-    """Render a Path as it would appear if the user typed it.
+    """Render a Path the way the user would have typed it.
 
-    When the path lives under cwd, show the cwd-relative form (e.g.
-    ``scenarios/chicago_1k_car``) so the default-output case looks the
-    same as ``--output scenarios/foo``. When it doesn't (``/tmp/...``,
-    ``--output`` outside the repo), fall back to the absolute path.
-    Avoids the inconsistency where the default output was always
-    absolute (built from ``Path(__file__).parent``) while user-provided
-    ``--output`` values stayed short.
+    If the path is under cwd, show the relative form (e.g.
+    ``scenarios/chicago_1k_car``) so the default-output case looks like
+    ``--output scenarios/foo``. If it isn't (``/tmp/...``, an ``--output``
+    outside the repo), fall back to the absolute path. This keeps the default
+    output (which used to come out absolute, built from
+    ``Path(__file__).parent``) from looking different than a user-provided
+    ``--output``.
     """
     try:
         return str(p.resolve().relative_to(Path.cwd()))
@@ -93,10 +93,10 @@ def _display_path(p: Path) -> str:
 
 
 # =============================================================================
-# Toolchain capture, recorded into generation_metadata.json so any bundle
-# carries the exact code+dep stack that produced it. Critical for cross-machine
-# reproducibility audits, minor osmnx releases have observably altered network
-# extraction in the past, so the bundle must say which version it was built on.
+# Toolchain capture, written into generation_metadata.json so every bundle
+# records the exact code and dependency stack that produced it. This matters
+# for cross-machine reproducibility: minor osmnx releases have changed network
+# extraction before, so the bundle has to say which version built it.
 # =============================================================================
 
 # (module name, distribution name), the second is for importlib.metadata when
@@ -398,8 +398,7 @@ def generate_scenario(
     force_overpass: bool = False,
     verbose: bool = False,
 ) -> dict:
-    """
-    Generate a complete canonical scenario bundle.
+    """Generate a complete canonical scenario bundle.
 
     Args:
         city: City key (chicago, nyc, la).
@@ -473,16 +472,15 @@ def generate_scenario(
 
     t0 = time.time()
     step_times: dict[str, float] = {}
-    # ALWAYS route logs through the bar's print_above() so any record
-    # (including WARNING+ from osmnx / build_network_from_osm.py) lands
-    # cleanly above the sticky bar. Pre-V11.1 capture was gated on
-    # --verbose, which meant default-mode WARNING records (e.g.
-    # "Dropping degenerate edge ...") went straight to stderr and
-    # collided with the bar's no-newline redraws, producing mangled
-    # `░░░░  ⠦  0%  step 1/4 ... elapsed 3m 07sWARNING ...` lines.
-    # The level threshold below decides what passes through:
-    #   default  → WARNING+ (errors still surface, no INFO firehose)
-    #   verbose  → INFO+    (full adapter chatter)
+    # Always route logs through the bar's print_above() so every record
+    # (including WARNING+ from osmnx / build_network_from_osm.py) lands cleanly
+    # above the sticky bar. Before V11.1 the capture was gated on --verbose, so
+    # default-mode WARNING records (e.g. "Dropping degenerate edge ...") went
+    # straight to stderr and collided with the bar's no-newline redraws,
+    # producing mangled `░░░░  ⠦  0%  step 1/4 ... elapsed 3m 07sWARNING ...`
+    # lines. The threshold below decides what gets through:
+    #   default  -> WARNING+ (errors still surface, no INFO firehose)
+    #   verbose  -> INFO+    (full adapter chatter)
     capture_log_level = logging.INFO if verbose else logging.WARNING
     progress = StickyProgress(
         _TOTAL_STEPS, unit="step",

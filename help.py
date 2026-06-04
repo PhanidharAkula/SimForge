@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-SimForge Help System
+SimForge help system.
 
-Comprehensive reference for all commands, options, limits, and examples.
-City census limits are auto-detected from modelgen/ files (cached).
+A reference for the commands, options, limits, and examples. City census
+limits are auto-detected from the modelgen/ files (and cached).
 
 Usage:
   python help.py                    # Full help
@@ -1786,10 +1786,10 @@ def _curses_show_topic(stdscr, title: str, content: str,
             pct = int(100 * offset / max_offset)
             pos = (f"{pct:3d}%   line {offset + 1}–"
                    f"{min(offset + body_h, n_lines)}/{n_lines}")
-        # PgUp/PgDn and Home/End still WORK (helpful on long topics) but
-        # we keep them off the footer because compact Mac keyboards lack
-        # those keys natively (need Fn-modifier) and most users won't
-        # discover them. The two essentials live here.
+        # PgUp/PgDn and Home/End still work (handy on long topics), but we
+        # keep them off the footer: compact Mac keyboards don't have those
+        # keys without an Fn-modifier, and most people won't find them. Only
+        # the two essentials go here.
         footer = f"  ↑/↓: scroll    Esc: back    [{pos}]"
         footer_attr = (curses.color_pair(1) | curses.A_BOLD) if has_colors \
                       else curses.A_REVERSE

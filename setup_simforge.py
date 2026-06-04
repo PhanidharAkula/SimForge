@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-SimForge Setup Script
+SimForge setup script.
 
-One-command bootstrap for new users. Checks prerequisites, creates a
-virtual environment, installs Python dependencies, downloads external
-tools (MATSim JAR), and validates the installation.
+A one-command bootstrap for new users: it checks the prerequisites, makes a
+virtual environment, installs the Python dependencies, fetches the external
+tools (the MATSim JAR), and validates the install.
 
 Usage:
     python setup_simforge.py

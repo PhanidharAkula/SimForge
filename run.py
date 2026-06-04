@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-SimForge Runner - Simplified CLI
+SimForge runner: the simplified CLI.
 
 Usage:
     python run.py                                    # Run all scenarios, all engines, all modes
@@ -78,12 +78,11 @@ def check_engine_installed(engine: str) -> bool:
 ALL_ENGINES = ["sumo", "matsim", "dtalite"]
 ALL_MODES = ["micro", "meso"]
 
-# Per-engine mode capability. Engines simulate exactly one paradigm each:
-# SUMO supports both microscopic (car-following) and mesoscopic (link queue);
-# MATSim is queue-based mesoscopic only; DTALite is mesoscopic Dynamic
-# Traffic Assignment only. Cells in the experimental matrix that pair an
-# engine with an unsupported mode are skipped, not silently re-run as
-# meso, which would inflate the result count with duplicated cells.
+# Which modes each engine can actually do. SUMO does both microscopic
+# (car-following) and mesoscopic (link queue); MATSim is queue-based
+# mesoscopic only; DTALite is mesoscopic dynamic traffic assignment only.
+# Matrix cells that pair an engine with a mode it can't do are skipped, not
+# quietly re-run as meso (which would pad the result count with duplicates).
 ENGINE_SUPPORTED_MODES = {
     "sumo": {"micro", "meso"},
     "matsim": {"meso"},
@@ -522,14 +521,13 @@ Examples:
     cell_idx_w = len(str(total_runs))
 
     # Sticky progress bar from the shared pipeline.progress.StickyProgress
-    # module. TTY-only with a heartbeat spinner, flicker-free in-place
-    # updates, ✓N ✗N counters in the tail. Suppressed silently when
-    # stdout is piped (sbatch logs, CI captures). Logs are ALWAYS routed
-    # above the bar via print_above() so WARNING+ records (e.g. osmnx
-    # "Dropping degenerate edge") don't collide with the bar's
-    # no-newline writes. The level threshold differs by mode:
-    #   default  → WARNING+ only (errors surface, no INFO firehose)
-    #   verbose  → INFO+    (full adapter chatter)
+    # module: TTY-only, a heartbeat spinner, flicker-free in-place updates,
+    # ✓N ✗N counters in the tail. It goes quiet when stdout is piped (sbatch
+    # logs, CI captures). Logs always route above the bar via print_above() so
+    # WARNING+ records (e.g. osmnx "Dropping degenerate edge") don't collide
+    # with the bar's no-newline writes. The threshold differs by mode:
+    #   default  -> WARNING+ only (errors surface, no INFO firehose)
+    #   verbose  -> INFO+    (full adapter chatter)
     import logging as _logging
     from pipeline.progress import StickyProgress
     progress = StickyProgress(
