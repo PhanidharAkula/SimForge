@@ -104,7 +104,7 @@ def save(fig, name, output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F1 — SimForge at a glance
+# F1: SimForge at a glance
 # -----------------------------------------------------------------------------
 
 
@@ -187,7 +187,7 @@ def fig_1_1_simforge_overview(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F2 — Three-layer architecture
+# F2: Three-layer architecture
 # -----------------------------------------------------------------------------
 
 
@@ -199,7 +199,7 @@ def fig_3_1_three_layer_architecture(output_dir):
     ax.set_ylim(0, 9)
     ax.axis("off")
 
-    # Layer geometry — non-overlapping, with explicit inter-layer gap for arrows
+    # Layer geometry: non-overlapping, with an explicit inter-layer gap for arrows
     LAYER_H = 2.2
     layer_specs = [
         ("PIPELINE LAYER", "(canonical-bundle generation)", 6.5, C_PIPELINE,
@@ -235,7 +235,7 @@ def fig_3_1_three_layer_architecture(output_dir):
         ax.text(layer_left + 0.25 + 2.4, y_bottom + LAYER_H - 0.30, sub,
                 ha="left", va="center", fontsize=9.5, style="italic",
                 color="#555")
-        # Module boxes — placed below the title row, with margins
+        # Module boxes, placed below the title row, with margins
         n = len(modules)
         module_top_y = y_bottom + LAYER_H - 0.65
         module_bottom_y = y_bottom + 0.15
@@ -272,7 +272,7 @@ def fig_3_1_three_layer_architecture(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F6 — Fairness audit Q1-Q5 flow
+# F6: Fairness audit Q1-Q5 flow
 # -----------------------------------------------------------------------------
 
 
@@ -353,7 +353,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F7 — Phase 14 BFS deduplication
+# F7: Phase 14 BFS deduplication
 # -----------------------------------------------------------------------------
 
 
@@ -441,7 +441,7 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F9 — Two paradigm-spread phenomena
+# F9: Two paradigm-spread phenomena
 # -----------------------------------------------------------------------------
 
 
@@ -479,7 +479,7 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.grid(axis="y", linestyle=":", alpha=0.5)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    # Annotation arrow — tip lands inside the chicago_200k bar body
+    # Annotation arrow: the tip lands inside the chicago_200k bar body
     # (well below its 0.645 value label) for visual clarity
     ax.annotate("", xy=(3, 0.35), xytext=(3.5, 1.30),
                 arrowprops=dict(arrowstyle="->", color="#c62828", lw=1.5))
@@ -514,7 +514,7 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.grid(axis="y", linestyle=":", alpha=0.5)
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
-    # Annotation arrow — tip lands inside the chicago_200k bar body
+    # Annotation arrow: the tip lands inside the chicago_200k bar body
     # (well below its 1.078 value label) for visual clarity
     ax.annotate("", xy=(2, 0.55), xytext=(1.25, 2.00),
                 arrowprops=dict(arrowstyle="->", color="#1b5e20", lw=1.5))
@@ -536,7 +536,7 @@ def fig_6_1_paradigm_spread(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F3 — Canonical 5-file bundle schema (Methods §3.2)
+# F3: Canonical 5-file bundle schema (Methods §3.2)
 # -----------------------------------------------------------------------------
 
 
@@ -603,7 +603,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
                     color="#333")
 
     # Caption box at top noting the manifest verification.
-    # (We don't draw per-file SHA-256 arrows here — they all originate at the
+    # (We don't draw per-file SHA-256 arrows here; they'd all originate at the
     # manifest.xml column and target the other 4 headers at the same y, which
     # renders as a single overlapping horizontal line rather than 4 distinct
     # arrows. The textual caption + the per-file `<file path=... sha256=...>`
@@ -641,7 +641,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F4 — Scenario generation pipeline (Methods §3.3)
+# F4: Scenario generation pipeline (Methods §3.3)
 # -----------------------------------------------------------------------------
 
 
@@ -713,7 +713,7 @@ def fig_3_3_generation_pipeline(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F5 — Adapter contract (3 engines × 3 functions)  (Methods §3.4)
+# F5: Adapter contract (3 engines × 3 functions)  (Methods §3.4)
 # -----------------------------------------------------------------------------
 
 
@@ -794,7 +794,7 @@ def fig_3_4_adapter_contract(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F8 — Wave 2 container distribution chain (Methods §3.11)
+# F8: Wave 2 container distribution chain (Methods §3.11)
 # -----------------------------------------------------------------------------
 
 
@@ -865,7 +865,7 @@ def fig_3_11_container_chain(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F10 — Four reproducibility regimes (Discussion §6.2.3)
+# F10: Four reproducibility regimes (Discussion §6.2.3)
 # -----------------------------------------------------------------------------
 
 
@@ -938,7 +938,7 @@ def fig_6_2_reproducibility_regimes(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F11 — canonical_routes parallel-BFS worker architecture (Methods §3.8)
+# F11: canonical_routes parallel-BFS worker architecture (Methods §3.8)
 # -----------------------------------------------------------------------------
 
 

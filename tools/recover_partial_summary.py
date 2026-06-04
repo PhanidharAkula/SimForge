@@ -12,29 +12,28 @@ synthesizes failure entries for what isn't, and writes the canonical
 The resulting JSON is byte-compatible with the schema the analyzer +
 audit_fairness scripts read.
 
-Synthesized cells use ``timeout_s`` from the runspec entry, so the
-JSON honestly records the timeout we *attempted* — even though the
-cell never ran to completion. Pair with a CHANGELOG entry explaining
-why recovery was needed (which run was interrupted, what timeout was
-in force, etc.).
+Synthesized cells use ``timeout_s`` from the runspec entry, so the JSON
+honestly records the timeout we attempted, even though the cell never ran to
+completion. Pair it with a CHANGELOG entry explaining why recovery was
+needed (which run was interrupted, what timeout was in force, and so on).
 
-Optionally pass ``--harness-log <path>`` to populate ``runtime_s``,
-``engine_wall_s``, and ``cell_wall_s`` for *successful* cells from
-the harness's own cell-tape output (the lines like ``[N/M] engine
-mode seed=X ✓ Y.Ys wall (Z.Zs engine)``). Without this flag, recovered
-success cells get ``runtime_s = 0`` and Table 5.1 (Runtime) will show
-zeros for them — the travel-time / R-score numbers parsed from on-disk
-artifacts are still correct.
+Optionally pass ``--harness-log <path>`` to fill in ``runtime_s``,
+``engine_wall_s``, and ``cell_wall_s`` for the successful cells from the
+harness's own cell-tape output (the lines like ``[N/M] engine mode seed=X ✓
+Y.Ys wall (Z.Zs engine)``). Without the flag, recovered success cells get
+``runtime_s = 0`` and Table 5.1 (Runtime) shows zeros for them; the
+travel-time and R-score numbers parsed from on-disk artifacts are still
+correct.
 
 Usage::
 
-    # Minimal — runtime fields will be 0 for success cells:
+    # Minimal: runtime fields will be 0 for success cells.
     python -m tools.recover_partial_summary \\
         --runspec  runspecs/benchmark_small.yaml \\
         --scenario la_50k_car \\
         --base-dir runs/benchmark_small/la_50k_car
 
-    # With harness log — populates runtime fields too:
+    # With a harness log: populates the runtime fields too.
     python -m tools.recover_partial_summary \\
         --runspec  runspecs/benchmark_small.yaml \\
         --scenario la_50k_car \\
@@ -73,7 +72,7 @@ _CELL_TAPE_RE = re.compile(
     r"(?P<mode>\w+)\s+"                # mode: meso|micro
     r"seed=(?P<seed>\d+)\s+"           # seed=42
     r"(?P<status>[✓✗])"      # ✓ or ✗
-    r"\s*(?P<rest>.*)$"                # rest of line — timing or error
+    r"\s*(?P<rest>.*)$"                # rest of line: timing or error
 )
 _TIMING_RE = re.compile(
     r"(?P<wall>\d+(?:\.\d+)?)s\s+wall\s*\(\s*(?P<engine_s>\d+(?:\.\d+)?)s\s+engine\)"
@@ -115,7 +114,7 @@ def _parse_harness_log(log_path: Path) -> dict[tuple[str, str, int], dict]:
                     wall_s = float(tm["wall"])
                     engine_s = float(tm["engine_s"])
             else:
-                # "FAIL  <error message>" — strip leading "FAIL"
+                # "FAIL  <error message>", so strip the leading "FAIL"
                 error_msg = re.sub(r"^FAIL\s+", "", rest).strip() or "unknown failure"
 
             parsed[(engine, mode, seed)] = {
@@ -232,17 +231,17 @@ def recover_scenario(
                 status, metrics, error = _parse_matsim_cell(cell_dir)
             elif engine == "dtalite":
                 status, metrics, error = _parse_dtalite_cell(cell_dir)
-                # If DTALite missing/incomplete, synthesize a timeout message
-                # using the runspec's configured timeout_s — recording what
-                # we *attempted*, not zero.
+                # If DTALite is missing or incomplete, synthesize a timeout
+                # message from the runspec's configured timeout_s, recording
+                # what we attempted rather than zero.
                 if status == "failed" and error is None:
                     error = f"{engine.upper()} timeout after {timeout_s}s (synthesized — cell did not complete; see CHANGELOG for context)"
             else:
                 status, metrics, error = "failed", {}, f"Unknown engine: {engine}"
 
-            # Determine runtime values. Priority order:
-            #   1. Harness log (most accurate — actual wall + engine times).
-            #   2. Synthesized timeout (when cell failed with a timeout error).
+            # Determine runtime values, in priority order:
+            #   1. Harness log (most accurate: the actual wall + engine times).
+            #   2. Synthesized timeout (when the cell failed with a timeout).
             #   3. Zero (fallback).
             log_entry = log_runtimes.get((engine, mode, seed))
             if log_entry and log_entry["status"] == "success" and status == "success":

@@ -72,7 +72,7 @@ def main() -> None:
         print(f"  {label:<12} {_binary_version(cmd)}")
     print()
     print("--- Project files ---")
-    # Skip -sources.jar / -javadoc.jar variants — those aren't runnable MATSim.
+    # Skip the -sources.jar / -javadoc.jar variants; those aren't runnable MATSim.
     matsim = sorted(
         p for p in glob.glob("lib/matsim-*/matsim-*.jar")
         if not p.endswith(("-sources.jar", "-javadoc.jar"))
@@ -82,9 +82,10 @@ def main() -> None:
     print(f"  modelgen txts: {len(glob.glob('modelgen/*.txt'))}")
     print(f"  scenarios:     {len(glob.glob('scenarios/*/'))}")
 
-    # DTALite — bundled binary inside path4gmns Python package.
-    # Importing here keeps env_report runnable even if the adapter import
-    # itself ever breaks (it's a thin Python module, but defensive is cheap).
+    # DTALite: the binary bundled inside the path4gmns Python package.
+    # Importing here (rather than at module top) keeps env_report runnable
+    # even if the adapter import ever breaks. It's a thin module, but a little
+    # defensiveness is cheap.
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if repo_root not in sys.path:
         sys.path.insert(0, repo_root)
@@ -100,7 +101,7 @@ def main() -> None:
     except ImportError as e:
         print(f"  dtalite adapter: import failed ({e})")
 
-    # DTALite version pin — the source of truth for cross-machine reproducibility.
+    # The DTALite version pin: the source of truth for cross-machine reproducibility.
     dtalite_manifest = "lib/dtalite/manifest.json"
     if os.path.isfile(dtalite_manifest):
         try:

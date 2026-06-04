@@ -2,11 +2,11 @@
 """SimForge Scenario Analyzer.
 
 End-to-end analysis of one or more canonical scenario bundles in
-`scenarios/`. All output is tabular — every section is one table with
-metrics as rows and scenarios as columns. When only one scenario is
-analysed the tables degenerate to a single data column. When more
-scenarios than the terminal can hold, each section auto-paginates
-into multiple pages with a `(scenarios X–Y of N)` suffix.
+`scenarios/`. Everything comes out as tables: each section is one table,
+metrics down the rows, scenarios across the columns. With a single scenario
+the tables collapse to one data column. When there are more scenarios than
+the terminal can hold, each section auto-paginates into pages with a
+`(scenarios X–Y of N)` suffix.
 
 Tables emitted (in order):
 
@@ -37,7 +37,7 @@ Pagination is automatic: when the terminal isn't wide enough, each
 section splits into pages of N scenarios with a `(scenarios X–Y of N)`
 suffix on the title.
 
-Standard library only — no new dependencies.
+Standard library only, no new dependencies.
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from evaluation.demand_composition import read_demand_composition  # noqa: E402
 
-# ANSI colour codes — disabled when not a TTY or --no-color is passed.
+# ANSI colour codes, turned off when stdout isn't a TTY or --no-color is set.
 _USE_COLOR = sys.stdout.isatty()
 _RESET = "\033[0m"
 _BOLD = "\033[1m"
@@ -317,7 +317,7 @@ def fmt_pct(num, denom) -> str:
 
 
 def fmt_count_pct(num, denom) -> str:
-    """`1,234 (56.78%)` — count plus percent of denom."""
+    """`1,234 (56.78%)`: a count and its percent of denom."""
     if num is None:
         return "—"
     if not denom:
@@ -525,9 +525,9 @@ def _section_demand(reports):
          for r in reports]
     ))
 
-    # If no bundle has the purpose column we stop here — pre-V5 bundles
-    # only carry the canonical 5 columns and the per-purpose / peak-split
-    # subsections would be all-zero clutter.
+    # Stop here if no bundle has the purpose column. Pre-V5 bundles only carry
+    # the canonical 5 columns, and the per-purpose / peak-split subsections
+    # would just be all-zero clutter.
     if not any(r.demand.get("composition") for r in reports):
         return rows
 
@@ -668,11 +668,10 @@ def render_table(
     up regardless of colour. Rows where ``vals is None`` are subsection
     headers, rendered as a divider line in the metric column.
 
-    When the rendered width would exceed ``term_width`` (default: actual
-    terminal columns), the scenario columns are chunked across multiple
-    pages — the metric column repeats on every page, each page shows a
-    contiguous subset of scenarios with a `(p/N)` page suffix on the
-    title.
+    When the rendered width would exceed ``term_width`` (default: the actual
+    terminal columns), the scenario columns are split across pages. The metric
+    column repeats on every page, and each page shows a contiguous subset of
+    scenarios with a `(p/N)` page suffix on the title.
     """
     data_rows = [(label, vals) for label, vals in rows if vals is not None]
     label_width = max(

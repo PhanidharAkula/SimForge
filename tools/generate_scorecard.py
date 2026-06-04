@@ -2,26 +2,25 @@
 """
 Emit a single ``reproducibility_scorecard.md`` for a SimForge benchmark run.
 
-The scorecard is a one-shot summary of *whether the numbers in the run
-are reproducible and fair*, intended to ship alongside the per-cell
-artefacts and the headline tables. It rolls up four things a thesis
-defender (or a future replicator) needs to see at a glance:
+The scorecard is a one-shot summary of *whether the run's numbers are
+reproducible and fair*, meant to ship next to the per-cell artefacts and the
+headline tables. It rolls up the four things a thesis defender (or a future
+replicator) wants to see at a glance:
 
-  1. Provenance — OSM PBF hashes (osm_data/manifest.json), scenario
-     bundle manifest, git commit. Anyone re-running with these inputs
+  1. Provenance: OSM PBF hashes (osm_data/manifest.json), the scenario
+     bundle manifest, the git commit. Anyone re-running with these inputs
      should get the same numbers.
-  2. Environment — Python + key dependency versions, SUMO + Java +
-     OpenMP availability. Matches the audit content of
-     ``tools/env_report.py``.
-  3. Cross-engine fairness — Q1-style byte-identity of feasibility
+  2. Environment: Python and key dependency versions, SUMO + Java + OpenMP
+     availability. The same content ``tools/env_report.py`` audits.
+  3. Cross-engine fairness: Q1-style byte-identity of the feasibility
      verdicts across the three engines, per scenario.
-  4. Reproducibility R = 1 − CV per (scenario, engine, mode) cell —
-     reads the same ``benchmark_results_<runspec>.json`` that
+  4. Reproducibility R = 1 − CV per (scenario, engine, mode) cell, read from
+     the same ``benchmark_results_<runspec>.json`` that
      ``analyze_benchmark`` consumes.
 
-It is a *summary* artefact, not a re-audit: full Q1-Q5 detail still
-lives in ``python -m evaluation.audit_fairness``. The scorecard is
-deliberately self-contained — no engine-output parsing, no replays.
+It's a summary, not a re-audit: the full Q1-Q5 detail still lives in
+``python -m evaluation.audit_fairness``. The scorecard stays deliberately
+self-contained, with no engine-output parsing and no replays.
 
 Usage
 -----
@@ -132,7 +131,7 @@ def _resolve_results_json(arg: Path) -> Path:
 
 def _discover_run_layout(run_dir: Path, scenario: str, engine: str,
                          mode: str, seed: int) -> Path | None:
-    """Mirror audit_fairness._find_cell_dir — same four-layout detector."""
+    """Mirror of audit_fairness._find_cell_dir: the same four-layout detector."""
     candidates = [
         run_dir / f"{scenario}_{engine}_{mode}_seed{seed}" / "native_files",
         run_dir / scenario / engine / mode / f"seed_{seed}",
