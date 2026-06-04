@@ -23,7 +23,7 @@ def _prepare_or_skip(scenario: Path, out: Path):
     """Call `prepare_sumo_inputs`, skipping the test on a known arm64 netconvert crash.
 
     The bundled scenarios can exceed SUMO 1.26's macOS arm64 `netconvert`
-    threshold (~3K nodes) — chicago_1k_car under osmnx 2.x extracts ~20K
+    threshold (~3K nodes), chicago_1k_car under osmnx 2.x extracts ~20K
     nodes once denser highway types are included. Linux CI handles them
     fine; on macOS arm64 we skip cleanly so the suite stays green.
     """
@@ -79,7 +79,7 @@ def test_edges_have_length_attribute(bundled_scenario: Path, tmp_path: Path) -> 
 
 @pytest.mark.requires_sumo
 def test_net_xml_has_realistic_lane_lengths(bundled_scenario: Path, tmp_path: Path) -> None:
-    """Mean lane length must be > 10 m — guards against raw-WGS84 lengths."""
+    """Mean lane length must be > 10 m, guards against raw-WGS84 lengths."""
     out = tmp_path / "sumo_net_check"
     _prepare_or_skip(bundled_scenario, out)
 

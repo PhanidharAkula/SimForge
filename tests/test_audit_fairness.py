@@ -1,5 +1,5 @@
 """
-Tests for evaluation/audit_fairness.py — the post-benchmark cross-engine
+Tests for evaluation/audit_fairness.py, the post-benchmark cross-engine
 fairness audit (Q1–Q4 checks).
 
 We don't run the full audit_scenario flow against a real run directory
@@ -7,13 +7,13 @@ here (that's exercised manually after every benchmark via the canonical
 post-run pipeline). Instead we cover:
 
   * Pure parser helpers (HMS→seconds, dtalite/matsim/sumo travel-time
-    extraction, demand counting, XML/CSV element counts) — synthetic
+    extraction, demand counting, XML/CSV element counts), synthetic
     fixtures, fully deterministic.
-  * `_find_cell_dir` — the four output-layout detector that lets a single
+  * `_find_cell_dir`, the four output-layout detector that lets a single
     `audit_fairness <run-dir>` invocation work regardless of whether the
     run came from run.py (flat) or run_benchmark.py (nested) or a
     parallel-by-scenario sbatch wrapper (doubly-nested or per-scenario).
-  * `_discover_scenarios` — directory-walking helper used by the CLI.
+  * `_discover_scenarios`, directory-walking helper used by the CLI.
 """
 
 from __future__ import annotations
@@ -186,7 +186,7 @@ class TestCountHelpers:
     def test_count_matsim_persons(self, tmp_path: Path):
         # V11.2+ MATSim adapter emits population_v6 (root <population>);
         # _count_matsim_persons just findall("person") on the root, so
-        # it's root-tag-agnostic — but the fixture uses the production
+        # it's root-tag-agnostic, but the fixture uses the production
         # root to stay aligned with what the adapter actually writes.
         path = tmp_path / "plans.xml"
         path.write_text(
@@ -223,7 +223,7 @@ class TestCountHelpers:
 
 
 # ---------------------------------------------------------------------------
-# _find_cell_dir — the 4-layout detector that's the whole reason
+# _find_cell_dir, the 4-layout detector that's the whole reason
 # audit_fairness.py works against both run.py and run_benchmark.py output.
 # ---------------------------------------------------------------------------
 
@@ -340,7 +340,7 @@ class TestDiscoverScenarios:
 
 
 # ---------------------------------------------------------------------------
-# _discover_modes — Phase 12+ helper that lets the orchestrator audit
+# _discover_modes, Phase 12+ helper that lets the orchestrator audit
 # both meso and micro for the same (scenario, seed) tuple.
 # ---------------------------------------------------------------------------
 
@@ -365,7 +365,7 @@ class TestDiscoverModes:
 
 
 # ---------------------------------------------------------------------------
-# audit_scenario — orchestrator integration test against a synthetic run dir.
+# audit_scenario, orchestrator integration test against a synthetic run dir.
 #
 # Exercises the Q1-Q4 print path end-to-end on a layout-B run directory we
 # build from scratch with realistic per-engine fixture files.
@@ -447,7 +447,7 @@ def _build_synthetic_run_dir(base: Path, scenario: str = "chicago_1k_car", seed:
 class TestAuditScenarioIntegration:
     def test_runs_clean_against_synthetic_dir(self, tmp_path: Path, capsys):
         _build_synthetic_run_dir(tmp_path)
-        # No return value — we just need the orchestrator not to crash and
+        # No return value, we just need the orchestrator not to crash and
         # to print every Q1-Q4 section.
         audit_scenario(tmp_path, "chicago_1k_car", seed=42)
         out = capsys.readouterr().out

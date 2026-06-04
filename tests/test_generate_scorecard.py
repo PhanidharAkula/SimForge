@@ -1,5 +1,5 @@
 """
-Tests for tools/generate_scorecard.py — the reproducibility-scorecard
+Tests for tools/generate_scorecard.py, the reproducibility-scorecard
 emitter that summarizes provenance, environment, Q1 fairness, and R
 per cell into a single Markdown artefact.
 

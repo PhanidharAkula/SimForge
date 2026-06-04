@@ -12,7 +12,7 @@ path4gmns installed.
 
 These catch the class of regression where the adapter writes files the
 engine refuses to parse (e.g. an attribute added/removed in a breaking
-SUMO release) — something no amount of XML-structure assertions can see.
+SUMO release), something no amount of XML-structure assertions can see.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 from .conftest import is_arm64_netconvert_crash
 
 
-# Short per-engine timeout — the 1k-trip scenario finishes in seconds; if it
+# Short per-engine timeout, the 1k-trip scenario finishes in seconds; if it
 # takes longer than this something is wrong, and we'd rather fail CI fast.
 SUMO_TIMEOUT_S = 120
 MATSIM_TIMEOUT_S = 600
@@ -155,7 +155,7 @@ def test_matsim_real_jar_produces_output_trips(bundled_scenario: Path, tmp_path:
 def test_dtalite_real_binary_produces_agent_csv(bundled_scenario: Path, tmp_path: Path) -> None:
     """DTALite (via path4gmns) writes link_performance.csv + agent.csv with ≥1 row.
 
-    This is the DTALite equivalent of the SUMO/MATSim smoke tests above — proves
+    This is the DTALite equivalent of the SUMO/MATSim smoke tests above, proves
     the adapter's GMNS layout is what DTALite's UE loader actually accepts and
     that the binary produces the output schema we parse downstream.
 
@@ -188,17 +188,17 @@ def test_dtalite_real_binary_produces_agent_csv(bundled_scenario: Path, tmp_path
 
 
 # ---------------------------------------------------------------------------
-# Availability report — always runs, always passes, just surfaces what's on
+# Availability report, always runs, always passes, just surfaces what's on
 # the host.  Makes debugging CI/local skips instant.
 # ---------------------------------------------------------------------------
 
 
 def test_engine_availability_report() -> None:
-    """Log which engines are available — helps debug skipped tests in CI."""
+    """Log which engines are available, helps debug skipped tests in CI."""
     sumo_present = _have_sumo()
     matsim_present = _have_java_and_matsim()
     dtalite_present = _have_dtalite()
-    # No assertion — this is a diagnostic.  We just want the test header to
+    # No assertion, this is a diagnostic.  We just want the test header to
     # show the binary availability for the running host.
     print(f"\n  SUMO:    {'available' if sumo_present else 'not installed'}")
     print(f"  MATSim:  {'available' if matsim_present else 'not installed'}")

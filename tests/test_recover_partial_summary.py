@@ -1,4 +1,4 @@
-"""Tests for tools/recover_partial_summary.py — Phase 12.5 + 12.6."""
+"""Tests for tools/recover_partial_summary.py, Phase 12.5 + 12.6."""
 
 from __future__ import annotations
 

@@ -23,7 +23,7 @@ from pipeline.demand.parse_model_file import (
 
 
 # ---------------------------------------------------------------------------
-# JWTRNS_TO_MODE — V5 cityscape/PUMS-2021 mapping (single source of truth)
+# JWTRNS_TO_MODE, V5 cityscape/PUMS-2021 mapping (single source of truth)
 # ---------------------------------------------------------------------------
 
 
@@ -54,7 +54,7 @@ class TestJWTRNSMapping:
     def test_transit_bucket(self):
         # Public transit codes: Bus, Subway/elev, Commuter rail,
         # Light rail/streetcar, Ferryboat.
-        assert JWTRNS_TO_MODE[2] == "transit"  # Bus — was "car" pre-V5 bug
+        assert JWTRNS_TO_MODE[2] == "transit"  # Bus, was "car" pre-V5 bug
         assert JWTRNS_TO_MODE[3] == "transit"
         assert JWTRNS_TO_MODE[4] == "transit"
         assert JWTRNS_TO_MODE[5] == "transit"
@@ -65,14 +65,14 @@ class TestJWTRNSMapping:
         assert JWTRNS_TO_MODE[10] == "walk"
 
     def test_excluded_codes_use_home_sentinel(self):
-        # "home" is the no-trip sentinel — these codes should never
+        # "home" is the no-trip sentinel, these codes should never
         # reach the demand generator's trip-generation loop.
         assert JWTRNS_TO_MODE[11] == "home"  # Worked from home
         assert JWTRNS_TO_MODE[12] == "home"  # Other method (defensive default)
 
     def test_supported_modes_are_the_4_simulator_buckets(self):
         assert SUPPORTED_MODES == ("car", "transit", "bike", "walk")
-        # "home" is intentionally not in the supported tuple — it's the
+        # "home" is intentionally not in the supported tuple, it's the
         # sentinel for excluded persons.
         assert "home" not in SUPPORTED_MODES
 
@@ -100,7 +100,7 @@ class TestSingleSourceOfTruth:
     def test_scanner_imports_canonical_dict(self):
         from pipeline.modelgen_scanner import JWTRNS_TO_MODE as scanner_dict
         from pipeline.demand.parse_model_file import JWTRNS_TO_MODE as canonical
-        # Must be the same object — not a copy with the same values.
+        # Must be the same object, not a copy with the same values.
         assert scanner_dict is canonical
 
 
@@ -133,7 +133,7 @@ class TestParseSchedule:
         assert out[0].bld_id == 12345
 
     def test_malformed_garbage_silently_dropped(self):
-        # No matching tuples — should return [] rather than raise.
+        # No matching tuples, should return [] rather than raise.
         assert _parse_schedule('"this is not a schedule"') == []
 
     def test_partial_tuple_dropped(self):
@@ -145,7 +145,7 @@ class TestParseSchedule:
 
 
 # ---------------------------------------------------------------------------
-# _parse_person_line — full per record including schedule field
+# _parse_person_line, full per record including schedule field
 # ---------------------------------------------------------------------------
 
 
@@ -185,7 +185,7 @@ class TestParsePersonLine:
 
 
 # ---------------------------------------------------------------------------
-# ModelData.home_bld_by_per_id — needed by schedule-aware demand generation
+# ModelData.home_bld_by_per_id, needed by schedule-aware demand generation
 # ---------------------------------------------------------------------------
 
 
@@ -229,11 +229,11 @@ class TestHomeBldByPerId:
     def test_replicated_serial_resolves_per_household(self):
         # PUMS replicates SERIALNO across many synthesised households. Each
         # person belongs to exactly one household (the one whose person_ids
-        # list contains them) — even when several households share a serial.
+        # list contains them), even when several households share a serial.
         data = ModelData(
             buildings=[_make_bld(100), _make_bld(200), _make_bld(300)],
             households=[
-                # Three households all with the same serial — different bld_ids,
+                # Three households all with the same serial, different bld_ids,
                 # different person_ids. Each person must resolve to their own home.
                 _make_hld(100, "SHARED", [1, 2]),
                 _make_hld(200, "SHARED", [3, 4]),
@@ -260,7 +260,7 @@ class TestHomeBldByPerId:
 
 
 # ---------------------------------------------------------------------------
-# Trip-purpose realism (V5+) — HBSchool support helpers
+# Trip-purpose realism (V5+), HBSchool support helpers
 # ---------------------------------------------------------------------------
 
 
@@ -276,7 +276,7 @@ class TestHBSchoolHelpers:
         from pipeline.demand.generate_census_demand import _is_school_kind
         # OSM emits these as `kind=school` (sometimes with a colon
         # subkind suffix, e.g. `school:fast_food` is a misclassified
-        # building — we still match the leading prefix).
+        # building, we still match the leading prefix).
         assert _is_school_kind("school:")
         assert _is_school_kind("school")
         assert _is_school_kind("kindergarten:")
@@ -355,7 +355,7 @@ class TestHBSchoolHelpers:
         assert not _has_school_age_dependent(commuter, data)
 
     def test_has_school_age_dependent_excludes_age_minus_one(self):
-        """PUMS uses -1 for Not-applicable. We must exclude that — a
+        """PUMS uses -1 for Not-applicable. We must exclude that, a
         household with a -1-age member shouldn't count as having a kid."""
         from pipeline.demand.generate_census_demand import _has_school_age_dependent
         commuter = _make_per(1, "S")
@@ -378,11 +378,11 @@ class TestHBSchoolHelpers:
             AM_PURPOSES,
             PM_PURPOSES,
         )
-        # AM peak — outbound HBW, plus the school drop-off chain pair.
+        # AM peak, outbound HBW, plus the school drop-off chain pair.
         assert AM_PURPOSES == frozenset(
             {"HBW_AM", "HBSchool_AM", "HBW_AM_chained"}
         )
-        # PM peak — return HBW, plus the school pickup chain pair.
+        # PM peak, return HBW, plus the school pickup chain pair.
         assert PM_PURPOSES == frozenset(
             {"HBW_PM", "HBSchool_PM", "HBW_PM_chained"}
         )

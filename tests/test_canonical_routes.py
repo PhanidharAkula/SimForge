@@ -33,7 +33,7 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
-# Defensive import — module doesn't exist yet at commit 14.0
+# Defensive import, module doesn't exist yet at commit 14.0
 # ---------------------------------------------------------------------------
 
 try:
@@ -54,7 +54,7 @@ pytestmark = pytest.mark.skipif(
 
 
 # ---------------------------------------------------------------------------
-# Test-only helpers (don't depend on the new module — they replicate the
+# Test-only helpers (don't depend on the new module, they replicate the
 # legacy in-adapter BFS so the byte-identity test is self-contained)
 # ---------------------------------------------------------------------------
 
@@ -149,7 +149,7 @@ def _feasible_ids_for(scenario_dir: Path) -> Set[str]:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.1 — basic serial API contract
+# Phase 14.1, basic serial API contract
 # ---------------------------------------------------------------------------
 
 
@@ -235,7 +235,7 @@ class TestSerialAPI:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.1 — JSONL cache
+# Phase 14.1, JSONL cache
 # ---------------------------------------------------------------------------
 
 
@@ -246,7 +246,7 @@ class TestCache:
         """A second call with identical inputs should be fast (cache hit)."""
         feasible = _feasible_ids_for(bundled_scenario)
 
-        # First call — cold cache. Should write a cache file.
+        # First call, cold cache. Should write a cache file.
         t0 = time.monotonic()
         result1 = compute_canonical_routes(
             scenario_dir=bundled_scenario,
@@ -262,7 +262,7 @@ class TestCache:
             f"expected 1 cache file, found {len(cache_files)}: {cache_files}"
         )
 
-        # Second call — should read from cache without recomputing.
+        # Second call, should read from cache without recomputing.
         t0 = time.monotonic()
         result2 = compute_canonical_routes(
             scenario_dir=bundled_scenario,
@@ -304,7 +304,7 @@ class TestCache:
         shutil.copytree(bundled_scenario, scratch)
         demand_path = scratch / "demand.csv"
         text = demand_path.read_text(encoding="utf-8")
-        # Append a trailing newline — content changes, schema unchanged.
+        # Append a trailing newline, content changes, schema unchanged.
         demand_path.write_text(text + "\n", encoding="utf-8")
 
         # The feasibility filter recomputes on the tweaked bundle.
@@ -333,7 +333,7 @@ class TestByteIdentityVsLegacy:
     ) -> None:
         """The new shared BFS must produce paths byte-identical to the
         legacy in-adapter BFS loop, per trip_id. This is the load-bearing
-        invariant — adapters' route XML byte-identity downstream depends
+        invariant, adapters' route XML byte-identity downstream depends
         on this property.
         """
         legacy = _legacy_inline_bfs_paths(bundled_scenario)
@@ -355,7 +355,7 @@ class TestByteIdentityVsLegacy:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.2 — SUMO adapter byte-identity (with vs without canonical_routes)
+# Phase 14.2, SUMO adapter byte-identity (with vs without canonical_routes)
 # ---------------------------------------------------------------------------
 
 
@@ -403,11 +403,11 @@ class TestSumoRoutesXmlByteIdentity:
             supported_modes={"car"},
         )
 
-        # Legacy path — adapter runs its own BFS.
+        # Legacy path, adapter runs its own BFS.
         legacy_xml = build_sumo_routes_xml(
             summary, scc_graph, bundled_scenario / "demand.csv", feasible,
         )
-        # Phase 14 path — adapter consumes pre-computed routes.
+        # Phase 14 path, adapter consumes pre-computed routes.
         routes = compute_canonical_routes(
             scenario_dir=bundled_scenario,
             feasible_trip_ids=feasible,
@@ -425,7 +425,7 @@ class TestSumoRoutesXmlByteIdentity:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.3 — MATSim adapter byte-identity (with vs without canonical_routes)
+# Phase 14.3, MATSim adapter byte-identity (with vs without canonical_routes)
 # ---------------------------------------------------------------------------
 
 
@@ -454,14 +454,14 @@ class TestMatsimPlansXmlByteIdentity:
             supported_modes={"car"},
         )
 
-        # Legacy path — adapter runs its own BFS.
+        # Legacy path, adapter runs its own BFS.
         legacy_xml = build_matsim_plans_xml(
             demand_path=bundled_scenario / "demand.csv",
             links=links,
             feasible=feasible,
             network_path=bundled_scenario / "network.xml",
         )
-        # Phase 14 path — adapter consumes pre-computed routes.
+        # Phase 14 path, adapter consumes pre-computed routes.
         routes = compute_canonical_routes(
             scenario_dir=bundled_scenario,
             feasible_trip_ids=feasible,
@@ -482,7 +482,7 @@ class TestMatsimPlansXmlByteIdentity:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.5 — multiprocessing determinism
+# Phase 14.5, multiprocessing determinism
 # ---------------------------------------------------------------------------
 
 

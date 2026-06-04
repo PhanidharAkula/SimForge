@@ -1,14 +1,14 @@
 """
-Tests for `evaluation/metrics/confidence.py` — 95 % confidence intervals.
+Tests for `evaluation/metrics/confidence.py`, 95 % confidence intervals.
 
 Validation strategy:
-  1. **Tabulated t-critical values** — round-tripped against published
+  1. **Tabulated t-critical values**, round-tripped against published
      two-tailed t-tables for α = 0.05 (any standard stats textbook).
-  2. **Edge cases** — N=0 raises, N=1 returns ± 0.0, identical samples
+  2. **Edge cases**, N=0 raises, N=1 returns ± 0.0, identical samples
      return ± 0.0.
-  3. **Worked examples** — small hand-computable inputs let us assert exact
+  3. **Worked examples**, small hand-computable inputs let us assert exact
      means and half-widths to machine precision.
-  4. **Monotonicity** — half-width strictly shrinks as N grows for a
+  4. **Monotonicity**, half-width strictly shrinks as N grows for a
      fixed-σ population (the whole point of larger N).
 """
 
@@ -26,7 +26,7 @@ from evaluation.metrics.confidence import (
 
 
 # ---------------------------------------------------------------------------
-# t_critical_95 — table fidelity and degenerate inputs
+# t_critical_95, table fidelity and degenerate inputs
 # ---------------------------------------------------------------------------
 
 
@@ -39,8 +39,8 @@ class TestTCritical:
             (2, 12.706),    # df = 1
             (3, 4.303),     # df = 2
             (5, 2.776),     # df = 4
-            (10, 2.262),    # df = 9 — the plan's target N
-            (30, 2.045),    # df = 29 — last tabulated entry
+            (10, 2.262),    # df = 9, the plan's target N
+            (30, 2.045),    # df = 29, last tabulated entry
         ],
     )
     def test_tabulated_values_match_textbook(self, n: int, expected_t: float) -> None:
@@ -52,7 +52,7 @@ class TestTCritical:
         assert t_critical_95(1000) == 1.960
 
     def test_n_equals_1_returns_zero(self) -> None:
-        """N=1 has no sample variance — half-width is undefined → 0.0."""
+        """N=1 has no sample variance, half-width is undefined → 0.0."""
         assert t_critical_95(1) == 0.0
 
     def test_n_below_1_raises(self) -> None:
@@ -63,7 +63,7 @@ class TestTCritical:
 
 
 # ---------------------------------------------------------------------------
-# confidence_interval_95 — semantic behaviour
+# confidence_interval_95, semantic behaviour
 # ---------------------------------------------------------------------------
 
 

@@ -35,7 +35,7 @@ _BUNDLED_PREFERENCE = (
 # minutes per adapter run. Skip them in suite-wide adapter sweeps.
 LARGE_SCENARIO_PATTERNS: tuple[str, ...] = ("50k", "200k", "500k", "5m")
 
-# Required canonical files — a scenario directory missing any of these is
+# Required canonical files, a scenario directory missing any of these is
 # treated as an orphan (e.g. iCloud half-sync) and excluded from discovery.
 _REQUIRED_BUNDLE_FILES = ("manifest.xml", "network.xml", "demand.csv", "config.xml")
 

@@ -23,7 +23,7 @@ class TestSimulationTimer:
     
     def test_timer_measures_time(self):
         """Timer should report elapsed time consistent with a monotonic-clock
-        reference. Loose upper bound — tightened lower bound — so the test
+        reference. Loose upper bound, tightened lower bound, so the test
         passes on loaded CI runners without going flaky in either direction.
         """
         ref_start = time.monotonic()

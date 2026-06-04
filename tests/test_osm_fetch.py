@@ -2,9 +2,9 @@
 Tests for the OSM network-fetching module.
 
 These tests run offline.  `osmnx.graph_from_bbox` is monkeypatched so we can
-exercise the full `build_network_from_osm` pipeline — bbox validation, cache
+exercise the full `build_network_from_osm` pipeline, bbox validation, cache
 folder pinning, error translation, canonical-schema extraction, and the
-`PREDEFINED_CITIES` table — without hitting the public Overpass API.
+`PREDEFINED_CITIES` table, without hitting the public Overpass API.
 
 Catches regressions in:
   - `BoundingBox.__post_init__` invariant enforcement (north>south, east>west)
@@ -187,14 +187,14 @@ class TestPredefinedCities:
         with pytest.raises(ValueError) as excinfo:
             get_city_bbox("atlantis")
         assert "atlantis" in str(excinfo.value)
-        # Every available city should be mentioned in the error — helps users
+        # Every available city should be mentioned in the error, helps users
         # notice a typo without reading the source.
         for key in PREDEFINED_CITIES:
             assert key in str(excinfo.value)
 
 
 # ---------------------------------------------------------------------------
-# Default tables are sensible (cheap sanity — catches copy-paste typos)
+# Default tables are sensible (cheap sanity, catches copy-paste typos)
 # ---------------------------------------------------------------------------
 
 
@@ -242,7 +242,7 @@ def test_cache_folder_is_pinned_to_repo_cache(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# download_osm_network — exercises the full error / success paths with a stub
+# download_osm_network, exercises the full error / success paths with a stub
 # ---------------------------------------------------------------------------
 
 
@@ -281,7 +281,7 @@ def test_download_osm_network_returns_graph(monkeypatch):
     G = download_osm_network(bbox)
 
     assert G.number_of_nodes() == 4
-    # Osmnx 2.x takes bbox as (west, south, east, north) — regression guard.
+    # Osmnx 2.x takes bbox as (west, south, east, north), regression guard.
     assert captured["bbox"] == (-87.65, 41.88, -87.64, 41.89)
     assert captured["simplify"] is True
     assert captured["truncate_by_edge"] is True
@@ -296,7 +296,7 @@ def test_download_osm_network_translates_exceptions(monkeypatch):
     with pytest.raises(RuntimeError) as excinfo:
         download_osm_network(BoundingBox(north=41.89, south=41.88, east=-87.64, west=-87.65))
     msg = str(excinfo.value)
-    # Human-readable error block — users must be told what to check.
+    # Human-readable error block, users must be told what to check.
     assert "Overpass" in msg or "rate-limited" in msg
     assert "ConnectionError" in msg
     assert "Bbox" in msg
@@ -319,14 +319,14 @@ def test_download_osm_network_reports_missing_osmnx(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# extract_canonical_network — speed unit parsing
+# extract_canonical_network, speed unit parsing
 # ---------------------------------------------------------------------------
 
 
 def test_extract_canonical_network_basic():
     G = _sample_graph()
     nodes, links, turn_restrictions = extract_canonical_network(G)
-    # No OSM relations passed — turn_restrictions should be empty.
+    # No OSM relations passed, turn_restrictions should be empty.
     assert turn_restrictions == []
 
     assert len(nodes) == 4
@@ -352,7 +352,7 @@ def test_extract_canonical_network_basic():
 
 
 # ---------------------------------------------------------------------------
-# build_network_from_osm — full end-to-end with fake OSM backend
+# build_network_from_osm, full end-to-end with fake OSM backend
 # ---------------------------------------------------------------------------
 
 
@@ -369,7 +369,7 @@ def test_build_network_from_osm_writes_xml(tmp_path, monkeypatch):
     assert result["link_count"] == 4
     assert out.is_file()
 
-    # Parse it back — must be valid XML containing nodes and links.
+    # Parse it back, must be valid XML containing nodes and links.
     from lxml import etree
 
     root = etree.parse(str(out)).getroot()

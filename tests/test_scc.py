@@ -1,5 +1,5 @@
 """
-Tests for pipeline/network/scc.py — the canonical largest-SCC computation.
+Tests for pipeline/network/scc.py, the canonical largest-SCC computation.
 
 Both demand generators and adapter feasibility filters delegate to this
 module. A regression here silently corrupts every cross-engine run, so the
@@ -21,7 +21,7 @@ from pipeline.network.scc import (
 
 
 # ---------------------------------------------------------------------------
-# Pure-algorithm tests — no I/O
+# Pure-algorithm tests, no I/O
 # ---------------------------------------------------------------------------
 
 
@@ -69,7 +69,7 @@ class TestComputeLargestSCC:
         assert compute_largest_scc({"x"}, []) == {"x"}
 
     def test_iterative_handles_deep_chain(self):
-        """Deep chain (5 000 nodes) — the recursive form would blow the stack."""
+        """Deep chain (5 000 nodes), the recursive form would blow the stack."""
         n = 5000
         nodes = {f"n{i}" for i in range(n)}
         edges = [(f"n{i}", f"n{i+1}") for i in range(n - 1)]

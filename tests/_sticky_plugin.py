@@ -1,12 +1,12 @@
 """Pytest plugin: sticky progress bar + per-file rollup or per-test rows.
 
-Replaces pytest's per-test dots / verbose labels with our own output:
+Swaps pytest's per-test dots / verbose labels for our own output:
 
-  Default (`python -m pytest`)         — one row per file (PASSED/FAILED/SKIPPED)
-  Verbose (`python -m pytest -v`)      — one row per test  (✓/✗/⊘ + reason)
+  Default (`python -m pytest`)         one row per file (PASSED/FAILED/SKIPPED)
+  Verbose (`python -m pytest -v`)      one row per test  (✓/✗/⊘ + reason)
 
-Either way the sticky bar at the bottom advances per-test (so the
-percentage is honest) — same visual style as run.py / run_benchmark.py /
+Either way the sticky bar at the bottom advances per test, so the
+percentage stays honest, in the same style as run.py / run_benchmark.py /
 generate.py.
 
 To get pytest's plain output for one run, opt out:
@@ -28,12 +28,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from pipeline.progress import StickyProgress  # noqa: E402
 
 
-# ANSI colour codes — match StickyProgress's own ✓/✗ counter palette so
-# the file-rollup rows agree visually with the bar at the bottom.
+# ANSI colour codes, matched to StickyProgress's own ✓/✗ counter palette so
+# the file-rollup rows look consistent with the bar at the bottom.
 _RESET = "\033[0m"
-_GREEN = "\033[1;32m"   # bold green   — PASSED
-_RED = "\033[1;31m"     # bold red     — FAILED
-_YELLOW = "\033[1;33m"  # bold yellow  — SKIPPED
+_GREEN = "\033[1;32m"   # bold green:  PASSED
+_RED = "\033[1;31m"     # bold red:    FAILED
+_YELLOW = "\033[1;33m"  # bold yellow: SKIPPED
 
 
 def _colour_status(status: str, *, tty: bool) -> str:
@@ -52,7 +52,7 @@ def _colour_status(status: str, *, tty: bool) -> str:
 
 def _fmt_dur(seconds: float) -> str:
     if seconds < 60:
-        # Sub-minute test runs are common — keep one decimal so 0.7s
+        # Sub-minute test runs are common, keep one decimal so 0.7s
         # doesn't render as "0s".
         return f"{seconds:.1f}s"
     m, s = divmod(int(seconds), 60)
@@ -108,7 +108,7 @@ class StickyProgressPlugin:
         # File-name column width (computed from collected items)
         self.name_w = 30
 
-        # TTY detection — colours only when we're on an interactive
+        # TTY detection, colours only when we're on an interactive
         # terminal (matches StickyProgress's own gating).
         self.tty = sys.stdout.isatty()
 
@@ -130,7 +130,7 @@ class StickyProgressPlugin:
         if files:
             self.name_w = max(len(f) for f in files)
 
-        # SimForge-style header — same look as run.py / run_benchmark.py.
+        # SimForge-style header, same look as run.py / run_benchmark.py.
         # `-q` in addopts hides pytest's own "collected N items" line, so we
         # re-emit a richer one here.
         print("\n" + "=" * 60)
@@ -159,8 +159,8 @@ class StickyProgressPlugin:
         # _pytest.warnings.pytest_terminal_summary iterates tr.stats
         # ["warnings"] and tryfirst doesn't guarantee precedence among
         # competing tryfirst hooks (registration order wins, and
-        # _pytest.warnings registers earlier). Doing the stat-pop here
-        # — strictly before any pytest_terminal_summary — kills the
+        # _pytest.warnings registers earlier). Doing the stat-pop here,
+        # strictly before any pytest_terminal_summary, kills the
         # "warnings summary" block at its source. We've already
         # captured every warning into self.warning_messages via
         # pytest_warning_recorded; the rendering happens in our own
@@ -172,7 +172,7 @@ class StickyProgressPlugin:
                     "deselected", "rerun"):
             tr.stats.pop(key, None)
         # Method monkey-patches: redundant with the stat-pop for some
-        # categories but defensive — pytest plugins occasionally render
+        # categories but defensive, pytest plugins occasionally render
         # via their own paths instead of tr.stats iteration.
         # `summary_failures` and `summary_errors` are the FAILURES /
         # ERRORS traceback blocks pytest emits before our unified
@@ -189,7 +189,7 @@ class StickyProgressPlugin:
 
     def pytest_warning_recorded(self, warning_message, when, nodeid, location):
         msg = str(warning_message.message)
-        # Drop the conftest path / lineno noise — we just want the warning text.
+        # Drop the conftest path / lineno noise, we just want the warning text.
         self.warning_messages.append((nodeid or "<session>", msg))
 
     # ---- suppress pytest's per-test character / label output --------------
@@ -257,7 +257,7 @@ class StickyProgressPlugin:
             self.skip_reasons_by_file.setdefault(file_path, Counter())[reason] += 1
             if self.verbose:
                 self._emit_test_row(nid, "skipped", reason)
-            # Skips count toward total but aren't failures — advance with
+            # Skips count toward total but aren't failures, advance with
             # ok=True so the bar's ✗N stays accurate to actual failures.
             self.progress.advance(ok=True)
 
@@ -289,7 +289,7 @@ class StickyProgressPlugin:
         """Print the accumulated rollup row for self.current_file."""
         if self.progress is None or self.current_file is None:
             return
-        # In verbose mode we already printed a row per test — skip the
+        # In verbose mode we already printed a row per test, skip the
         # per-file rollup so the screen doesn't double-list everything.
         if self.verbose:
             return
@@ -300,9 +300,9 @@ class StickyProgressPlugin:
         elif self.file_has_skip:
             status = "SKIPPED"
         else:
-            return  # No reportable tests — don't emit a row.
+            return  # No reportable tests, don't emit a row.
         # Pad the file-name column based on plain text width, then
-        # colour the status only — padding stays correct because the
+        # colour the status only, padding stays correct because the
         # ANSI codes don't change the visible-glyph count.
         self.progress.print_above(
             f"  {self.current_file:<{self.name_w}}  "
@@ -356,7 +356,7 @@ class StickyProgressPlugin:
     #
     # Runs with tryfirst=True so we render before _pytest.terminal and
     # _pytest.warnings get their turn. We also flip terminalreporter's
-    # internal "no_summary" / "no_header" knobs to suppress their output —
+    # internal "no_summary" / "no_header" knobs to suppress their output,
     # cleaner than a wholesale reporter swap and keeps pytest's exit code
     # logic intact.
 
@@ -415,7 +415,7 @@ class StickyProgressPlugin:
         print("\n" + "=" * 60 + "\n")
         # The actual muting of pytest's own end-of-session output
         # (warnings summary, short test summary, stats line) happens
-        # in pytest_sessionfinish — it has to run before any
+        # in pytest_sessionfinish, it has to run before any
         # pytest_terminal_summary hook fires.
 
 
@@ -426,7 +426,7 @@ def pytest_configure(config) -> None:
     Reads pytest's `-v` / `--verbose` flag and threads it into the plugin
     so verbose mode switches from per-file rollup to per-test rows. Then
     pins ``config.option.verbose`` back to ``-1`` so pytest's own
-    TerminalReporter stays in quiet mode for the rest of the run — its
+    TerminalReporter stays in quiet mode for the rest of the run, its
     file headers, ``[ N%]`` tails, and ``test session starts`` banner all
     branch on that value, and we'd otherwise be fighting them for screen
     real estate.

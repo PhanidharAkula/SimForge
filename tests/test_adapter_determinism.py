@@ -1,5 +1,5 @@
 """
-Determinism tests — running the SUMO adapter twice on the same scenario
+Determinism tests, running the SUMO adapter twice on the same scenario
 must produce byte-identical outputs (modulo netconvert's embedded timestamp).
 
 Cross-run divergence is what makes "reproducible benchmark" a lie, so these

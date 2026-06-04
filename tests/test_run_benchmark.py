@@ -4,7 +4,7 @@ The harness has historically had three foot-guns that bit hard in
 production (see CHANGELOG Phase 12):
 
   1. ``--output`` CLI overrides were silently clobbered by the runspec's
-     ``output_dir:`` inside ``run_benchmark()`` — every parallel-by-scenario
+     ``output_dir:`` inside ``run_benchmark()``, every parallel-by-scenario
      sbatch worker collapsed to the runspec's single output base, so the
      three workers' aggregate JSONs raced and last-writer-wins.
 
@@ -49,7 +49,7 @@ class TestExplicitOutputBase:
         assert (tmp_path / "myrun").is_dir()
 
     def test_none_output_falls_back_to_default(self, tmp_path: Path):
-        """Explicit ``None`` is the same as omitting the arg — default + implicit."""
+        """Explicit ``None`` is the same as omitting the arg, default + implicit."""
         h = BenchmarkHarness(output_base=None)
         assert h._explicit_output is False
         assert h.output_base == Path("runs")
@@ -58,7 +58,7 @@ class TestExplicitOutputBase:
 # ---------------------------------------------------------------------------
 # Bug 2 (per-cell mode-segmented path) is exercised end-to-end by the
 # audit_fairness layout tests in tests/test_audit_fairness.py
-# (TestFindCellDir.test_layout_b_phase12_*) — those tests assert that the
+# (TestFindCellDir.test_layout_b_phase12_*), those tests assert that the
 # new on-disk layout matches the path that `run_benchmark.py` now writes.
 # Keeping that assertion in audit_fairness's test file lets a regression
 # in either direction fail loudly.
@@ -66,7 +66,7 @@ class TestExplicitOutputBase:
 
 
 # ---------------------------------------------------------------------------
-# Bug 3: BFS-prep caching — prepare runs once per (scenario, engine);
+# Bug 3: BFS-prep caching, prepare runs once per (scenario, engine);
 # per-cell run dirs receive hardlinks; MATSim's seed-dependent config.xml
 # is rewritten per cell.
 # ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ class TestPreparedCache:
             (output_dir / "tripinfo.xml").write_text("<dummy/>")
 
         monkeypatch.setattr(h, "prepare_sumo_inputs", fake_prepare)
-        # Phase 14: stub the canonical-routes computation — the synthetic
+        # Phase 14: stub the canonical-routes computation, the synthetic
         # bundle has no network.xml/demand.csv. The cache-management
         # behavior under test is independent of route content.
         monkeypatch.setattr(h, "_canonical_routes_for", lambda *a, **kw: {})
@@ -171,7 +171,7 @@ class TestPreparedCache:
         )
         assert len(called) == 1
 
-        # Bundle "regenerated" — manifest hash changes.
+        # Bundle "regenerated", manifest hash changes.
         new_hash = self._write_bundle(bundle, manifest_text="v2-different-content")
         h._ensure_prepared_cache(
             scenario_path=bundle, scenario_id="chicago_1k_car",
@@ -234,7 +234,7 @@ class TestPreparedCache:
             scenario_path=bundle, scenario_id="chicago_1k_car",
             engine="sumo", engine_options=None,
         )
-        # Phase 12.2: collapsed — no <scenario_id>/ between .cache and engine.
+        # Phase 12.2: collapsed, no <scenario_id>/ between .cache and engine.
         assert cache == per_scenario / ".cache" / "sumo"
         assert (cache / ".prepared").is_file()
 
@@ -313,7 +313,7 @@ class TestPreparedCache:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.13 — canonical_routes cache hoist + legacy-cache migration.
+# Phase 14.13, canonical_routes cache hoist + legacy-cache migration.
 # ---------------------------------------------------------------------------
 
 
@@ -331,7 +331,7 @@ class TestCanonicalRoutesCacheRoot:
         """The global cache root is independent of the harness's output_base.
 
         Two harnesses with different output_base values must agree on the
-        cache location — that's the entire point of the Phase 14.13 hoist.
+        cache location, that's the entire point of the Phase 14.13 hoist.
         """
         h1 = BenchmarkHarness(output_base=tmp_path / "runA")
         h2 = BenchmarkHarness(output_base=tmp_path / "runB")
@@ -373,7 +373,7 @@ class TestLegacyCanonicalRoutesCacheMigration:
         """
         h = BenchmarkHarness(output_base=tmp_path)
         target = tmp_path / "global"
-        # No exception — migration is a defensive operation.
+        # No exception, migration is a defensive operation.
         h._migrate_legacy_canonical_routes_cache("never_run_scenario", target)
         # Target dir doesn't get created if there's nothing to migrate.
         assert not target.exists()
@@ -428,7 +428,7 @@ class TestLegacyCanonicalRoutesCacheMigration:
 
     def test_only_migrates_canonical_routes_files(self, tmp_path: Path):
         """Other files in the legacy dir (e.g. accidentally-placed
-        garbage) are NOT migrated — only canonical_routes_*.jsonl.
+        garbage) are NOT migrated, only canonical_routes_*.jsonl.
         """
         h = BenchmarkHarness(output_base=tmp_path)
         legacy_root = tmp_path / "chicago_1k_car" / ".canonical_routes"

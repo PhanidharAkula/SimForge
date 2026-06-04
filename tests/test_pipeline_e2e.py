@@ -25,7 +25,7 @@ from .conftest import is_arm64_netconvert_crash, warn_skipped
 
 
 # ===========================================================================
-# Validation tests — every corruption mode the validator must catch
+# Validation tests, every corruption mode the validator must catch
 # ===========================================================================
 
 

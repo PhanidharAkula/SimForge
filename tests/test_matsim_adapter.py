@@ -3,13 +3,13 @@ Tests for the MATSim adapter.
 
 `prepare_matsim_inputs` produces the four MATSim XML files (network, plans,
 vehicles, config) from a canonical scenario. These tests exercise file
-generation only — no Java or MATSim JAR is required.
+generation only, no Java or MATSim JAR is required.
 
 The expensive code paths (state-aware BFS pre-routing in
 `build_matsim_plans_xml`, full `prepare_matsim_inputs` runs) are shared via
 session-scoped fixtures so identical work is not repeated across N
 read-only assertions. Determinism of those paths is enforced separately
-in `tests/test_adapter_determinism.py` — this file checks structure only.
+in `tests/test_adapter_determinism.py`, this file checks structure only.
 """
 
 from __future__ import annotations
@@ -39,20 +39,20 @@ from adapters.matsim.matsim_adapter import (
 
 @pytest.fixture(scope="session")
 def canonical_network_data(bundled_scenario):
-    """`(nodes, links)` from the bundled scenario's network.xml — loaded once."""
+    """`(nodes, links)` from the bundled scenario's network.xml, loaded once."""
     return load_canonical_network(bundled_scenario / "network.xml")
 
 
 @pytest.fixture(scope="session")
 def built_network_xml(canonical_network_data):
-    """MATSim network XML string — built once per session."""
+    """MATSim network XML string, built once per session."""
     nodes, links = canonical_network_data
     return build_matsim_network_xml(nodes, links)
 
 
 @pytest.fixture(scope="session")
 def built_plans_xml(bundled_scenario, canonical_network_data):
-    """MATSim plans XML string — built once per session.
+    """MATSim plans XML string, built once per session.
 
     This is the expensive call: state-aware BFS pre-routing runs once per
     trip × N turn restrictions in network.xml. Caching it here drops the
@@ -196,7 +196,7 @@ class TestBuildMATSimNetwork:
 class TestBuildMATSimPlans:
     def test_valid_xml_output(self, built_plans_xml):
         # V11.2 migrated from plans_v4 (<plans>/<act>) to population_v6
-        # (<population>/<activity>) — see CHANGELOG Phase 11.2 for the
+        # (<population>/<activity>), see CHANGELOG Phase 11.2 for the
         # rationale (plans_v4 rejected V5 Phase 7's `<route type="links">`).
         root = ET.fromstring(built_plans_xml)
         assert root.tag == "population"

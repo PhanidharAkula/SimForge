@@ -3,7 +3,7 @@ Tests for the DTALite adapter.
 
 `prepare_dtalite_inputs` produces GMNS node.csv / link.csv / demand.csv plus
 settings.csv / settings.yml from a canonical scenario. These tests exercise
-input preparation, schema fidelity, determinism, and output parsing — no
+input preparation, schema fidelity, determinism, and output parsing, no
 DTALite binary is required for the fast tier. The single binary-driven
 smoke test is gated on `is_dtalite_available()` and skips when path4gmns
 is not installed.
@@ -306,7 +306,7 @@ class TestDemandCsv:
         assert n == 1
 
     def test_drops_intra_zonal(self, tmp_path):
-        # trip_d is n0→n0 — must NOT appear even when feasible.
+        # trip_d is n0→n0, must NOT appear even when feasible.
         demand = tmp_path / "demand.csv"
         self._write_canonical_demand(demand)
         out = tmp_path / "od.csv"
@@ -453,7 +453,7 @@ class TestPrepareDTALiteInputs:
 
 
 # ---------------------------------------------------------------------------
-# Output parsing — synthetic agent.csv
+# Output parsing, synthetic agent.csv
 # ---------------------------------------------------------------------------
 
 

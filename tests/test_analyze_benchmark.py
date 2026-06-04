@@ -1,5 +1,5 @@
 """
-Tests for evaluation/analyze_benchmark.py — mode-aware grouping and the
+Tests for evaluation/analyze_benchmark.py, mode-aware grouping and the
 identity-resolution fallback that prevent the silent R-score collapse fixed
 in [1.0.0].
 
@@ -29,7 +29,7 @@ from evaluation.analyze_benchmark import (
 
 
 # ---------------------------------------------------------------------------
-# _resolve_identity — explicit fields and string-parsed fallback
+# _resolve_identity, explicit fields and string-parsed fallback
 # ---------------------------------------------------------------------------
 
 
@@ -67,7 +67,7 @@ class TestResolveIdentity:
 
 
 # ---------------------------------------------------------------------------
-# compute_reproducibility — core R = 1 − σ/μ behaviour
+# compute_reproducibility, core R = 1 − σ/μ behaviour
 # ---------------------------------------------------------------------------
 
 
@@ -91,7 +91,7 @@ class TestComputeReproducibility:
 
 
 # ---------------------------------------------------------------------------
-# analyze_results — mode-aware grouping
+# analyze_results, mode-aware grouping
 # ---------------------------------------------------------------------------
 
 
@@ -232,7 +232,7 @@ class TestTableRenderers:
         assert "matsim" in out
 
     def test_coverage_report_flags_low_sample_and_asymmetric(self, stats):
-        """Our stats fixture has a SUMO/micro cell on chicago but not nyc —
+        """Our stats fixture has a SUMO/micro cell on chicago but not nyc,
         the coverage report must call that out as asymmetric."""
         out = print_coverage_report(stats)
         assert "COVERAGE DIAGNOSTIC" in out
@@ -243,7 +243,7 @@ class TestTableRenderers:
     def test_coverage_report_flags_thin_cells(self):
         thin_stats = analyze_results({"results": [
             _run("x", "sumo", "meso", 1.0, 200.0),
-            _run("x", "sumo", "meso", 1.0, 201.0),  # only 2 runs — thin
+            _run("x", "sumo", "meso", 1.0, 201.0),  # only 2 runs, thin
         ]})
         out = print_coverage_report(thin_stats)
         assert "Low-sample" in out or "n < 3" in out

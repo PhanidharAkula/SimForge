@@ -8,16 +8,16 @@ network parser, the top-level `generate_synthetic_demand` dispatch, and the
 
 Focus areas:
 
-  - SCC restriction of origins *and* destinations — the [1.0.0] cross-engine
+  - SCC restriction of origins *and* destinations, the [1.0.0] cross-engine
     fairness fix relies on this being true for the generator AND the
     adapter-side feasibility filter.
-  - Deterministic seeding — two runs with the same seed on the same network
+  - Deterministic seeding, two runs with the same seed on the same network
     must produce byte-identical demand.csv files.
-  - Peak-hour temporal profile — the peak-hour generator must actually
+  - Peak-hour temporal profile, the peak-hour generator must actually
     concentrate departures in the requested windows (we don't test exact
     fractions, just a strong-signal assertion).
-  - Canonical CSV schema — columns and types match `canonical/schema/demand_v0.md`.
-  - Error translation — missing / corrupt network paths produce clear errors.
+  - Canonical CSV schema, columns and types match `canonical/schema/demand_v0.md`.
+  - Error translation, missing / corrupt network paths produce clear errors.
 """
 
 from __future__ import annotations
@@ -60,7 +60,7 @@ _NETWORK_XML_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 
 
 def _write_grid_network(path: Path, n: int = 4) -> None:
-    """Write an n-node ring network to `path` — SCC is the whole ring.
+    """Write an n-node ring network to `path`, SCC is the whole ring.
 
     Coordinates are spaced ~111 m apart (0.001 deg latitude) so the
     Haversine distances used by the gravity model land in a realistic range.
@@ -71,7 +71,7 @@ def _write_grid_network(path: Path, n: int = 4) -> None:
         lat = 41.88
         nodes.append(f'    <node id="n{i}" x="{lon}" y="{lat}"/>')
     links = []
-    # Bidirectional ring — guarantees the whole graph is one SCC.
+    # Bidirectional ring, guarantees the whole graph is one SCC.
     for i in range(n):
         j = (i + 1) % n
         links.append(f'    <link id="l{i}a" from="n{i}" to="n{j}" length_m="111"/>')
@@ -207,7 +207,7 @@ class TestUniformRandomGenerator:
             assert d in ring_network.strongly_connected_nodes
 
     def test_excludes_dead_end_nodes(self, partial_scc_network):
-        """n4 is reachable but outside the SCC — uniform sampler must skip it."""
+        """n4 is reachable but outside the SCC, uniform sampler must skip it."""
         gen = UniformRandomGenerator(partial_scc_network, seed=42)
         origins, destinations = set(), set()
         for _ in range(200):
@@ -328,7 +328,7 @@ class TestGenerateSyntheticDemand:
 
     def test_determinism_across_runs(self, tmp_path):
         """Two generate_synthetic_demand calls with the same seed must yield
-        byte-identical demand.csv files — this is the guarantee adapters rely
+        byte-identical demand.csv files, this is the guarantee adapters rely
         on to produce byte-identical SCC-filtered skip lists."""
         net_path = tmp_path / "network.xml"
         _write_grid_network(net_path, n=8)
@@ -358,7 +358,7 @@ class TestGenerateSyntheticDemand:
             )
 
     def test_gravity_restricts_to_scc(self, tmp_path):
-        """n4 is outside the SCC — no emitted trip may reference it."""
+        """n4 is outside the SCC, no emitted trip may reference it."""
         net_path = tmp_path / "network.xml"
         _write_partial_scc_network(net_path)
         out_path = tmp_path / "demand.csv"

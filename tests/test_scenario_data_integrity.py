@@ -2,7 +2,7 @@
 """
 Comprehensive data integrity tests for ALL generated scenarios.
 
-These tests ensure that any data errors are caught here — before
+These tests ensure that any data errors are caught here, before
 sending scenarios to simulation engines. A new user generating their
 own data should see failures here, not cryptic SUMO/MATSim errors.
 
@@ -273,7 +273,7 @@ class TestDemandIntegrity:
         )
 
     def test_origin_differs_from_destination(self, scenario):
-        """Same-node trips can't be routed — they should not appear."""
+        """Same-node trips can't be routed, they should not appear."""
         _, rows, _ = self._load_demand_and_nodes(scenario)
         same = [
             (i + 2, r["trip_id"])

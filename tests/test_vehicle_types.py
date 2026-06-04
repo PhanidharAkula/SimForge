@@ -132,7 +132,7 @@ class TestMatsimVehicleTypeXml:
         m = re.search(r'<width meter="([\d.]+)"/>', xml)
         assert m is not None
         assert float(m.group(1)) == CAR_WIDTH_M
-        # Pre-V11 MATSim emitted width=1.0 (motorcycle) — verify the fix.
+        # Pre-V11 MATSim emitted width=1.0 (motorcycle), verify the fix.
         assert float(m.group(1)) == 1.8
 
     def test_max_speed_matches_canonical(self):

@@ -219,7 +219,7 @@ class TestRealBundle:
     """
 
     def test_real_network_loads_without_error(self, bundled_scenario):
-        # Don't assert on count — if the bundle pre-dates V5 turn restrictions
+        # Don't assert on count, if the bundle pre-dates V5 turn restrictions
         # the result is just an empty list, which is fine.
         out = parse_turn_restrictions(bundled_scenario / "network.xml")
         assert isinstance(out, list)
@@ -300,7 +300,7 @@ class TestDTALiteMovementCSV:
     def test_osm_to_gmns_type_mapping(self, tmp_path: Path):
         """Negative restrictions translate directly; positive `only_*`
         restrictions also map to the named direction (the named direction
-        is the *allowed* one — DTALite's penalty/capacity is the same
+        is the *allowed* one, DTALite's penalty/capacity is the same
         no-go signal regardless)."""
         from adapters.dtalite.dtalite_adapter import write_dtalite_movement_csv
         net = self._network_with_restrictions(tmp_path)

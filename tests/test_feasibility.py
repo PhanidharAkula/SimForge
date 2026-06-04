@@ -1,5 +1,5 @@
 """
-Tests for adapters/common/feasibility.py — the shared trip-feasibility filter
+Tests for adapters/common/feasibility.py, the shared trip-feasibility filter
 that makes cross-engine comparison apples-to-apples.
 
 The filter is the foundation of the [1.0.0] fix that closed the SUMO/MATSim
@@ -160,7 +160,7 @@ class TestFeasibilityReport:
         assert abs(self._make(75, 100).feasible_fraction - 0.75) < 1e-9
 
     def test_feasible_fraction_zero_trips(self):
-        # Avoid division-by-zero — empty demand is treated as "100% feasible".
+        # Avoid division-by-zero, empty demand is treated as "100% feasible".
         assert self._make(0, 0).feasible_fraction == 1.0
 
     def test_summary_line_contains_counts(self):
@@ -255,7 +255,7 @@ class TestRealBundledFeasibility:
 
 
 # ---------------------------------------------------------------------------
-# Mode-aware feasibility (V5 — adapters narrow demand to supported_modes)
+# Mode-aware feasibility (V5, adapters narrow demand to supported_modes)
 # ---------------------------------------------------------------------------
 
 

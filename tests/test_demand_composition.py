@@ -90,7 +90,7 @@ def test_chain_leg_purposes_subset_of_peak_sets():
 
 def test_format_composition_includes_school_count(tmp_path: Path):
     """The terminal-output formatter must surface the school-related
-    count and percentage — that's the headline number for the audit."""
+    count and percentage, that's the headline number for the audit."""
     demand = tmp_path / "demand.csv"
     _write(demand, [
         "trip_id,origin_node_id,destination_node_id,departure_time_s,mode,purpose",
