@@ -1,10 +1,10 @@
 #!/bin/bash
 # ============================================================================
-# SimForge benchmark — large tier (chicago_200k_car + nyc_500k_car).
+# SimForge benchmark, large tier (chicago_200k_car + nyc_500k_car).
 #
 # 4-cell matrix: 2 scenarios × 2 engines (SUMO meso + MATSim meso) × 5 seeds
-# = 20 simulator invocations. DTALite intentionally excluded at this tier
-# per Phase 12.5 finding — the bundled path4gmns 0.10.0 DTALite C++ binary
+# = 20 simulator invocations. DTALite is left out at this tier on purpose,
+# per the Phase 12.5 finding: the bundled path4gmns 0.10.0 DTALite C++ binary
 # caps at 4 OpenMP threads and would need ~100-250 h per seed at these
 # scenario sizes (extrapolated from la_50k observed ~25 h/seed). Documented
 # as a path4gmns binary-side scalability ceiling in CHANGELOG Phase 12.5/12.7
@@ -22,9 +22,9 @@
 #                              × ~3-5 min sim ≈ ~22 h cold,
 #                              ~1-2 h warm-cache re-run
 #   Total wall = max(workers) ≈ ~22 h cold, comfortable inside the
-#   --time=2-00:00:00 (48 h) budget below. Both per-scenario fallback
-#   sbatchs (Phase 13.2 wall-margin insurance) deleted post-Phase-14 —
-#   this umbrella is now the single source of truth.
+#   --time=2-00:00:00 (48 h) budget below. The two per-scenario fallback
+#   sbatchs (Phase 13.2 wall-margin insurance) were deleted post-Phase-14,
+#   so this umbrella is now the single source of truth.
 #
 #   Phase 13 baseline reference (for the CHANGELOG comparison story):
 #   chicago_200k under Phase 13 took 141.87 h wall (jobs 9332478).
@@ -66,11 +66,12 @@
 ##SBATCH --mail-user=your-email@example.com
 
 set -euo pipefail
-# nullglob: an unmatched glob expands to *nothing* instead of staying as the
-# literal pattern. Critical for the RESULTS=(<base>/*/<glob>.json) line below
-# — without it, a missing-files case silently passes the literal "*" path to
-# analyze_benchmark and the script appears to "find 1 result" that doesn't
-# exist (this happened in production on 2026-05-02 — see CHANGELOG Phase 12).
+# nullglob: an unmatched glob expands to nothing instead of staying the
+# literal pattern. This matters for the RESULTS=(<base>/*/<glob>.json) line
+# below; without it, a missing-files case quietly passes the literal "*" path
+# to analyze_benchmark and the script looks like it "found 1 result" that
+# doesn't exist. That bit us in production on 2026-05-02 (see CHANGELOG
+# Phase 12).
 shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
@@ -113,13 +114,13 @@ if [ "${SIMFORGE_USE_CONTAINER:-0}" = "1" ]; then
     echo "=== Running in pinned-digest container: ${SIF} ==="
     echo "    (Wave 2: SIMFORGE_USE_CONTAINER=1 mode active)"
 else
-    module load openjdk/21.0.3_9 # MATSim runtime — Pitzer's lmod requires explicit version
+    module load openjdk/21.0.3_9 # MATSim runtime; Pitzer's lmod wants an explicit version
     source .venv/bin/activate    # uv-managed venv with eclipse-sumo + matsim
     RUN_PY=(python)
     echo "=== Running in host venv: $(which python) ==="
     echo "    (set SIMFORGE_USE_CONTAINER=1 to use Wave 2 pinned-digest container instead)"
 fi
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK  # Phase 12.4 — defensive even though
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK  # Phase 12.4: defensive even though
                                               # SUMO + MATSim don't use OpenMP at
                                               # the user level. DTALite is excluded
                                               # at this tier so the path4gmns 4-thread
@@ -134,8 +135,8 @@ echo "Engines:   SUMO + MATSim (DTALite excluded at this tier — see header / C
 echo
 
 # ---------------------------------------------------------------------------
-# 1. Preflight — both 200K and 500K bundles must be present (gitignored,
-#    rsync from your dev box first).
+# 1. Preflight: both the 200K and 500K bundles must be present (gitignored,
+#    so rsync them from your dev box first).
 # ---------------------------------------------------------------------------
 echo "=== Preflight: validating bundles ==="
 SCENARIOS=(chicago_200k_car nyc_500k_car)

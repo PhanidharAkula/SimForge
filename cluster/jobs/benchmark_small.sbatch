@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge benchmark — small tier (3 scenarios × SUMO + MATSim + DTALite × meso+micro).
+# SimForge benchmark, small tier (3 scenarios × SUMO + MATSim + DTALite × meso+micro).
 #
 # Runs runspecs/benchmark_small.yaml with three parallel python workers,
 # one per scenario, each writing to its own --output dir to avoid the
@@ -13,9 +13,9 @@
 #   16 workers), consumed by both SUMO and MATSim adapters. la_50k SUMO+
 #   MATSim BFS was ~10-11 h per engine pre-Phase-14; Phase 14 reduces it
 #   to ~1-2 h shared across both. The new long pole at the small tier is
-#   DTALite la_50k_car — Phase 14 does not help DTALite (it computes its
-#   own routes via UE/SUE iteration, doesn't use pre-routed BFS), so the
-#   path4gmns 4-thread cap still drives the worker:
+#   DTALite la_50k_car. Phase 14 doesn't help DTALite (it finds its own
+#   routes via UE/SUE iteration, no pre-routed BFS), so the path4gmns
+#   4-thread cap still drives that worker:
 #     chicago_1k_car worker:  ~10 min  (1K trips, small graph)
 #     nyc_10k_car   worker:  ~2-3 h   (SUMO micro × 5 is the pole here)
 #     la_50k_car    worker:  ~20-22 h (DTALite × 5 seeds × ~4 h each;
@@ -67,11 +67,12 @@
 ##SBATCH --mail-user=your-email@example.com
 
 set -euo pipefail
-# nullglob: an unmatched glob expands to *nothing* instead of staying as the
-# literal pattern. Critical for the RESULTS=(<base>/*/<glob>.json) line below
-# — without it, a missing-files case silently passes the literal "*" path to
-# analyze_benchmark and the script appears to "find 1 result" that doesn't
-# exist (this happened in production on 2026-05-02 — see CHANGELOG Phase 12).
+# nullglob: an unmatched glob expands to nothing instead of staying the
+# literal pattern. This matters for the RESULTS=(<base>/*/<glob>.json) line
+# below; without it, a missing-files case quietly passes the literal "*" path
+# to analyze_benchmark and the script looks like it "found 1 result" that
+# doesn't exist. That bit us in production on 2026-05-02 (see CHANGELOG
+# Phase 12).
 shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
@@ -118,7 +119,7 @@ echo "Free mem:  $(free -h | awk 'NR==2{print $4}')"
 echo
 
 # ---------------------------------------------------------------------------
-# 1. Preflight — every scenario referenced in the runspec must validate.
+# 1. Preflight: every scenario referenced in the runspec must validate.
 # ---------------------------------------------------------------------------
 echo "=== Preflight: validating bundles ==="
 SCENARIOS=(chicago_1k_car nyc_10k_car la_50k_car)

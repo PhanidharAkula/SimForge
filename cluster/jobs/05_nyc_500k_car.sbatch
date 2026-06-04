@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge — 05_nyc_500k_car: 500K car trips, NYC, 6–10 AM, 20 km radius.
+# SimForge: 05_nyc_500k_car: 500K car trips, NYC, 6–10 AM, 20 km radius.
 #
 # Largest tier; the canonical scalability stress test. Under the
 # schedule-first pipeline expect ~10–15 minutes on a Pitzer `cpu` compute

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge — 04_chicago_200k_car: 200K trips (car+transit), Chicago, 24-hour
+# SimForge: 04_chicago_200k_car: 200K trips (car+transit), Chicago, 24-hour
 # horizon, 15 km radius.
 #
 # Large full-day tier. Larger bbox + trip count than 03 means more memory

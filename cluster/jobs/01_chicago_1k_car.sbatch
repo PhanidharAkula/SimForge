@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge — 01_chicago_1k_car: 1K car trips, Chicago, 7–8 AM, 2 km radius.
+# SimForge: 01_chicago_1k_car: 1K car trips, Chicago, 7–8 AM, 2 km radius.
 #
 # Smallest tier; intended as a sanity check after a fresh Pitzer install
 # or pipeline change. Should land well under 5 minutes wall-clock under

@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge — 02_nyc_10k_car: 10K car trips, NYC, 7–9 AM, 4 km radius.
+# SimForge: 02_nyc_10k_car: 10K car trips, NYC, 7–9 AM, 4 km radius.
 #
 # Small commute tier; ~5–10 minutes wall-clock under schedule-first.
 # Useful for quick iteration on adapter/engine changes before scaling up.

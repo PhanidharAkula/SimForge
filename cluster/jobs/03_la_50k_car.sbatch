@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge — 03_la_50k_car: 50K trips (car+transit+bike), LA,
+# SimForge: 03_la_50k_car: 50K trips (car+transit+bike), LA,
 # 6–10 AM, 10 km radius.
 #
 # Medium multi-modal tier. Reference cross-platform-reproducibility bundle
