@@ -172,7 +172,7 @@ def render_flowing_particles(
     bbox = network.bbox
     if figsize is None:
         from visualization.data.bundle import figsize_for_bbox
-        # Particle mode has no colorbar — no extra width needed.
+        # Particle mode has no colorbar, so no extra width needed.
         figsize = figsize_for_bbox(bbox, extra_width_in=0.0) if bbox else (10.0, 10.0)
 
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
@@ -257,8 +257,8 @@ def _make_play_once_writer(fps: int):
     matplotlib's stock PillowWriter hardcodes ``loop=0`` (infinite) in
     ``finish()``. We subclass it to omit the ``loop=`` kwarg entirely,
     which prevents Pillow from writing the NETSCAPE2.0 application
-    extension at all — viewers then default to single play (per the
-    GIF89a spec).
+    extension at all, so viewers fall back to single play (per the GIF89a
+    spec).
 
     Note: a previous attempt used composition + ``__getattr__`` to wrap
     PillowWriter, but matplotlib's context manager calls ``self.finish()``
@@ -359,8 +359,8 @@ def render_animated_flow(
         time-lapse.
     figsize, dpi : matplotlib figure size + DPI per frame
     cmap : matplotlib colormap (Reds default for throughput).
-    use_osm_curves, scenario_id : same as link_load — pulls OSM way
-        polylines from the cache for proper curved rendering.
+    use_osm_curves, scenario_id : same as link_load; pulls OSM way polylines
+        from the cache for proper curved rendering.
     """
     if not time_bin_loads:
         raise ValueError("No time-bin loads: empty events?")
@@ -420,7 +420,7 @@ def render_animated_flow(
     logger.info("Animating %d frames @ %d fps (~%ds video)",
                 n_frames, fps, n_frames // max(fps, 1))
 
-    # Figure setup — figsize matches data aspect to avoid white margins.
+    # Figure setup: figsize matches the data aspect to avoid white margins.
     # Throughput mode HAS a colorbar (per-bin link load), so leave room.
     bbox = network.bbox
     if figsize is None:

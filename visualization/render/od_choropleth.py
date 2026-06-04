@@ -1,4 +1,4 @@
-"""Choropleth renderer — CityScape-style filled-polygon trip density.
+"""Choropleth renderer: CityScape-style filled-polygon trip density.
 
 For each US Census tract polygon overlapping the scenario's bbox,
 counts how many trip origins (or destinations) fall inside, then
@@ -7,7 +7,7 @@ colors the polygon using CityScape's exact log-scale palette
 demand.csv via point-in-polygon).
 
 The aesthetic match:
-- 100-step blue→red gradient (same as cityscape's color indexes 33-132)
+- a 100-step blue-to-red gradient (cityscape's color indexes 33-132)
 - Light gray (#dddddd) for tracts with zero demand (cityscape's index 32)
 - Log scale: ``color = 32 + log10(value/10) * 30`` (DrawShapes.cpp:215)
 - Thin black tract borders for cartographic clarity
@@ -27,7 +27,7 @@ from visualization.data.census import (
 logger = logging.getLogger(__name__)
 
 
-# CityScape's exact color logic from DrawShapes.cpp:215 — reproduced as Python.
+# CityScape's exact color logic from DrawShapes.cpp:215, ported to Python.
 # Their color index 32 = empty (light gray), 33-132 = 100-step gradient.
 # Their endpoints (from the .fig palette we have): #0a0ae1 (blue) -> #e10a0a (red).
 def _cityscape_color_index(value: int) -> int:
@@ -41,17 +41,17 @@ def _cityscape_color_index(value: int) -> int:
 def _build_cityscape_cmap():
     """Build a matplotlib LinearSegmentedColormap matching CityScape's palette.
 
-    Their palette declared in the .fig color table: 100 colors stepping
-    from #0a0ae1 (blue) at index 33 to #e10a0a (red) at index 132. The
-    intermediate colors blend through purple → magenta → red.
+    Their palette, from the .fig color table: 100 colors stepping from
+    #0a0ae1 (blue) at index 33 to #e10a0a (red) at index 132, blending
+    through purple and magenta on the way.
     """
     import matplotlib
     import numpy as np
     from matplotlib.colors import LinearSegmentedColormap
 
-    # 5 anchor colors capturing CityScape's blue → blue-purple → magenta
-    # → red-orange → red gradient. Manually picked to match the .fig file
-    # color table at indexes 33, 58, 83, 108, 132.
+    # 5 anchor colors tracing CityScape's gradient (blue, blue-purple,
+    # magenta, red-orange, red), hand-picked to match the .fig color table
+    # at indexes 33, 58, 83, 108, 132.
     anchors = [
         "#0a0ae1",  # blue (index 33)
         "#5b1bcf",  # blue-purple (index 58)
@@ -131,8 +131,8 @@ def render_od_choropleth(
     state_fips : str, optional
         State to load tracts from. Auto-detected from network bbox if None.
     show_basemap : bool
-        Overlay the SimForge road network on top (faded). Default off —
-        the choropleth speaks for itself; a basemap can compete visually.
+        Overlay the SimForge road network on top (faded). Off by default;
+        the choropleth speaks for itself and a basemap can compete with it.
     dpi : int
     figsize : (w, h)
     border_color, border_width : tract polygon border style

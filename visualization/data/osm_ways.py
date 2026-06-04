@@ -50,9 +50,8 @@ def load_way_geometries(
 ) -> dict[int, list[tuple[float, float]]]:
     """Return ``{way_id: [(lon, lat), ...]}`` for every needed_way_id.
 
-    Loads from the per-scenario JSON cache when available; otherwise
-    parses the appropriate PBF (slow — minutes for large states) and
-    caches the result.
+    Reads the per-scenario JSON cache when it's there; otherwise it parses
+    the right PBF (slow, minutes for large states) and caches the result.
     """
     cache_fp = cache_path_for_scenario(scenario_id)
     cached: dict[int, list[tuple[float, float]]] = {}

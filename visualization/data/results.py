@@ -54,7 +54,7 @@ class LinkPerformance:
 
 
 # ---------------------------------------------------------------------------
-# DTALite (richest per-cell data — link_performance.csv has volume + speed)
+# DTALite (the richest per-cell data: link_performance.csv has volume + speed)
 # ---------------------------------------------------------------------------
 
 def load_dtalite_links(cell_dir: Path) -> list[LinkPerformance]:
@@ -105,12 +105,12 @@ def load_dtalite_trips(cell_dir: Path) -> list[TripRecord]:
     multiple routes can exist for the same OD pair; each becomes a
     separate "trip" in this list.
 
-    DTALite's ``agent_id`` is a renumbered 1-indexed integer — it does
-    NOT correspond to SimForge's ``trip_id`` (e.g., "t42"). However,
-    DTALite preserves the SimForge node IDs as ``o_zone_id`` /
-    ``d_zone_id`` (with the "n" prefix stripped to satisfy DTALite's
-    int-only zone ID requirement). We restore the prefix here so the
-    aggregator can join against SimForge's network nodes uniformly.
+    DTALite's ``agent_id`` is a renumbered 1-indexed integer; it does NOT
+    match SimForge's ``trip_id`` (e.g. "t42"). It does keep the SimForge node
+    IDs, though, as ``o_zone_id`` / ``d_zone_id`` (with the "n" prefix
+    stripped to satisfy DTALite's int-only zone IDs). We put the prefix back
+    here so the aggregator can join against SimForge's network nodes the same
+    way it does for the other engines.
     """
     fp = cell_dir / "agent.csv"
     if not fp.is_file():
@@ -158,16 +158,16 @@ def load_sumo_links(cell_dir: Path) -> list[LinkPerformance]:
     """Per-link traffic volume for SUMO, derived from the routes file
     filtered by completed trips in tripinfo.xml.
 
-    SimForge writes routes.rou.xml with the BFS-pre-routed link sequence
-    per vehicle. SUMO simulates these and writes tripinfo.xml with one
-    entry per completed trip. We aggregate counts per link, restricted
-    to routes whose vehicle id appears in tripinfo (i.e. trips that
-    finished — SUMO refuses some insertions on congested edges).
+    SimForge writes routes.rou.xml with each vehicle's BFS-pre-routed link
+    sequence. SUMO simulates those and writes tripinfo.xml, one entry per
+    completed trip. We count per link, keeping only routes whose vehicle id
+    shows up in tripinfo (the trips that actually finished; SUMO refuses some
+    insertions on congested edges).
 
-    Note: this is "approximate" link load — counts each route's link
-    sequence once per completed trip. It does NOT reflect SUMO's actual
-    second-by-second link usage (would need --edgedata-output enabled
-    in the SUMO config and re-run). Close enough for visualization.
+    This is an approximate link load: it counts each route's link sequence
+    once per completed trip. It does NOT capture SUMO's real second-by-second
+    link usage, which would need --edgedata-output turned on and a re-run.
+    Close enough for a picture.
     """
     routes_fp = cell_dir / "routes.rou.xml"
     tripinfo_fp = cell_dir / "tripinfo.xml"
@@ -257,10 +257,10 @@ def load_matsim_links(cell_dir: Path) -> list[LinkPerformance]:
     these plans without replanning, so the route in the plan IS the
     route the engine simulated.
 
-    Counts each link once per completed trip. Like the SUMO equivalent
-    this is "approximate" link load — true accuracy would require
-    parsing output_events.xml.gz (every link enter event), which is
-    correct but slower for large scenarios.
+    Counts each link once per completed trip. Like the SUMO version, this is
+    an approximate link load; getting it exactly right would mean parsing
+    output_events.xml.gz (every link-enter event), which is correct but
+    slower on large scenarios.
     """
     plans_fp = cell_dir / "output" / "output_plans.xml.gz"
     trips_fp = cell_dir / "output" / "output_trips.csv.gz"
@@ -324,8 +324,7 @@ def load_matsim_trips(cell_dir: Path) -> list[TripRecord]:
                 # The "person" column is the SimForge person ID (e.g.
                 # "person_t0"), which strips to SimForge trip_id "t0".
                 # The "trip_id" column is MATSim's internal leg ID (e.g.
-                # "person_t0_1") and does NOT correspond to a SimForge
-                # trip_id — don't use it.
+                # "person_t0_1"), not a SimForge trip_id, so don't use it.
                 tid = (row.get("person") or "").removeprefix("person_")
                 tt_str = row.get("trav_time") or "00:00:00"
                 duration = _hms_to_seconds(tt_str)

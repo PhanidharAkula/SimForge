@@ -1,12 +1,12 @@
 """travel_time renderer (Phase B).
 
-Per-tract choropleth of mean trip travel time by ORIGIN tract — for
-each census tract, what's the average travel time of trips that
-originate there, as observed by one engine.
+Per-tract choropleth of mean trip travel time by ORIGIN tract: for each
+census tract, the average travel time of the trips that start there, as one
+engine saw it.
 
-Reuses the choropleth aesthetic from od_choropleth.py (CityScape-style
-log palette + TIGER roads basemap), but the metric being colored is
-mean travel time per origin tract, not trip count.
+Reuses od_choropleth.py's look (the CityScape-style log palette plus the
+TIGER roads basemap), only here the color is mean travel time per origin
+tract rather than trip count.
 """
 
 from __future__ import annotations
@@ -98,9 +98,9 @@ def render_travel_time_choropleth(
     from matplotlib.collections import LineCollection, PolyCollection
     from matplotlib.colors import Normalize
 
-    # Travel time uses a green->yellow->red gradient (low TT = good=green,
-    # high TT = bad=red). Linear norm — TT distributions are usually less
-    # skewed than count distributions.
+    # Travel time uses a green->yellow->red gradient (low TT = good = green,
+    # high TT = bad = red). A linear norm, since TT distributions are usually
+    # less skewed than count distributions.
     cmap_obj = matplotlib.colormaps["RdYlGn_r"]
     if tract_mean_tt:
         norm = Normalize(vmin=min(tract_mean_tt.values()),

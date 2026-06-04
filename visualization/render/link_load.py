@@ -84,7 +84,7 @@ def render_link_metric(
         raise ValueError(f"Unknown metric: {metric}")
 
     # Build link_id -> (volume) lookup. Engine ID prefix conventions:
-    #   DTALite: int IDs (e.g., "1234") — match SimForge bundle's "l1234".
+    #   DTALite: int IDs (e.g. "1234"), which map to the bundle's "l1234".
     #   SUMO:    "lXXX" already.
     #   MATSim:  "lXXX" already.
     link_metric: dict[str, float] = {}

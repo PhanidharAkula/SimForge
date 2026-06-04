@@ -23,13 +23,13 @@ from visualization.data.bundle import bundle_paths
 # the dry-run availability matrix, which reports each one's "generatable
 # when" criteria against the data actually on disk.
 ALL_MAP_TYPES: tuple[str, ...] = (
-    "od_origins",        # Phase A — bundle only
-    "od_destinations",   # Phase A — bundle only
-    "link_load",         # Phase B — needs successful engine cells
-    "travel_time",       # Phase B — needs successful engine cells
-    "congestion",        # Phase B — needs successful engine cells
-    "route_diversity",   # Phase C — needs >= 2 engines
-    "animated_flow",     # Phase C — needs event-level engine output
+    "od_origins",        # Phase A: bundle only
+    "od_destinations",   # Phase A: bundle only
+    "link_load",         # Phase B: needs successful engine cells
+    "travel_time",       # Phase B: needs successful engine cells
+    "congestion",        # Phase B: needs successful engine cells
+    "route_diversity",   # Phase C: needs >= 2 engines
+    "animated_flow",     # Phase C: needs event-level engine output
 )
 
 # Engines we expect to find under runs/<runspec>/<scenario>/.
@@ -117,7 +117,7 @@ def discover_run_cells(run_dir: Path, coverage: ScenarioCoverage) -> ScenarioCov
     """Append ``CellArtifacts`` entries for any per-cell output dirs found.
 
     Walks ``run_dir / <engine> / <mode> / seed_*/`` (Phase 12.2 layout).
-    Doesn't error if run_dir doesn't exist — just leaves cells empty.
+    A missing run_dir isn't an error; it just leaves cells empty.
     """
     if not run_dir.is_dir():
         return coverage

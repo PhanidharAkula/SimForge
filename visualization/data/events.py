@@ -1,9 +1,9 @@
 """Parse MATSim event streams for time-resolved link load.
 
 MATSim's ``output_events.xml.gz`` records every link enter/leave event
-with a timestamp. Aggregating "entered link" events into time bins
-gives per-link throughput (vehicles per bin) over the simulation
-horizon — the data behind the ``animated_flow`` map.
+with a timestamp. Binning the "entered link" events by time gives per-link
+throughput (vehicles per bin) over the simulation horizon, which is the data
+behind the ``animated_flow`` map.
 
 Cached at ``cache/events/<scenario>/<engine>_<seed>_<bin>s.json`` so
 subsequent renders skip the slow XML parse.

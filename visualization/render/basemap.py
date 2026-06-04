@@ -1,8 +1,8 @@
 """Render the SimForge canonical network as a matplotlib basemap.
 
 No internet, no third-party tile service. The basemap is the same road
-graph the simulator was given — clean, deterministic, hash-pinned via
-the bundle's manifest.
+graph the simulator ran on: clean, deterministic, hash-pinned through the
+bundle's manifest.
 
 Highway types from the OSM tags are used to grade line weight + colour
 so primary arterials read clearly under any overlay (heatmap, choropleth).
@@ -15,7 +15,7 @@ from typing import Iterable
 from visualization.data.bundle import Network
 
 
-# Grouped by visual prominence — tuples of (highway types, line width, alpha).
+# Grouped by visual prominence: tuples of (highway types, line width, alpha).
 # Highway types not in this list fall through to the unclassified bucket.
 _HIGHWAY_STYLES: tuple[tuple[tuple[str, ...], float, float, str], ...] = (
     (("motorway", "motorway_link", "trunk", "trunk_link"), 1.0, 0.85, "#666666"),

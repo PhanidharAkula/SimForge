@@ -2,10 +2,10 @@
 
 Usage::
 
-    # Coverage report only — what's generatable from current data?
+    # Coverage report only: what can we generate from the data on disk?
     python -m visualization.generate_maps --scenario chicago_1k_car --dry-run
 
-    # Render origin density (Phase A flagship map) — defaults to
+    # Render origin density (the Phase A flagship map); defaults to
     # visualization/output/chicago_1k_car/od_origins.png:
     python -m visualization.generate_maps --scenario chicago_1k_car --maps od_origins
 

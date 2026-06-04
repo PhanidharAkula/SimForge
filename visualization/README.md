@@ -2,12 +2,12 @@
 
 Standalone, opt-in module for generating geographic visualizations from
 SimForge bundles and benchmark results. Runs separately from the main
-SimForge workflow — `generate.py`, `run_benchmark.py`,
+SimForge workflow, `generate.py`, `run_benchmark.py`,
 `analyze_benchmark`, `audit_fairness`, and `generate_plots` do **not**
 invoke this module, and the main suite incurs no startup cost from it.
 
-The component produces seven map types — two from the bundle alone,
-three per-engine maps from a benchmark run, and two cross-engine maps —
+The component produces seven map types, two from the bundle alone,
+three per-engine maps from a benchmark run, and two cross-engine maps,
 covering origin/destination demand, simulated link load, congestion,
 mean travel time per origin tract, cross-engine routing diversity, and
 animated vehicle flow.
@@ -45,12 +45,12 @@ Seven map types, grouped by what input data they need:
 
 | Map | Inputs needed | Engine specificity | Notes |
 |---|---|---|---|
-| `od_origins` | Bundle (`network.xml`, `demand.csv`) + cached census tracts + TIGER roads | — | CityScape-style filled tract choropleth on TIGER roads basemap |
-| `od_destinations` | (same) | — | Same renderer with destination side |
+| `od_origins` | Bundle (`network.xml`, `demand.csv`) + cached census tracts + TIGER roads | n/a | CityScape-style filled tract choropleth on TIGER roads basemap |
+| `od_destinations` | (same) | n/a | Same renderer with destination side |
 | `link_load` | Per-cell engine output | per `(engine, mode)` | Color + linewidth = volume per link (log scale) |
 | `congestion` | Per-cell DTALite `link_performance.csv` | DTALite only (needs link speed) | Color = mean speed / free-flow speed (green→red) |
 | `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` | Choropleth of mean per-trip travel time by origin tract |
-| `route_diversity` | Cell output from ≥ 2 engines | cross-engine | Highlights links picked by 1 / 2 / 3 engines — visualizes the SUMO≈MATSim vs DTALite split |
+| `route_diversity` | Cell output from ≥ 2 engines | cross-engine | Highlights links picked by 1 / 2 / 3 engines, visualizes the SUMO≈MATSim vs DTALite split |
 | `animated_flow` | MATSim `output_events.xml.gz` from one cell | MATSim only | Two modes: `particles` (one moving dot per vehicle) or `throughput` (5-min link-load snapshots) |
 
 Phase A = bundle-only maps (`od_*`).
@@ -91,7 +91,7 @@ usage: generate_maps.py [-h] --scenario SCENARIO [--bundle-dir DIR]
 | `--anim-format` | `mp4` | `mp4` (smallest, needs ffmpeg), `gif` (embeds inline in markdown but largest), `apng` (full color, ~5× smaller than GIF) |
 | `-v / --verbose` | off | DEBUG-level logging |
 
-Phase B maps render one engine at a time — pass `--engine sumo` / `--engine matsim` / `--engine dtalite` to render the others (or omit and the CLI picks the first cell on disk).
+Phase B maps render one engine at a time, pass `--engine sumo` / `--engine matsim` / `--engine dtalite` to render the others (or omit and the CLI picks the first cell on disk).
 
 ---
 
@@ -106,7 +106,7 @@ visualization/output/chicago_1k_car/
 ├── link_load_sumo_meso.png              # Phase B (per-engine, per-mode)
 ├── link_load_matsim_meso.png
 ├── link_load_dtalite_meso.png
-├── congestion_dtalite_meso.png          # DTALite only — SUMO/MATSim skip
+├── congestion_dtalite_meso.png          # DTALite only, SUMO/MATSim skip
 ├── travel_time_sumo_meso.png
 ├── travel_time_matsim_meso.png
 ├── travel_time_dtalite_meso.png
@@ -145,7 +145,7 @@ Available maps:
 
 `[OK]` = the map's inputs are on disk and it will render.
 `[--]` = an input is missing; the map will be skipped if requested.
-`[FAIL]` = the input was present but the renderer raised — the rest of the run continues.
+`[FAIL]` = the input was present but the renderer raised, the rest of the run continues.
 
 | Scenario | Behaviour |
 |---|---|
@@ -160,7 +160,7 @@ Available maps:
 
 | Data | Origin | Cache location | Helper |
 |---|---|---|---|
-| Bundle network + demand | `scenarios/<id>/{network.xml, demand.csv}` (canonical bundle) | n/a | — |
+| Bundle network + demand | `scenarios/<id>/{network.xml, demand.csv}` (canonical bundle) | n/a | n/a |
 | US Census tract polygons (CB 2024, 500k resolution) | US Census Bureau Cartographic Boundary files | `cache/census/<fips>/cb_2024_<fips>_tract_500k.{shp,shx,dbf}` | `python -m tools.download_census_tracts --all-bundled` |
 | TIGER PRISECROADS (roads basemap) | US Census TIGER/Line 2024 | `cache/tiger/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}` | `python -m tools.download_tiger_roads --all-bundled` |
 | OSM way geometries (curved link polylines) | Sliced from the scenario's OSM PBF | `cache/osm_ways/<scenario>/` | Built on-demand by `visualization/data/osm_ways.py` |
@@ -168,7 +168,7 @@ Available maps:
 | MATSim events (for `animated_flow`) | `output/output_events.xml.gz` in a MATSim cell | n/a (parsed once per render) | Always written by the MATSim adapter |
 
 All cached data is from public-domain US government sources. The two
-`tools/download_*.py` helpers are one-shot — they skip downloads whose
+`tools/download_*.py` helpers are one-shot, they skip downloads whose
 shapefiles already exist locally.
 
 ---
@@ -196,7 +196,7 @@ shapefiles already exist locally.
 ### Why SUMO and MATSim `link_load` look identical
 
 SimForge's fairness contract forces SUMO and MATSim to **use the same
-routes** — both adapters read SimForge's pre-routed link sequences via
+routes**, both adapters read SimForge's pre-routed link sequences via
 state-aware BFS:
 
 | Engine | Route source | Mobsim job |
@@ -209,7 +209,7 @@ So when `link_load` aggregates "which links appear in completed trip
 routes":
 
 - SUMO and MATSim render the **same** input route distribution (just
-  scaled by completion rate — SUMO drops some trips at congested-edge
+  scaled by completion rate, SUMO drops some trips at congested-edge
   insertion, MATSim never does)
 - DTALite renders its own UE-equilibrated routes, which spread flow
   across alternative paths
@@ -217,7 +217,7 @@ routes":
 **Visual implication**: SUMO and MATSim `link_load` maps look
 ~identical (same shape, slightly different intensity); DTALite looks
 distinctly different. This is **direct visual proof of the
-fair-comparison contract** — when routes are held constant, spatial
+fair-comparison contract**, when routes are held constant, spatial
 traffic structure is identical, so any cross-engine travel-time
 difference is purely engine-internal mobsim behavior, not an input
 asymmetry.
@@ -229,7 +229,7 @@ are red (the DTALite UE alternates).
 ### Why `animated_flow` shows "departure bursts"
 
 When watching the particle animation, the swarm of moving dots may
-appear to *jump* at certain moments — many vehicles materialize on the
+appear to *jump* at certain moments, many vehicles materialize on the
 network at once, then traffic thins again until the next jump. Users
 typically notice 2-3 such bursts in a `chicago_1k_car` playback, more
 in `nyc_10k_car`.
@@ -247,7 +247,7 @@ person reporting the same JWMNP value lands on the exact same
 - nyc_10k_car: 10000 trips onto **34 unique timestamps**. Largest
   burst: 1561 trips at 27000 s (7:30:00 AM).
 
-The animation shows these bursts faithfully — at each PUMS departure
+The animation shows these bursts faithfully, at each PUMS departure
 mark (7:00, 7:15, 7:30, 7:40, 7:54…) hundreds-to-thousands of vehicles
 enter the network in the same simulation second. The aggregate peak
 shape is realistic; the per-second discretisation is the PUMS data
@@ -280,7 +280,7 @@ Numerically:
 - chicago_1k_car (AM only): 5.5 % origin↔destination set overlap
 - chicago_200k_car (full day): **74 %** overlap
 
-This is correct behavior, not a bug — it reflects the symmetry of
+This is correct behavior, not a bug, it reflects the symmetry of
 commute patterns once both AM and PM are included. Useful for thesis
 §3.3 as evidence the Phase 9c PM chain mechanism produces genuinely
 symmetric demand at the metro scale.
@@ -302,11 +302,11 @@ visualization/
 │   └── tiger_roads.py      # TIGER/Line PRISECROADS shapefile → road polylines
 ├── render/                 # Matplotlib-only render functions, one file per map type
 │   ├── basemap.py          # Faded SimForge network underlay (shared by link maps + animated_flow)
-│   ├── od_choropleth.py    # Phase A — filled-tract choropleth (CityScape palette)
-│   ├── link_load.py        # Phase B — link_load + congestion (color = volume / speed_ratio)
-│   ├── travel_time.py      # Phase B — choropleth of mean travel time by origin tract
-│   ├── route_diversity.py  # Phase C — cross-engine consensus / divergence map
-│   └── animated_flow.py    # Phase C — particles + throughput animation modes
+│   ├── od_choropleth.py    # Phase A, filled-tract choropleth (CityScape palette)
+│   ├── link_load.py        # Phase B, link_load + congestion (color = volume / speed_ratio)
+│   ├── travel_time.py      # Phase B, choropleth of mean travel time by origin tract
+│   ├── route_diversity.py  # Phase C, cross-engine consensus / divergence map
+│   └── animated_flow.py    # Phase C, particles + throughput animation modes
 ├── output/                 # Default render destination (gitignored)
 │   └── <scenario>/
 └── README.md               # This file
@@ -330,7 +330,7 @@ imported by the main SimForge code paths.
   Illinois Census tracts aren't cached)
 
 Run via `python -m pytest tests/test_visualization.py -q`. Cached US
-Census tracts are not in the test fixtures — the CLI render test skips
+Census tracts are not in the test fixtures, the CLI render test skips
 gracefully on a machine that hasn't run `download_census_tracts.py`.
 
 ---
@@ -340,12 +340,12 @@ gracefully on a machine that hasn't run `download_census_tracts.py`.
 The visualization layer has different concerns from the rest of
 SimForge:
 
-- It doesn't affect the canonical fairness contract — adapters and
+- It doesn't affect the canonical fairness contract, adapters and
   `audit_fairness` are agnostic to it.
 - It needs heavier rendering deps (matplotlib + shapely + pyshp + the
   US Census shapefiles); users who never want maps shouldn't pay any
   startup cost.
-- It's only used during writeup / analysis, not during simulation —
+- It's only used during writeup / analysis, not during simulation,
   the locked benchmark numbers are independent of any plot.
 - Keeping it isolated means the main workflow stays lean and the
   visualization layer can evolve independently (e.g., adding a new map

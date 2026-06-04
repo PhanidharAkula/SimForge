@@ -3,7 +3,7 @@
 A bundle is a directory like ``scenarios/chicago_1k_car/`` containing
 ``network.xml``, ``demand.csv``, and ``manifest.xml`` (plus optional
 ``signals.xml``, ``modelgen/``, etc.). This module exposes only the
-geometry + demand pieces the visualizer needs — no engine-specific
+geometry and demand pieces the visualizer needs, with no engine-specific
 knowledge.
 
 Coordinates are EPSG:4326 (lon/lat). The visualizer does not reproject;
@@ -83,8 +83,8 @@ class Demand:
 def load_network(network_path: Path) -> Network:
     """Parse ``network.xml`` lazily and return a Network.
 
-    Uses ``lxml.etree.iterparse`` so the full DOM never lives in memory —
-    important for la_50k_car (470k links, ~70 MB XML).
+    Uses ``lxml.etree.iterparse`` so the full DOM never sits in memory at
+    once, which matters for la_50k_car (470k links, ~70 MB XML).
     """
     network = Network()
     context = etree.iterparse(str(network_path), events=("end",), tag=("node", "link"))

@@ -1,9 +1,9 @@
 """SimForge visualization component.
 
-Standalone, opt-in module for generating geographic visualizations from
-SimForge bundles and benchmark results. Not invoked by the main workflow
-(generate.py / run_benchmark.py / analyze_benchmark) — users run it
-explicitly after data is on disk.
+A standalone, opt-in module for geographic visualizations from SimForge
+bundles and benchmark results. The main workflow (generate.py /
+run_benchmark.py / analyze_benchmark) never calls it; you run it yourself
+once the data is on disk.
 
 Entry point::
 
