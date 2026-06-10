@@ -20,11 +20,11 @@
 
 ### Required Software
 
-| Software   | Version          | Installation                                              |
-| ---------- | ---------------- | --------------------------------------------------------- |
-| **uv**     | 0.4+             | `curl -LsSf https://astral.sh/uv/install.sh \| sh`        |
-| **Java**   | 17+              | `brew install openjdk@17` (required only for MATSim)      |
-| **Git**    | 2.30+            | Usually pre-installed                                     |
+| Software | Version | Installation                                         |
+| -------- | ------- | ---------------------------------------------------- |
+| **uv**   | 0.4+    | `curl -LsSf https://astral.sh/uv/install.sh \| sh`   |
+| **Java** | 17+     | `brew install openjdk@17` (required only for MATSim) |
+| **Git**  | 2.30+   | Usually pre-installed                                |
 
 `uv` manages Python and the venv; **Python itself does not need to be pre-installed**. SUMO (the simulator binary) is installed automatically via [`requirements.lock`](requirements.lock), no separate `brew install sumo` step.
 
@@ -92,10 +92,10 @@ SimForge generates road networks from **hash-pinned OSM PBF snapshots** rather t
 
 ### Why local PBFs
 
-| Path           | Reproducibility                  | Speed (city-scale bbox) | Reliability                                  |
-| -------------- | -------------------------------- | ----------------------- | -------------------------------------------- |
-| Local PBF      | ✅ SHA-256 pinned, byte-identical | 30 – 90 s               | ✅ Deterministic, no rate limits             |
-| Overpass (API) | ⚠️ Upstream OSM is a moving target | 5 – 30+ min             | ⚠️ Rate-limited; stalls on NYC-sized bboxes   |
+| Path           | Reproducibility                    | Speed (city-scale bbox) | Reliability                                 |
+| -------------- | ---------------------------------- | ----------------------- | ------------------------------------------- |
+| Local PBF      | ✅ SHA-256 pinned, byte-identical  | 30 – 90 s               | ✅ Deterministic, no rate limits            |
+| Overpass (API) | ⚠️ Upstream OSM is a moving target | 5 – 30+ min             | ⚠️ Rate-limited; stalls on NYC-sized bboxes |
 
 The Overpass path still exists as a fallback in `pipeline/network/build_network_from_osm.py` for cities without a committed PBF, but every bundled city (`chicago`, `nyc`, `la`) ships with a matching state-level PBF entry in the manifest.
 
@@ -109,11 +109,11 @@ python tools/download_osm.py
 
 That script reads `osm_data/manifest.json`, downloads any missing file from Geofabrik, and refuses to proceed on a SHA-256 mismatch. Re-running is cheap, it just verifies existing files' hashes.
 
-| File                                 | Size    | Covers                        | Used by   |
-| ------------------------------------ | ------- | ----------------------------- | --------- |
-| `osm_data/illinois-2026-04-22.osm.pbf`  | 348 MB  | State of Illinois             | `chicago` |
-| `osm_data/new-york-2026-04-22.osm.pbf`  | 489 MB  | State of New York             | `nyc`     |
-| `osm_data/california-2026-04-22.osm.pbf` | 1.3 GB | State of California           | `la`      |
+| File                                     | Size   | Covers              | Used by   |
+| ---------------------------------------- | ------ | ------------------- | --------- |
+| `osm_data/illinois-2026-04-22.osm.pbf`   | 348 MB | State of Illinois   | `chicago` |
+| `osm_data/new-york-2026-04-22.osm.pbf`   | 489 MB | State of New York   | `nyc`     |
+| `osm_data/california-2026-04-22.osm.pbf` | 1.3 GB | State of California | `la`      |
 
 Total: ~2.1 GB. Re-download only needed if the manifest is updated (rare, `downloaded_on` is pinned).
 
@@ -135,33 +135,33 @@ The result is schema-identical to what the Overpass path returned, downstream ca
 
 Three scenarios are committed to the repo so the test suite and the default `run.py` invocation work out of the box:
 
-| Scenario          | City    | Trips  | Modes | Bundle size |
-| ----------------- | ------- | ------ | ----- | ----------- |
-| `chicago_1k_car`  | Chicago | 1,000  | car   | ~1 MB       |
-| `nyc_10k_car`     | NYC     | 10,000 | car   | ~36 MB      |
-| `la_50k_car`      | LA      | 50,000 | car   | ~140 MB     |
+| Scenario         | City    | Trips  | Modes | Bundle size |
+| ---------------- | ------- | ------ | ----- | ----------- |
+| `chicago_1k_car` | Chicago | 1,000  | car   | ~1 MB       |
+| `nyc_10k_car`    | NYC     | 10,000 | car   | ~36 MB      |
+| `la_50k_car`     | LA      | 50,000 | car   | ~140 MB     |
 
 The 200K/500K tiers are not committed (their network/signals files exceed GitHub's 100 MB limit), generate them locally with the helper scripts below.
 
 ### Generation Tiers
 
-| Preset (`--preset`)  | Trips   | Horizon  | Helper script                          |
-| -------------------- | ------- | -------- | -------------------------------------- |
-| `chicago_1k_car`     | 1,000   | 7–8 AM   | `scripts/01_chicago_1k_car.py`         |
-| `nyc_10k_car`        | 10,000  | 7–9 AM   | `scripts/02_nyc_10k_car.py`            |
-| `la_50k_car`         | 50,000  | 6–10 AM  | `scripts/03_la_50k_car.py`             |
-| `chicago_200k_car`   | 200,000 | 24 h     | `scripts/04_chicago_200k_car.py`       |
-| `nyc_500k_car`       | 500,000 | 6–10 AM  | `scripts/05_nyc_500k_car.py`           |
+| Preset (`--preset`) | Trips   | Horizon | Helper script                    |
+| ------------------- | ------- | ------- | -------------------------------- |
+| `chicago_1k_car`    | 1,000   | 7–8 AM  | `scripts/01_chicago_1k_car.py`   |
+| `nyc_10k_car`       | 10,000  | 7–9 AM  | `scripts/02_nyc_10k_car.py`      |
+| `la_50k_car`        | 50,000  | 6–10 AM | `scripts/03_la_50k_car.py`       |
+| `chicago_200k_car`  | 200,000 | 24 h    | `scripts/04_chicago_200k_car.py` |
+| `nyc_500k_car`      | 500,000 | 6–10 AM | `scripts/05_nyc_500k_car.py`     |
 
 ### Data Sources
 
-| File         | Source                      | Description                                |
-| ------------ | --------------------------- | ------------------------------------------ |
-| network.xml  | **OpenStreetMap (OSM)**     | Real road network topology                 |
-| demand.csv   | **Census** (default) or **Synthetic** | PUMS-calibrated or gravity model |
-| signals.xml  | **Inferred from OSM**       | Signal timing inferred from intersection geometry |
-| config.xml   | **Created**                 | Simulation parameters (seed, duration)     |
-| manifest.xml | **Created**                 | SHA-256 checksums and metadata             |
+| File         | Source                                | Description                                       |
+| ------------ | ------------------------------------- | ------------------------------------------------- |
+| network.xml  | **OpenStreetMap (OSM)**               | Real road network topology                        |
+| demand.csv   | **Census** (default) or **Synthetic** | PUMS-calibrated or gravity model                  |
+| signals.xml  | **Inferred from OSM**                 | Signal timing inferred from intersection geometry |
+| config.xml   | **Created**                           | Simulation parameters (seed, duration)            |
+| manifest.xml | **Created**                           | SHA-256 checksums and metadata                    |
 
 ### Demand Modes
 
@@ -276,11 +276,11 @@ was attempted-and-abandoned in Version_4 (see
 and [`doc/engines/THIRD_ENGINE_OPTIONS.md`](doc/engines/THIRD_ENGINE_OPTIONS.md)
 for the full selection rationale).
 
-| Engine    | Hardware    | Use Case                                |
-| --------- | ----------- | --------------------------------------- |
-| SUMO      | Any CPU     | Small/medium scenarios, debugging        |
-| MATSim    | Any CPU + Java | Activity-based, multi-modal           |
-| DTALite   | Any CPU     | Mesoscopic Dynamic Traffic Assignment (UE) |
+| Engine  | Hardware       | Use Case                                   |
+| ------- | -------------- | ------------------------------------------ |
+| SUMO    | Any CPU        | Small/medium scenarios, debugging          |
+| MATSim  | Any CPU + Java | Activity-based, multi-modal                |
+| DTALite | Any CPU        | Mesoscopic Dynamic Traffic Assignment (UE) |
 
 ### Will DTALite run on my Mac?
 
@@ -365,19 +365,19 @@ sbatch cluster/jobs/05_nyc_500k_car.sbatch       # or any of cluster/jobs/01..05
 
 ## Command Reference
 
-| Command                                                | Description                                |
-| ------------------------------------------------------ | ------------------------------------------ |
-| `python setup_simforge.py`                             | One-command bootstrap (venv + deps + JAR) |
-| `python run.py`                                        | Main CLI, run all or filtered simulations |
-| `python run.py --list`                                 | Show available scenarios/engines/modes     |
-| `python run.py --validate-only`                        | Validate scenario bundles only             |
-| `python -m execution.run_benchmark <runspec>`          | Run benchmark from YAML spec               |
-| `python -m pipeline.validation.validate_bundle <path>` | Validate a single bundle                   |
-| `python generate.py --preset <name>`                   | Generate a scenario from a preset         |
-| `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
-| `python -m evaluation.generate_plots    <results.json>` | Render the 10 thesis figures              |
-| `python -m pytest`                                     | Fast suite, default (~30 s; slow tests skipped). Full suite (668 tests with all 5 bundles, ~596 with the 3 tracked, ~20-30 min): `python -m pytest --runslow` |
-| `tools/clean.sh [--all]`                               | Wipe regenerable caches (`--all` includes `cache/`) |
+| Command                                                 | Description                                                                                                                                                   |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `python setup_simforge.py`                              | One-command bootstrap (venv + deps + JAR)                                                                                                                     |
+| `python run.py`                                         | Main CLI, run all or filtered simulations                                                                                                                     |
+| `python run.py --list`                                  | Show available scenarios/engines/modes                                                                                                                        |
+| `python run.py --validate-only`                         | Validate scenario bundles only                                                                                                                                |
+| `python -m execution.run_benchmark <runspec>`           | Run benchmark from YAML spec                                                                                                                                  |
+| `python -m pipeline.validation.validate_bundle <path>`  | Validate a single bundle                                                                                                                                      |
+| `python generate.py --preset <name>`                    | Generate a scenario from a preset                                                                                                                             |
+| `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic                                                                                                                             |
+| `python -m evaluation.generate_plots    <results.json>` | Render the 10 thesis figures                                                                                                                                  |
+| `python -m pytest`                                      | Fast suite, default (~30 s; slow tests skipped). Full suite (668 tests with all 5 bundles, ~596 with the 3 tracked, ~20-30 min): `python -m pytest --runslow` |
+| `tools/clean.sh [--all]`                                | Wipe regenerable caches (`--all` includes `cache/`)                                                                                                           |
 
 ---
 
@@ -420,13 +420,13 @@ SimForge/
 
 ## Troubleshooting
 
-| Problem                | Solution                                                          |
-| ---------------------- | ----------------------------------------------------------------- |
-| `MATSim JAR not found`                          | Re-run `python setup_simforge.py`, or run the manual `curl` above                                     |
-| `SUMO not found`                                | Comes from `requirements.lock` (the `eclipse-sumo` wheel): `uv pip install -r requirements.lock`, then `source .venv/bin/activate`              |
-| `Java not found`                                | `brew install openjdk@17`                                                                              |
-| `FileNotFoundError: osm_data/<state>.osm.pbf`   | Run `python tools/download_osm.py`, fetches + SHA-256-verifies every PBF in the manifest            |
-| `ImportError: osmium`                           | `pip install 'osmium>=4.0'` (not `pyrosm`; that package no longer builds on Python 3.13+)              |
-| Overpass fallback hangs                         | Prefer the PBF path, add the city's `pbf_file` to `generate.py::CITIES` and update the manifest       |
-| `No scenarios found`                            | Run a script in `scripts/` first, or check `python run.py --list`                                      |
-| Large `cache/` folder                           | `tools/clean.sh --all` to wipe the Overpass HTTP cache (no effect on the pinned PBFs in `osm_data/`) |
+| Problem                                       | Solution                                                                                                                           |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `MATSim JAR not found`                        | Re-run `python setup_simforge.py`, or run the manual `curl` above                                                                  |
+| `SUMO not found`                              | Comes from `requirements.lock` (the `eclipse-sumo` wheel): `uv pip install -r requirements.lock`, then `source .venv/bin/activate` |
+| `Java not found`                              | `brew install openjdk@17`                                                                                                          |
+| `FileNotFoundError: osm_data/<state>.osm.pbf` | Run `python tools/download_osm.py`, fetches + SHA-256-verifies every PBF in the manifest                                           |
+| `ImportError: osmium`                         | `pip install 'osmium>=4.0'` (not `pyrosm`; that package no longer builds on Python 3.13+)                                          |
+| Overpass fallback hangs                       | Prefer the PBF path, add the city's `pbf_file` to `generate.py::CITIES` and update the manifest                                    |
+| `No scenarios found`                          | Run a script in `scripts/` first, or check `python run.py --list`                                                                  |
+| Large `cache/` folder                         | `tools/clean.sh --all` to wipe the Overpass HTTP cache (no effect on the pinned PBFs in `osm_data/`)                               |

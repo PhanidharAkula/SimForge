@@ -43,15 +43,15 @@ all` then skips them gracefully (`[SKIP]`) without erroring.
 
 Seven map types, grouped by what input data they need:
 
-| Map | Inputs needed | Engine specificity | Notes |
-|---|---|---|---|
-| `od_origins` | Bundle (`network.xml`, `demand.csv`) + cached census tracts + TIGER roads | n/a | CityScape-style filled tract choropleth on TIGER roads basemap |
-| `od_destinations` | (same) | n/a | Same renderer with destination side |
-| `link_load` | Per-cell engine output | per `(engine, mode)` | Color + linewidth = volume per link (log scale) |
-| `congestion` | Per-cell DTALite `link_performance.csv` | DTALite only (needs link speed) | Color = mean speed / free-flow speed (green→red) |
-| `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` | Choropleth of mean per-trip travel time by origin tract |
-| `route_diversity` | Cell output from ≥ 2 engines | cross-engine | Highlights links picked by 1 / 2 / 3 engines, visualizes the SUMO≈MATSim vs DTALite split |
-| `animated_flow` | MATSim `output_events.xml.gz` from one cell | MATSim only | Two modes: `particles` (one moving dot per vehicle) or `throughput` (5-min link-load snapshots) |
+| Map               | Inputs needed                                                             | Engine specificity              | Notes                                                                                           |
+| ----------------- | ------------------------------------------------------------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `od_origins`      | Bundle (`network.xml`, `demand.csv`) + cached census tracts + TIGER roads | n/a                             | CityScape-style filled tract choropleth on TIGER roads basemap                                  |
+| `od_destinations` | (same)                                                                    | n/a                             | Same renderer with destination side                                                             |
+| `link_load`       | Per-cell engine output                                                    | per `(engine, mode)`            | Color + linewidth = volume per link (log scale)                                                 |
+| `congestion`      | Per-cell DTALite `link_performance.csv`                                   | DTALite only (needs link speed) | Color = mean speed / free-flow speed (green→red)                                                |
+| `travel_time`     | Per-cell engine output + bundle                                           | per `(engine, mode)`            | Choropleth of mean per-trip travel time by origin tract                                         |
+| `route_diversity` | Cell output from ≥ 2 engines                                              | cross-engine                    | Highlights links picked by 1 / 2 / 3 engines, visualizes the SUMO≈MATSim vs DTALite split       |
+| `animated_flow`   | MATSim `output_events.xml.gz` from one cell                               | MATSim only                     | Two modes: `particles` (one moving dot per vehicle) or `throughput` (5-min link-load snapshots) |
 
 Phase A = bundle-only maps (`od_*`).
 Phase B = per-engine maps (`link_load`, `travel_time`, `congestion`).
@@ -76,21 +76,21 @@ usage: generate_maps.py [-h] --scenario SCENARIO [--bundle-dir DIR]
                         [--anim-format {mp4,gif,apng}] [-v]
 ```
 
-| Flag | Default | What it does |
-|---|---|---|
-| `--scenario` | required | Bundle id (`chicago_1k_car`, `nyc_10k_car`, `chicago_200k_car`, `la_50k_car`, `nyc_500k_car`, …) |
-| `--bundle-dir` | `scenarios/<scenario>` | Override the bundle location |
-| `--run-dir` | auto-detect under `runs/benchmark_*/<scenario>` | Where per-cell engine artefacts live |
-| `--maps` | `all` | Comma-separated list, or `all`. Unknown names exit non-zero with the catalogue |
-| `--output` | `visualization/output/<scenario>/` | Where PNGs / MP4s / GIFs land (gitignored by default) |
-| `--dry-run` | off | Print the coverage matrix and exit; render nothing |
-| `--dpi` | 220 | Render DPI. Animations and statics use the same value |
-| `--engine` | first available | Which engine's data to use for Phase B maps. Choices: `sumo`, `matsim`, `dtalite` |
-| `--anim-mode` | `particles` | Animation style. `particles` = moving dots per vehicle; `throughput` = per-bin link load snapshots |
-| `--anim-fps` | 30 | Playback fps (particles only; throughput is fixed at 2 fps) |
-| `--anim-sim-per-frame` | 5.0 | Particles mode: simulated seconds per frame. Lower → slower motion, longer file |
-| `--anim-format` | `mp4` | `mp4` (smallest, needs ffmpeg), `gif` (embeds inline in markdown but largest), `apng` (full color, ~5× smaller than GIF) |
-| `-v / --verbose` | off | DEBUG-level logging |
+| Flag                   | Default                                         | What it does                                                                                                             |
+| ---------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `--scenario`           | required                                        | Bundle id (`chicago_1k_car`, `nyc_10k_car`, `chicago_200k_car`, `la_50k_car`, `nyc_500k_car`, …)                         |
+| `--bundle-dir`         | `scenarios/<scenario>`                          | Override the bundle location                                                                                             |
+| `--run-dir`            | auto-detect under `runs/benchmark_*/<scenario>` | Where per-cell engine artefacts live                                                                                     |
+| `--maps`               | `all`                                           | Comma-separated list, or `all`. Unknown names exit non-zero with the catalogue                                           |
+| `--output`             | `visualization/output/<scenario>/`              | Where PNGs / MP4s / GIFs land (gitignored by default)                                                                    |
+| `--dry-run`            | off                                             | Print the coverage matrix and exit; render nothing                                                                       |
+| `--dpi`                | 220                                             | Render DPI. Animations and statics use the same value                                                                    |
+| `--engine`             | first available                                 | Which engine's data to use for Phase B maps. Choices: `sumo`, `matsim`, `dtalite`                                        |
+| `--anim-mode`          | `particles`                                     | Animation style. `particles` = moving dots per vehicle; `throughput` = per-bin link load snapshots                       |
+| `--anim-fps`           | 30                                              | Playback fps (particles only; throughput is fixed at 2 fps)                                                              |
+| `--anim-sim-per-frame` | 5.0                                             | Particles mode: simulated seconds per frame. Lower → slower motion, longer file                                          |
+| `--anim-format`        | `mp4`                                           | `mp4` (smallest, needs ffmpeg), `gif` (embeds inline in markdown but largest), `apng` (full color, ~5× smaller than GIF) |
+| `-v / --verbose`       | off                                             | DEBUG-level logging                                                                                                      |
 
 Phase B maps render one engine at a time, pass `--engine sumo` / `--engine matsim` / `--engine dtalite` to render the others (or omit and the CLI picks the first cell on disk).
 
@@ -148,25 +148,25 @@ Available maps:
 `[--]` = an input is missing; the map will be skipped if requested.
 `[FAIL]` = the input was present but the renderer raised, the rest of the run continues.
 
-| Scenario | Behaviour |
-|---|---|
-| Only bundle present, no simulations run | `od_*` are `[OK]`; everything else `[--]` |
-| Only one engine has succeeded | `od_*`, `link_load`, `travel_time` (for that engine) are `[OK]`; `route_diversity` is `[--]` (needs ≥ 2 engines); `congestion` is `[--]` unless that engine is DTALite |
-| Bundle missing entirely | All map types `[--]` with reason "missing network.xml or demand.csv in bundle" |
-| Unknown map name on CLI | Hard exit (rc=2) with the catalogue |
+| Scenario                                | Behaviour                                                                                                                                                              |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Only bundle present, no simulations run | `od_*` are `[OK]`; everything else `[--]`                                                                                                                              |
+| Only one engine has succeeded           | `od_*`, `link_load`, `travel_time` (for that engine) are `[OK]`; `route_diversity` is `[--]` (needs ≥ 2 engines); `congestion` is `[--]` unless that engine is DTALite |
+| Bundle missing entirely                 | All map types `[--]` with reason "missing network.xml or demand.csv in bundle"                                                                                         |
+| Unknown map name on CLI                 | Hard exit (rc=2) with the catalogue                                                                                                                                    |
 
 ---
 
 ## Data sources
 
-| Data | Origin | Cache location | Helper |
-|---|---|---|---|
-| Bundle network + demand | `scenarios/<id>/{network.xml, demand.csv}` (canonical bundle) | n/a | n/a |
-| US Census tract polygons (CB 2024, 500k resolution) | US Census Bureau Cartographic Boundary files | `cache/census/<fips>/cb_2024_<fips>_tract_500k.{shp,shx,dbf}` | `python -m tools.download_census_tracts --all-bundled` |
-| TIGER PRISECROADS (roads basemap) | US Census TIGER/Line 2024 | `cache/tiger_roads/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}` | `python -m tools.download_tiger_roads --all-bundled` |
-| OSM way geometries (curved link polylines) | Sliced from the scenario's OSM PBF | `cache/osm_ways/<scenario>/` | Built on-demand by `visualization/data/osm_ways.py` |
-| Per-cell engine output | `runs/benchmark_*/<scenario>/<engine>/<mode>/seed_*/` | n/a | `python -m execution.run_benchmark <runspec>.yaml` |
-| MATSim events (for `animated_flow`) | `output/output_events.xml.gz` in a MATSim cell | n/a (parsed once per render) | Always written by the MATSim adapter |
+| Data                                                | Origin                                                        | Cache location                                                      | Helper                                                 |
+| --------------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
+| Bundle network + demand                             | `scenarios/<id>/{network.xml, demand.csv}` (canonical bundle) | n/a                                                                 | n/a                                                    |
+| US Census tract polygons (CB 2024, 500k resolution) | US Census Bureau Cartographic Boundary files                  | `cache/census/<fips>/cb_2024_<fips>_tract_500k.{shp,shx,dbf}`       | `python -m tools.download_census_tracts --all-bundled` |
+| TIGER PRISECROADS (roads basemap)                   | US Census TIGER/Line 2024                                     | `cache/tiger_roads/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}` | `python -m tools.download_tiger_roads --all-bundled`   |
+| OSM way geometries (curved link polylines)          | Sliced from the scenario's OSM PBF                            | `cache/osm_ways/<scenario>/`                                        | Built on-demand by `visualization/data/osm_ways.py`    |
+| Per-cell engine output                              | `runs/benchmark_*/<scenario>/<engine>/<mode>/seed_*/`         | n/a                                                                 | `python -m execution.run_benchmark <runspec>.yaml`     |
+| MATSim events (for `animated_flow`)                 | `output/output_events.xml.gz` in a MATSim cell                | n/a (parsed once per render)                                        | Always written by the MATSim adapter                   |
 
 All cached data is from public-domain US government sources. The two
 `tools/download_*.py` helpers are one-shot, they skip downloads whose
@@ -176,19 +176,19 @@ shapefiles already exist locally.
 
 ## Rendering defaults
 
-| Concern | Default |
-|---|---|
-| DPI | 220 (override with `--dpi`) |
-| OD map style | CityScape-derived 100-step blue→red log-scale palette over US Census tracts; light gray (`#dddddd`) for empty tracts |
-| Basemap (OD maps) | TIGER PRISECROADS at `linewidth=0.7`, `color="#1a1a1a"`, `alpha=0.7` |
-| Basemap (link maps) | The canonical SimForge network (extracted from the bundle's hash-pinned OSM PBF); footways, paths, steps, cycleways, and pedestrian links are excluded by default |
-| Background | White everywhere |
-| Travel-time colormap | `RdYlGn_r` (green = fast, red = slow) |
-| Link-load colormap | `Reds` |
-| Congestion colormap | `RdYlGn` (green = free-flow, red = standstill) |
-| Route diversity legend | 3 engines = gray (consensus), 2 engines = blue, 1 engine = red (typically DTALite UE alternate) |
-| Animated-flow particles | dot size = 9.0 px, red `#e60026` on dark gray `#888888` basemap |
-| Output dir | `visualization/output/<scenario>/` (gitignored) |
+| Concern                 | Default                                                                                                                                                           |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DPI                     | 220 (override with `--dpi`)                                                                                                                                       |
+| OD map style            | CityScape-derived 100-step blue→red log-scale palette over US Census tracts; light gray (`#dddddd`) for empty tracts                                              |
+| Basemap (OD maps)       | TIGER PRISECROADS at `linewidth=0.7`, `color="#1a1a1a"`, `alpha=0.7`                                                                                              |
+| Basemap (link maps)     | The canonical SimForge network (extracted from the bundle's hash-pinned OSM PBF); footways, paths, steps, cycleways, and pedestrian links are excluded by default |
+| Background              | White everywhere                                                                                                                                                  |
+| Travel-time colormap    | `RdYlGn_r` (green = fast, red = slow)                                                                                                                             |
+| Link-load colormap      | `Reds`                                                                                                                                                            |
+| Congestion colormap     | `RdYlGn` (green = free-flow, red = standstill)                                                                                                                    |
+| Route diversity legend  | 3 engines = gray (consensus), 2 engines = blue, 1 engine = red (typically DTALite UE alternate)                                                                   |
+| Animated-flow particles | dot size = 9.0 px, red `#e60026` on dark gray `#888888` basemap                                                                                                   |
+| Output dir              | `visualization/output/<scenario>/` (gitignored)                                                                                                                   |
 
 ---
 
@@ -200,11 +200,11 @@ SimForge's fairness contract forces SUMO and MATSim to **use the same
 routes**, both adapters read SimForge's pre-routed link sequences via
 state-aware BFS:
 
-| Engine | Route source | Mobsim job |
-|---|---|---|
-| SUMO | SimForge BFS routes in `routes.rou.xml` | Queue dynamics + completion |
-| MATSim | SimForge BFS routes in `<route type="links">` of plans.xml | Qsim + completion |
-| DTALite | Computes its own UE routes via Frank-Wolfe / column generation | Routing + flow assignment |
+| Engine  | Route source                                                   | Mobsim job                  |
+| ------- | -------------------------------------------------------------- | --------------------------- |
+| SUMO    | SimForge BFS routes in `routes.rou.xml`                        | Queue dynamics + completion |
+| MATSim  | SimForge BFS routes in `<route type="links">` of plans.xml     | Qsim + completion           |
+| DTALite | Computes its own UE routes via Frank-Wolfe / column generation | Routing + flow assignment   |
 
 So when `link_load` aggregates "which links appear in completed trip
 routes":
@@ -230,7 +230,7 @@ are red (the DTALite UE alternates).
 ### Why `animated_flow` shows "departure bursts"
 
 When watching the particle animation, the swarm of moving dots may
-appear to *jump* at certain moments, many vehicles materialize on the
+appear to _jump_ at certain moments, many vehicles materialize on the
 network at once, then traffic thins again until the next jump. Users
 typically notice 2-3 such bursts in a `chicago_1k_car` playback, more
 in `nyc_10k_car`.

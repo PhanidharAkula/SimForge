@@ -2,7 +2,7 @@
 
 SimForge is a thesis artefact, but the framework is designed to outlive the thesis as a reusable cross-simulator benchmarking harness. Contributions that improve reproducibility, broaden simulator coverage, or sharpen the evaluation tooling are welcome.
 
-This document describes the development workflow, the conventions enforced by the test suite, and the bar for changes that touch the *canonical schema*, the adapters, or the evaluation tooling.
+This document describes the development workflow, the conventions enforced by the test suite, and the bar for changes that touch the _canonical schema_, the adapters, or the evaluation tooling.
 
 ---
 
@@ -39,41 +39,41 @@ git checkout -b your-feature-branch
 
 The 668-test suite (with all 5 bundles, ~596 with just the 3 tracked) is the only thing standing between a "small fix" and a silently broken adapter. A `slow` pytest marker gates the heavy tests: default `pytest` runs the fast suite (~30 s), and `pytest --runslow` runs the full suite (~20-30 min) before a PR. The test layout (per `TESTING.md`):
 
-| Test file                              | Tests | Covers                                                       |
-| -------------------------------------- | ----- | ------------------------------------------------------------ |
-| `test_adapter_determinism.py`          | 8     | Byte-identical re-runs across all adapters                   |
-| `test_sumo_adapter.py`                 | 4     | SUMO adapter input/output shape                              |
-| `test_matsim_adapter.py`               | 26    | MATSim adapter (incl. Phase 12.1 route-text format pin)      |
-| `test_dtalite_adapter.py`              | 46    | DTALite adapter, writers, settings, demand-driven zoning, determinism, output parsing |
-| `test_fidelity_metrics.py`             | 21    | RMSE, GEH, KS                                                |
-| `test_metrics_travel_time.py`          | 2     | tripinfo.xml parser                                          |
-| `test_reproducibility_metrics.py`      | 15    | R-score, edge cases (μ → 0)                                  |
-| `test_scalability_metrics.py`          | 8     | SimulationTimer, throughput, hardware info                   |
-| `test_validator.py`                    | 2     | Bundle validator (manifest + referential integrity)          |
-| `test_scenario_data_integrity.py`      | 36 × N| Per-bundle hash, manifest, SCC, demand integrity (N = bundles in `scenarios/`) |
-| `test_pipeline_e2e.py`                 | 20    | OSM fetch → bundle → adapter → metrics                       |
-| `test_scc.py`                          | 14    | Iterative Kosaraju + bundled-network coverage                |
-| `test_feasibility.py`                  | 19    | Shared SCC-based cross-engine trip filter (mode-aware, V5+)  |
-| `test_analyze_benchmark.py`            | 24    | Mode-aware grouping, identity fallback, all table renderers |
-| `test_osm_fetch.py`                    | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pinning  |
-| `test_demand_generators.py`            | 21    | Uniform / gravity / peak-hour generators, SCC-restricted OD |
-| `test_engine_smoke.py`                 | 4     | Real-binary SUMO/MATSim/DTALite smoke (skip if missing)      |
-| `test_audit_fairness.py`               | 40    | Q1–Q5 audit + 5-layout detector (Phase 12+ mode-segmented + back-compat) |
-| `test_run_benchmark.py`                | 22    | BenchmarkHarness explicit-output, prep-cache hot/cold, bundle-hash invalidation, scoped_base collapse, per-cell failure isolation |
-| `test_runspec.py`                      | 23    | RunSpec/RunConfig schema: mode aliases, repeats/timeout/seed_increment guards, YAML loading |
-| `test_run_cli.py`                      | 3     | run.py parity with the harness (failure isolation, monotonic timing) |
-| `test_demand_composition.py`           | 7     | V5+ Phase 10, `purpose` column tally, AM/PM split, chain legs |
-| `test_parse_model_file.py`             | 27    | ModelGen parser + V5 Phase 5 JWTRNS + Phase 9 HBSchool helpers |
-| `test_turn_restrictions.py`            | 17    | V5+ Phase 7, OSM restriction parser, BFS, DTALite movement.csv |
-| `test_vehicle_types.py`                | 19    | V5+ Phase 11, canonical car constants, cross-engine equivalence |
-| `test_confidence.py`                   | 18    | Student's-t 95% CI core + edge cases                         |
-| `test_adapter_contract.py`             | 6     | Three-function adapter contract regression                   |
-| `test_canonical_routes.py`             | 11    | Phase 14 shared parallel-BFS route cache                     |
-| `test_generate_scorecard.py`           | 22    | Scorecard renderer (`tools/generate_scorecard`)              |
-| `test_recover_partial_summary.py`      | 6     | Partial-summary recovery from interrupted runs               |
-| `test_visualization.py`                | 13    | Visualization component (loaders, coverage, CLI)             |
+| Test file                         | Tests  | Covers                                                                                                                            |
+| --------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `test_adapter_determinism.py`     | 8      | Byte-identical re-runs across all adapters                                                                                        |
+| `test_sumo_adapter.py`            | 4      | SUMO adapter input/output shape                                                                                                   |
+| `test_matsim_adapter.py`          | 26     | MATSim adapter (incl. Phase 12.1 route-text format pin)                                                                           |
+| `test_dtalite_adapter.py`         | 46     | DTALite adapter, writers, settings, demand-driven zoning, determinism, output parsing                                             |
+| `test_fidelity_metrics.py`        | 21     | RMSE, GEH, KS                                                                                                                     |
+| `test_metrics_travel_time.py`     | 2      | tripinfo.xml parser                                                                                                               |
+| `test_reproducibility_metrics.py` | 15     | R-score, edge cases (μ → 0)                                                                                                       |
+| `test_scalability_metrics.py`     | 8      | SimulationTimer, throughput, hardware info                                                                                        |
+| `test_validator.py`               | 2      | Bundle validator (manifest + referential integrity)                                                                               |
+| `test_scenario_data_integrity.py` | 36 × N | Per-bundle hash, manifest, SCC, demand integrity (N = bundles in `scenarios/`)                                                    |
+| `test_pipeline_e2e.py`            | 20     | OSM fetch → bundle → adapter → metrics                                                                                            |
+| `test_scc.py`                     | 14     | Iterative Kosaraju + bundled-network coverage                                                                                     |
+| `test_feasibility.py`             | 19     | Shared SCC-based cross-engine trip filter (mode-aware, V5+)                                                                       |
+| `test_analyze_benchmark.py`       | 24     | Mode-aware grouping, identity fallback, all table renderers                                                                       |
+| `test_osm_fetch.py`               | 20     | OSM/Overpass fetch (mocked), bbox validation, cache pinning                                                                       |
+| `test_demand_generators.py`       | 21     | Uniform / gravity / peak-hour generators, SCC-restricted OD                                                                       |
+| `test_engine_smoke.py`            | 4      | Real-binary SUMO/MATSim/DTALite smoke (skip if missing)                                                                           |
+| `test_audit_fairness.py`          | 40     | Q1–Q5 audit + 5-layout detector (Phase 12+ mode-segmented + back-compat)                                                          |
+| `test_run_benchmark.py`           | 22     | BenchmarkHarness explicit-output, prep-cache hot/cold, bundle-hash invalidation, scoped_base collapse, per-cell failure isolation |
+| `test_runspec.py`                 | 23     | RunSpec/RunConfig schema: mode aliases, repeats/timeout/seed_increment guards, YAML loading                                       |
+| `test_run_cli.py`                 | 3      | run.py parity with the harness (failure isolation, monotonic timing)                                                              |
+| `test_demand_composition.py`      | 7      | V5+ Phase 10, `purpose` column tally, AM/PM split, chain legs                                                                     |
+| `test_parse_model_file.py`        | 27     | ModelGen parser + V5 Phase 5 JWTRNS + Phase 9 HBSchool helpers                                                                    |
+| `test_turn_restrictions.py`       | 17     | V5+ Phase 7, OSM restriction parser, BFS, DTALite movement.csv                                                                    |
+| `test_vehicle_types.py`           | 19     | V5+ Phase 11, canonical car constants, cross-engine equivalence                                                                   |
+| `test_confidence.py`              | 18     | Student's-t 95% CI core + edge cases                                                                                              |
+| `test_adapter_contract.py`        | 6      | Three-function adapter contract regression                                                                                        |
+| `test_canonical_routes.py`        | 11     | Phase 14 shared parallel-BFS route cache                                                                                          |
+| `test_generate_scorecard.py`      | 22     | Scorecard renderer (`tools/generate_scorecard`)                                                                                   |
+| `test_recover_partial_summary.py` | 6      | Partial-summary recovery from interrupted runs                                                                                    |
+| `test_visualization.py`           | 13     | Visualization component (loaders, coverage, CLI)                                                                                  |
 
-If you change adapter behaviour, run the determinism tests *and* the relevant adapter tests, the determinism tests catch silent file-format regressions that the adapter unit tests miss.
+If you change adapter behaviour, run the determinism tests _and_ the relevant adapter tests, the determinism tests catch silent file-format regressions that the adapter unit tests miss.
 
 ### 3. Run the canonical stress test
 
@@ -156,19 +156,19 @@ Bundles larger than 1K should **not** be committed to the repo. Add the scenario
 
 The doc set is intentionally consolidated, please don't introduce new top-level `.md` files without a discussion. The current layout:
 
-| Audience            | File                              | Scope                                             |
-| ------------------- | --------------------------------- | ------------------------------------------------- |
-| Newcomer            | `README.md`                       | Hook + 60-second orientation                      |
-| Newcomer            | `SETUP.md`                        | Install + first run                               |
-| Newcomer            | `CONTRIBUTING.md`                 | This file                                         |
-| Reproducer          | `doc/REPRODUCING.md`              | End-to-end thesis-figure reproduction             |
-| Reproducer          | `doc/RESULTS_GUIDE.md`            | Per-figure / per-table interpretation             |
-| Implementer         | `doc/ARCHITECTURE.md`             | Subsystem boundaries, data flow                   |
-| Implementer         | `doc/SCENARIO_GENERATION.md`      | Canonical bundle anatomy, generator pipeline      |
-| Maintainer          | `CHANGELOG.md`                    | Per-commit user-visible change log                 |
-| Maintainer          | `TESTING.md`                      | Test layout + per-file counts                     |
-| Reader              | `doc/GLOSSARY.md`                 | Acronyms and domain terms                         |
-| Visualizer          | `visualization/README.md`         | Opt-in geographic-map renderer (visualization branch) |
+| Audience    | File                         | Scope                                                 |
+| ----------- | ---------------------------- | ----------------------------------------------------- |
+| Newcomer    | `README.md`                  | Hook + 60-second orientation                          |
+| Newcomer    | `SETUP.md`                   | Install + first run                                   |
+| Newcomer    | `CONTRIBUTING.md`            | This file                                             |
+| Reproducer  | `doc/REPRODUCING.md`         | End-to-end thesis-figure reproduction                 |
+| Reproducer  | `doc/RESULTS_GUIDE.md`       | Per-figure / per-table interpretation                 |
+| Implementer | `doc/ARCHITECTURE.md`        | Subsystem boundaries, data flow                       |
+| Implementer | `doc/SCENARIO_GENERATION.md` | Canonical bundle anatomy, generator pipeline          |
+| Maintainer  | `CHANGELOG.md`               | Per-commit user-visible change log                    |
+| Maintainer  | `TESTING.md`                 | Test layout + per-file counts                         |
+| Reader      | `doc/GLOSSARY.md`            | Acronyms and domain terms                             |
+| Visualizer  | `visualization/README.md`    | Opt-in geographic-map renderer (visualization branch) |
 
 Documentation that duplicates information in another file is technical debt, link, don't restate. If a number appears in two places, only one of them is right after the next change.
 

@@ -31,19 +31,19 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 
 ## ✅ Current Status
 
-| Component                    | Status                              |
-| ---------------------------- | ----------------------------------- |
-| Canonical Schema (v0)        | ✅ Stable                           |
-| Scenario Validator           | ✅ Complete                         |
-| SUMO Adapter                 | ✅ Complete (microscopic + meso)    |
-| MATSim Adapter               | ✅ Complete (single-iteration meso) |
-| DTALite Adapter (3rd primary) | ✅ Complete (CPU mesoscopic DTA, runs on Mac/Linux) |
-| 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
-| Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
-| Metrics & Plots              | ✅ Complete (10 thesis figures)     |
-| Test Suite                   | ✅ 668 tests across 31 files (fast default `pytest` ~30 s: 522 pass, 146 skip; full `pytest --runslow` ~20-30 min; 13 SUMO netconvert tests skip on arm64) |
-| Bundled scenarios: `chicago_1k_car`, `nyc_10k_car`, `la_50k_car` | ✅ Generated, validated, SHA-256-stamped manifests |
-| Visualization Component (opt-in) | ✅ Complete (7 map types, OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
+| Component                                                        | Status                                                                                                                                                     |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Canonical Schema (v0)                                            | ✅ Stable                                                                                                                                                  |
+| Scenario Validator                                               | ✅ Complete                                                                                                                                                |
+| SUMO Adapter                                                     | ✅ Complete (microscopic + meso)                                                                                                                           |
+| MATSim Adapter                                                   | ✅ Complete (single-iteration meso)                                                                                                                        |
+| DTALite Adapter (3rd primary)                                    | ✅ Complete (CPU mesoscopic DTA, runs on Mac/Linux)                                                                                                        |
+| 95 % CIs on every KPI                                            | ✅ Complete (Student's t)                                                                                                                                  |
+| Execution Harness                                                | ✅ Complete (`run.py` + RunSpec)                                                                                                                           |
+| Metrics & Plots                                                  | ✅ Complete (10 thesis figures)                                                                                                                            |
+| Test Suite                                                       | ✅ 668 tests across 31 files (fast default `pytest` ~30 s: 522 pass, 146 skip; full `pytest --runslow` ~20-30 min; 13 SUMO netconvert tests skip on arm64) |
+| Bundled scenarios: `chicago_1k_car`, `nyc_10k_car`, `la_50k_car` | ✅ Generated, validated, SHA-256-stamped manifests                                                                                                         |
+| Visualization Component (opt-in)                                 | ✅ Complete (7 map types, OD choropleths, link load, congestion, travel time, route diversity, animated flow)                                              |
 
 The 200K / 500K tiers are not committed (their network/signals files exceed GitHub's 100 MB limit); regenerate them locally via the helper scripts in `scripts/`.
 
@@ -212,11 +212,11 @@ SimForge/
 
 ## 🔧 Simulators
 
-| Adapter | Engine    | Traffic Model                      | Native inputs written  |
-| ------- | --------- | ---------------------------------- | ---------------------- |
-| SUMO    | eclipse-sumo 1.26+| Microscopic / Mesoscopic   | net.net.xml, routes.rou.xml, toy.sumocfg |
-| MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml, config.xml |
-| DTALite | path4gmns 0.10+ (DTALiteClassic)| CPU mesoscopic Dynamic Traffic Assignment (UE) | node.csv + link.csv + demand.csv + settings.{csv,yml} |
+| Adapter | Engine                           | Traffic Model                                  | Native inputs written                                 |
+| ------- | -------------------------------- | ---------------------------------------------- | ----------------------------------------------------- |
+| SUMO    | eclipse-sumo 1.26+               | Microscopic / Mesoscopic                       | net.net.xml, routes.rou.xml, toy.sumocfg              |
+| MATSim  | MATSim 15                        | Activity-based, single iteration               | network.xml, plans.xml, config.xml                    |
+| DTALite | path4gmns 0.10+ (DTALiteClassic) | CPU mesoscopic Dynamic Traffic Assignment (UE) | node.csv + link.csv + demand.csv + settings.{csv,yml} |
 
 LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the retrospectives in [`doc/engines/`](doc/engines/).
 
@@ -305,28 +305,28 @@ symmetry).
 
 ## 📚 Documentation
 
-| Document                                                   | Description                                   |
-| ---------------------------------------------------------- | --------------------------------------------- |
-| [SETUP.md](SETUP.md)                                       | Installation guide (local + OSM data)         |
-| [doc/PITZER.md](doc/PITZER.md)                             | Supercomputer (OSC Pitzer) setup and SLURM    |
-| [TESTING.md](TESTING.md)                                   | Test suite layout and how to run subsets      |
-| [CHANGELOG.md](CHANGELOG.md)                               | Notable changes per release                   |
-| [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md)                 | End-to-end system architecture                |
-| [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md)   | Data sources, generation pipeline, realism    |
-| [doc/REPRODUCING.md](doc/REPRODUCING.md)                   | Full reproduction guide for thesis results    |
-| [doc/RESULTS_GUIDE.md](doc/RESULTS_GUIDE.md)               | What each generated figure/table means        |
-| [doc/GLOSSARY.md](doc/GLOSSARY.md)                         | Acronyms and term definitions                 |
-| [doc/SIMULATION_PARADIGMS.md](doc/SIMULATION_PARADIGMS.md) | Macro / meso / micro reference + per-engine support |
-| [doc/LICENSING.md](doc/LICENSING.md)                       | Per-component license declarations            |
-| [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics   |
-| [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal             |
-| [doc/CONTAINER_USAGE.md](doc/CONTAINER_USAGE.md)           | Docker / Singularity (GHCR) container workflow |
-| [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md)     | Census ModelGen provenance + travel-mode handling |
-| [doc/engines/](doc/engines/)                               | Engine comparison + LPSim/QarSUMO retrospectives |
-| [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                    |
-| `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules               |
-| [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types) |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                         | Contribution workflow and code style          |
+| Document                                                   | Description                                                                                                                                                                                                                                                    |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [SETUP.md](SETUP.md)                                       | Installation guide (local + OSM data)                                                                                                                                                                                                                          |
+| [doc/PITZER.md](doc/PITZER.md)                             | Supercomputer (OSC Pitzer) setup and SLURM                                                                                                                                                                                                                     |
+| [TESTING.md](TESTING.md)                                   | Test suite layout and how to run subsets                                                                                                                                                                                                                       |
+| [CHANGELOG.md](CHANGELOG.md)                               | Notable changes per release                                                                                                                                                                                                                                    |
+| [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md)                 | End-to-end system architecture                                                                                                                                                                                                                                 |
+| [doc/SCENARIO_GENERATION.md](doc/SCENARIO_GENERATION.md)   | Data sources, generation pipeline, realism                                                                                                                                                                                                                     |
+| [doc/REPRODUCING.md](doc/REPRODUCING.md)                   | Full reproduction guide for thesis results                                                                                                                                                                                                                     |
+| [doc/RESULTS_GUIDE.md](doc/RESULTS_GUIDE.md)               | What each generated figure/table means                                                                                                                                                                                                                         |
+| [doc/GLOSSARY.md](doc/GLOSSARY.md)                         | Acronyms and term definitions                                                                                                                                                                                                                                  |
+| [doc/SIMULATION_PARADIGMS.md](doc/SIMULATION_PARADIGMS.md) | Macro / meso / micro reference + per-engine support                                                                                                                                                                                                            |
+| [doc/LICENSING.md](doc/LICENSING.md)                       | Per-component license declarations                                                                                                                                                                                                                             |
+| [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics                                                                                                                                                                                                                    |
+| [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal                                                                                                                                                                                                                              |
+| [doc/CONTAINER_USAGE.md](doc/CONTAINER_USAGE.md)           | Docker / Singularity (GHCR) container workflow                                                                                                                                                                                                                 |
+| [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md)     | Census ModelGen provenance + travel-mode handling                                                                                                                                                                                                              |
+| [doc/engines/](doc/engines/)                               | Engine comparison + LPSim/QarSUMO retrospectives                                                                                                                                                                                                               |
+| [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                                                                                                                                                                                                                                     |
+| `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules                                                                                                                                                                                                                                |
+| [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types)                                                                                                                                                                                                                 |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                         | Contribution workflow and code style                                                                                                                                                                                                                           |
 | `python help.py`                                           | In-CLI help: curses TUI in a terminal, `python help.py <topic>` (overview / setup / generate / run / scripts / cities / modes / adapters / metrics / evaluation / schema / benchmark / tests / analyzer / visualization / troubleshooting) for paste-safe text |
 
 ---
