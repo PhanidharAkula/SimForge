@@ -56,7 +56,7 @@ SUMO:
 | `link/@to`          | `edge/@to`               | Direct copy         |
 | `link/@lanes`       | `edge/@numLanes`         | Direct copy         |
 | `link/@speed_limit` | `edge/@speed`            | Direct copy (m/s)   |
-| `link/@length`      | (computed by netconvert) | Not directly mapped |
+| `link/@length`      | `edge/@length`           | Direct copy (m); keeps canonical lengths instead of netconvert's geometric recomputation |
 
 **Example:**
 
@@ -69,17 +69,20 @@ Canonical:
 SUMO:
 
 ```xml
-<edge id="l1" from="n1" to="n2" numLanes="1" speed="13.9"/>
+<edge id="l1" from="n1" to="n2" numLanes="1" speed="13.9" length="100.0"/>
 ```
 
 ### Network Generation: `netconvert`
 
-The adapter uses SUMO's `netconvert` tool to build the final network:
+The adapter uses SUMO's `netconvert` tool to build the final network
+(`--proj.plain-geo` keeps the WGS84 lon/lat inputs from being read as
+meters, which used to produce sub-meter lane lengths):
 
 ```bash
 netconvert --node-files nodes.nod.xml \
            --edge-files edges.edg.xml \
            --output-file net.net.xml \
+           --proj.plain-geo \
            --no-turnarounds
 ```
 
@@ -306,5 +309,5 @@ diff out/run1/routes.rou.xml out/run2/routes.rou.xml
 - [ ] Full traffic light integration via `--tls-file`
 - [ ] Custom vehicle types from demand.csv
 - [ ] Dijkstra routing for weighted shortest paths
-- [ ] Support for `--seed` flag for SUMO reproducibility
+- [x] `--seed` support (every run path passes `--seed <N>` to the binary)
 - [ ] Edge-level capacity constraints

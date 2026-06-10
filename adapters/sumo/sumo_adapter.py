@@ -190,7 +190,13 @@ def summarize_scenario(scenario_root: Path) -> ScenarioSummary:
     has_signals = False
     signals_path = paths.get("signals")
     if signals_path is not None and signals_path.is_file():
-        signals_tree = ET.parse(signals_path)
+        try:
+            signals_tree = ET.parse(signals_path)
+        except ET.ParseError as e:
+            raise ValueError(
+                f"Failed to parse signals.xml at {signals_path}: {e}\n"
+                f"  Fix: Re-generate the signals or check with 'xmllint {signals_path}'."
+            ) from e
         signals_root = signals_tree.getroot()
         if signals_root.tag == "signals":
             junctions = signals_root.findall("junction")
@@ -645,12 +651,24 @@ def prepare_sumo_inputs(
     edges_path = output_dir / "edges.edg.xml"
     edges_path.write_text(edges_content, encoding="utf-8")
 
-    # Run netconvert to generate proper net.net.xml
+    # Run netconvert to generate proper net.net.xml. Resolve the binary
+    # venv-aware (PATH, then the interpreter's own bin/) so unactivated
+    # invocations still find the eclipse-sumo wheel's executables.
+    from adapters.common.engine_binaries import find_engine_binary
+    netconvert_bin = find_engine_binary("netconvert")
+    if netconvert_bin is None:
+        raise RuntimeError(
+            "netconvert not found on PATH or next to the interpreter.\n"
+            "  SUMO is bundled in requirements.lock as the eclipse-sumo wheel.\n"
+            "  Install with:  uv pip install -r requirements.lock\n"
+            "    (or:         pip install eclipse-sumo  for an ad-hoc install)\n"
+            "  Then verify:   netconvert --version"
+        )
     net_path = output_dir / "net.net.xml"
     try:
         nc_result = subprocess.run(
             [
-                "netconvert",
+                netconvert_bin,
                 "--node-files", str(nodes_path),
                 "--edge-files", str(edges_path),
                 "--output-file", str(net_path),
@@ -660,6 +678,7 @@ def prepare_sumo_inputs(
             check=False,
             capture_output=True,
             text=True,
+            timeout=600,
         )
         # netconvert returns non-zero for warnings; only fail on actual errors
         if nc_result.returncode != 0:
@@ -683,13 +702,20 @@ def prepare_sumo_inputs(
                            if l.strip().startswith("Error:")]
             if error_lines or not net_path.exists():
                 raise RuntimeError(f"netconvert failed: {nc_result.stderr}")
-    except FileNotFoundError as exc:
+    except subprocess.TimeoutExpired as exc:
+        # A hung netconvert (pathological or large network) must fail fast and
+        # visibly rather than wedge an unattended SBATCH job for its whole wall.
         raise RuntimeError(
-            "netconvert not found on PATH.\n"
-            "  SUMO is bundled in requirements.lock as the eclipse-sumo wheel.\n"
-            "  Install with:  uv pip install -r requirements.lock\n"
-            "    (or:         pip install eclipse-sumo  for an ad-hoc install)\n"
-            "  Then verify:   netconvert --version"
+            f"netconvert timed out after {exc.timeout:.0f}s on this network.\n"
+            "  On arm64 macOS, netconvert can spin or crash on large networks "
+            "(>~3000 nodes); use a smaller --radius or run on Linux/HPC."
+        ) from exc
+    except FileNotFoundError as exc:
+        # Defensive: find_engine_binary resolved a path above, so this only
+        # fires if the binary vanished between the probe and the exec.
+        raise RuntimeError(
+            f"netconvert disappeared while running ({netconvert_bin}).\n"
+            "  Re-install with:  uv pip install -r requirements.lock"
         ) from exc
 
     # The shared feasibility set: every engine simulates exactly this subset.
@@ -757,7 +783,15 @@ def run_sumo(
     Returns (success, runtime_seconds, error_message_or_None).
     """
     config_path = Path(config_path).resolve()
-    cmd = ["sumo", "-c", str(config_path)]
+    from adapters.common.engine_binaries import find_engine_binary
+    sumo_bin = find_engine_binary("sumo")
+    if sumo_bin is None:
+        return False, 0.0, (
+            "sumo binary not found on PATH or next to the interpreter. "
+            "Install with: uv pip install -r requirements.lock "
+            "(bundles eclipse-sumo), then verify: sumo --version"
+        )
+    cmd = [sumo_bin, "-c", str(config_path)]
     if seed is not None:
         cmd.extend(["--seed", str(seed)])
     if ignore_route_errors:
@@ -767,7 +801,7 @@ def run_sumo(
         logger.info("Using mesoscopic simulation mode (faster)")
     logger.info("Running: %s", " ".join(cmd))
 
-    start_time = time.time()
+    start_time = time.monotonic()
     try:
         result = subprocess.run(
             cmd,
@@ -777,7 +811,7 @@ def run_sumo(
             cwd=config_path.parent,
             check=False,
         )
-        runtime = time.time() - start_time
+        runtime = time.monotonic() - start_time
         if result.returncode != 0:
             error_lines = [
                 line for line in (result.stderr or "").split("\n")
@@ -791,9 +825,9 @@ def run_sumo(
             return False, runtime, error_msg
         return True, runtime, None
     except subprocess.TimeoutExpired:
-        return False, time.time() - start_time, f"Timeout after {timeout_s}s"
+        return False, time.monotonic() - start_time, f"Timeout after {timeout_s}s"
     except OSError as e:
-        return False, time.time() - start_time, str(e)
+        return False, time.monotonic() - start_time, str(e)
 
 
 def parse_sumo_output(output_dir: Path) -> dict:
@@ -811,11 +845,22 @@ def parse_sumo_output(output_dir: Path) -> dict:
     if tripinfo_path.exists():
         try:
             stats = parse_sumo_tripinfo(tripinfo_path)
-            metrics["travel_time"] = {
-                "mean": stats.mean_travel_time_s,
-                "p95": stats.p95_travel_time_s,
-                "trip_count": stats.trip_count,
-            }
+            if stats.trip_count == 0:
+                # Zero completed trips is a degenerate outcome (empty/edgeless
+                # network, every route rejected), not a real 0.0s mean. Emitting
+                # mean=0.0/p95=0.0 here would flow into aggregation as if valid;
+                # leave travel_time out so downstream treats it as no-metrics.
+                logger.warning(
+                    "SUMO produced 0 completed trips in %s; reporting no "
+                    "travel-time metrics (degenerate run, not a 0.0s result).",
+                    output_dir,
+                )
+            else:
+                metrics["travel_time"] = {
+                    "mean": stats.mean_travel_time_s,
+                    "p95": stats.p95_travel_time_s,
+                    "trip_count": stats.trip_count,
+                }
         except (OSError, ValueError) as e:
             logger.warning("Failed to parse tripinfo: %s", e)
     return metrics

@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import csv
 import logging
-import os
+import math
 import platform
 import re
 import statistics
@@ -133,22 +133,26 @@ class DTALiteConfig:
     # 0 = assignment only; 1 = also write per-link and per-agent performance.
     # We need the per-agent output for travel-time stats.
     simulation_output: int = 1
-    # UE convergence percent: DTA stops once the relative gap drops below this.
-    ue_convergence_percent: float = 0.1
-    number_of_cpu_processors: int = 4
     # Demand period (4-digit, 24-hour clock). It has to span every trip's
     # departure_time; the 0700-0800 default matches the bundled scenarios'
     # morning-peak focus.
     demand_period_start_hhmm: str = "0700"
     demand_period_end_hhmm: str = "0800"
 
+    # NOTE: DTALite Classic (the stable path4gmns 0.10.0 entry point we drive,
+    # see run_dtalite) takes only (assignment_mode, column_gen_num,
+    # column_upd_num) and its settings.csv [assignment] section has no column
+    # for a UE convergence percent or a CPU-processor count. Earlier versions
+    # of this config carried ue_convergence_percent and number_of_cpu_processors
+    # fields, but nothing ever wrote them to a file the binary reads, so they
+    # were silently ignored. They have been dropped to avoid implying control
+    # the engine doesn't expose here.
+
     def to_dict(self) -> dict:
         return {
             "iterations": self.iterations,
             "column_updating_iterations": self.column_updating_iterations,
             "simulation_output": self.simulation_output,
-            "ue_convergence_percent": self.ue_convergence_percent,
-            "number_of_cpu_processors": self.number_of_cpu_processors,
             "demand_period_start_hhmm": self.demand_period_start_hhmm,
             "demand_period_end_hhmm": self.demand_period_end_hhmm,
         }
@@ -263,6 +267,7 @@ def write_dtalite_node_csv(
     sane for tiny test fixtures).
     """
     sorted_nodes = sorted(graph.nodes.values(), key=lambda n: _to_int_index(n.id))
+    seen_idx: dict[int, str] = {}
     with out_path.open("w", encoding="utf-8", newline="") as f:
         w = csv.writer(f, lineterminator="\n")
         w.writerow([
@@ -271,6 +276,15 @@ def write_dtalite_node_csv(
         ])
         for node in sorted_nodes:
             idx = _to_int_index(node.id)
+            # Canonical ids strip their prefix to a GMNS integer, so two ids
+            # that differ only in prefix (or by zero-padding) would collide to
+            # the same node_id and silently emit conflicting rows. Fail loudly.
+            if idx in seen_idx:
+                raise ValueError(
+                    f"DTALite node_id collision: canonical ids {seen_idx[idx]!r} "
+                    f"and {node.id!r} both map to integer {idx}."
+                )
+            seen_idx[idx] = node.id
             is_zone = zone_node_ids is None or node.id in zone_node_ids
             zone_cell = idx if is_zone else ""
             production = 1 if is_zone else 0
@@ -690,6 +704,14 @@ def prepare_dtalite_inputs(
     write_dtalite_settings_yml(output_dir / "settings.yml", config)
     write_dtalite_settings_csv(output_dir / "settings.csv", config)
 
+    if od_pairs_written == 0:
+        logger.warning(
+            "DTALite demand.csv for %s has zero OD pairs (%d feasible trips): "
+            "DTALite would run a vacuous assignment with no travel-time output. "
+            "Check the scenario's demand and feasibility filter.",
+            summary.scenario_id, len(feasible),
+        )
+
     logger.info(
         "DTALite inputs ready at %s — %d nodes, %d links, %d unique OD pairs "
         "from %d feasible trips, %d turn restrictions in movement.csv",
@@ -745,11 +767,26 @@ def run_dtalite(
             f"settings.csv missing in {output_dir} — call prepare_dtalite_inputs first."
         )
 
+    if int(iterations) < 1 or int(column_updating_iterations) < 0:
+        return False, 0.0, (
+            f"invalid DTALite iteration counts: iterations={iterations} "
+            f"(must be >= 1), column_updating_iterations="
+            f"{column_updating_iterations} (must be >= 0)."
+        )
+
     if not is_dtalite_available():
         return False, 0.0, (
             "DTALite not available. Install via: uv pip install path4gmns\n"
             "On Mac, the bundled binary also needs OpenMP: brew install libomp"
         )
+
+    # Success is decided by the presence of fresh output files (the path4gmns
+    # macOS wrapper can raise after the binary has already written them). Delete
+    # any stale outputs from a prior run in this dir first, so "link_performance
+    # .csv exists" unambiguously means "this run produced it" rather than a
+    # leftover that would mask a silent failure.
+    for stale in ("link_performance.csv", "agent.csv", "od_performance.csv"):
+        (output_dir / stale).unlink(missing_ok=True)
 
     # The subprocess prints path4gmns's noisy "version 0.10.0" banner on
     # import; route it to /dev/null via a brief stdout redirect inside
@@ -762,7 +799,7 @@ def run_dtalite(
         f"{int(column_updating_iterations)})",
     ]
     logger.info("Running DTALite: %s  (cwd=%s)", " ".join(cmd), output_dir)
-    start = time.time()
+    start = time.monotonic()
     try:
         result = subprocess.run(
             cmd,
@@ -772,7 +809,7 @@ def run_dtalite(
             timeout=timeout_s,
             check=False,
         )
-        elapsed = time.time() - start
+        elapsed = time.monotonic() - start
         # We decide success from the output files, not the exit code.
         # path4gmns 0.10.0's DTALiteClassic wrapper has a macOS
         # multiprocessing bug: it raises a SemLock error AFTER the binary has
@@ -804,9 +841,9 @@ def run_dtalite(
         msg = err_line.strip() if err_line else tail
         return False, elapsed, f"DTALite produced no link_performance.csv: {msg}"
     except subprocess.TimeoutExpired:
-        return False, time.time() - start, f"DTALite timeout after {timeout_s}s"
+        return False, time.monotonic() - start, f"DTALite timeout after {timeout_s}s"
     except (OSError, subprocess.SubprocessError) as exc:
-        return False, time.time() - start, f"DTALite failed to launch: {exc}"
+        return False, time.monotonic() - start, f"DTALite failed to launch: {exc}"
 
 
 # ---------------------------------------------------------------------------
@@ -839,8 +876,10 @@ def parse_dtalite_output(output_dir: Path) -> Optional[DTALiteTripStats]:
     The file is in minutes for travel_time and kilometers for distance; we
     convert to seconds and meters for the shared TripStats schema.
 
-    Returns ``None`` when there's no ``agent.csv`` (DTALite failed, or
-    simulation_output=0 in settings.yml).
+    Returns ``None`` when there's no ``agent.csv`` (DTALite failed before
+    writing per-agent output). DTALiteClassic with assignment_mode=1 always
+    emits agent.csv on a successful run, so a missing file means failure, not
+    a quiet output toggle.
     """
     output_dir = Path(output_dir)
     agent_csv = output_dir / "agent.csv"
@@ -859,9 +898,20 @@ def parse_dtalite_output(output_dir: Path) -> Optional[DTALiteTripStats]:
                 volume = float(row.get("volume", "1") or 1)
             except ValueError:
                 continue
+            # Drop non-finite values (NaN/inf): a single NaN travel time would
+            # poison the mean and percentiles for the whole run, and the row
+            # would still be counted as a completed trip.
+            if not math.isfinite(tt_min) or not math.isfinite(dist_km) \
+                    or not math.isfinite(volume):
+                continue
             if volume <= 0:
                 continue
-            n = max(1, int(round(volume)))
+            # Round to nearest integer vehicle count; a volume that rounds to 0
+            # (a sub-0.5 fractional assignment) contributes no vehicle, matching
+            # the comment below rather than being force-counted as one.
+            n = int(round(volume))
+            if n <= 0:
+                continue
             total_vehicle_trips += n
             if tt_min <= 0:
                 continue

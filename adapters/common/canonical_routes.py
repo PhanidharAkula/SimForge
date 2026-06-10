@@ -573,7 +573,29 @@ def _compute_serial(
             "[bfs] fallback   : %s trips used plain BFS (no restriction-respecting path)",
             _fmt_int(fallback_count),
         )
+    _warn_unroutable(routes)
     return routes
+
+
+def _warn_unroutable(routes: Dict[str, List[str]]) -> None:
+    """Log a WARNING if any trip mapped to an empty route ([]).
+
+    A feasible trip can still come back unroutable when the SCC filter or a
+    turn-restriction quirk leaves no path the feasibility pre-check missed.
+    Those trips are emitted as ``[]`` on purpose (adapters rely on that
+    mapping to skip them), but emitting them silently hides a real data
+    issue. We do not change the ``[]`` mapping, only surface it: name the
+    count and a small sample of trip_ids so the operator can investigate.
+    """
+    empty = sum(1 for p in routes.values() if not p)
+    if empty <= 0:
+        return
+    sample = sorted(tid for tid, p in routes.items() if not p)[:5]
+    logger.warning(
+        "[bfs] unroutable : %s feasible trip(s) produced empty routes "
+        "(emitted as []); sample trip_ids=%s",
+        _fmt_int(empty), sample,
+    )
 
 
 def _emit_progress(
@@ -756,6 +778,7 @@ def _compute_parallel(
                 _emit_progress(completed, n, bfs_start, now, workers=workers)
                 last_progress_at = now
 
+    _warn_unroutable(routes)
     return routes
 
 

@@ -44,11 +44,7 @@ class MATSimConfig:
     
     # Memory settings
     java_heap_gb: int = 4
-    
-    # Output settings
-    write_events: bool = True
-    write_plans: bool = True
-    
+
     def to_dict(self) -> dict:
         return {
             "iterations": self.iterations,
@@ -75,28 +71,51 @@ def find_matsim_jar() -> Optional[Path]:
     matsim_home = os.environ.get("MATSIM_HOME")
     if matsim_home:
         possible_paths.insert(0, Path(matsim_home) / "matsim.jar")
-        # Also check for matsim-{version}.jar pattern
-        for jar in Path(matsim_home).glob("matsim-*.jar"):
-            if "sources" not in jar.name:
-                possible_paths.insert(0, jar)
-    
+        # Also check for matsim-{version}.jar pattern. Path.glob has no
+        # guaranteed order, so sort by name and insert in that order; the
+        # last-sorted (highest version) ends up at index 0 and wins
+        # deterministically across runs and filesystems.
+        home_jars = sorted(
+            (j for j in Path(matsim_home).glob("matsim-*.jar")
+             if "sources" not in j.name),
+            key=lambda p: p.name,
+        )
+        if len(home_jars) > 1:
+            logger.warning(
+                "Multiple MATSim JARs in MATSIM_HOME (%s); choosing %s",
+                matsim_home, home_jars[-1].name,
+            )
+        for jar in home_jars:
+            possible_paths.insert(0, jar)
+
     # Check lib/ folder in project root (relative to this file)
     project_lib = Path(__file__).parent.parent.parent / "lib"
     if project_lib.exists():
-        for version_dir in project_lib.glob("matsim-*"):
+        for version_dir in sorted(project_lib.glob("matsim-*"), key=lambda p: p.name):
             if version_dir.is_dir():
-                for jar in version_dir.glob("matsim-*.jar"):
-                    if "sources" not in jar.name:
-                        possible_paths.insert(0, jar)
+                lib_jars = sorted(
+                    (j for j in version_dir.glob("matsim-*.jar")
+                     if "sources" not in j.name),
+                    key=lambda p: p.name,
+                )
+                if len(lib_jars) > 1:
+                    logger.warning(
+                        "Multiple MATSim JARs in %s; choosing %s",
+                        version_dir, lib_jars[-1].name,
+                    )
+                for jar in lib_jars:
+                    possible_paths.insert(0, jar)
     
     for p in possible_paths:
         if p.exists():
             return p
     
-    # Check for any matsim*.jar in current directory
-    for jar in Path(".").glob("matsim*.jar"):
-        return jar
-    
+    # Check for any matsim*.jar in current directory, sorted so the choice
+    # does not depend on filesystem iteration order.
+    cwd_jars = sorted(Path(".").glob("matsim*.jar"), key=lambda p: p.name)
+    if cwd_jars:
+        return cwd_jars[-1]
+
     return None
 
 
@@ -123,7 +142,15 @@ def check_java_available() -> Tuple[bool, str]:
 
 
 def seconds_to_time_string(seconds: int) -> str:
-    """Convert seconds since midnight to HH:MM:SS format."""
+    """Convert seconds since midnight to HH:MM:SS format.
+
+    A negative input (e.g. a malformed bundle with a negative
+    departure_time_s) would otherwise produce an unparseable string like
+    '-1:59:59' because of Python's floored division and modulo, so clamp to
+    zero first and emit a valid '00:00:00'.
+    """
+    if seconds < 0:
+        seconds = 0
     hours = seconds // 3600
     minutes = (seconds % 3600) // 60
     secs = seconds % 60
@@ -165,75 +192,23 @@ def load_canonical_network(network_path: Path) -> Tuple[Dict, List]:
     return nodes, links
 
 
-def _largest_strongly_connected_component(nodes: Dict, links: List) -> set:
-    """The largest strongly connected component, as a set of node IDs.
-
-    Plain Kosaraju: one DFS pass forward to get a finish order, a second
-    pass over the reverse graph in that order to peel off components.
-    """
-
-    # Adjacency both ways, forward and reverse.
-    fwd = {}
-    rev = {}
-    for link in links:
-        f, t = link["from"], link["to"]
-        if f == t:
-            continue
-        fwd.setdefault(f, []).append(t)
-        rev.setdefault(t, []).append(f)
-
-    all_nodes = set(nodes.keys())
-    visited = set()
-    finish_order = []
-
-    # Pass 1: DFS on forward graph to get finish order
-    for start in all_nodes:
-        if start in visited:
-            continue
-        stack = [(start, False)]
-        while stack:
-            node, processed = stack.pop()
-            if processed:
-                finish_order.append(node)
-                continue
-            if node in visited:
-                continue
-            visited.add(node)
-            stack.append((node, True))
-            for nb in fwd.get(node, []):
-                if nb not in visited:
-                    stack.append((nb, False))
-
-    # Pass 2: DFS on reverse graph in reverse finish order
-    visited.clear()
-    best_component = set()
-
-    for start in reversed(finish_order):
-        if start in visited:
-            continue
-        component = set()
-        stack = [start]
-        while stack:
-            node = stack.pop()
-            if node in visited:
-                continue
-            visited.add(node)
-            component.add(node)
-            for nb in rev.get(node, []):
-                if nb not in visited:
-                    stack.append(nb)
-        if len(component) > len(best_component):
-            best_component = component
-
-    return best_component
-
-
 def clean_network(nodes: Dict, links: List) -> tuple:
     """Keep only the largest SCC, drop everything else.
 
     Returns (filtered_nodes, filtered_links, reachable_node_ids).
     """
-    reachable = _largest_strongly_connected_component(nodes, links)
+    from pipeline.network.scc import compute_largest_scc
+
+    # Use the shared SCC routine so the adapter's feasibility filter cannot
+    # drift from the demand generators and the other engines. It wants the
+    # node ids as a Set[str] and the edges as a List[Tuple[str, str]], so
+    # adapt our dict/list-of-dict inputs here. Self-loops are dropped, which
+    # matches the local implementation this replaced.
+    node_ids: Set[str] = set(nodes.keys())
+    edges: List[Tuple[str, str]] = [
+        (l["from"], l["to"]) for l in links if l["from"] != l["to"]
+    ]
+    reachable = compute_largest_scc(node_ids, edges)
 
     filtered_nodes = {nid: n for nid, n in nodes.items() if nid in reachable}
     filtered_links = [
@@ -922,7 +897,7 @@ def run_matsim(
     
     logger.debug("Running: %s", ' '.join(cmd))
     
-    start_time = time.time()
+    start_time = time.monotonic()
     try:
         result = subprocess.run(
             cmd,
@@ -932,19 +907,28 @@ def run_matsim(
             cwd=config_path.parent,
             check=False
         )
-        elapsed = time.time() - start_time
+        elapsed = time.monotonic() - start_time
         
         if result.returncode == 0:
             return True, elapsed, None
         else:
-            error = result.stderr[:500] if result.stderr else f"Exit code {result.returncode}"
+            if result.returncode < 0:
+                # Negative return codes are deaths-by-signal (SIGKILL from the
+                # OOM killer, SIGSEGV, an operator's kill -9). Translate them
+                # the way the SUMO paths do instead of reporting a bare
+                # "Exit code -9".
+                error = f"MATSim crashed with signal {-result.returncode}"
+                if result.stderr:
+                    error += f": {result.stderr[:300]}"
+            else:
+                error = result.stderr[:500] if result.stderr else f"Exit code {result.returncode}"
             return False, elapsed, error
             
     except subprocess.TimeoutExpired:
-        elapsed = time.time() - start_time
+        elapsed = time.monotonic() - start_time
         return False, elapsed, f"Timeout after {timeout_s}s"
     except OSError as e:
-        elapsed = time.time() - start_time
+        elapsed = time.monotonic() - start_time
         return False, elapsed, str(e)
 
 

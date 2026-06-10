@@ -10,12 +10,14 @@ Run it from the repo root:
 from __future__ import annotations
 
 import argparse
-import shutil
+import math
 import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from adapters.common.engine_binaries import find_engine_binary
 
 from .sumo_adapter import prepare_sumo_inputs
 
@@ -34,16 +36,18 @@ def _run_sumo(
     BFS over the canonical node graph, and on big real-world networks that
     can disagree with SUMO's own edge-level lane connectivity.
     """
-    if shutil.which("sumo") is None:
+    sumo_bin = find_engine_binary("sumo")
+    if sumo_bin is None:
         return (
             False,
             0.0,
-            "sumo not found on PATH. SUMO is bundled in requirements.lock as the "
-            "eclipse-sumo wheel — install with: `uv pip install -r requirements.lock` "
-            "(or `pip install eclipse-sumo` for an ad-hoc install). Verify with: `sumo --version`.",
+            "sumo not found on PATH or next to the interpreter. SUMO is bundled in "
+            "requirements.lock as the eclipse-sumo wheel; install with: "
+            "`uv pip install -r requirements.lock` (or `pip install eclipse-sumo` "
+            "for an ad-hoc install). Verify with: `sumo --version`.",
         )
 
-    cmd = ["sumo"]
+    cmd = [sumo_bin]
     if mesoscopic:
         cmd.extend(["--mesosim", "true"])
     cmd.extend([
@@ -54,7 +58,7 @@ def _run_sumo(
         "--statistic-output", str((output_dir / "statistics.xml").resolve()),
     ])
 
-    start = time.time()
+    start = time.monotonic()
     try:
         result = subprocess.run(
             cmd,
@@ -64,11 +68,14 @@ def _run_sumo(
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return False, time.time() - start, f"SUMO timed out after {timeout_s}s"
+        return False, time.monotonic() - start, f"SUMO timed out after {timeout_s}s"
 
-    runtime = time.time() - start
-    # SUMO exits non-zero even on harmless warnings, so only count it failed
-    # when stderr actually carries an "Error:" line.
+    runtime = time.monotonic() - start
+    # A non-zero exit is a failure. Prefer an explicit "Error:" line from stderr
+    # when SUMO emits one; otherwise report the exit or signal code. We must
+    # never return success on a non-zero exit: a SIGSEGV/abort (returncode < 0)
+    # leaves no tripinfo.xml and would otherwise be indistinguishable from a
+    # clean run with no output. This mirrors adapters.sumo.sumo_adapter.run_sumo.
     if result.returncode != 0:
         error_lines = [
             line for line in (result.stderr or "").splitlines()
@@ -76,6 +83,16 @@ def _run_sumo(
         ]
         if error_lines:
             return False, runtime, "\n".join(error_lines)
+        if result.returncode < 0:
+            return False, runtime, (
+                f"SUMO crashed with signal {-result.returncode} (no Error line). "
+                f"On arm64 macOS, sumo/netconvert can SIGSEGV on large networks; "
+                f"try the linux container."
+            )
+        tail = (result.stderr or result.stdout or "").strip()[-300:]
+        return False, runtime, (
+            f"SUMO exited with code {result.returncode}: {tail or 'no output'}"
+        )
     return True, runtime, None
 
 
@@ -87,11 +104,19 @@ def _summarize_tripinfo(tripinfo_path: Path) -> dict | None:
         tree = ET.parse(tripinfo_path)
     except ET.ParseError:
         return None
-    durations = [
-        float(elem.get("duration"))
-        for elem in tree.getroot().findall("tripinfo")
-        if elem.get("duration") is not None
-    ]
+    # Guard each parse: a non-numeric or non-finite (nan/inf) duration would
+    # otherwise crash the comprehension or silently poison the mean/percentiles.
+    durations: list[float] = []
+    for elem in tree.getroot().findall("tripinfo"):
+        raw = elem.get("duration")
+        if raw is None:
+            continue
+        try:
+            d = float(raw)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(d):
+            durations.append(d)
     if not durations:
         return None
     durations.sort()
@@ -100,7 +125,10 @@ def _summarize_tripinfo(tripinfo_path: Path) -> dict | None:
         "trip_count": n,
         "mean_travel_time_s": sum(durations) / n,
         "median_travel_time_s": durations[n // 2],
-        "p95_travel_time_s": durations[min(n - 1, int(0.95 * n))],
+        # Same p95 index as the adapter contract path
+        # (evaluation.metrics.travel_time._compute_p95) so the CLI and the
+        # benchmark harness report identical percentiles.
+        "p95_travel_time_s": durations[int(0.95 * (n - 1))],
         "min_travel_time_s": durations[0],
         "max_travel_time_s": durations[-1],
     }
