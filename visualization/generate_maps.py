@@ -195,24 +195,34 @@ def _render_phase_c(
             load_dtalite_links, load_matsim_links, load_sumo_links,
         )
 
-        # Pick first available cell per engine that has the right artifacts.
+        # Per engine, iterate ALL cells (lowest seed first) and pick the
+        # first one that actually has the required artifact on disk. Picking
+        # the literal lowest-seed cell without this check would silently drop
+        # an engine whose lowest seed failed even if a higher seed succeeded.
+        # This mirrors the animated_flow path above (filter by artifact, then
+        # take the lowest seed) and keeps the happy path identical.
         engine_links = {}
-        per_engine_first_cell: dict[str, "CellArtifacts"] = {}
-        for cell in coverage.cells:
-            if cell.engine in per_engine_first_cell:
-                continue
-            per_engine_first_cell[cell.engine] = cell
-
-        for engine, cell in per_engine_first_cell.items():
-            try:
-                if engine == "sumo" and cell.has_tripinfo:
-                    engine_links[engine] = load_sumo_links(cell.cell_dir)
-                elif engine == "matsim" and cell.has_matsim_trips:
-                    engine_links[engine] = load_matsim_links(cell.cell_dir)
-                elif engine == "dtalite" and cell.has_dtalite_link_perf:
-                    engine_links[engine] = load_dtalite_links(cell.cell_dir)
-            except Exception as e:
-                logger.warning("[%s] %s loader failed: %s", map_type, engine, e)
+        artifact_attr = {
+            "sumo": "has_tripinfo",
+            "matsim": "has_matsim_trips",
+            "dtalite": "has_dtalite_link_perf",
+        }
+        loaders = {
+            "sumo": load_sumo_links,
+            "matsim": load_matsim_links,
+            "dtalite": load_dtalite_links,
+        }
+        cells_by_seed = sorted(coverage.cells, key=lambda c: c.seed)
+        for engine, attr in artifact_attr.items():
+            for cell in cells_by_seed:
+                if cell.engine != engine or not getattr(cell, attr):
+                    continue
+                try:
+                    engine_links[engine] = loaders[engine](cell.cell_dir)
+                except Exception as e:
+                    logger.warning("[%s] %s loader failed: %s", map_type, engine, e)
+                    continue
+                break
 
         engine_links = {k: v for k, v in engine_links.items() if v}
         if len(engine_links) < 2:
@@ -383,7 +393,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--dpi", type=int, default=220,
                         help="render DPI (default 220)")
     parser.add_argument("--engine", default=None,
-                        choices=["sumo", "matsim", "dtalite", None],
+                        choices=["sumo", "matsim", "dtalite"],
                         help="Engine to render Phase B maps from (link_load, "
                              "travel_time, congestion). Defaults to first "
                              "available engine in the run dir.")
@@ -435,6 +445,14 @@ def main(argv: list[str] | None = None) -> int:
     bundle_dir = args.bundle_dir or (Path("scenarios") / args.scenario)
     run_dir = args.run_dir or _autodetect_run_dir(args.scenario)
     output_dir = args.output or _resolve_default_output(args.scenario)
+
+    # A missing bundle directory is almost always a typo'd --scenario.
+    # Without this check the run "succeeds" with a wall of [--] rows and
+    # exit code 0, which reads as success to the caller.
+    if not Path(bundle_dir).is_dir():
+        print(f"Error: scenario bundle directory not found: {bundle_dir}")
+        print("  Check --scenario (or pass --bundle-dir explicitly).")
+        return 2
 
     coverage = discover_bundle(bundle_dir, scenario_id=args.scenario)
     if run_dir is not None:

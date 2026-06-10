@@ -72,6 +72,7 @@ usage: generate_maps.py [-h] --scenario SCENARIO [--bundle-dir DIR]
                         [--engine {sumo,matsim,dtalite}]
                         [--anim-mode {particles,throughput}]
                         [--anim-fps N] [--anim-sim-per-frame SEC]
+                        [--anim-dot-size PT] [--anim-dot-alpha A]
                         [--anim-format {mp4,gif,apng}] [-v]
 ```
 
@@ -162,7 +163,7 @@ Available maps:
 |---|---|---|---|
 | Bundle network + demand | `scenarios/<id>/{network.xml, demand.csv}` (canonical bundle) | n/a | n/a |
 | US Census tract polygons (CB 2024, 500k resolution) | US Census Bureau Cartographic Boundary files | `cache/census/<fips>/cb_2024_<fips>_tract_500k.{shp,shx,dbf}` | `python -m tools.download_census_tracts --all-bundled` |
-| TIGER PRISECROADS (roads basemap) | US Census TIGER/Line 2024 | `cache/tiger/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}` | `python -m tools.download_tiger_roads --all-bundled` |
+| TIGER PRISECROADS (roads basemap) | US Census TIGER/Line 2024 | `cache/tiger_roads/<fips>/tl_2024_<fips>_prisecroads.{shp,shx,dbf}` | `python -m tools.download_tiger_roads --all-bundled` |
 | OSM way geometries (curved link polylines) | Sliced from the scenario's OSM PBF | `cache/osm_ways/<scenario>/` | Built on-demand by `visualization/data/osm_ways.py` |
 | Per-cell engine output | `runs/benchmark_*/<scenario>/<engine>/<mode>/seed_*/` | n/a | `python -m execution.run_benchmark <runspec>.yaml` |
 | MATSim events (for `animated_flow`) | `output/output_events.xml.gz` in a MATSim cell | n/a (parsed once per render) | Always written by the MATSim adapter |
@@ -301,7 +302,7 @@ visualization/
 │   ├── results.py          # Per-engine LinkPerformance + Trip loaders for SUMO/MATSim/DTALite
 │   └── tiger_roads.py      # TIGER/Line PRISECROADS shapefile → road polylines
 ├── render/                 # Matplotlib-only render functions, one file per map type
-│   ├── basemap.py          # Faded SimForge network underlay (shared by link maps + animated_flow)
+│   ├── basemap.py          # Faded SimForge network underlay (standalone helper; the shipped renderers draw their own inline underlays)
 │   ├── od_choropleth.py    # Phase A, filled-tract choropleth (CityScape palette)
 │   ├── link_load.py        # Phase B, link_load + congestion (color = volume / speed_ratio)
 │   ├── travel_time.py      # Phase B, choropleth of mean travel time by origin tract

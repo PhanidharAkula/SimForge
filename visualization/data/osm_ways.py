@@ -130,10 +130,9 @@ def link_polyline(
     from→to line if no way mapping is found.
     """
     fallback = [node_coords[from_node_id], node_coords[to_node_id]]
+    # Both endpoints must be known OSM nodes for the way snip to make sense.
     if from_node_id not in node_osm_ids or to_node_id not in node_osm_ids:
         return fallback
-    from_osm = node_osm_ids[from_node_id]
-    to_osm = node_osm_ids[to_node_id]
 
     # Try each candidate way until we find one whose node sequence
     # contains both endpoints.

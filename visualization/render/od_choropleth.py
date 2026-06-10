@@ -45,8 +45,6 @@ def _build_cityscape_cmap():
     #0a0ae1 (blue) at index 33 to #e10a0a (red) at index 132, blending
     through purple and magenta on the way.
     """
-    import matplotlib
-    import numpy as np
     from matplotlib.colors import LinearSegmentedColormap
 
     # 5 anchor colors tracing CityScape's gradient (blue, blue-purple,

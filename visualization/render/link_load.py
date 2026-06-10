@@ -45,7 +45,7 @@ def render_link_metric(
     line_width_max: float = 2.5,
     use_osm_curves: bool = True,
     scenario_id: str | None = None,
-) -> Path:
+) -> Path | None:
     """Render road links colored by a per-link metric.
 
     Parameters

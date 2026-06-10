@@ -115,6 +115,17 @@ def load_tracts_in_bbox(
     fields = [f[0] for f in sf.fields[1:]]
     field_idx = {name: i for i, name in enumerate(fields)}
 
+    # Fail with a clear message naming the file if the shapefile is not a
+    # standard census tract layout, rather than a bare KeyError deep in the
+    # per-record build below.
+    required = {"GEOID", "STATEFP", "COUNTYFP", "TRACTCE"}
+    missing = required - set(fields)
+    if missing:
+        raise ValueError(
+            f"{shp_path} is missing expected census tract fields {sorted(missing)}; "
+            f"found {fields}. Is this a TIGER tract shapefile?"
+        )
+
     tracts: list[TractPolygon] = []
     total_shapes = 0
     for shape_rec in sf.shapeRecords():
