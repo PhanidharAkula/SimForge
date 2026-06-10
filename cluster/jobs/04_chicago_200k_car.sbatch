@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge: 04_chicago_200k_car: 200K trips (car+transit), Chicago, 24-hour
+# SimForge: 04_chicago_200k_car: 200K trips (car), Chicago, 24-hour
 # horizon, 15 km radius.
 #
 # Large full-day tier. Larger bbox + trip count than 03 means more memory
@@ -11,7 +11,10 @@
 #   --account=...     your project allocation (replaces PMIU0110)
 #   --mail-user=...   uncomment + fill if you want completion notifications
 #
-# Submit from the repo root:   sbatch cluster/jobs/04_chicago_200k_car.sbatch
+# Submit from the repo root. Create logs/ first: SLURM resolves the
+# relative --output/--error paths at submit time, so an in-script
+# mkdir would be too late for its own %x_%j.out/.err files.
+#   mkdir -p logs && sbatch cluster/jobs/04_chicago_200k_car.sbatch
 # ============================================================================
 
 #SBATCH --account=PMIU0110

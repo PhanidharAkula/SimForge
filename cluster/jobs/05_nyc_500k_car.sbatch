@@ -11,7 +11,10 @@
 #   --account=...     your project allocation (replaces PMIU0110)
 #   --mail-user=...   uncomment + fill if you want completion notifications
 #
-# Submit from the repo root:   sbatch cluster/jobs/05_nyc_500k_car.sbatch
+# Submit from the repo root. Create logs/ first: SLURM resolves the
+# relative --output/--error paths at submit time, so an in-script
+# mkdir would be too late for its own %x_%j.out/.err files.
+#   mkdir -p logs && sbatch cluster/jobs/05_nyc_500k_car.sbatch
 # ============================================================================
 
 #SBATCH --account=PMIU0110

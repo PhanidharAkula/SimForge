@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================================
-# SimForge: 03_la_50k_car: 50K trips (car+transit+bike), LA,
+# SimForge: 03_la_50k_car: 50K trips (car), LA,
 # 6–10 AM, 10 km radius.
 #
 # Medium multi-modal tier. Reference cross-platform-reproducibility bundle
@@ -12,7 +12,10 @@
 #   --account=...     your project allocation (replaces PMIU0110)
 #   --mail-user=...   uncomment + fill if you want completion notifications
 #
-# Submit from the repo root:   sbatch cluster/jobs/03_la_50k_car.sbatch
+# Submit from the repo root. Create logs/ first: SLURM resolves the
+# relative --output/--error paths at submit time, so an in-script
+# mkdir would be too late for its own %x_%j.out/.err files.
+#   mkdir -p logs && sbatch cluster/jobs/03_la_50k_car.sbatch
 # ============================================================================
 
 #SBATCH --account=PMIU0110
