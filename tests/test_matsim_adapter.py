@@ -31,6 +31,9 @@ from adapters.matsim.matsim_adapter import (
     seconds_to_time_string,
 )
 
+# Whole module is slow: it preps MATSim inputs for every bundle (incl. 200k/500k).
+pytestmark = pytest.mark.slow
+
 
 # ---------------------------------------------------------------------------
 # Session-scoped fixtures (cache expensive prepare/build work across tests)
@@ -55,8 +58,9 @@ def built_plans_xml(bundled_scenario, canonical_network_data):
     """MATSim plans XML string, built once per session.
 
     This is the expensive call: state-aware BFS pre-routing runs once per
-    trip × N turn restrictions in network.xml. Caching it here drops the
-    `TestBuildMATSimPlans` class from ~30 s to ~10 s on chicago_1k_car.
+    trip × N turn restrictions in network.xml. Building it once per
+    session lets every read-only test in `TestBuildMATSimPlans` share the
+    result instead of re-routing chicago_1k_car each time.
     """
     _, links = canonical_network_data
     feasible, _ = feasible_trip_ids(
@@ -73,9 +77,9 @@ def built_plans_xml(bundled_scenario, canonical_network_data):
 def prepared_chicago(bundled_scenario, tmp_path_factory):
     """Full `prepare_matsim_inputs(chicago_1k_car)` run once per session.
 
-    The 4 read-only tests in `TestPrepareMATSimInputs` consume this
-    fixture instead of re-preparing per test. Drops their combined wall
-    time from ~40 s to ~10 s on chicago_1k_car.
+    The read-only tests in `TestPrepareMATSimInputs` consume this fixture
+    instead of re-preparing per test, so the chicago_1k_car preparation
+    runs a single time for the whole class.
     """
     out = tmp_path_factory.mktemp("matsim_prepared")
     config_path = prepare_matsim_inputs(bundled_scenario, out)
@@ -87,9 +91,9 @@ def prepared_sweep(small_bundled_scenarios, tmp_path_factory):
     """Map of every small bundled scenario → its prepared MATSim output.
 
     The state-aware BFS pre-routing in `build_matsim_plans_xml` is O(trips)
-    and dominates wall time on the bigger bundles (nyc_10k_car: ~5-7 min
-    of BFS for 10K trips). Caching the prepared bundle once per session
-    is the single biggest speedup in this file.
+    and dominates wall time on the bigger bundles (nyc_10k_car runs BFS
+    over 10K trips). Preparing each bundle once per session lets all
+    sweep assertions reuse the result rather than re-routing per test.
     """
     if not small_bundled_scenarios:
         return {}
@@ -195,9 +199,10 @@ class TestBuildMATSimNetwork:
 
 class TestBuildMATSimPlans:
     def test_valid_xml_output(self, built_plans_xml):
-        # V11.2 migrated from plans_v4 (<plans>/<act>) to population_v6
-        # (<population>/<activity>), see CHANGELOG Phase 11.2 for the
-        # rationale (plans_v4 rejected V5 Phase 7's `<route type="links">`).
+        # Plans are emitted in MATSim's population_v6 schema
+        # (<population>/<activity>) rather than the older plans_v4
+        # (<plans>/<act>): population_v6 is the schema that accepts the
+        # explicit `<route type="links">` element this adapter writes.
         root = ET.fromstring(built_plans_xml)
         assert root.tag == "population"
 
@@ -211,21 +216,21 @@ class TestBuildMATSimPlans:
         assert person is not None
         plan = person.find("plan")
         assert plan is not None
-        # population_v6 element name is `<activity>`, not plans_v4's `<act>`.
+        # In population_v6 the element name is `<activity>` (the older
+        # plans_v4 schema named it `<act>`).
         assert len(plan.findall("activity")) == 2
         assert len(plan.findall("leg")) == 1
 
     def test_route_text_includes_start_and_end_links(self, built_plans_xml):
-        """MATSim 15 / population_v6 expects the <route type="links"> text
-        to be the FULL link sequence (including start_link as first token
-        and end_link as last token), NOT just the interior. Confirmed
-        against MATSim's own output_plans.xml.gz format. Pre-V12 SimForge
-        emitted only the interior; MATSim's mobsim then rejected every
-        transition with `DefaultTurnAcceptanceLogic` "Cannot move vehicle"
-        warnings and output_trips.csv.gz ended up empty (zero trips →
-        zero std → trivial R = 1.0000 that read as perfect determinism
-        but was actually no determinism at all). See CHANGELOG Phase 12
-        "MATSim route text format".
+        """The <route type="links"> text is the FULL link sequence,
+        including start_link as the first token and end_link as the last
+        token, not just the interior links. This matches the format of
+        MATSim's own output_plans.xml.gz under MATSim 15 / population_v6.
+        Emitting only the interior would make the mobsim reject every
+        transition (`DefaultTurnAcceptanceLogic` "Cannot move vehicle")
+        and produce an empty output_trips.csv.gz, which in turn yields a
+        degenerate R = 1.0000 from zero trips rather than from genuine
+        determinism.
         """
         root = ET.fromstring(built_plans_xml)
         for person in root.findall("person"):
@@ -255,11 +260,12 @@ class TestBuildMATSimPlans:
             )
 
     def test_route_start_link_matches_start_activity_link(self, built_plans_xml):
-        """The route's start_link must equal the link of the preceding
-        activity (because the agent is physically *on* that link when the
-        leg starts). Same for end_link / next-activity link. Pre-V12 the
-        adapter emitted route start_link = first BFS-derived edge instead
-        of the activity link, leaving the agent unable to begin the leg.
+        """The route's start_link equals the link of the preceding
+        activity (the agent is physically *on* that link when the leg
+        starts), and the route's end_link equals the next activity's
+        link. Aligning these lets the agent actually begin the leg; a
+        BFS-derived first edge that differs from the activity link would
+        strand it.
         """
         root = ET.fromstring(built_plans_xml)
         for person in root.findall("person"):

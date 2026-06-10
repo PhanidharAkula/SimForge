@@ -1,4 +1,4 @@
-"""Tests for tools/recover_partial_summary.py, Phase 12.5 + 12.6."""
+"""Tests for tools/recover_partial_summary.py: reconstructing partial summaries from a harness log."""
 
 from __future__ import annotations
 

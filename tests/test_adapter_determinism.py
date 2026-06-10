@@ -18,7 +18,7 @@ from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 from .conftest import directory_sha256, file_sha256, is_arm64_netconvert_crash
 
 
-pytestmark = pytest.mark.determinism
+pytestmark = [pytest.mark.slow, pytest.mark.determinism]  # re-runs adapters/engines
 
 
 @pytest.mark.requires_sumo

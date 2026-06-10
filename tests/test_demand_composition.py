@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 
 from evaluation.demand_composition import (
     CHAIN_LEG_PURPOSES,
@@ -78,9 +77,9 @@ def test_returns_none_for_empty_purpose_column(tmp_path: Path):
 
 
 def test_chain_leg_purposes_subset_of_peak_sets():
-    """The CHAIN_LEG_PURPOSES set must be a strict subset of
-    AM_PURPOSES ∪ PM_PURPOSES. If a future Phase adds a chain leg to a
-    new peak set, this test catches the missing membership."""
+    """The CHAIN_LEG_PURPOSES set is a strict subset of
+    AM_PURPOSES ∪ PM_PURPOSES: every chain leg belongs to a known
+    peak set, with no chain-leg purpose orphaned outside both."""
     from pipeline.demand.generate_census_demand import (
         AM_PURPOSES,
         PM_PURPOSES,

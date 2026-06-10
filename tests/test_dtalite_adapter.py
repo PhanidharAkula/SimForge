@@ -561,6 +561,7 @@ class TestBinaryDiscovery:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.slow  # runs a real DTALite engine subprocess
 @pytest.mark.skipif(
     not is_dtalite_available(),
     reason="path4gmns not installed (uv pip install path4gmns; brew install libomp on Mac)",
@@ -577,8 +578,10 @@ class TestRunSmoke:
         ok, runtime, err = run_dtalite(
             out, timeout_s=300, iterations=2, column_updating_iterations=2
         )
-        if not ok:
-            pytest.skip(f"DTALite run failed in CI environment: {err}")
+        # The class is already gated on is_dtalite_available(); once the engine
+        # is present a failed run is a real regression, not an environment skip,
+        # so assert rather than skip (a broken adapter must fail the suite).
+        assert ok, f"DTALite run failed: {err}"
         # Must produce at least link_performance.csv
         assert (out / "link_performance.csv").is_file()
         # Stats parse should produce non-zero completed if assignment converged

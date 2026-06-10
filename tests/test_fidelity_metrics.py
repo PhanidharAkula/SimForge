@@ -161,7 +161,6 @@ class TestFidelityMetrics:
     """Tests for combined fidelity metrics computation."""
     
     def test_compute_fidelity_metrics_basic(self):
-        """Test full fidelity metrics computation."""
         observed_counts = [100.0, 200.0, 300.0, 400.0, 500.0]
         simulated_counts = [105.0, 198.0, 305.0, 395.0, 510.0]
         
@@ -176,7 +175,6 @@ class TestFidelityMetrics:
         assert 0 <= metrics.geh_pct_below_5 <= 100
     
     def test_compute_fidelity_metrics_with_travel_times(self):
-        """Test fidelity metrics with travel time distributions."""
         observed_counts = [100.0, 200.0]
         simulated_counts = [105.0, 195.0]
         observed_tt = [10.0, 12.0, 14.0, 16.0, 18.0]

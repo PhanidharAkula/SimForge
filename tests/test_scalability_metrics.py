@@ -59,7 +59,6 @@ class TestScalabilityMetrics:
     """Tests for scalability metrics computation."""
     
     def test_compute_basic_metrics(self):
-        """Test basic scalability metrics calculation."""
         metrics = compute_scalability_metrics(
             wall_clock_seconds=10.0,
             simulated_time_seconds=3600.0,
@@ -74,7 +73,6 @@ class TestScalabilityMetrics:
         assert metrics.simulated_to_realtime_ratio == 360.0  # 3600/10
     
     def test_compute_with_hardware_info(self):
-        """Test scalability with hardware normalization."""
         hw_info = HardwareInfo(
             cpu_model="Test CPU",
             cpu_cores=4,
@@ -93,7 +91,6 @@ class TestScalabilityMetrics:
         assert metrics.trips_per_second_per_watt == 0.1  # 10/100
     
     def test_compute_zero_runtime(self):
-        """Test handling of zero runtime."""
         metrics = compute_scalability_metrics(
             wall_clock_seconds=0.0,
             simulated_time_seconds=3600.0,
@@ -109,7 +106,6 @@ class TestScalabilityReport:
     """Tests for scalability report formatting."""
     
     def test_format_report_basic(self):
-        """Test report formatting."""
         metrics = compute_scalability_metrics(
             wall_clock_seconds=10.0,
             simulated_time_seconds=3600.0,
@@ -130,7 +126,6 @@ class TestScalabilityComparison:
     """Tests for comparing scalability results."""
     
     def test_compare_scalability(self):
-        """Test comparing two scalability results."""
         baseline = compute_scalability_metrics(
             wall_clock_seconds=20.0,
             simulated_time_seconds=3600.0,

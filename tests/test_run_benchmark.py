@@ -1,24 +1,21 @@
 """Targeted tests for execution.run_benchmark.BenchmarkHarness.
 
-The harness has historically had three foot-guns that bit hard in
-production (see CHANGELOG Phase 12):
+These tests pin three behavioral guarantees of the harness:
 
-  1. ``--output`` CLI overrides were silently clobbered by the runspec's
-     ``output_dir:`` inside ``run_benchmark()``, every parallel-by-scenario
-     sbatch worker collapsed to the runspec's single output base, so the
-     three workers' aggregate JSONs raced and last-writer-wins.
+  1. An explicit ``--output`` CLI base is honored over the runspec's
+     ``output_dir:`` inside ``run_benchmark()``, so each parallel-by-scenario
+     sbatch worker keeps its own output base and the workers' aggregate
+     JSONs do not collide.
 
-  2. The per-cell directory was ``<base>/<scenario>/<engine>/seed_<N>/``
-     (no mode segment), so SUMO meso and SUMO micro for the same seed
-     wrote to the same dir and overwrote each other's tripinfo.xml +
-     feasibility_report.json.
+  2. The per-cell directory is mode-segmented
+     (``<base>/<scenario>/<engine>/<mode>/seed_<N>/``), so SUMO meso and
+     SUMO micro for the same seed write to distinct dirs and never
+     overwrite each other's tripinfo.xml + feasibility_report.json.
 
-  3. ``prepare_<engine>_inputs`` ran per-cell, so the dominant per-trip
-     BFS-routing cost was repeated N×reps times even though the routes
-     are deterministic given (scenario, engine). la_50k_car had ~10 h
-     of BFS per cell × 15 cells = 150 h, busting any reasonable walltime.
-
-These tests pin all three so the regressions don't slip back.
+  3. ``prepare_<engine>_inputs`` runs once per (scenario, engine): the
+     dominant per-trip BFS-routing cost is computed a single time and
+     reused across the N×reps cells, since the routes are deterministic
+     given (scenario, engine).
 """
 
 from __future__ import annotations
@@ -30,7 +27,8 @@ from execution.run_benchmark import BenchmarkHarness
 
 
 # ---------------------------------------------------------------------------
-# Bug 1: ``--output`` CLI override survives the run_benchmark() entry point.
+# An explicit ``--output`` base is honored over the runspec's output_dir
+# inside the run_benchmark() entry point.
 # ---------------------------------------------------------------------------
 
 
@@ -56,19 +54,19 @@ class TestExplicitOutputBase:
 
 
 # ---------------------------------------------------------------------------
-# Bug 2 (per-cell mode-segmented path) is exercised end-to-end by the
+# The per-cell mode-segmented path is exercised end-to-end by the
 # audit_fairness layout tests in tests/test_audit_fairness.py
-# (TestFindCellDir.test_layout_b_phase12_*), those tests assert that the
-# new on-disk layout matches the path that `run_benchmark.py` now writes.
-# Keeping that assertion in audit_fairness's test file lets a regression
-# in either direction fail loudly.
+# (TestFindCellDir.test_layout_b_phase12_*), which assert that the on-disk
+# layout matches the path that `run_benchmark.py` writes. Keeping that
+# assertion in audit_fairness's test file lets a divergence in either
+# direction fail loudly.
 # ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
-# Bug 3: BFS-prep caching, prepare runs once per (scenario, engine);
-# per-cell run dirs receive hardlinks; MATSim's seed-dependent config.xml
-# is rewritten per cell.
+# BFS-prep caching: prepare runs once per (scenario, engine); per-cell run
+# dirs receive hardlinks; MATSim's seed-dependent config.xml is rewritten
+# per cell.
 # ---------------------------------------------------------------------------
 
 
@@ -86,9 +84,9 @@ class TestPreparedCache:
         bundle_hash = self._write_bundle(bundle)
 
         h = BenchmarkHarness(output_base=tmp_path)
-        # Phase 12.2 path: <scoped_base>/.cache/<engine>/
-        # output_base.name != scenario_id here, so scoped_base inserts
-        # the scenario layer.
+        # Cache path is <scoped_base>/.cache/<engine>/. Here
+        # output_base.name != scenario_id, so scoped_base inserts the
+        # scenario layer.
         cache = tmp_path / "chicago_1k_car" / ".cache" / "sumo"
         cache.mkdir(parents=True)
         (cache / ".prepared").write_text(bundle_hash)
@@ -123,9 +121,9 @@ class TestPreparedCache:
             (output_dir / "tripinfo.xml").write_text("<dummy/>")
 
         monkeypatch.setattr(h, "prepare_sumo_inputs", fake_prepare)
-        # Phase 14: stub the canonical-routes computation, the synthetic
-        # bundle has no network.xml/demand.csv. The cache-management
-        # behavior under test is independent of route content.
+        # Stub the canonical-routes computation: the synthetic bundle has
+        # no network.xml/demand.csv. The cache-management behavior under
+        # test is independent of route content.
         monkeypatch.setattr(h, "_canonical_routes_for", lambda *a, **kw: {})
 
         cache = h._ensure_prepared_cache(
@@ -150,7 +148,7 @@ class TestPreparedCache:
     def test_cache_invalidates_when_bundle_changes(
         self, tmp_path: Path, monkeypatch,
     ):
-        """Regenerating the bundle (different manifest) triggers cache rebuild."""
+        """Regenerating the bundle (different manifest) triggers a cache rebuild."""
         bundle = tmp_path / "scenarios" / "chicago_1k_car"
         self._write_bundle(bundle, manifest_text="v1")
 
@@ -180,7 +178,7 @@ class TestPreparedCache:
         assert len(called) == 2, (
             "cache should have rebuilt because bundle's manifest.xml changed"
         )
-        # Sentinel now reflects the new hash. Phase 12.2 path:
+        # Sentinel now reflects the new hash. Cache path:
         # <scoped_base>/.cache/<engine>/.prepared (with scoped_base
         # = output_base/scenario_id since output_base.name != scenario_id).
         cache = tmp_path / "chicago_1k_car" / ".cache" / "sumo"
@@ -189,10 +187,10 @@ class TestPreparedCache:
     def test_scoped_base_collapses_when_output_matches_scenario(
         self, tmp_path: Path,
     ):
-        """Phase 12.2: when output_base.name == scenario_id (typical
-        parallel-by-scenario sbatch case), _scoped_base returns
-        output_base unchanged so per-cell + cache paths don't pick up
-        a redundant <scenario>/<scenario>/ doubling."""
+        """When output_base.name == scenario_id (typical parallel-by-
+        scenario sbatch case), _scoped_base returns output_base unchanged
+        so per-cell + cache paths don't pick up a redundant
+        <scenario>/<scenario>/ doubling."""
         per_scenario = tmp_path / "runs_root" / "chicago_1k_car"
         per_scenario.mkdir(parents=True)
         h = BenchmarkHarness(output_base=per_scenario)
@@ -234,7 +232,7 @@ class TestPreparedCache:
             scenario_path=bundle, scenario_id="chicago_1k_car",
             engine="sumo", engine_options=None,
         )
-        # Phase 12.2: collapsed, no <scenario_id>/ between .cache and engine.
+        # Collapsed: no <scenario_id>/ between .cache and engine.
         assert cache == per_scenario / ".cache" / "sumo"
         assert (cache / ".prepared").is_file()
 
@@ -313,12 +311,13 @@ class TestPreparedCache:
 
 
 # ---------------------------------------------------------------------------
-# Phase 14.13, canonical_routes cache hoist + legacy-cache migration.
+# Global canonical_routes cache root + legacy-cache migration.
 # ---------------------------------------------------------------------------
 
 
 class TestCanonicalRoutesCacheRoot:
-    """Phase 14.13: cache moved from per-output-dir to global cache/canonical_routes/."""
+    """The canonical_routes cache lives at the global cache/canonical_routes/
+    location, independent of any per-output-dir."""
 
     def test_cache_root_is_global_under_cache_dir(self):
         """Cache root is cache/canonical_routes/ regardless of output_base."""
@@ -331,7 +330,7 @@ class TestCanonicalRoutesCacheRoot:
         """The global cache root is independent of the harness's output_base.
 
         Two harnesses with different output_base values must agree on the
-        cache location, that's the entire point of the Phase 14.13 hoist.
+        cache location, that is the entire point of the global cache root.
         """
         h1 = BenchmarkHarness(output_base=tmp_path / "runA")
         h2 = BenchmarkHarness(output_base=tmp_path / "runB")
@@ -342,7 +341,8 @@ class TestCanonicalRoutesCacheRoot:
 
 
 class TestLegacyCanonicalRoutesCacheMigration:
-    """Phase 14.13: one-time migration of pre-hoist cache files."""
+    """One-time migration of per-output-dir cache files into the global
+    cache root."""
 
     def test_migrates_legacy_cache_file_to_global_location(
         self, tmp_path: Path,
@@ -446,3 +446,49 @@ class TestLegacyCanonicalRoutesCacheMigration:
         # Garbage left in legacy dir untouched.
         assert (legacy_root / "garbage.txt").exists()
         assert (legacy_root / "canonical_routes_b.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# Per-cell failure isolation: a single bad cell becomes a failed RunResult,
+# never an uncaught exception that aborts the whole run.
+# ---------------------------------------------------------------------------
+
+
+class TestRunSingleFailureIsolation:
+    def test_unsupported_engine_is_failed_result_not_raise(self, tmp_path: Path):
+        h = BenchmarkHarness(output_base=tmp_path / "out")
+        rr = h.run_single(
+            "chicago_1k_car", Path("scenarios/chicago_1k_car"),
+            "teleporter", seed=42, repeat_index=0, timeout_s=5,
+        )
+        assert rr.status == "failed"
+        assert "Unsupported engine" in (rr.error_message or "")
+
+    def test_missing_scenario_is_failed_result_not_raise(self, tmp_path: Path):
+        # Prep raises FileNotFoundError; the handler turns it into a failed
+        # RunResult so the surrounding benchmark loop keeps going.
+        h = BenchmarkHarness(output_base=tmp_path / "out")
+        rr = h.run_single(
+            "ghost", tmp_path / "does_not_exist",
+            "dtalite", seed=42, repeat_index=0, timeout_s=5,
+        )
+        assert rr.status == "failed"
+        assert rr.error_message  # a clear message, not a bare traceback
+
+    def test_corrupt_signals_bundle_is_failed_result(self, tmp_path: Path):
+        # A bundle that PASSES validation can still raise during adapter prep
+        # (e.g. a signals.xml that summarize_scenario parses but validate_bundle
+        # does not). The harness catches any such exception type (ParseError is
+        # a SyntaxError subclass, not OSError/ValueError) and records a failed
+        # cell rather than aborting the whole run.
+        import shutil
+        bundle = tmp_path / "bundle"
+        shutil.copytree("scenarios/chicago_1k_car", bundle)
+        (bundle / "signals.xml").write_text("<signals><junction  <!-- unclosed")
+        h = BenchmarkHarness(output_base=tmp_path / "out")
+        rr = h.run_single(
+            "bundle", bundle, "sumo", seed=42, repeat_index=0,
+            timeout_s=5, mesoscopic=True,
+        )
+        assert rr.status == "failed"
+        assert "Adapter failed" in (rr.error_message or "")

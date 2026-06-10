@@ -26,13 +26,14 @@ from tools.generate_scorecard import (
 
 
 # ---------------------------------------------------------------------------
-# Helper: minimal run-dir fixture matching execution.run_benchmark layout B.
+# Helper: minimal run-dir fixture matching the mode-segmented run-dir layout
+# produced by execution.run_benchmark.
 # ---------------------------------------------------------------------------
 
 
 def _build_run_dir(tmp_path: Path, *, q1_drift: bool = False,
                    include_failures: bool = False) -> Path:
-    """One scenario, three engines, two seeds. Layout B (Phase 12+)."""
+    """One scenario, three engines, two seeds in the mode-segmented run-dir layout."""
     scenario = "synth_5_car"
     engines = ("sumo", "matsim", "dtalite")
     seeds = (42, 43)

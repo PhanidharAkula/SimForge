@@ -40,14 +40,16 @@ class TestReproducibilityIndex:
         r = compute_reproducibility_index(values)
         assert r < 0.5  # Should be low
     
-    def test_cv_equals_one_gives_r_zero(self):
-        """When CV = 1 (σ = μ), R should be 0."""
-        # This is a theoretical case
-        # For CV=1: σ = μ, so R = 1 - 1 = 0
-        # Hard to construct exactly, but we can approximate
-        values = [0.0, 200.0]  # mean=100, stdev≈141, CV≈1.41, R≈-0.41
+    def test_high_cv_clamps_to_zero(self):
+        """CV >= 1 (sigma >= mu) clamps R to 0, not a negative value.
+
+        R = 1 - CV is floored at 0 so the index stays in [0, 1] and reads
+        identically here, in analyze_benchmark, and in generate_plots (a noisy
+        cell is "0.0 / not reproducible", never a confusing negative number).
+        """
+        values = [0.0, 200.0]  # mean=100, stdev~141, CV~1.41 -> 1-CV<0 -> clamped 0
         r = compute_reproducibility_index(values)
-        assert r < 0  # Negative due to high variance
+        assert r == 0.0
     
     def test_single_value_raises(self):
         """Single value should raise ValueError."""
@@ -65,7 +67,6 @@ class TestReproducibilityMetrics:
     """Tests for comprehensive reproducibility metrics."""
     
     def test_compute_metrics_basic(self):
-        """Test basic metrics computation."""
         values = [10.0, 10.1, 9.9, 10.0, 10.0]
         metrics = compute_reproducibility_metrics(values, kpi_name="travel_time")
         
@@ -86,7 +87,6 @@ class TestReproducibilityMetrics:
         assert metrics.max_value == 3.0
     
     def test_interpretation_levels(self):
-        """Test different interpretation levels."""
         # Excellent: R >= 0.99
         excellent = compute_reproducibility_metrics([100.0, 100.0, 100.0], "test")
         assert "excellent" in excellent.interpretation
@@ -101,7 +101,6 @@ class TestMultiKPIReproducibility:
     """Tests for multi-KPI reproducibility analysis."""
     
     def test_multi_kpi_basic(self):
-        """Test multi-KPI analysis."""
         run_results = [
             {"travel_time": 12.0, "throughput": 100.0},
             {"travel_time": 12.1, "throughput": 99.0},
@@ -131,7 +130,6 @@ class TestReproducibilityReport:
     """Tests for report formatting."""
     
     def test_format_single_kpi_report(self):
-        """Test single KPI report formatting."""
         metrics = compute_reproducibility_metrics(
             [10.0, 10.1, 9.9], "travel_time"
         )

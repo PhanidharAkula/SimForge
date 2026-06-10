@@ -67,7 +67,7 @@ def _have_dtalite() -> bool:
     return is_dtalite_available()
 
 
-pytestmark = pytest.mark.integration
+pytestmark = [pytest.mark.slow, pytest.mark.integration]  # real engine subprocess runs
 
 
 # ---------------------------------------------------------------------------

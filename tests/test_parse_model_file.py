@@ -28,16 +28,15 @@ from pipeline.demand.parse_model_file import (
 
 
 class TestJWTRNSMapping:
-    """Pin the corrected JWTRNS → simulator-bucket mapping.
+    """Pin the JWTRNS → simulator-bucket mapping.
 
     Source: cityscape Schedule-generator branch, model_gen/ScheduleGenerator.h
     lines 211-233 (verbatim from ACS PUMS 2021 Data Dictionary). See
     doc/MODELGEN_AND_MODES.md §2 for provenance and §4 for the bucket
     rationale.
 
-    Catches accidental regression to the pre-2019 PUMS labels (e.g. the
-    pre-V5 bug where code 2 was treated as "carpool → car" when it is
-    actually "Bus → transit").
+    The codes follow the post-2019 PUMS labels: code 2 is "Bus → transit",
+    not "carpool → car".
     """
 
     def test_exact_12_codes(self):
@@ -54,7 +53,7 @@ class TestJWTRNSMapping:
     def test_transit_bucket(self):
         # Public transit codes: Bus, Subway/elev, Commuter rail,
         # Light rail/streetcar, Ferryboat.
-        assert JWTRNS_TO_MODE[2] == "transit"  # Bus, was "car" pre-V5 bug
+        assert JWTRNS_TO_MODE[2] == "transit"  # Bus
         assert JWTRNS_TO_MODE[3] == "transit"
         assert JWTRNS_TO_MODE[4] == "transit"
         assert JWTRNS_TO_MODE[5] == "transit"
@@ -91,10 +90,10 @@ class TestJWTRNSMapping:
 
 
 class TestSingleSourceOfTruth:
-    """The scanner must re-export the canonical dict, not duplicate it.
+    """The scanner re-exports the canonical dict rather than duplicating it.
 
-    Pre-V5 the dict was duplicated in two files; this caused real drift
-    bugs where one was fixed and the other was forgotten.
+    A single shared dict keeps the scanner and the parser from drifting
+    out of sync.
     """
 
     def test_scanner_imports_canonical_dict(self):
@@ -260,12 +259,12 @@ class TestHomeBldByPerId:
 
 
 # ---------------------------------------------------------------------------
-# Trip-purpose realism (V5+), HBSchool support helpers
+# Trip-purpose realism: HBSchool support helpers
 # ---------------------------------------------------------------------------
 
 
 class TestHBSchoolHelpers:
-    """Verify the modelgen-only foundations for HBSchool trips:
+    """The modelgen-only foundations for HBSchool trips:
       - `_is_school_kind` recognises OSM school-tag values
       - `ModelData.age_by_per_id` survives mode-filtering (kids would
         otherwise be filtered out by JWTRNS=-1)
@@ -303,7 +302,7 @@ class TestHBSchoolHelpers:
         data = ModelData(
             buildings=[_make_bld(100)],
             households=[_make_hld(100, "S", [1])],
-            persons=[_make_per(1, "S")],  # Person dataclass has age=30 default? check
+            persons=[_make_per(1, "S")],  # _make_per gives this person age=40
         )
         # Direct-construction fallback: age map is built from `persons`.
         assert data.age_by_per_id  # non-empty
@@ -369,11 +368,11 @@ class TestHBSchoolHelpers:
         assert not _has_school_age_dependent(commuter, data)
 
     def test_peak_purpose_sets_cover_all_chain_legs(self):
-        """The AM/PM budget split (Phase 9a + 9b + 9c) relies on
-        AM_PURPOSES and PM_PURPOSES correctly classifying every chain
-        leg into its peak. A leg missing from its peak set would cause
-        the gravity-fallback Phase 2 to over-emit by the chain count
-        (see Phase 9b's HBSchool budget over-emit bug)."""
+        """The AM/PM budget split relies on AM_PURPOSES and PM_PURPOSES
+        correctly classifying every chain leg into its peak. A leg
+        missing from its peak set would let the gravity fallback
+        over-emit by the chain count, so each leg must appear in exactly
+        one peak set."""
         from pipeline.demand.generate_census_demand import (
             AM_PURPOSES,
             PM_PURPOSES,

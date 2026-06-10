@@ -61,7 +61,24 @@ pytestmark = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 
 
-@pytest.fixture(params=SCENARIOS, ids=[s.name for s in SCENARIOS])
+# The 200k/500k bundles are ~200 MB of XML each; re-parsing them across every
+# data-integrity check dominates the default suite wall time. Their parametrized
+# cases are marked slow (run only under --runslow); the small/medium bundles
+# (chicago_1k, nyc_10k, la_50k) stay in the fast default run.
+_HUGE_BUNDLE_PATTERNS = ("200k", "500k", "5m")
+
+
+def _scenario_params():
+    params = []
+    for s in SCENARIOS:
+        huge = any(pat in s.name for pat in _HUGE_BUNDLE_PATTERNS)
+        params.append(
+            pytest.param(s, id=s.name, marks=(pytest.mark.slow,) if huge else ())
+        )
+    return params
+
+
+@pytest.fixture(params=_scenario_params())
 def scenario(request) -> Path:
     return request.param
 

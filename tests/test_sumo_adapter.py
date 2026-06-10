@@ -18,6 +18,9 @@ from adapters.sumo.sumo_adapter import prepare_sumo_inputs
 
 from .conftest import is_arm64_netconvert_crash, warn_skipped
 
+# Whole module is slow: it runs netconvert on real networks per scenario.
+pytestmark = pytest.mark.slow
+
 
 def _prepare_or_skip(scenario: Path, out: Path):
     """Call `prepare_sumo_inputs`, skipping the test on a known arm64 netconvert crash.

@@ -72,8 +72,11 @@ class TestResolveIdentity:
 
 
 class TestComputeReproducibility:
-    def test_single_value_returns_one(self):
-        assert compute_reproducibility([42.0]) == 1.0
+    def test_single_value_returns_nan(self):
+        # A single run carries no evidence of reproducibility, so the score is
+        # undefined (NaN, rendered as 'n/a (N<2)') rather than a misleading 1.0.
+        import math
+        assert math.isnan(compute_reproducibility([42.0]))
 
     def test_identical_values_return_one(self):
         assert compute_reproducibility([10.0, 10.0, 10.0]) == 1.0
@@ -108,7 +111,6 @@ def _run(scenario: str, engine: str, mode: str, runtime: float, tt: float, trips
 
 class TestAnalyzeResults:
     def test_mode_keeps_meso_and_micro_separate(self):
-        """Regression test for the [1.0.0] silent R-score collapse."""
         results = {"results": [
             _run("chicago_1k_car", "sumo", "meso", 0.30, 204.1),
             _run("chicago_1k_car", "sumo", "meso", 0.29, 204.0),

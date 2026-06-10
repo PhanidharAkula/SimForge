@@ -184,10 +184,10 @@ class TestCountHelpers:
         assert vol == 3
 
     def test_count_matsim_persons(self, tmp_path: Path):
-        # V11.2+ MATSim adapter emits population_v6 (root <population>);
+        # The MATSim adapter emits population_v6 (root <population>);
         # _count_matsim_persons just findall("person") on the root, so
-        # it's root-tag-agnostic, but the fixture uses the production
-        # root to stay aligned with what the adapter actually writes.
+        # it's root-tag-agnostic, but the fixture uses the same root the
+        # adapter writes to stay aligned with real output.
         path = tmp_path / "plans.xml"
         path.write_text(
             """<?xml version="1.0"?>
@@ -264,10 +264,10 @@ class TestFindCellDir:
         assert _find_cell_dir(tmp_path, "x", "sumo", 42) is not None
         assert _find_cell_dir(tmp_path, "x", "sumo", 43) is None
 
-    # -- Phase 12+ layout: mode segment in the path --
+    # -- Mode-segmented layout: mode segment in the path --
 
     def test_layout_b_phase12_meso_segmented(self, tmp_path: Path):
-        """Phase 12+ layout B: <base>/<scenario>/<engine>/<mode>/seed_<N>/."""
+        """Mode-segmented layout B: <base>/<scenario>/<engine>/<mode>/seed_<N>/."""
         cell = tmp_path / "chicago_1k_car" / "sumo" / "meso" / "seed_42"
         cell.mkdir(parents=True)
         assert _find_cell_dir(tmp_path, "chicago_1k_car", "sumo", 42) == cell
@@ -282,20 +282,20 @@ class TestFindCellDir:
         assert _find_cell_dir(tmp_path, "nyc_10k_car", "sumo", 42, mode="micro") == micro
 
     def test_layout_d_phase12_per_scenario_with_mode(self, tmp_path: Path):
-        """Phase 12+ layout D: <base>/<engine>/<mode>/seed_<N>/."""
+        """Mode-segmented layout D: <base>/<engine>/<mode>/seed_<N>/."""
         cell = tmp_path / "dtalite" / "meso" / "seed_42"
         cell.mkdir(parents=True)
         assert _find_cell_dir(tmp_path, "ignored", "dtalite", 42) == cell
 
     def test_back_compat_pre_phase12_layout_b(self, tmp_path: Path):
-        """Pre-Phase-12 mode-less layout still found as a fallback."""
+        """Mode-less layout is still found as a fallback."""
         cell = tmp_path / "chicago_1k_car" / "matsim" / "seed_42"
         cell.mkdir(parents=True)
-        # Phase 12+ requested mode not on disk → falls back to mode-less layout.
+        # Requested mode not on disk → falls back to the mode-less layout.
         assert _find_cell_dir(tmp_path, "chicago_1k_car", "matsim", 42, mode="meso") == cell
 
     def test_phase12_preferred_over_legacy_when_both_exist(self, tmp_path: Path):
-        """If both mode-less and mode-segmented dirs exist, Phase 12+ wins."""
+        """If both mode-less and mode-segmented dirs exist, the mode-segmented dir wins."""
         legacy = tmp_path / "x" / "sumo" / "seed_42"
         new = tmp_path / "x" / "sumo" / "meso" / "seed_42"
         legacy.mkdir(parents=True)
@@ -328,20 +328,20 @@ class TestDiscoverScenarios:
         assert _discover_scenarios(tmp_path) == []
 
     def test_finds_layout_b_phase12_with_mode_segment(self, tmp_path: Path):
-        """Phase 12+ layout B: <base>/<scenario>/<engine>/<mode>/seed_<N>/."""
+        """Mode-segmented layout B: <base>/<scenario>/<engine>/<mode>/seed_<N>/."""
         for sc in ("chicago_1k_car", "nyc_10k_car"):
             (tmp_path / sc / "sumo" / "meso" / "seed_42").mkdir(parents=True)
         assert _discover_scenarios(tmp_path) == ["chicago_1k_car", "nyc_10k_car"]
 
     def test_finds_layout_a_micro_seed(self, tmp_path: Path):
-        """Layout A discovery now also recognises micro-mode flat dirs."""
+        """Layout A discovery also recognises micro-mode flat dirs."""
         (tmp_path / "chicago_1k_car_sumo_micro_seed42").mkdir()
         assert _discover_scenarios(tmp_path) == ["chicago_1k_car"]
 
 
 # ---------------------------------------------------------------------------
-# _discover_modes, Phase 12+ helper that lets the orchestrator audit
-# both meso and micro for the same (scenario, seed) tuple.
+# _discover_modes, helper that lets the orchestrator audit both meso and
+# micro for the same (scenario, seed) tuple.
 # ---------------------------------------------------------------------------
 
 
@@ -356,7 +356,7 @@ class TestDiscoverModes:
         assert _discover_modes(tmp_path, "nyc_10k_car") == ["meso", "micro"]
 
     def test_pre_phase12_layout_defaults_to_meso(self, tmp_path: Path):
-        """Pre-Phase-12 mode-less dirs report as meso (mode unrecoverable)."""
+        """Mode-less dirs report as meso (the mode is unrecoverable from the path)."""
         (tmp_path / "old_run" / "sumo" / "seed_42").mkdir(parents=True)
         assert _discover_modes(tmp_path, "old_run") == ["meso"]
 

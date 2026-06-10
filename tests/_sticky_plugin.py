@@ -436,6 +436,12 @@ def pytest_configure(config) -> None:
     we treat as "user wants verbose". ``-vv`` (verbose >= 1) also
     activates it.
     """
+    # Collect-only runs (`pytest --collect-only`) want pytest's native
+    # listing and its "N tests collected" summary line; the bar and the
+    # verbosity pin would suppress both. Stand down entirely.
+    if getattr(config.option, "collectonly", False):
+        return
+
     user_wants_verbose = config.option.verbose >= 0
     # Pin BEFORE pytest_sessionstart fires (which prints the "test
     # session starts" banner at verbosity >= 0).

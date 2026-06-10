@@ -23,6 +23,9 @@ from pipeline.validation.validate_bundle import validate_bundle
 
 from .conftest import is_arm64_netconvert_crash, warn_skipped
 
+# Whole module is slow: it runs the adapters end-to-end over every bundle.
+pytestmark = pytest.mark.slow
+
 
 # ===========================================================================
 # Validation tests, every corruption mode the validator must catch

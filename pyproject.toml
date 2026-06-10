@@ -14,6 +14,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:lxml.*",
 ]
 markers = [
+    "slow: tests that run real engines / BFS routing (minutes each); skipped by default, pass --runslow to include them (the full pre-ship gate)",
     "integration: tests that exercise multiple subsystems end-to-end",
     "requires_sumo: tests that require the SUMO `netconvert` / `sumo` binaries",
     "requires_java: tests that require Java + the MATSim JAR",
