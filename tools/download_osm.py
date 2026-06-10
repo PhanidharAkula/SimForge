@@ -43,29 +43,48 @@ def human(n: int) -> str:
 
 
 def download(url: str, dest: Path) -> None:
-    """Stream URL → dest with a one-line progress readout every 10 MB."""
+    """Stream URL → dest with a one-line progress readout every 10 MB.
+
+    Writes to a ``.partial`` sibling and renames into place only on
+    success. If the transfer is interrupted (network error, Ctrl-C, disk
+    full), the partial file is removed before the exception propagates so
+    we never leave a truncated ``.partial`` behind.
+    """
     tmp = dest.with_suffix(dest.suffix + ".partial")
-    with urlopen(url) as resp, tmp.open("wb") as out:
-        total = int(resp.headers.get("Content-Length") or 0)
-        read = 0
-        next_report = 10 * 1024 * 1024
-        while True:
-            buf = resp.read(1024 * 1024)
-            if not buf:
-                break
-            out.write(buf)
-            read += len(buf)
-            if read >= next_report:
-                pct = f"{100 * read / total:.1f}%" if total else ""
-                print(f"    ... {human(read)} {pct}")
-                next_report += 10 * 1024 * 1024
-    tmp.rename(dest)
+    try:
+        with urlopen(url) as resp, tmp.open("wb") as out:
+            total = int(resp.headers.get("Content-Length") or 0)
+            read = 0
+            next_report = 10 * 1024 * 1024
+            while True:
+                buf = resp.read(1024 * 1024)
+                if not buf:
+                    break
+                out.write(buf)
+                read += len(buf)
+                if read >= next_report:
+                    pct = f"{100 * read / total:.1f}%" if total else ""
+                    print(f"    ... {human(read)} {pct}")
+                    next_report += 10 * 1024 * 1024
+        tmp.rename(dest)
+    except BaseException:
+        # Clean up the truncated partial on any failure (including
+        # KeyboardInterrupt), then re-raise so the caller still fails loudly.
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def resolve_one(key: str, entry: dict, force: bool) -> bool:
     """Ensure one manifest entry is present and hash-correct. Return True on success."""
     dest = OSM_DIR / entry["path"]
     expected_sha = entry["sha256"]
+
+    # Sweep any stale .partial left by a previously interrupted download so
+    # it cannot masquerade as a real file or accumulate across runs.
+    stale = dest.with_suffix(dest.suffix + ".partial")
+    if stale.exists():
+        print(f"  [{key}] removing stale partial {stale.name}")
+        stale.unlink(missing_ok=True)
 
     if dest.exists() and not force:
         print(f"  [{key}] present ({human(dest.stat().st_size)}) — verifying hash ...")

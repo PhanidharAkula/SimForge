@@ -7,6 +7,14 @@ Public-domain, free to download.
 Files land under ``cache/census/<state_fips>/`` and are auto-detected
 by the visualization component when rendering choropleth maps.
 
+Provenance note: the SHA-256 written next to each download is recorded
+for provenance only. Unlike ``tools/download_osm.py`` (which verifies
+every PBF against a pinned manifest hash and refuses to proceed on a
+mismatch), the census / TIGER hash here is NOT checked against a known-
+good pinned value. It documents what was fetched, not that the fetch was
+correct. These are public-domain, stable Census Bureau releases, so the
+risk is low, but a corrupt or tampered download would not be caught.
+
 Usage::
 
     # Download for a specific state by FIPS code:
@@ -43,11 +51,12 @@ BUNDLED_STATES: dict[str, str] = {
 
 def _cache_dir(state_fips: str) -> Path:
     """Standard cache location for a state's tract shapefiles."""
-    return Path("cache") / "census" / state_fips
+    return Path("cache") / "census" / str(state_fips).zfill(2)
 
 
 def is_cached(state_fips: str) -> bool:
     """Check if the unzipped .shp / .shx / .dbf already exist locally."""
+    state_fips = str(state_fips).zfill(2)
     d = _cache_dir(state_fips)
     return all((d / f"cb_2024_{state_fips}_tract_500k{ext}").is_file()
                for ext in (".shp", ".shx", ".dbf"))
@@ -58,6 +67,7 @@ def download_state_tracts(state_fips: str, force: bool = False) -> Path:
 
     Returns the cache directory containing .shp / .shx / .dbf / .prj.
     """
+    state_fips = str(state_fips).zfill(2)
     cache = _cache_dir(state_fips)
     if not force and is_cached(state_fips):
         logger.info("[%s] already cached at %s", state_fips, cache)
@@ -77,9 +87,16 @@ def download_state_tracts(state_fips: str, force: bool = False) -> Path:
     with zipfile.ZipFile(zip_path) as zf:
         zf.extractall(cache)
 
+    # Recorded for provenance only: this hash is NOT verified against a
+    # pinned known-good value (unlike download_osm, which refuses to
+    # proceed on a manifest mismatch). See the module docstring.
     sha = hashlib.sha256(zip_path.read_bytes()).hexdigest()
     (cache / f"{fname}.sha256").write_text(sha + "\n", encoding="utf-8")
     logger.info("[%s] sha256 %s", state_fips, sha[:16] + "...")
+    logger.warning(
+        "[%s] sha256 recorded for provenance only; NOT verified against a "
+        "pinned value (unlike download_osm)", state_fips,
+    )
 
     if not is_cached(state_fips):
         raise RuntimeError(

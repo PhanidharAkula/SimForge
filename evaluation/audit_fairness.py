@@ -204,6 +204,15 @@ def audit_scenario(base: Path, scenario: str, seed: int = 42,
                 "skipped_outside_scc", "skipped_unknown_nodes",
                 "skipped_missing_fields", "skipped_unsupported_mode"]
         first_eng = next(iter(reports))
+        # Keys that every real feasibility report must carry. If one is absent
+        # from a report, .get(k, 0) would make both sides default to 0 and the
+        # audit would print PASS on missing (not verified-equal) data, so warn.
+        core_keys = ["feasible_trips", "total_trips", "scc_nodes", "scc_links"]
+        for eng in reports:
+            absent = [k for k in core_keys if k not in reports[eng]]
+            if absent:
+                print(f"  [WARN] {eng} feasibility report is missing {absent}; "
+                      f"Q1 equality on those keys compares defaults, not data")
         # Use .get(...) so reports from before mode-aware feasibility shipped
         # (no `skipped_unsupported_mode`) still compare cleanly; they default
         # to 0 alongside the fresh reports' 0 for car-only bundles.

@@ -47,7 +47,11 @@ def main() -> int:
         return 1
 
     print(f"Parsing {network_path} ...")
-    tree = ET.parse(network_path)
+    try:
+        tree = ET.parse(network_path)
+    except ET.ParseError as e:
+        print(f"ERROR: {network_path} is not valid XML: {e}", file=sys.stderr)
+        return 1
     links_elem = tree.getroot().find("links")
     if links_elem is None:
         print(f"ERROR: <links> element missing in {network_path}", file=sys.stderr)
@@ -61,7 +65,12 @@ def main() -> int:
     buckets: Counter[str] = Counter()
     zeros: list[tuple[str, str, str, str | None]] = []
     for link in links:
-        length_m = float(link.get("length", "0"))
+        try:
+            length_m = float(link.get("length", "0"))
+        except (TypeError, ValueError):
+            # A non-numeric length is malformed; bucket it as zero-length so the
+            # report surfaces it rather than crashing on the whole file.
+            length_m = 0.0
         if length_m == 0.0:
             zeros.append((
                 link.get("id", "?"),

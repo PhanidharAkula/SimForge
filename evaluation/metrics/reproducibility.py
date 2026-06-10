@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Any
+from typing import List, Dict, Optional
 
 
 @dataclass
@@ -71,8 +71,11 @@ def compute_reproducibility_index(values: List[float]) -> float:
     
     std_dev = statistics.stdev(values)
     cv = std_dev / abs(mean)
-    r_index = 1.0 - cv
-    
+    # Clamp to [0, 1] so the index reads identically here, in
+    # analyze_benchmark, and in generate_plots (R = 1 - CV, floored at 0 for
+    # high-variance cells rather than going negative).
+    r_index = max(0.0, 1.0 - cv)
+
     return r_index
 
 
@@ -97,11 +100,14 @@ def compute_reproducibility_metrics(
             cv = 0.0
             r_index = 1.0
         else:
+            # Mean near zero but values vary: maximally non-reproducible. Keep
+            # r_index finite (0.0) so the metric stays valid in any JSON it
+            # lands in, instead of -inf which is not valid JSON.
             cv = float('inf')
-            r_index = float('-inf')
+            r_index = 0.0
     else:
         cv = std_dev / abs(mean)
-        r_index = 1.0 - cv
+        r_index = max(0.0, 1.0 - cv)
     
     # Interpretation
     if r_index >= 0.99:

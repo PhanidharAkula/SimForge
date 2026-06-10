@@ -440,9 +440,11 @@ def _compare_from_benchmark(results_path: Path) -> int:
         if not micro_runs or not meso_runs:
             continue
         
-        # Average metrics
-        micro_rt = statistics.mean([r["runtime_s"] for r in micro_runs])
-        meso_rt = statistics.mean([r["runtime_s"] for r in meso_runs])
+        # Average metrics. .get with a default (matching analyze_benchmark.py)
+        # so an older or partial results row missing runtime_s degrades
+        # gracefully instead of crashing the whole comparison with a KeyError.
+        micro_rt = statistics.mean([r.get("runtime_s", 0) for r in micro_runs])
+        meso_rt = statistics.mean([r.get("runtime_s", 0) for r in meso_runs])
         
         micro_tt = statistics.mean([
             r["metrics"]["travel_time"]["mean"] for r in micro_runs
@@ -480,4 +482,6 @@ def _compare_from_benchmark(results_path: Path) -> int:
 
 
 if __name__ == "__main__":
-    main()
+    # main() returns proper exit codes (1 on missing file / empty results);
+    # without sys.exit they were discarded and every failure exited 0.
+    sys.exit(main())

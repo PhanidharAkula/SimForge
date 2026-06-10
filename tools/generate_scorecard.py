@@ -151,18 +151,27 @@ def _discover_run_layout(run_dir: Path, scenario: str, engine: str,
 def _collect_feasibility(run_dir: Path, results: list[dict]) -> dict:
     """Per (scenario, engine, mode) → loaded feasibility_report.json (seed 42)."""
     found: dict[tuple[str, str, str], dict] = {}
-    cells = {(r["scenario"], r["engine"], r["mode"]) for r in results}
-    for sc, eng, md in cells:
-        cell = _discover_run_layout(run_dir, sc, eng, md, seed=42)
-        if cell is None:
-            continue
-        fp = cell / "feasibility_report.json"
-        if not fp.is_file():
-            continue
-        try:
-            found[(sc, eng, md)] = json.loads(fp.read_text())
-        except json.JSONDecodeError:
-            continue
+    # Derive the seeds actually present per cell from the results, rather than
+    # assuming seed 42, so a runspec using a different seed is not silently
+    # reported as "no feasibility found". Feasibility is seed-independent, so
+    # the first seed whose report loads is enough.
+    cell_seeds: dict[tuple[str, str, str], set] = {}
+    for r in results:
+        key = (r["scenario"], r["engine"], r["mode"])
+        cell_seeds.setdefault(key, set()).add(r.get("seed", 42))
+    for (sc, eng, md), seeds in cell_seeds.items():
+        for seed in sorted(seeds):
+            cell = _discover_run_layout(run_dir, sc, eng, md, seed=seed)
+            if cell is None:
+                continue
+            fp = cell / "feasibility_report.json"
+            if not fp.is_file():
+                continue
+            try:
+                found[(sc, eng, md)] = json.loads(fp.read_text())
+                break
+            except json.JSONDecodeError:
+                continue
     return found
 
 

@@ -17,7 +17,6 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
 from typing import Optional, Dict, Any
 import platform
 import os
@@ -114,7 +113,9 @@ def get_hardware_info() -> HardwareInfo:
                         kb = int(line.split()[1])
                         info.memory_gb = kb / (1024 ** 2)
                         break
-    except Exception:
+    except (OSError, ValueError, IndexError):
+        # Best-effort hardware probe: a missing/odd /proc/meminfo or sysctl
+        # output should leave memory_gb at its default, not crash the report.
         pass
     
     # GPU detection would require additional libraries (pynvml, etc.)

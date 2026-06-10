@@ -101,41 +101,63 @@ class ScenarioMetrics:
 
 
 def load_results(results_path: Path) -> dict:
-    """Load benchmark results from JSON."""
-    with open(results_path, encoding="utf-8") as f:
-        return json.load(f)
+    """Load benchmark results from JSON, with a clear error on bad input.
+
+    Mirrors analyze_benchmark.load_results so plot generation fails with an
+    actionable message (not a bare traceback) on a missing or corrupt file.
+    """
+    try:
+        with open(results_path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError as exc:
+        raise FileNotFoundError(
+            f"Benchmark results not found: {results_path}\n"
+            f"  Run a benchmark first (python -m execution.run_benchmark <runspec>)."
+        ) from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"Benchmark results at {results_path} is not valid JSON: {exc}\n"
+            f"  The file may be truncated or corrupt; re-run the benchmark."
+        ) from exc
 
 
 def extract_city_engine(scenario_id: str) -> tuple[str, str, str]:
-    """Parse scenario_id into (city, engine, mode). Only used as a fallback."""
+    """Parse scenario_id into (city, engine, mode). Only used as a fallback.
+
+    Matches engine/mode on whole '_'-delimited segments rather than substrings,
+    so a city token that merely contains an engine name (e.g. 'sumoton') is not
+    mis-parsed.
+    """
+    segments = scenario_id.split("_")
+    seg_set = set(segments)
+
     engine = "unknown"
     for eng in KNOWN_ENGINES:
-        if f"_{eng}" in scenario_id:
+        if eng in seg_set:
             engine = eng
             break
 
     mode = "meso"
-    if "_micro" in scenario_id:
+    if "micro" in seg_set or "microscopic" in seg_set:
         mode = "micro"
-    elif "_meso" in scenario_id:
+    elif "meso" in seg_set or "mesoscopic" in seg_set:
         mode = "meso"
 
-    city = scenario_id
-    for eng in KNOWN_ENGINES:
-        city = (city
-                .replace(f"_{eng}_meso", "")
-                .replace(f"_{eng}_micro", "")
-                .replace(f"_{eng}", ""))
-    for m in ("_meso", "_micro", "_mesoscopic", "_microscopic"):
-        city = city.replace(m, "")
+    drop = set(KNOWN_ENGINES) | {"meso", "micro", "mesoscopic", "microscopic"}
+    city = "_".join(s for s in segments if s not in drop)
 
     return city, engine, mode
 
 
 def compute_reproducibility(values: list[float]) -> float:
-    """R = 1 - CV. Returns 1.0 if fewer than two samples."""
+    """R = 1 - CV (clamped to [0, 1]).
+
+    Returns NaN for fewer than two samples (rendered as 'n/a' in plots) since a
+    single run carries no reproducibility evidence; this matches
+    analyze_benchmark.compute_reproducibility so table and heatmap agree.
+    """
     if len(values) < 2:
-        return 1.0
+        return float("nan")
     mean_val = statistics.mean(values)
     if mean_val == 0:
         return 1.0
@@ -970,8 +992,15 @@ def generate_all_plots(results_paths: list[Path],
         runs_in_file = data.get("results", data.get("runs", []))
         print(f"  Benchmark: "
               f"{data.get('runspec_name', data.get('timestamp', 'unknown'))}")
+        n_success_in_file = data.get(
+            'successful_runs',
+            data.get('summary', {}).get(
+                'completed',
+                sum(1 for r in runs_in_file if r.get("status") == "success"),
+            ),
+        )
         print(f"  Runs: {data.get('total_runs', len(runs_in_file))} total, "
-              f"{data.get('successful_runs', data.get('summary', {}).get('completed', '?'))} successful")
+              f"{n_success_in_file} successful")
         total_runs += data.get('total_runs', len(runs_in_file))
         successful_runs += data.get('successful_runs',
                                     data.get('summary', {}).get('completed', 0))
@@ -984,6 +1013,13 @@ def generate_all_plots(results_paths: list[Path],
     metrics = list(seen.values())
     print(f"\nCombined: {total_runs} total runs, "
           f"{len(metrics)} unique (city, engine, mode) cells")
+
+    # Zero cells means there is nothing any figure can draw; the first
+    # gridspec would crash on ncols=0. Say so cleanly instead.
+    if not metrics:
+        print("\nNo successful runs in the results file(s); nothing to plot.")
+        print("  Re-run the benchmark, or check that you passed the right JSON.")
+        return {"error": "no successful runs"}
 
     generated: dict[str, str] = {}
     print("\nGenerating plots...")

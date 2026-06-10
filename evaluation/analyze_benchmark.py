@@ -62,16 +62,32 @@ def compute_reproducibility(travel_times: list[float]) -> float:
     """
     Compute reproducibility score (1 - CV).
     CV = coefficient of variation = std/mean
-    Score of 1.0 = perfectly deterministic
+    Score of 1.0 = perfectly deterministic.
+
+    With fewer than 2 samples the variance is undefined, so we return NaN
+    (rendered as 'n/a (N<2)' downstream) rather than a misleading 1.0.
     """
     if len(travel_times) < 2:
-        return 1.0
+        return float('nan')
     mean_tt = statistics.mean(travel_times)
     if mean_tt == 0:
         return 1.0
     std_tt = statistics.stdev(travel_times)
     cv = std_tt / mean_tt
     return max(0.0, 1.0 - cv)
+
+
+def _num(value, default: float = 0.0) -> float:
+    """Coerce a JSON metric field to a float.
+
+    Hand-edited or cross-version results files can carry nulls, strings
+    ("NaN"), or booleans where numbers belong; statistics/comparisons on
+    those crash with TypeErrors. Anything that isn't a real number becomes
+    ``default``.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return default
+    return float(value)
 
 
 def _resolve_identity(run: dict) -> tuple[str, str, str]:
@@ -83,6 +99,10 @@ def _resolve_identity(run: dict) -> tuple[str, str, str]:
     scenario = run.get("scenario")
     mode = run.get("mode")
     scenario_id = run.get("scenario_id", "")
+    if not isinstance(scenario_id, str):
+        # A malformed row (int/null scenario_id) must not crash the
+        # .endswith parsing below; coerce and carry on.
+        scenario_id = str(scenario_id) if scenario_id is not None else ""
 
     if not engine or not scenario or not mode:
         parsed_engine = "unknown"
@@ -144,11 +164,13 @@ def analyze_results(results: dict) -> list[ScenarioStats]:
             ))
             continue
 
-        # Compute statistics from successful runs - use "runtime_s" not "runtime_seconds"
-        runtimes = [r.get("runtime_s", 0) for r in successful_runs]
+        # Compute statistics from successful runs - use "runtime_s" not "runtime_seconds".
+        # _num() coerces JSON nulls, strings, and booleans to 0 so statistics
+        # and comparisons never see a non-numeric value.
+        runtimes = [_num(r.get("runtime_s")) for r in successful_runs]
         # Metrics structure: metrics.travel_time.trip_count, metrics.travel_time.mean
-        trip_counts = [r.get("metrics", {}).get("travel_time", {}).get("trip_count", 0) for r in successful_runs]
-        travel_times = [r.get("metrics", {}).get("travel_time", {}).get("mean", 0) for r in successful_runs]
+        trip_counts = [_num(r.get("metrics", {}).get("travel_time", {}).get("trip_count", 0)) for r in successful_runs]
+        travel_times = [_num(r.get("metrics", {}).get("travel_time", {}).get("mean", 0)) for r in successful_runs]
 
         # Filter out zero travel times (might indicate metric computation failure)
         valid_travel_times = [tt for tt in travel_times if tt > 0]
@@ -225,19 +247,25 @@ def print_reproducibility_table(stats_list: list[ScenarioStats]) -> str:
 
     for s in sorted_stats:
         if s.successes > 0 and s.avg_travel_time > 0:
-            if s.reproducibility_score >= 0.99:
-                rating = "Excellent"
-            elif s.reproducibility_score >= 0.95:
-                rating = "Good"
-            elif s.reproducibility_score >= 0.90:
-                rating = "Acceptable"
+            r = s.reproducibility_score
+            if r != r:  # NaN sentinel: single-run cell, R is undefined
+                r_text = "n/a"
+                rating = "n/a (N<2)"
             else:
-                rating = "Poor"
+                if r >= 0.99:
+                    rating = "Excellent"
+                elif r >= 0.95:
+                    rating = "Good"
+                elif r >= 0.90:
+                    rating = "Acceptable"
+                else:
+                    rating = "Poor"
+                r_text = f"{r:.4f}"
 
             lines.append(
                 f"{s.scenario:<25} {s.engine:<10} {s.mode:<7} "
                 f"{s.avg_travel_time:>10.1f} {s.ci95_travel_time:>8.2f} "
-                f"{s.std_travel_time:>10.1f} {s.reproducibility_score:>8.4f} {rating:<15}"
+                f"{s.std_travel_time:>10.1f} {r_text:>8} {rating:<15}"
             )
         else:
             lines.append(
@@ -375,8 +403,13 @@ def print_summary_table(stats_list: list[ScenarioStats]) -> str:
         engine_stats[s.engine]["success"] += s.successes
         if s.successes > 0:
             engine_stats[s.engine]["runtimes"].append(s.avg_runtime)
-            if s.reproducibility_score > 0:
-                engine_stats[s.engine]["r_scores"].append(s.reproducibility_score)
+            # Average R over every multi-run cell, including legitimately
+            # noisy ones with R==0. Gating on R>0 dropped those and biased
+            # the mean upward. Single-run cells carry a NaN sentinel (R is
+            # undefined for N<2), so skip them here.
+            r = s.reproducibility_score
+            if s.successes >= 2 and r == r:
+                engine_stats[s.engine]["r_scores"].append(r)
     
     lines.append(f"\n{'Engine':<15} {'Success Rate':<15} {'Avg Runtime':<15} {'Avg R-Score':<15}")
     lines.append("-" * 60)
@@ -415,10 +448,12 @@ def generate_latex_table(stats_list: list[ScenarioStats]) -> str:
                     lines.append("\\midrule")
                 current_scenario = s.scenario
 
+            r = s.reproducibility_score
+            r_text = "n/a" if r != r else f"{r:.4f}"
             lines.append(
                 f"{scenario_name} & {s.engine}/{s.mode} & "
                 f"{s.avg_runtime:.2f} $\\pm$ {s.ci95_runtime:.3f} & "
-                f"{int(s.avg_trips)} & {s.reproducibility_score:.4f} \\\\"
+                f"{int(s.avg_trips)} & {r_text} \\\\"
             )
 
     lines.append("\\bottomrule")
@@ -470,7 +505,14 @@ def main():
     print(f"Total runs: {len(results.get('results', results.get('runs', [])))}")
     
     stats_list = analyze_results(results)
-    
+
+    # A results file with zero runs would render banner-only empty tables and
+    # exit 0, which reads as success to scripts. Say so and fail instead.
+    if not stats_list:
+        print("\nNo runs found in the results file; nothing to analyze.")
+        print("  Re-run the benchmark, or check that you passed the right JSON.")
+        return 1
+
     # Print all tables
     output_parts = []
     

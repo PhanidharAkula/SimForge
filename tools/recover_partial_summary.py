@@ -56,7 +56,14 @@ from pathlib import Path
 
 import yaml
 
-from execution.run_benchmark import BenchmarkResult, RunResult
+# Make `python tools/recover_partial_summary.py` work like the -m form:
+# a plain script run puts tools/ (not the repo root) on sys.path, so the
+# `execution` import below would otherwise fail with ModuleNotFoundError.
+# Same bootstrap as tools/analyze_scenarios.py and tools/env_report.py.
+REPO_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO_ROOT))
+
+from execution.run_benchmark import BenchmarkResult, RunResult  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -252,6 +259,16 @@ def recover_scenario(
                 runtime_s = float(timeout_s)
                 engine_wall_s = runtime_s
                 cell_wall_s = runtime_s
+            elif status == "success":
+                # A success cell whose log line carries no engine-time clause:
+                # fall back to the cell wall if the log has it, and warn rather
+                # than silently recording runtime_s=0 (which would skew the
+                # recovered runtime table).
+                cell_wall_s = (log_entry or {}).get("wall_s", 0.0)
+                engine_wall_s = cell_wall_s
+                runtime_s = cell_wall_s
+                print(f"  [WARN] no engine-time in log for {engine}/{mode} "
+                      f"seed={seed}; using cell wall {cell_wall_s}s")
             else:
                 runtime_s = engine_wall_s = cell_wall_s = 0.0
 
