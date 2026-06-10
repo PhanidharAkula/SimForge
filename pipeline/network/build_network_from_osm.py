@@ -150,6 +150,48 @@ DEFAULT_LANES = {
     "service": 1,
 }
 
+# Rank of each known highway class, most significant first (the
+# DEFAULT_SPEEDS_MPS declaration order: motorway ... service). Used to reduce
+# merged-edge tag lists deterministically; unknown classes rank after every
+# known one and resolve alphabetically among themselves.
+_HIGHWAY_RANK = {ht: i for i, ht in enumerate(DEFAULT_SPEEDS_MPS)}
+
+
+def _pick_first_tag(value):
+    """Deterministically reduce an osmnx merged-tag value to one element.
+
+    When osmnx simplification merges several OSM ways into one edge, tag
+    values that differ across the merged ways arrive as a list whose ORDER
+    is not deterministic (it descends from set iteration, so it changes with
+    each process's hash seed). Taking ``value[0]`` therefore made repeated
+    generations of the same scenario differ byte-wise. Reduce by the smallest
+    string form instead, which is stable across runs and platforms.
+    """
+    if isinstance(value, list):
+        if not value:
+            return None
+        return min(value, key=str)
+    return value
+
+
+def _pick_highway_type(value) -> str:
+    """Deterministically reduce a merged ``highway`` tag to one class.
+
+    Prefers the most significant road class present (motorway over footway),
+    so the merged edge inherits the class that dominates its capacity/speed
+    defaults; ties and unknown classes resolve alphabetically. Replaces the
+    old ``value[0]`` pick, whose hash-seed-dependent order flipped
+    ``highway_type`` between regenerations of the same scenario.
+    """
+    if not isinstance(value, list):
+        return value
+    if not value:
+        return "residential"
+    return min(
+        (str(v) for v in value),
+        key=lambda ht: (_HIGHWAY_RANK.get(ht, len(_HIGHWAY_RANK)), ht),
+    )
+
 
 _OSM_CACHE_CONFIGURED = False
 
@@ -362,11 +404,12 @@ def extract_canonical_network(
         # in the future.
         node_highway = data.get("highway")
         if isinstance(node_highway, list):
-            node_highway = node_highway[0] if node_highway else None
-        has_signal = (
-            osm_id in osm_signal_ids
-            or node_highway == "traffic_signals"
-        )
+            # Any merged value counts: checking only one element of the list
+            # would make signal detection depend on nondeterministic ordering.
+            node_has_signal_tag = "traffic_signals" in (str(v) for v in node_highway)
+        else:
+            node_has_signal_tag = node_highway == "traffic_signals"
+        has_signal = osm_id in osm_signal_ids or node_has_signal_tag
 
         nodes.append(CanonicalNode(
             id=canonical_id,
@@ -401,10 +444,8 @@ def extract_canonical_network(
         from_node = osm_to_canonical[u]
         to_node = osm_to_canonical[v]
 
-        # Get highway type
-        highway = data.get("highway", "residential")
-        if isinstance(highway, list):
-            highway = highway[0]
+        # Get highway type (deterministic priority pick for merged edges)
+        highway = _pick_highway_type(data.get("highway", "residential"))
 
         # Get length, and drop degenerate edges (length <= 0). These show up
         # when an OSM way joins two nodes at the exact same coordinates
@@ -427,8 +468,7 @@ def extract_canonical_network(
         maxspeed = data.get("maxspeed")
         if maxspeed:
             try:
-                if isinstance(maxspeed, list):
-                    maxspeed = maxspeed[0]
+                maxspeed = _pick_first_tag(maxspeed)
                 # Parse "50" or "50 mph" or "50 km/h"
                 speed_str = str(maxspeed).lower().replace("mph", "").replace("km/h", "").strip()
                 speed_kmh = float(speed_str)
@@ -445,18 +485,15 @@ def extract_canonical_network(
         lanes = data.get("lanes")
         if lanes:
             try:
-                if isinstance(lanes, list):
-                    lanes = lanes[0]
+                lanes = _pick_first_tag(lanes)
                 lanes = int(lanes)
             except (ValueError, TypeError):
                 lanes = DEFAULT_LANES.get(highway, 1)
         else:
             lanes = DEFAULT_LANES.get(highway, 1)
         
-        # Get name
-        name = data.get("name")
-        if isinstance(name, list):
-            name = name[0]
+        # Get name (deterministic pick for merged edges)
+        name = _pick_first_tag(data.get("name"))
         
         links.append(CanonicalLink(
             id=f"l{link_counter}",

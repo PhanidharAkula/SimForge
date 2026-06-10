@@ -99,10 +99,21 @@ def _load_network_nodes(network_path: Path) -> NetworkInfo:
 
     for node in root.findall(".//node"):
         nid = node.get("id")
+        # Skip nodes missing an id (mirrors pipeline/network/scc.py): a
+        # malformed network with an id-less <node> would otherwise crash the
+        # adjacency/degree bookkeeping with a TypeError on the None key.
+        if not nid:
+            continue
         x = float(node.get("x", 0))
         y = float(node.get("y", 0))
         node_ids.append(nid)
         node_coords[nid] = (x, y)  # x=lon, y=lat
+
+    if not node_ids:
+        raise ValueError(
+            f"No valid nodes found in network.xml at {network_path}: "
+            f"every <node> was missing an 'id' attribute. Re-generate the network."
+        )
 
     for link in root.findall(".//link"):
         from_node = link.get("from")
@@ -881,6 +892,12 @@ def generate_census_demand(
         if origin_idx is not None:
             scores[origin_idx] = 0.0
 
+        # An empty score array (no eligible destinations in the SCC) would make
+        # csum[-1] raise IndexError. Bail out of the gravity loop cleanly: no
+        # destination can be sampled, so further attempts are futile.
+        if scores.size == 0:
+            break
+
         csum = np.cumsum(scores)
         total = csum[-1]
         if total <= 0.0:
@@ -930,6 +947,20 @@ def generate_census_demand(
             "dest_source": "gravity",
             "purpose": purpose,
         })
+
+    # Degenerate networks (no routable destinations in the SCC, or a tiny
+    # scheduled+gravity pool) can leave the loops short of the request after
+    # exhausting attempts. Surface the shortfall loudly here; the caller
+    # (generate.py) compares the returned trip_count against the request and
+    # decides what to do. We do not raise: returning what we generated keeps
+    # the contract intact.
+    if len(trips) < num_trips:
+        logger.warning(
+            "Under-generated census demand: produced %d of %d requested trips. "
+            "The network may be degenerate (no routable destinations in the SCC) "
+            "or the census pool too small for this bounding box.",
+            len(trips), num_trips,
+        )
 
     # Final ordering + dense trip ids. Sort key includes a secondary tiebreak
     # so ties on departure_time_s are deterministic across runs.

@@ -110,13 +110,24 @@ def load_network_for_demand(network_path: Path) -> NetworkStats:
     node_degrees = defaultdict(int)
     
     # Parse nodes
+    # Skip nodes missing an id (mirrors pipeline/network/scc.py): a malformed
+    # network with an id-less <node> would otherwise crash adjacency/degree
+    # bookkeeping with a TypeError on the None key.
     for node in root.findall(".//node"):
         nid = node.get("id")
+        if not nid:
+            continue
         x = float(node.get("x", 0))
         y = float(node.get("y", 0))
         node_ids.append(nid)
         node_coords[nid] = (x, y)
-    
+
+    if not node_ids:
+        raise ValueError(
+            f"No valid nodes found in network.xml at {network_path}: "
+            f"every <node> was missing an 'id' attribute. Re-generate the network."
+        )
+
     # Parse links to build adjacency and degrees
     # Skip self-loops (from == to) as they cause issues in routing
     link_count = 0
@@ -255,6 +266,17 @@ class DemandGenerator:
             trip["trip_id"] = f"t{i}"
         
         logger.info("Generated %d trips in %d attempts", len(trips), attempts)
+        # Degenerate networks (e.g. no routable OD pairs, tiny SCC) can leave
+        # the loop short of the request after exhausting max_attempts. Surface
+        # the shortfall loudly here; the caller (generate.py) compares the
+        # returned count against the request and decides what to do.
+        if len(trips) < num_trips:
+            logger.warning(
+                "Under-generated demand: produced %d of %d requested trips "
+                "after %d attempts. The network may be degenerate (no routable "
+                "OD pairs or a tiny strongly connected component).",
+                len(trips), num_trips, attempts,
+            )
         return trips
 
 

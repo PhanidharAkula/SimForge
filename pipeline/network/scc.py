@@ -110,7 +110,18 @@ def compute_largest_scc(
             for nb in rev.get(node, ()):
                 if nb not in visited:
                     stk.append(nb)
-        if len(component) > len(best):
+        # Deterministic tie-break: prefer the larger component, and among
+        # equal-largest components prefer the one with the lexicographically
+        # smallest node id. A bare `>` would let set-iteration order
+        # (PYTHONHASHSEED) decide ties, and that seed differs between the parent
+        # process and the spawn-based BFS workers, so on a network whose two
+        # largest SCCs tie in size the workers could pick a different SCC than
+        # the feasibility filter did, silently breaking the byte-identical
+        # routes guarantee. Keying ties on min(component) makes the choice a
+        # pure function of the graph, independent of hash seed and worker count.
+        if len(component) > len(best) or (
+            len(component) == len(best) and best and min(component) < min(best)
+        ):
             best = component
     return best
 

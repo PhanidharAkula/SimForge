@@ -242,16 +242,17 @@ def build_signal_controller(
     out_links: dict,
     cycle_length_s: int = 90,
     yellow_time_s: int = 3,
-    all_red_s: int = 2
+    all_red_s: int = 2,
+    min_green_s: int = 5
 ) -> SignalController:
     """
     Build a simple 2-phase signal controller for a node.
-    
+
     Phase timing:
     - Green time split evenly between phases
     - Yellow interval at end of each green
     - All-red clearance between phases
-    
+
     Args:
         node_id: Node to signalize
         node_coords: Node coordinates
@@ -260,23 +261,37 @@ def build_signal_controller(
         cycle_length_s: Total cycle length
         yellow_time_s: Yellow interval duration
         all_red_s: All-red clearance duration
-    
+        min_green_s: Minimum green per phase; the cycle must be long enough to
+            seat two of these plus the fixed yellow/all-red overhead.
+
     Returns:
         SignalController object
     """
     # Group links into phases
     _ = out_links  # reserved for future directional logic
     phase1_links, phase2_links = group_links_by_direction(node_id, node_coords, in_links)
-    
+
     # Calculate green times
     # Total non-green = 2 * (yellow + all_red)
     non_green_time = 2 * (yellow_time_s + all_red_s)
+
+    # A cycle shorter than the fixed overhead plus two minimum greens would
+    # produce zero or negative green durations (one phase starved). Reject it
+    # rather than emit an invalid plan; the default 90 s cycle has 80 s of
+    # green to split, so normal generation is unaffected.
+    if cycle_length_s < non_green_time + 2 * min_green_s:
+        raise ValueError(
+            f"cycle_length_s={cycle_length_s} is too short for a valid 2-phase "
+            f"plan: it must be at least {non_green_time + 2 * min_green_s} s "
+            f"(non-green overhead {non_green_time} s + 2 x min_green {min_green_s} s)."
+        )
+
     total_green_time = cycle_length_s - non_green_time
-    
-    # Split green evenly
-    green1 = total_green_time // 2
-    green2 = total_green_time - green1
-    
+
+    # Split green evenly, clamping each phase to a positive minimum.
+    green1 = max(min_green_s, total_green_time // 2)
+    green2 = max(min_green_s, total_green_time - green1)
+
     # Build phases
     phases = []
     

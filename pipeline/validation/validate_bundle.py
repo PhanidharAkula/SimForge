@@ -75,7 +75,8 @@ def validate_bundle(scenario_root: Path) -> bool:
                 continue
 
             canonical_files.setdefault(file_type, []).append(
-                {"path": file_path, "required": required_flag}
+                {"path": file_path, "required": required_flag,
+                 "sha256": file_elem.get("sha256")}
             )
 
     # Expect exactly one of each primary canonical type
@@ -99,6 +100,27 @@ def validate_bundle(scenario_root: Path) -> bool:
             if not full_path.is_file():
                 errors.append(
                     f"Required canonical file of type '{file_type}' not found: {full_path}"
+                )
+
+    # Verify SHA-256 checksums when the manifest carries them (manifest
+    # version >= 0.2). Older manifests have no sha256 attribute, so the check
+    # is simply skipped for them, keeping back-compatibility with bundles
+    # generated before self-verifying manifests existed.
+    import hashlib
+    for file_type, entries in canonical_files.items():
+        for entry in entries:
+            expected = entry.get("sha256")
+            if not expected:
+                continue
+            full_path = scenario_root / entry["path"]
+            if not full_path.is_file():
+                continue  # missing-file error already recorded above
+            actual = hashlib.sha256(full_path.read_bytes()).hexdigest()
+            if actual != expected:
+                errors.append(
+                    f"Checksum mismatch for canonical '{file_type}' file "
+                    f"{entry['path']}: manifest sha256={expected[:12]}..., "
+                    f"file sha256={actual[:12]}... (file modified since generation)"
                 )
 
     # If manifest structure is already broken badly, stop here
@@ -210,6 +232,28 @@ def validate_bundle(scenario_root: Path) -> bool:
         )
 
     # -------------------------------------------------------------------------
+    # 3b. Parse signals.xml content
+    # -------------------------------------------------------------------------
+    # Validation used to only check signals.xml *exists*. Parse its content
+    # here so a malformed signals file is caught at validation time (the bundle
+    # is flagged INVALID and skipped) instead of later, when an adapter's raw
+    # parse would raise mid-run.
+    signals_entries = canonical_files.get("signals", [])
+    if signals_entries:
+        signals_path = scenario_root / signals_entries[0]["path"]
+        if signals_path.is_file():
+            try:
+                signals_root = ET.parse(signals_path).getroot()
+            except ET.ParseError as e:
+                errors.append(f"Failed to parse signals.xml: {e}")
+            else:
+                if signals_root.tag != "signals":
+                    errors.append(
+                        f"signals.xml root element must be <signals>, "
+                        f"found <{signals_root.tag}>"
+                    )
+
+    # -------------------------------------------------------------------------
     # 4. Load demand.csv and check node references
     # -------------------------------------------------------------------------
     demand_entry = canonical_files["demand"][0]
@@ -244,14 +288,35 @@ def validate_bundle(scenario_root: Path) -> bool:
                 )
                 return report_result(scenario_root, errors)
 
+            data_rows = 0
+            seen_trip_ids: set[str] = set()
             for row_idx, row in enumerate(reader, start=2):  # 1-based header, data starts at line 2
-                trip_id = row.get("trip_id", "").strip()
-                origin = row.get("origin_node_id", "").strip()
-                dest = row.get("destination_node_id", "").strip()
-                departure_raw = row.get("departure_time_s", "").strip()
+                data_rows += 1
+                # `or ""` (not a .get default): DictReader stores None, not a
+                # missing key, for columns a short/ragged row doesn't fill
+                # (e.g. a stray comment or footer line). Without the guard
+                # such a row crashes .strip() with an AttributeError instead
+                # of being reported as the invalid data it is.
+                trip_id = (row.get("trip_id") or "").strip()
+                origin = (row.get("origin_node_id") or "").strip()
+                dest = (row.get("destination_node_id") or "").strip()
+                departure_raw = (row.get("departure_time_s") or "").strip()
 
                 if not trip_id:
                     errors.append(f"demand.csv row {row_idx}: empty trip_id")
+                elif trip_id in seen_trip_ids:
+                    errors.append(f"demand.csv row {row_idx}: duplicate trip_id '{trip_id}'")
+                else:
+                    seen_trip_ids.add(trip_id)
+
+                # Self-loop trips (origin == destination) are degenerate: every
+                # engine drops them, so they would inflate agreement metrics
+                # without simulating anything.
+                if origin and dest and origin == dest:
+                    errors.append(
+                        f"demand.csv row {row_idx}: origin and destination are the "
+                        f"same node '{origin}' (self-loop trip)"
+                    )
 
                 if origin not in node_ids:
                     errors.append(
@@ -274,8 +339,21 @@ def validate_bundle(scenario_root: Path) -> bool:
                         f"demand.csv row {row_idx}: departure_time_s='{departure_raw}' is not a valid integer"
                     )
 
+            if data_rows == 0:
+                errors.append(
+                    "demand.csv has a valid header but zero trip rows; a bundle "
+                    "with no demand is degenerate (every engine would simulate "
+                    "nothing). Re-generate the scenario."
+                )
+
     except FileNotFoundError:
         errors.append(f"demand.csv file not found at {demand_path}")
+    except UnicodeDecodeError as e:
+        # Binary junk or a corrupted/truncated file: report INVALID instead
+        # of crashing with a raw decode traceback.
+        errors.append(
+            f"demand.csv is not valid UTF-8 text (binary or corrupted file): {e}"
+        )
     except (OSError, csv.Error) as e:
         errors.append(f"Failed to read or parse demand.csv: {e}")
 

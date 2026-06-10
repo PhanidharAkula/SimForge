@@ -279,6 +279,16 @@ def _parse_household_line(parts: list[str]) -> Optional[Household]:
         num_people = int(parts[8])
         person_ids = [int(parts[i]) for i in range(9, 9 + num_people)
                       if i < len(parts)]
+        # A truncated line can leave fewer person ids than num_people claims.
+        # Reconcile num_people to the count we actually parsed so downstream
+        # consumers never index past the real list.
+        if len(person_ids) != num_people:
+            logger.debug(
+                "hld bld_id=%d declared %d people but parsed %d ids; "
+                "reconciling num_people to %d",
+                bld_id, num_people, len(person_ids), len(person_ids),
+            )
+            num_people = len(person_ids)
         return Household(
             bld_id=bld_id, serial_no=serial_no, bedrooms=bedrooms,
             bld_type=bld_type, puma_id=puma_id, weight=weight,
