@@ -1,10 +1,10 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<manifest version="0.1">
+<manifest version="0.2">
   <scenario id="chicago_1k_car"/>
   <canonical_files>
-    <file type="network" path="network.xml"/>
-    <file type="demand" path="demand.csv"/>
-    <file type="config" path="config.xml"/>
-    <file type="signals" path="signals.xml"/>
+    <file type="network" path="network.xml" sha256="776407d90771d0e3446b5ffa02d5d8dca52b6a0e65228523a2c0725276807af1"/>
+    <file type="demand" path="demand.csv" sha256="dca87608007e473e0ca43fd762007371e40c4d50e595b3e38fa2448eaef8653e"/>
+    <file type="config" path="config.xml" sha256="8e2379a6450e873729631c032213b7c8ce48367515477202a1324d563660b0a7"/>
+    <file type="signals" path="signals.xml" sha256="be62fe8847824b4f54ee055d78659fb1b0e138b97e8e1196579b3dde01d56548"/>
   </canonical_files>
 </manifest>
