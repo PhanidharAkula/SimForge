@@ -122,3 +122,9 @@ wsc2023_cityscape.pdf
 esm23.pdf
 simforge_thesis.zip
 Plan/
+
+# Thesis LaTeX source kept in the repo root for convenience (synced to
+# Overleaf separately); not part of the shipped software artefact. Both
+# casings listed because the filesystem is case-insensitive.
+/paper/
+/Paper/

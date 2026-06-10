@@ -477,9 +477,13 @@ affect simulation output.
 | MATSim | car, transit, bike, walk (full multi-modal) | **car only**, `supported_modes={"car"}`, only `mode=car` modeParams configured |
 | DTALite | car only by design | **car only**, `supported_modes={"car"}` matches engine capability |
 
-Practical implication: the `la_50k_car` bundle (49,291 car +
-442 transit + 267 bike trips) simulates as ~50,000 cars in every engine.
-The bundle's name documents what generated it, not what gets simulated.
+Practical implication: every shipped bundle is car-only (the Version_3-era
+`la_50k_bike_car_transit`, 49,291 car + 442 transit + 267 bike, was
+regenerated car-only as `la_50k_car` in Version_5). If a user generates a
+multi-mode bundle today, the non-car trips are NOT simulated as cars: the
+shared feasibility filter drops them identically in every engine and counts
+them under `skipped_unsupported_mode` in each cell's
+`feasibility_report.json`.
 
 ---
 
@@ -575,7 +579,7 @@ only JWTRNS codes {2, 3, 4, 5, 6}.
 
 The corrected mapping is now reflected in `parse_model_file.py:32-50`
 (docstring), `help.py` (`HELP_MODES`), `doc/SCENARIO_GENERATION.md`,
-`doc/chapters/methods.md`, and this doc (§4 above).
+the thesis methods chapter, and this doc (§4 above).
 
 ### 7.5 ✅ Engine adapters now mode-filter demand
 

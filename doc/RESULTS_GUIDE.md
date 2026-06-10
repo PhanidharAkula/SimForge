@@ -14,8 +14,8 @@ RunSpec ──► run_benchmark ──► runs/<name>/benchmark_results_<name>.j
   analyze_benchmark.py        audit_fairness.py        generate_plots.py
             │                         │                         │
             ▼                         ▼                         ▼
-   Tables 5.1, 5.2 + Coverage     Q1–Q4 PASS/WARN/FAIL    Figures 5.1 – 5.9
-   + Demand Composition (V5+)     + Q5 Demand composition  (PNG + PDF in plots/)
+   Tables 5.1, 5.2 + Coverage     Q1–Q4 PASS/WARN/FAIL    Figures 5.1 – 5.10
+   + Demand Composition (V5+)     + Q5 Demand composition  (PNG in plots/)
    (LaTeX + Markdown)             across all engines
             │                         │                         │
             └─────────────────────────┼─────────────────────────┘
@@ -244,7 +244,7 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 ```
 
-Renders **10 figures** (PNG + PDF) into `<results-dir>/plots/` (or `--output` if specified). Two of them, Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine), are auto-skipped when their data isn't available, so the figure count drops to 8 on pre-V5 bundles or pre-Phase-11.6 result files.
+Renders **10 figures** (PNG, 300 dpi) into `<results-dir>/plots/` (or `--output` if specified). Two of them, Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine), are auto-skipped when their data isn't available, so the figure count drops to 8 on pre-V5 bundles or pre-Phase-11.6 result files.
 
 #### Generated figures
 

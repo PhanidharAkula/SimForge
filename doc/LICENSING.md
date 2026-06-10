@@ -102,8 +102,9 @@ include each upstream notice file.
 ## 5. Documentation
 
 `doc/`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `TESTING.md`,
-`SETUP.md`, the thesis chapter drafts in `doc/chapters/`, and the
-opt-in `visualization/README.md`, same as the code: **Apache 2.0**.
+`SETUP.md`, and the opt-in `visualization/README.md`, same as the code:
+**Apache 2.0**. (The thesis chapters live outside this repository and are
+not covered by its license.)
 
 ## 6. Re-use guidance for downstream users
 

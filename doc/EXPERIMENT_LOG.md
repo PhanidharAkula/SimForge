@@ -24,7 +24,7 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 |---|---|---|
 | Engines shipping (Version_5) | 3 (SUMO, MATSim, DTALite) | `adapters/` |
 | Engines researched + ruled out | 4 (LPSim, QarSUMO, POLARIS, CityFlow) | `doc/engines/` |
-| Test suite | 626 collected; 613 pass, 13 skip on Apple Silicon (arm64 netconvert) | §3.1 below |
+| Test suite | 668 tests across 31 test files (all 5 standard bundles present; ~596 with the 3 git-tracked bundles, data-integrity tests are parametrized per bundle). A `slow` marker gates the heavy tests: default `pytest` runs the FAST suite only (~30 s, this run 522 passed, 146 skipped, the everyday command), `pytest --runslow` runs the FULL suite (~20-30 min, the pre-ship / CI gate). On arm64 the full run skips 13 SUMO netconvert tests (the binary segfaults on large networks); they run on Linux. | §3.1 below |
 | Reproducibility ceiling | R = 1.0000 across N=5 on MATSim + DTALite at all converged scales; SUMO R = 0.95-0.99 (Good-Excellent) across all tiers | §3.4, §3.6 |
 | Fairness audit | Q1✓ Q2✓ Q3✓ on all 3 scenarios; Q4 paradigm-spread signal; Q5 demand-composition | §3.5, §3.6 |
 | Cross-engine TT alignment (post-Phase-12.5 verified, Pitzer jobs 47237978 + 47248311) | SUMO/MATSim mean-TT ratio: chicago_1k 0.869 (-13.1%), nyc_10k 1.132 (+13.2%), **la_50k 1.046 (+4.6%)**, alignment improves with scale (law of large numbers) | §3.5 |

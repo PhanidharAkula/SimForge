@@ -74,7 +74,7 @@ upstream sources.
 | Code, docs, runspecs | Indefinite (in git history) |
 | Hash-pinned OSM PBFs in `osm_data/` | Indefinite (matched against `osm_data/manifest.json` SHA-256) |
 | Modelgen text files in `modelgen/` | Per the upstream cityscape release; SimForge does not redistribute |
-| Generated canonical bundles (1K only is tracked; larger tiers gitignored) | Regeneratable from hash-pinned inputs; not retained beyond active development |
+| Generated canonical bundles (1K/10K/50K tracked; 200K/500K gitignored) | Regeneratable from hash-pinned inputs; untracked tiers not retained beyond active development |
 | Run results under `runs/` | Per thesis-defense + 12-month post-graduation period, then archived or deleted per OSC storage policy |
 | Container images on GHCR | Same as code (indefinite) |
 

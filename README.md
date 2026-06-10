@@ -9,12 +9,12 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 ## ⚡ Highlights
 
 - **3 heterogeneous engines** unified under one canonical schema, SUMO (micro + meso), MATSim (queue-mobsim), DTALite (CPU mesoscopic DTA), with a **code-enforced fair-comparison contract**
-- **~25–30× speedup** on BFS pre-routing (~68h → ~5–8h on NYC 500K-trip scenarios) via canonical-route deduplication, 16-way parallelism, and a content-addressed cache
+- **~20× cold / ~228× warm-cache speedup** on BFS pre-routing (per-cell ~68 h → one shared 7.1 h cold pass, 37 min warm, at the 200K tier), which is what made the 500K tier runnable at all (12.1 h measured vs a ~600 h projection), via canonical-route deduplication, parallel workers, and a content-addressed cache
 - **Byte-identical reproducibility**, every run bit-deterministic for a given seed; no live-protocol bindings (no TraCI/Py4J), strictly file-in/file-out
-- **HPC-deployed** across three OSC clusters (Pitzer, Cardinal, Ascend) with cluster-specific SLURM tuning
-- **Scales to ~80K nodes / ~200K directed links** across Chicago, NYC, and LA at five demand tiers (1K → 500K trips)
+- **HPC-deployed** on two OSC clusters (Pitzer + Cardinal, with cluster-specific SLURM tuning; the shared `$HOME` is also mounted on Ascend)
+- **Scales to ~420K SCC nodes / ~1.3M directed links** (NYC 500K tier; measured from the simulated networks) across Chicago, NYC, and LA at five demand tiers (1K → 500K trips)
 - **~70–72% demand realism** (vs. ~20–40% for uniform/gravity baselines), calibrated against US Census PUMS microdata, no paid survey data
-- **~639 tests** including mutation tests, byte-identity determinism guards, and Student's-t 95% CIs on every KPI
+- **668 tests across 31 files** including byte-identity determinism guards, and Student's-t 95% CIs on every KPI; a `slow` marker gates the heavy engine / BFS-routing / huge-bundle tests, so the default `pytest` runs the fast suite (~30 s) and `pytest --runslow` runs the full sweep (~20-30 min)
 
 > Master's thesis · Miami University · 2024–2026
 
@@ -41,11 +41,11 @@ It provides a **canonical data schema**, **validated scenario bundles**, **deter
 | 95 % CIs on every KPI        | ✅ Complete (Student's t)            |
 | Execution Harness            | ✅ Complete (`run.py` + RunSpec)    |
 | Metrics & Plots              | ✅ Complete (10 thesis figures)     |
-| Test Suite                   | ✅ ~639 tests (626 pass, 13 arm64-netconvert skips) |
-| Bundled scenario: `chicago_1k_car` | ✅ Generated & validated      |
-| Visualization Component (opt-in, separate branch) | ✅ Complete (7 map types, OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
+| Test Suite                   | ✅ 668 tests across 31 files (fast default `pytest` ~30 s: 522 pass, 146 skip; full `pytest --runslow` ~20-30 min; 13 SUMO netconvert tests skip on arm64) |
+| Bundled scenarios: `chicago_1k_car`, `nyc_10k_car`, `la_50k_car` | ✅ Generated, validated, SHA-256-stamped manifests |
+| Visualization Component (opt-in) | ✅ Complete (7 map types, OD choropleths, link load, congestion, travel time, route diversity, animated flow) |
 
-Larger scenarios (10K / 50K / 200K / 500K trips) can be generated locally via the helper scripts in `scripts/`; only the small 1K bundle above is committed to the repo.
+The 200K / 500K tiers are not committed (their network/signals files exceed GitHub's 100 MB limit); regenerate them locally via the helper scripts in `scripts/`.
 
 ---
 
@@ -123,8 +123,9 @@ python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_be
 The middle step (`audit_fairness`) is the cross-engine fairness check,
 verifies that all engines saw the same trip set, the same SCC-filtered
 network, and the same trip count, and reports per-engine travel-time
-ratios. See [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md) for the
-canonical interpretation of audit output.
+ratios. See [doc/RESULTS_GUIDE.md](doc/RESULTS_GUIDE.md) for how to read
+the audit output, and [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md) §3
+for the measured Q1–Q4 results from the canonical cluster runs.
 
 `run_benchmark.py` also auto-emits a one-shot `reproducibility_scorecard.md`
 next to `benchmark_results_*.json`: provenance hashes + environment +
@@ -172,20 +173,26 @@ SimForge/
 ├── scripts/                # Per-tier scenario generation (01_chicago_1k_car.py … 05_nyc_500k_car.py)
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py,
 │                           # env_report.py, inspect_network.py,
-│                           # analyze_scenarios.py, see `python help.py analyzer`,
+│                           # analyze_scenarios.py, generate_scorecard.py,
+│                           # recover_partial_summary.py, plus
 │                           # download_census_tracts.py + download_tiger_roads.py
-│                           # for the visualization-branch shapefile cache)
+│                           # for the visualization shapefile cache)
 ├── runspecs/               # Benchmark configurations (YAML)
-├── scenarios/              # Bundled canonical scenarios
-│   └── chicago_1k_car/     # (larger tiers are generated on demand via scripts/)
+├── scenarios/              # Bundled canonical scenarios (chicago_1k_car,
+│                           # nyc_10k_car, la_50k_car; the 200K/500K tiers
+│                           # are generated on demand via scripts/)
 ├── lib/matsim-15.0/        # MATSim JAR + libs (see SETUP.md)
 ├── runs/                   # Simulation output (gitignored)
 ├── cache/                  # Overpass HTTP cache + US Census shapefiles (gitignored)
-├── tests/                  # pytest test suite (~639 tests across 29 files)
-├── visualization/          # Opt-in geographic-map renderer (on visualization branch)
+├── tests/                  # pytest test suite (668 tests across 31 files; slow tests gated behind --runslow)
+├── visualization/          # Opt-in geographic-map renderer
+├── cluster/                # SLURM sbatch templates + example runs (OSC)
 ├── run.py                  # Main CLI entry point
 ├── generate.py             # Scenario generator entry point
-├── requirements.txt
+├── help.py                 # In-CLI help system (curses TUI + topics)
+├── setup_simforge.py       # One-command bootstrap installer
+├── requirements.lock       # Exact pinned deps (canonical install)
+├── requirements.txt        # Loose ranges (development)
 └── SETUP.md                # Detailed setup guide
 ```
 
@@ -205,10 +212,10 @@ SimForge/
 
 ## 🔧 Simulators
 
-| Adapter | Engine    | Traffic Model                      | Output                 |
+| Adapter | Engine    | Traffic Model                      | Native inputs written  |
 | ------- | --------- | ---------------------------------- | ---------------------- |
-| SUMO    | eclipse-sumo 1.26+| Microscopic / Mesoscopic   | net.xml, rou.xml       |
-| MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml |
+| SUMO    | eclipse-sumo 1.26+| Microscopic / Mesoscopic   | net.net.xml, routes.rou.xml, toy.sumocfg |
+| MATSim  | MATSim 15 | Activity-based, single iteration   | network.xml, plans.xml, config.xml |
 | DTALite | path4gmns 0.10+ (DTALiteClassic)| CPU mesoscopic Dynamic Traffic Assignment (UE) | node.csv + link.csv + demand.csv + settings.{csv,yml} |
 
 LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the retrospectives in [`doc/engines/`](doc/engines/).
@@ -228,8 +235,9 @@ LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the retrospectives 
 ## 🧪 Testing
 
 ```bash
-pytest tests/ -v          # Run all ~639 tests (~626 pass, 13 arm64-netconvert skips on Apple Silicon)
-pytest tests/ -v -k sumo  # SUMO-related tests only
+pytest tests/ -v             # Fast suite (default, ~30 s): unit + small-bundle integration; slow tests skipped (this run: 522 pass, 146 skip)
+pytest tests/ -v --runslow   # Full suite (~20-30 min, pre-ship / CI gate): all 668 tests; 13 SUMO netconvert tests skip on Apple Silicon (arm64), they run on Linux
+pytest tests/ -v -k sumo     # SUMO-related tests only
 ```
 
 See [TESTING.md](TESTING.md) for layout and coverage.
@@ -268,7 +276,7 @@ For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECT
 
 ## 🗺️ Geographic Visualization (opt-in)
 
-A standalone visualization component on the `visualization` branch
+A standalone visualization component under `visualization/`
 renders **7 map types** from any bundle / benchmark run, OD demand
 choropleths on US Census tracts, per-engine link load + congestion +
 travel time, cross-engine route diversity, and MATSim-driven flow
@@ -312,10 +320,13 @@ symmetry).
 | [doc/LICENSING.md](doc/LICENSING.md)                       | Per-component license declarations            |
 | [doc/DATA_MANAGEMENT.md](doc/DATA_MANAGEMENT.md)           | Data sources, PII policy, retention, ethics   |
 | [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal             |
+| [doc/CONTAINER_USAGE.md](doc/CONTAINER_USAGE.md)           | Docker / Singularity (GHCR) container workflow |
+| [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md)     | Census ModelGen provenance + travel-mode handling |
+| [doc/engines/](doc/engines/)                               | Engine comparison + LPSim/QarSUMO retrospectives |
 | [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                    |
 | `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules               |
 | [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types) |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                         | Contribution workflow and code style          |
-| `python help.py`                                           | In-CLI help: curses TUI in a terminal, `python help.py <topic>` (overview / setup / generate / run / scripts / cities / modes / adapters / metrics / evaluation / schema / benchmark / tests / analyzer / troubleshooting) for paste-safe text |
+| `python help.py`                                           | In-CLI help: curses TUI in a terminal, `python help.py <topic>` (overview / setup / generate / run / scripts / cities / modes / adapters / metrics / evaluation / schema / benchmark / tests / analyzer / visualization / troubleshooting) for paste-safe text |
 
 ---

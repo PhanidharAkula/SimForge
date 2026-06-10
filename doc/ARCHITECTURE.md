@@ -49,7 +49,7 @@ The canonical schema is the lingua franca of SimForge. Every scenario is express
 | `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode + V5+ `purpose`/`dest_source`) | CSV for ease of analysis; departure in seconds. V5+ provenance columns are informational (adapters ignore). |
 | `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers at OSM-tagged nodes (V5+)        | Simplified to common denominator across all simulators. V5+ Phase 6: placement is OSM-grounded (`has_signal="true"` only). |
 | `config.xml`   | `config_v0`   | Scenario metadata + parameters                                  | Engine-agnostic parameters only                            |
-| `manifest.xml` | `manifest_v0` | SHA-256 hashes + sizes for all files                            | Hash-based integrity verification                          |
+| `manifest.xml` | `manifest_v0` | SHA-256 hashes for all canonical files (v0.2)                   | Hash-based integrity verification                          |
 
 **Why this design:**
 
@@ -90,9 +90,13 @@ Stage 3: Demand         pipeline/demand/generate_census_demand.py
 
 Stage 4: Config         generate.py::_write_config_xml
          Parameters + metadata → config.xml
+         (generate.py actually writes config.xml before the demand stage;
+          shown here with the metadata files for readability)
 
 Stage 5: Manifest       generate.py::_write_manifest_xml
-         Bundle file inventory → manifest.xml
+         Bundle file inventory → manifest.xml, written LAST so every
+         canonical file (network, signals, config, demand) carries a
+         sha256 attribute (manifest v0.2, self-verifying)
          (validation lives separately in pipeline/validation/validate_bundle.py)
 ```
 
@@ -195,8 +199,8 @@ BenchmarkResult (JSON)
 **RunSpec example** (`runspecs/benchmark_small.yaml`):
 
 ```yaml
-name: benchmark_large
-description: End-to-end stress test across all engines and modes.
+name: benchmark_small
+description: Canonical small-tier benchmark across all engines and modes.
 output_dir: runs/benchmark_small
 
 runs:
@@ -204,10 +208,11 @@ runs:
     scenario_path: scenarios/chicago_1k_car
     engine: sumo
     mode: mesoscopic
-    repeats: 3
+    repeats: 5
     seed: 42
     timeout_s: 300
-  # ... four cells total: chicago_1k_car × {SUMO meso, SUMO micro, MATSim meso, DTALite meso}, N=5 each
+  # ... 11 cells total: {chicago_1k, nyc_10k, la_50k} × the engine/mode
+  # pairs each tier runs (see the file), N=5 seeds per cell
 ```
 
 The harness expands each `runs[]` entry into `repeats` individual runs, monotonically incrementing seeds when `seed_increment` is enabled. After execution, `analyze_benchmark.py` and `generate_plots.py` consume the resulting `runs/<name>/benchmark_results_<name>.json`.
@@ -223,7 +228,7 @@ Three metric families, each in a dedicated module:
 | Reproducibility | `metrics/reproducibility.py` | R-index, CV, multi-KPI                | Consistency         |
 | Travel Time     | `metrics/travel_time.py`     | Mean, P95, completion rate            | Per-run extraction  |
 
-### 2.6 Visualization Component (Phase 13, separate branch)
+### 2.6 Visualization Component (Phase 13, opt-in)
 
 Standalone, opt-in module under `visualization/`. Generates geographic
 maps from canonical bundles and benchmark results. Lives on the
@@ -339,7 +344,7 @@ adapters/dtalite/dtalite_adapter.py
     │ uses: csv, subprocess (path4gmns DTALiteClassic), re, statistics, yaml
     │
     ▼
-execution/runspec.py               (YAML/JSON loading, dataclasses)
+execution/runspec.py               (YAML loading, dataclasses)
 execution/run_benchmark.py         (uses: runspec, adapters, subprocess, time)
     │
     ▼
@@ -402,8 +407,9 @@ User: python generate.py --city chicago --trips 1000 --seed 42
     AM/PM peak split + HBSchool chains where horizon and demographics fit)
         │ → demand.csv (1,000 trips, V5+ `purpose` + `dest_source`)
         ▼
-[7] Write config + manifest (SHA-256 hashes)
-        │ → config.xml, manifest.xml
+[7] Write manifest (SHA-256 hashes of all four canonical files;
+    config.xml was already written before the demand step)
+        │ → manifest.xml
         ▼
 [8] Validate bundle (referential integrity + hash check)
         │ → scenarios/chicago_1k_car/ (complete, validated)
@@ -494,19 +500,23 @@ Census-calibrated balances realism with reproducibility at zero cost.
 
 ### 6.1 Test Suite Organization
 
+A representative subset (the full 31-file table with per-file counts lives
+in `TESTING.md` and `CONTRIBUTING.md`):
+
 | Test File                         | Tests   | Scope                             |
 | --------------------------------- | ------- | --------------------------------- |
 | `test_adapter_determinism.py`     | 8       | Byte-identical output across runs |
 | `test_sumo_adapter.py`            | 4       | SUMO conversion pipeline          |
-| `test_matsim_adapter.py`          | 24      | MATSim adapter unit + integration |
+| `test_matsim_adapter.py`          | 26      | MATSim adapter unit + integration |
+| `test_dtalite_adapter.py`         | 46      | DTALite writers, settings, parsing |
 | `test_fidelity_metrics.py`        | 21      | RMSE, GEH, KS computation         |
 | `test_metrics_travel_time.py`     | 2       | SUMO tripinfo parsing             |
 | `test_reproducibility_metrics.py` | 15      | R-index, multi-KPI analysis       |
 | `test_scalability_metrics.py`     | 8       | Timer, throughput, hardware info  |
 | `test_validator.py`               | 2       | Bundle validation checks          |
-| `test_scenario_data_integrity.py` | 70      | All scenarios × 35 checks each    |
+| `test_scenario_data_integrity.py` | 36 × N  | 36 checks per bundle present (180 with all 5) |
 | `test_pipeline_e2e.py`            | 20      | Bad data, routing, robustness     |
-| **Total**                         | **174** | **All passing**                   |
+| **Total (all 31 files)**          | **668** | Fast tier 522 by default; full gate via `--runslow` |
 
 ### 6.2 Determinism Guarantees
 
@@ -534,7 +544,7 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
                     ▼
 ┌─────────────────────────────────────────────────┐
 │  GitHub                                           │
-│  Branch: phase-14-canonical-routes (active), main │
+│  Branch: release (single public branch)           │
 │  + GitHub Actions auto-build → GHCR (Wave 2)      │
 └───────────────────┬──────────────────────────────┘
                     │ git clone           │ apptainer pull

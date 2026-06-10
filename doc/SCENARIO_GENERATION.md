@@ -12,7 +12,7 @@
 3. [The ModelGen Data Files](#3-the-modelgen-data-files)
 4. [Step-by-Step Pipeline Walkthrough](#4-step-by-step-pipeline-walkthrough)
    - [Step 1: Network from OpenStreetMap](#step-1-network-from-openstreetmap)
-   - [Step 2: Traffic Signals (Inferred)](#step-2-traffic-signals-inferred)
+   - [Step 2: Traffic Signals (OSM-grounded)](#step-2-traffic-signals-osm-grounded)
    - [Step 3: Config & Manifest](#step-3-config--manifest)
    - [Step 4: Demand Generation (Census)](#step-4-demand-generation-census)
    - [Step 4-alt: Demand Generation (Synthetic Fallback)](#step-4-alt-demand-generation-synthetic-fallback)
@@ -20,7 +20,7 @@
    - [Origin Selection](#51-origin-selection)
    - [Person Sampling](#52-person-sampling)
    - [Destination Selection](#53-destination-selection)
-   - [Departure Time Generation](#54-departure-time-generation)
+   - [Departure Time Generation](#54-departure-time-generation-v5)
    - [Mode Assignment](#55-mode-assignment)
 6. [What Makes It Realistic (and What Doesn't)](#6-what-makes-it-realistic-and-what-doesnt)
 7. [Data Lineage Diagram](#7-data-lineage-diagram)
@@ -49,8 +49,9 @@ Step 1: Slice road network from a hash-pinned Geofabrik OSM PBF
         (also collects OSM `highway=traffic_signals` node tags on the
          same PBF stream, no extra I/O)
 Step 2: Build signals.xml from those tagged nodes
-Step 3: Write config.xml + manifest.xml
-Step 4: Generate trip demand (census-calibrated or synthetic)
+Step 3: Write config.xml
+Step 4: Generate trip demand (census-calibrated or synthetic),
+        then write manifest.xml last (sha256 for all four canonical files)
 ```
 
 ---
@@ -368,7 +369,7 @@ fallback emits a loud WARNING so the operator knows to regenerate.
 **Files**: Written directly by `generate.py`
 
 ```
-Output: config.xml, manifest.xml
+Output: config.xml  (manifest.xml is written at the END of step 4)
 ```
 
 **config.xml** specifies:
@@ -378,7 +379,10 @@ Output: config.xml, manifest.xml
 - Random seed (42)
 - Units (meters, m/s, seconds)
 
-**manifest.xml** lists all files in the bundle, their types, and paths.
+**manifest.xml** lists all canonical files in the bundle, their types,
+paths, and a `sha256` per file (manifest v0.2, self-verifying). It is
+deliberately written last, after demand.csv exists in step 4, so all four
+canonical files carry hashes.
 
 **Realistic?** N/A, these are metadata files, not simulation data.
 

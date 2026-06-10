@@ -1,6 +1,6 @@
 # Third-Engine Selection, Deep Research & Recommendation
 
-**Status:** Decision pending (advisor approval).
+**Status:** Decided. DTALite was adopted (2026-04-28, Version_5 engine swap) and shipped as the third primary engine; this document is preserved as the selection record.
 **Context:** LPSim integration was abandoned 2026-04-27 (see `LPSIM_RETROSPECTIVE.md`). SimForge needs a working third engine to maintain the cross-simulator benchmarking premise without repeating the LPSim or QarSUMO failure modes.
 **Research date:** 2026-04-27, three deep-research passes against live GitHub state, recent issues (last 12 months), recent papers (2023–2025), and direct compatibility checks for OSC Pitzer (RHEL 8, glibc 2.28, gcc 13.2 modules).
 **Decision criterion:** an engine that **will actually work after implementation**, not one that looks promising in marketing copy. The user has explicitly stated that another LPSim/QarSUMO-class failure is unacceptable.

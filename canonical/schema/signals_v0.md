@@ -91,6 +91,15 @@ Represents a single phase within the junction’s signal cycle.
 > - **`g`** – permissive/low-priority green
 > - **`y`** – yellow/amber
 > - **`r`** – red
+>
+> **As generated:** SimForge's `pipeline/signals/build_signals_default.py`
+> emits the single-character form of this convention: each `<phase>` carries
+> a one-character `state` (`G`/`y`/`r`) plus `<link_ref id="..."/>` children
+> naming the approach links that state applies to, and each `<junction>`
+> uses `id="tl_<node_id>"` with a `node_id` attribute carrying the network
+> node. Multi-group `state` strings like `"GGrr"` (one character per signal
+> group, no `link_ref` children) remain valid v0; the bundle validator
+> checks well-formedness and the `<signals>` root for either form.
 
 **Example:**
 

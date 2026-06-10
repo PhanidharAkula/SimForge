@@ -179,6 +179,10 @@ A minimal but valid `manifest.xml` for the toy scenario:
 ## Versioning
 
 - This document defines **v0** of the canonical manifest schema.
+- The shipped generator stamps `<manifest version="0.2">`: the v0 schema
+  plus a `sha256` attribute on every canonical `<file>` entry, making the
+  bundle self-verifying (`validate_bundle` recomputes and compares; older
+  manifests without the attribute skip the check).
 - Future versions may:
   - add more file `type` values,
   - add richer metadata for engine assets and outputs,

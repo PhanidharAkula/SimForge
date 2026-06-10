@@ -13,8 +13,11 @@ git clone <repo-url>
 cd SimForge
 python setup_simforge.py        # creates .venv, installs deps, downloads MATSim JAR
 source .venv/bin/activate
-python -m pytest tests/ -q      # ~639 tests should pass with all 5 bundles (~567 with the 3 tracked)
+python -m pytest tests/ -q      # fast suite (~30 s): default run skips the slow tests
+python -m pytest tests/ --runslow -q   # full suite (~20-30 min): the pre-ship / CI gate
 ```
+
+The fast `pytest` run is the everyday command (this run: 522 passed, 146 skipped). It covers the unit tests and the small-bundle integration, and skips the slow engine / BFS-routing / huge-bundle (200k/500k) tests. The full `pytest --runslow` run is 668 tests across 31 test files with all 5 standard bundles in `scenarios/` (~596 with just the 3 git-tracked bundles). On Apple Silicon (arm64) 13 SUMO netconvert tests skip (the binary segfaults on large networks); they run on Linux.
 
 If `setup_simforge.py` fails, see [SETUP.md](SETUP.md) for the manual install path.
 
@@ -34,7 +37,7 @@ git checkout -b your-feature-branch
 
 ### 2. Write the test first
 
-The ~639-test suite (with all 5 bundles, ~567 with just the 3 tracked) is the only thing standing between a "small fix" and a silently broken adapter. The test layout (per `TESTING.md`):
+The 668-test suite (with all 5 bundles, ~596 with just the 3 tracked) is the only thing standing between a "small fix" and a silently broken adapter. A `slow` pytest marker gates the heavy tests: default `pytest` runs the fast suite (~30 s), and `pytest --runslow` runs the full suite (~20-30 min) before a PR. The test layout (per `TESTING.md`):
 
 | Test file                              | Tests | Covers                                                       |
 | -------------------------------------- | ----- | ------------------------------------------------------------ |
@@ -51,12 +54,14 @@ The ~639-test suite (with all 5 bundles, ~567 with just the 3 tracked) is the on
 | `test_pipeline_e2e.py`                 | 20    | OSM fetch → bundle → adapter → metrics                       |
 | `test_scc.py`                          | 14    | Iterative Kosaraju + bundled-network coverage                |
 | `test_feasibility.py`                  | 19    | Shared SCC-based cross-engine trip filter (mode-aware, V5+)  |
-| `test_analyze_benchmark.py`            | 24    | Mode-aware grouping, renderers (incl. Adj TT), intersection helpers |
+| `test_analyze_benchmark.py`            | 24    | Mode-aware grouping, identity fallback, all table renderers |
 | `test_osm_fetch.py`                    | 20    | OSM/Overpass fetch (mocked), bbox validation, cache pinning  |
 | `test_demand_generators.py`            | 21    | Uniform / gravity / peak-hour generators, SCC-restricted OD |
 | `test_engine_smoke.py`                 | 4     | Real-binary SUMO/MATSim/DTALite smoke (skip if missing)      |
 | `test_audit_fairness.py`               | 40    | Q1–Q5 audit + 5-layout detector (Phase 12+ mode-segmented + back-compat) |
-| `test_run_benchmark.py`                | 12    | Phase 12+: BenchmarkHarness explicit-output, prep-cache hot/cold, bundle-hash invalidation, Phase 12.2 scoped_base collapse |
+| `test_run_benchmark.py`                | 22    | BenchmarkHarness explicit-output, prep-cache hot/cold, bundle-hash invalidation, scoped_base collapse, per-cell failure isolation |
+| `test_runspec.py`                      | 23    | RunSpec/RunConfig schema: mode aliases, repeats/timeout/seed_increment guards, YAML loading |
+| `test_run_cli.py`                      | 3     | run.py parity with the harness (failure isolation, monotonic timing) |
 | `test_demand_composition.py`           | 7     | V5+ Phase 10, `purpose` column tally, AM/PM split, chain legs |
 | `test_parse_model_file.py`             | 27    | ModelGen parser + V5 Phase 5 JWTRNS + Phase 9 HBSchool helpers |
 | `test_turn_restrictions.py`            | 17    | V5+ Phase 7, OSM restriction parser, BFS, DTALite movement.csv |

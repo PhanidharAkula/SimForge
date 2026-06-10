@@ -158,7 +158,7 @@ and no separate `pip install eclipse-sumo` step.
 ```bash
 # 4.1, clone into $HOME (500 GB quota, no advisor permission needed)
 cd $HOME
-git clone -b Version_5 https://github.com/PhanidharAkula/SimForge.git
+git clone -b release https://github.com/PhanidharAkula/SimForge.git
 cd SimForge
 
 # 4.2, install uv (manages Python + venv; user-space, no admin)

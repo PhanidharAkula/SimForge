@@ -175,7 +175,8 @@ PROJECT STRUCTURE (alphabetical, repo root):
   adapters/           Simulator-specific converters (sumo, matsim, dtalite)
   canonical/          Canonical bundle schema spec (canonical/schema/)
   cluster/            HPC cluster integration (Pitzer SLURM sbatches)
-  doc/                Architecture, retrospectives, thesis chapters
+  doc/                Architecture, reproduction guide, experiment log,
+                      engine retrospectives
   evaluation/         Metrics, analysis, fairness audit, plot generation
   execution/          Benchmark harness (runspec-driven, run_benchmark.py)
   lib/                Third-party JARs (matsim-15.0/) + version pins
@@ -185,16 +186,19 @@ PROJECT STRUCTURE (alphabetical, repo root):
   runspecs/           Benchmark configuration files (YAML)
   scenarios/          Generated canonical data bundles
   scripts/            5 ready-to-use generation scripts (01–05)
-  tests/              Test suite (pytest, ~639 tests across 29 files
-                      with all 5 bundles generated; ~567 with just the 3
-                      tracked bundles. +36 per parametrized integrity tests
-                      per bundle in scenarios/)
+  tests/              Test suite (pytest, 668 tests across 31 files
+                      with all 5 bundles generated; ~596 with just the 3
+                      tracked bundles. +36 parametrized integrity tests
+                      per bundle in scenarios/. Default `pytest` runs the
+                      FAST suite only (~30 s); `pytest --runslow` runs the
+                      full suite (~20-30 min). See the `slow` marker below.)
   tools/              Operator utilities (analyze_scenarios.py, clean.sh,
                       download_osm.py, env_report.py, inspect_network.py,
+                      generate_scorecard.py, recover_partial_summary.py,
                       download_census_tracts.py + download_tiger_roads.py
-                      for the visualization-branch shapefile cache)
-  visualization/      Opt-in geographic-map renderer (visualization branch
-                     generate_maps.py CLI + 7 map types)
+                      for the visualization shapefile cache)
+  visualization/      Opt-in geographic-map renderer
+                      (generate_maps.py CLI + 7 map types)
 
   Top-level files:
   generate.py         Unified scenario generator (start here)
@@ -439,7 +443,7 @@ CENSUS MODE MAPPING (cityscape Schedule-generator branch / ACS PUMS 2021):
   12 Other method                          > home (excluded, no trip)
   -1 N/A, not a worker (cityscape's "bb" sentinel)
 
-  Single source of truth: pipeline/demand/parse_model_file.py:200
+  Single source of truth: pipeline/demand/parse_model_file.py::JWTRNS_TO_MODE
   See doc/MODELGEN_AND_MODES.md §2 + §4 for cityscape provenance and the
   per-city per-code histograms.
 
@@ -474,8 +478,9 @@ SUPPORTED SIMULATORS:
   PT-module wiring required for true multi-modal simulation.
 
   LPSim, POLARIS, and QarSUMO are documented as evaluated-and-rejected
-  in doc/engines/{LPSIM,QARSUMO}_RETROSPECTIVE.md and
-  doc/engines/THIRD_ENGINE_OPTIONS.md.
+  in doc/engines/LPSIM_RETROSPECTIVE.md, doc/engines/THIRD_ENGINE_OPTIONS.md,
+  and doc/engines/ENGINE_COMPARISON.md (QarSUMO's record lives in the
+  latter two plus the CHANGELOG Version_4 Phase A entry).
 
 ADAPTER CLI:
   python -m adapters.sumo.cli    <scenario_path> <output_dir>                  # convert only
@@ -529,7 +534,7 @@ HELP_SCHEMA = """
   CANONICAL SCHEMA REFERENCE
 ====================================================================
 
-6 files per scenario bundle:
+5 canonical files per scenario bundle, plus one metadata sidecar:
 
 1. network.xml              -- Directed road graph from OSM. V5+ also
                                carries `has_signal="true"` on traffic-signal
@@ -555,7 +560,8 @@ HELP_SCHEMA = """
                                See doc/SCENARIO_GENERATION.md
                                §"Step 2: Traffic Signals" for full provenance.
 4. config.xml               -- Scenario metadata (time, seed, units)
-5. manifest.xml             -- File inventory
+5. manifest.xml             -- File inventory; v0.2 carries a sha256 per
+                               canonical file (self-verifying bundle)
 6. generation_metadata.json -- Per-step source / parameter / hash trail
                                (generator version, seed, OSM source, demand
                                source, modelgen city stats, SCC drop counts,
@@ -586,15 +592,10 @@ ANALYZE BENCHMARK:
                             silently omitted for pre-V5 bundles missing
                             the `purpose` column.
     Table 5.1, Runtime comparison (engine x city x mode)
-    Table 5.2, Reproducibility analysis (R-scores + Adj TT column*)
+    Table 5.2, Reproducibility analysis (Avg TT, 95 % CI, Std, R-Score, rating)
 
   --latex       emit LaTeX tables (ready for thesis inclusion)
   --markdown    emit Markdown tables (for docs / GitHub)
-
-  * Adj TT: intersection-corrected mean travel time, computed over the trip-ID
-    set completed by ALL engines for a given (scenario, mode, seed).  Eliminates
-    the sample bias from SUMO dropping ~5 trips that MATSim always completes.
-    Populated automatically when run-artifact directories exist next to the JSON.
 
 AUDIT CROSS-ENGINE FAIRNESS:
   python -m evaluation.audit_fairness <run-dir> [seed]
@@ -638,7 +639,7 @@ COMPARE MICRO vs MESO:
 GENERATE THESIS PLOTS:
   python -m evaluation.generate_plots <results.json> [--output DIR] [--clean]
 
-  Generates (PNG + PDF):
+  Generates (PNG, 300 dpi):
     Fig 5.1, Engine runtime comparison (grouped bar: city x engine)
     Fig 5.2, Reproducibility heatmap (engine x city R-scores)
     Fig 5.3, Travel time comparison (mean +/- std by engine)
@@ -696,10 +697,13 @@ BUILT-IN RUNSPECS:
                          N=5 repeats per cell = 55 runs total. Runs end-to-end
                          on a Mac laptop (DTALite is CPU-only).
   benchmark_large.yaml   chicago_200k_car + nyc_500k_car, mesoscopic only,
-                         3 engines x 2 scenarios x 5 reps = 30 runs.
-                         Per-run timeout 3600 s for 200K, 7200 s for 500K
-                         (HPC tier, submit via cluster/jobs/benchmark_large.sbatch;
-                         bundles are gitignored, rsync from your dev box first).
+                         2 engines (SUMO + MATSim; DTALite is excluded at
+                         this tier, its bundled binary caps at 4 OpenMP
+                         threads, see doc/EXPERIMENT_LOG.md Phase 12.5/12.7)
+                         x 2 scenarios x 5 reps = 20 runs. Per-run timeout
+                         3600 s for 200K, 7200 s for 500K (HPC tier, submit
+                         via cluster/jobs/benchmark_large.sbatch; bundles
+                         are gitignored, rsync from your dev box first).
 
 OUTPUT FORMAT:
   Banner with the matrix dimensions (Runspec, Scenarios, Engines, Modes,
@@ -719,8 +723,12 @@ OUTPUT FORMAT:
   print_above(); --verbose drops the threshold to INFO+ for full
   adapter chatter.
 
-REPRODUCE THE THESIS NUMBERS END-TO-END (~40-100 min on M-series Mac;
-~25 min on Linux/HPC where SUMO micro on nyc_10k_car runs faster):
+REPRODUCE THE THESIS NUMBERS END-TO-END. Budget on an M-series Mac:
+~2 h for the chicago_1k + nyc_10k cells; the five la_50k DTALite cells
+then each run to their DESIGNED 14400 s timeout (~20 h serial, recorded
+as the timeout policy the thesis documents), so a full unattended pass
+is ~22 h. Use --scenario chicago_1k_car / nyc_10k_car to skip the LA
+tier, or run it on HPC via cluster/jobs/benchmark_small.sbatch:
   python -m execution.run_benchmark runspecs/benchmark_small.yaml
   python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
   python -m evaluation.audit_fairness runs/benchmark_small
@@ -769,25 +777,34 @@ HELP_TESTS = """
   TEST SUITE REFERENCE
 ====================================================================
 
-SimForge ships ~639 tests across 29 files when all 5 bundles are
+SimForge ships 668 tests across 31 files when all 5 bundles are
 generated (chicago_1k_car + nyc_10k_car + la_50k_car tracked, plus
 chicago_200k_car + nyc_500k_car generated locally via the scripts/).
-The count is 459 base + 36 parametrized per bundle in `scenarios/`,
+The count is 488 base + 36 parametrized per bundle in `scenarios/`,
 so:
-  • 0 bundles in scenarios/        → 459 tests
-  • 3 tracked bundles only         → 459 + 3×36 = 567 tests
-  • all 5 bundles generated        → 459 + 5×36 = 639 tests
-The 567-test minimum suite runs in ~3-4 min on arm64 (~22 s on a Linux
-box where SUMO doesn't crash); the 639-test full sweep takes ~14 min
-on M-series Mac because the integrity tests parse the much larger
-200K/500K network.xml files.
+  • 0 bundles in scenarios/        → 488 tests
+  • 3 tracked bundles only         → 488 + 3×36 = ~596 tests
+  • all 5 bundles generated        → 488 + 5×36 = 668 tests
+
+A `slow` pytest marker gates the heavy tests. By default `pytest`
+runs the FAST suite only (unit tests + small-bundle integration),
+skipping the slow engine / BFS-routing / huge-bundle (200K/500K)
+tests. The full suite runs with `pytest --runslow`.
+  • default `pytest`     → ~30 s (this run: 522 passed, 146 skipped),
+                           the everyday command
+  • `pytest --runslow`   → the full suite, ~20-30 min, the pre-ship /
+                           CI gate. On Apple Silicon (arm64) 13 SUMO
+                           netconvert tests skip (the binary segfaults
+                           on large networks); they run on Linux, where
+                           the full run is far faster.
 
 Pytest config lives in pyproject.toml [tool.pytest.ini_options] with
 --strict-markers + --tb=short. Shared fixtures and platform-skip
 helpers live in tests/conftest.py.
 
 RUN COMMANDS:
-  python -m pytest                                    # Full suite, per-FILE rollup rows
+  python -m pytest                                    # FAST suite (default, ~30 s), slow tests skipped, per-FILE rows
+  python -m pytest --runslow                          # FULL suite (~20-30 min, pre-ship / CI gate)
   python -m pytest -v                                 # Verbose, per-TEST ✓/✗/⊘ rows
   python -m pytest -v -x                              # Verbose, stop on first failure
   python -m pytest tests/test_feasibility.py          # One file
@@ -800,6 +817,8 @@ RUN COMMANDS:
   python -m pytest -p no:sticky_progress              # Plain pytest output (no plugin)
 
 MARKERS (registered in pyproject.toml; --strict-markers enforced):
+  slow            Heavy engine / BFS-routing / huge-bundle (200K/500K)
+                  tests; skipped by default, run with --runslow
   integration     Exercises multiple subsystems end-to-end
   determinism     Verifies byte-identical adapter outputs across re-runs
   requires_sumo   Needs sumo / netconvert on PATH
@@ -813,8 +832,8 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
     python -m pytest -m integration
     python -m pytest -m "not requires_sumo"
 
-TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
-~567 with just the 3 tracked bundles. Alphabetical):
+TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
+~596 with just the 3 tracked bundles. Alphabetical):
 
   test_adapter_contract.py        (6)   Three-function adapter contract regression
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
@@ -848,13 +867,19 @@ TEST FILES (29 files / ~639 tests with all 5 bundles in scenarios/;
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_recover_partial_summary.py (6)   Partial-summary recovery from interrupted runs
   test_reproducibility_metrics.py (15)  R-score core + edge cases
-  test_run_benchmark.py           (12)  V5+ Phase 12, BenchmarkHarness
-                                        explicit-output flag, prep-cache hot/cold
-                                        + bundle-hash invalidation, scoped_base
-                                        collapse (Phase 12.2)
+  test_run_benchmark.py           (22)  BenchmarkHarness explicit-output flag,
+                                        prep-cache hot/cold + bundle-hash
+                                        invalidation, scoped_base collapse,
+                                        routes-cache migration, per-cell
+                                        failure isolation
+  test_run_cli.py                 (3)   run.py parity with the harness
+                                        (failure isolation, monotonic timing)
+  test_runspec.py                 (23)  RunSpec/RunConfig schema: mode aliases,
+                                        repeats/timeout/seed_increment guards,
+                                        YAML loading
   test_scalability_metrics.py     (8)   SimulationTimer, throughput
   test_scc.py                     (14)  Iterative Kosaraju + parser
-  test_scenario_data_integrity.py (180) 7 classes × 36 tests per scenario,
+  test_scenario_data_integrity.py (180) 7 classes, 36 tests per scenario,
                                         scales with scenarios/ contents:
                                           0 bundles → 0 tests
                                           3 tracked → 108 tests (3×36)
@@ -882,7 +907,7 @@ WHAT THE OUTPUT LOOKS LIKE:
   Default, per-file rollup rows + sticky progress bar:
     tests/test_feasibility.py    PASSED
     tests/test_engine_smoke.py   SKIPPED
-    [████████████░░░░░░░░░░░░░░] 50%  ✓ 320  ✗ 0  ⠼  test 320/639  elapsed 1m 30s
+    [████████████░░░░░░░░░░░░░░] 50%  ✓ 334  ✗ 0  ⠼  test 334/668  elapsed 1m 30s
 
   With -v, per-test ✓/✗/⊘ rows:
     ✓ tests/test_feasibility.py::test_drops_outside_scc
@@ -890,21 +915,23 @@ WHAT THE OUTPUT LOOKS LIKE:
     ✗ tests/test_x.py::test_y  (AssertionError: expected 5 got 6)
 
   With --cov, a coverage table is appended below the Summary block:
-    Name                              Stmts   Miss  Cover   Missing
-    adapters/common/feasibility.py       94      8    91%   42-49
+    Name                            Stmts   Miss Branch BrPart  Cover   Missing
+    adapters/common/feasibility.py     94      4     40      3    94%   ...
     ...
-    TOTAL                              2847    677    76%
+    TOTAL                            3422    681   1202    252  76.4%
 
   With -p no:sticky_progress, plain pytest output (dots, file headers,
   short test summary info, etc.). Useful when piping to a log file or
   diagnosing the plugin itself.
 
 COVERAGE:
-  python -m pytest --cov                              # Terminal summary
-  python -m pytest --cov --cov-report=html            # HTML report in htmlcov/
-  python -m pytest --cov --cov-fail-under=70          # Enforce 70 % floor
+  python -m pytest --runslow --cov                    # Terminal summary (full gate)
+  python -m pytest --runslow --cov --cov-report=html  # HTML report in htmlcov/
+  python -m pytest --runslow --cov --cov-fail-under=70  # Enforce 70 % floor
 
-  Current line coverage: ~76 % (branch coverage enabled). Source set and
+  Current line coverage: ~76 % on the full --runslow gate (fast tier
+  alone reads ~60 %; the engine/BFS paths only run under --runslow).
+  Branch coverage enabled. Source set and
   omit list configured in pyproject.toml [tool.coverage]. Dev tools install
   via: pip install -r requirements-dev.txt
 
@@ -1001,9 +1028,8 @@ HELP_VISUALIZATION = """
 Standalone, opt-in renderer for seven geographic map types: two
 bundle-only OD choropleths, three per-engine maps (link load,
 congestion, travel time), and two cross-engine maps (route diversity,
-MATSim-driven flow animation). Lives on the `visualization` branch
-and is not imported by main SimForge code paths, locked benchmark
-numbers are independent of any rendered plot.
+MATSim-driven flow animation). Not imported by main SimForge code
+paths, locked benchmark numbers are independent of any rendered plot.
 
 ONE-TIME SETUP (cache the public-domain US Census shapefiles):
   python -m tools.download_census_tracts --all-bundled
@@ -1046,6 +1072,8 @@ KEY CLI FLAGS:
   --anim-mode particles|throughput  default particles
   --anim-fps <N>            default 30 (particles); throughput is fixed at 2
   --anim-sim-per-frame <s>  default 5.0; lower = slower motion, longer file
+  --anim-dot-size <pt>      default 9.0; use 2-4 for 200K+ tiers
+  --anim-dot-alpha <a>      default 0.85, dot opacity
   --anim-format mp4|gif|apng  default mp4 (smallest, needs ffmpeg)
 
 COVERAGE MATRIX (printed before any render):
@@ -1155,16 +1183,19 @@ HELP_TROUBLESHOOTING = """
       Add -vv for full assertion diffs on failures.
 
 11. "Tests fail with 'binary not found' errors"
-   -> test_engine_smoke.py needs real SUMO / MATSim / Java on PATH.
-      Tests skip individually when binaries are missing, so the suite
-      stays green. Filter the SUMO-dependent ones with:
+   -> Engine-dependent tests auto-skip when the binaries are missing
+      (requires_sumo / requires_java markers), so the suite stays green.
+      The probe is venv-aware: `.venv/bin/python -m pytest` finds the
+      eclipse-sumo binaries even without `source .venv/bin/activate`.
+      Filter the SUMO-dependent ones explicitly with:
           python -m pytest -m "not requires_sumo"
 
-12. "Coverage numbers look low (~40 %)"
-   -> setup_simforge.py installs the dev deps; if you used a manual venv,
-      install them yourself:
-        pip install -r requirements-dev.txt
-      and make sure you're running from the project root.
+12. "Coverage reads ~60 % instead of the documented ~76 %"
+   -> You measured the fast default tier; the engine/BFS code paths only
+      execute under --runslow. Measure the full gate:
+        python -m pytest --runslow --cov
+      (pytest-cov comes from requirements-dev.txt, installed automatically
+      by setup_simforge.py; on a manual venv: pip install -r requirements-dev.txt)
 
 13. "sumo: Error: No connection between edge 'lX' and edge 'lY'"
    -> Drive sumo with --ignore-route-errors. SimForge pre-computes routes by
@@ -1197,9 +1228,10 @@ HELP_SETUP = """
 ONE-COMMAND BOOTSTRAP:
   python setup_simforge.py
 
-  This creates .venv/, installs runtime dependencies (requirements.txt)
-  AND developer tooling (requirements-dev.txt: pytest-cov, pytest-xdist,
-  mutmut), and downloads the MATSim 15.0 JAR to lib/matsim-15.0/.
+  This creates .venv/, installs the pinned runtime dependencies
+  (requirements.lock when present, else requirements.txt) AND developer
+  tooling (requirements-dev.txt: pytest-cov, pytest-xdist, mutmut), and
+  downloads the MATSim 15.0 JAR to lib/matsim-15.0/.
   Re-running is idempotent.
 
 ACTIVATE THE VENV (REQUIRED IN EVERY NEW SHELL):
@@ -1219,22 +1251,23 @@ EXTERNAL DEPENDENCIES:
                     Verify: java -version
 
 DEV DEPENDENCIES (coverage + mutation testing + parallel pytest):
-  Installing requirements.lock via `uv pip install -r requirements.lock`
-  bundles pytest, pytest-cov, and other dev tooling. The legacy
-  `pip install -r requirements-dev.txt` path still works for ad-hoc dev installs.
+  requirements.lock pins pytest itself; pytest-cov, pytest-xdist, and
+  mutmut come from requirements-dev.txt (setup_simforge.py installs it
+  automatically; on a manual venv run `pip install -r requirements-dev.txt`).
 
 VERIFY THE INSTALL (full sanity check):
   source .venv/bin/activate
-  python -m pytest                                                           # Full test suite (~3-4 min on arm64)
+  python -m pytest                                                           # FAST suite (default, ~30 s; slow tests skipped)
+  python -m pytest --runslow                                                 # FULL suite (~20-30 min; pre-ship / CI gate)
   python -m pipeline.validation.validate_bundle scenarios/chicago_1k_car
   python -m execution.run_benchmark runspecs/benchmark_small.yaml --dry-run
-  python -m execution.run_benchmark runspecs/benchmark_small.yaml            # ~40-100 min on M-series Mac
+  python -m execution.run_benchmark runspecs/benchmark_small.yaml            # ~2 h + designed la_50k DTALite timeouts (~22 h total); see python help.py benchmark
 
 MANUAL INSTALL (if setup_simforge.py fails, see SETUP.md):
   python3.10+ -m venv .venv
   source .venv/bin/activate
   pip install --upgrade pip
-  pip install -r requirements.txt
+  pip install -r requirements.lock      # exact pinned versions (canonical)
   pip install -r requirements-dev.txt
 
   # MATSim JAR (needed only for MATSim runs):
@@ -1257,6 +1290,8 @@ OPERATOR UTILITIES (tools/):
   tools/inspect_network.py <dir>       Link length distribution + degenerate-edge report
   tools/env_report.py                  Toolchain + dep + binary versions (parity check)
   tools/analyze_scenarios.py [name…]   Tabular bundle analyzer, see python help.py analyzer
+  tools/generate_scorecard.py <dir>    Reproducibility scorecard (also auto-emitted per run)
+  python -m tools.recover_partial_summary  Rebuild results JSON from cell artifacts
 
 FIRST RUN (after install):
   python generate.py --city chicago --trips 1000        # generate bundle
@@ -1895,7 +1930,7 @@ def _interactive_legacy_loop() -> int:
                 print("    " + ", ".join(suggestions))
             else:
                 print(_c(f"  Unknown topic: '{choice}'", _C_RED))
-                print(_c("  Try a number 1–15, a topic name, /<keyword>, or q.",
+                print(_c("  Try a number 1–16, a topic name, /<keyword>, or q.",
                          _C_DIM))
             try:
                 input(_input_prompt("  Press Enter to continue...", _C_DIM))

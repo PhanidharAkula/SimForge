@@ -2,7 +2,7 @@
 
 **Status:** Adapter implemented and tested; engine integration **abandoned** in Version_4 after exhaustive Pitzer debugging.
 **Decision date:** 2026-04-27.
-**Code retained:** `adapters/lpsim/` package, 45 unit tests, `lib/lpsim/manifest.json`, `cluster/jobs/build_lpsim.sbatch`, `cluster/jobs/smoke_lpsim.sbatch`, `cluster/jobs/diag_lpsim.sbatch`, `adapters/lpsim/MAPPING.md`.
+**Code disposition:** the `adapters/lpsim/` package, its unit tests, `lib/lpsim/manifest.json`, the build/smoke/diag sbatch jobs, and `adapters/lpsim/MAPPING.md` were all removed in the Version_5 engine swap (see CHANGELOG, "Engine swap: LPSim out, DTALite in"). This retrospective is the surviving record; the deleted code remains reachable in git history before the swap commit.
 
 ---
 
@@ -108,6 +108,11 @@ Engine churn, projects becoming unmaintained, build chains rotting, dependencies
 In thesis terms: **SimForge is the framework that survives the engine's failure.** The engine's failure is not a project failure, it is the use case the framework was built to handle.
 
 ## 6. References
+
+*(Snapshot of the artifacts as they existed at the 2026-04-27 decision; the
+adapter, tests, manifest, and sbatch jobs were removed in the Version_5
+engine swap, see the Code disposition note at the top. The thesis chapter
+drafts later moved out of the repo.)*
 
 - **Phase B integration commits:** `fe118b5` (initial adapter), `b060818`–`466d0a6` (schema fixes), `1359b9e`–`6fdaba1` (in-container source rebuild path), `99a7354`–`27371ad` (Pitzer landing).
 - **Manifest:** `lib/lpsim/manifest.json`, pinned `git_sha` and `docker_image:tag`.

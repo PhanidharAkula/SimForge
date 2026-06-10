@@ -37,9 +37,9 @@ Three compounding factors the original architecture didn't optimize for:
 2. **Single-threaded routing.** The per-trip loop is a serial Python
    `for` over `demand.csv` (`adapters/sumo/sumo_adapter.py:481`). Each
    sbatch already allocates 16-24 CPUs but only 1 does routing work;
-   the rest idle. State-aware BFS per call is O(V + E) on a graph of
-   ~80K nodes / ~200K links; CPython per-step overhead (~5 µs/state)
-   amortizes to seconds per trip.
+   the rest idle. State-aware BFS per call is O(V + E) on graphs of
+   ~330K-420K SCC nodes / ~1.1M-1.3M links at the large tiers; CPython
+   per-step overhead (~5 µs/state) amortizes to seconds per trip.
 
 3. **Network size scaling.** The 200K and 500K bundles use 15-20 km
    bbox radii (vs 2-10 km for chicago_1k_car / nyc_10k_car), producing
@@ -275,7 +275,7 @@ refactor that introduces nondeterminism into this chain.
 | **Multiprocessing + replicated graph + trip-partition (current)** | Trivially deterministic; zero synchronisation; small chunks give free load balancing | Replicates graph N times in RAM (~2.4 GB on chicago_200k, 16-way) | ✅ chosen, RAM is abundant at our scale, simplicity wins |
 | **Threading + shared graph** | No graph duplication | Python's GIL serialises CPU-bound work, BFS is a pure-Python loop, so 0× speedup measured | ❌ GIL is the deal-breaker |
 | **`multiprocessing.shared_memory` for the graph** | Single in-RAM copy of the graph | Requires serialising the graph dict into raw bytes + custom view-layer; complicates determinism analysis; saves ~2 GB which we don't need | ❌ overkill for our memory budget |
-| **Network partitioning (geographic zones) + cross-zone messaging** | Saves memory if the graph were enormous (millions of nodes) | Workers must coordinate when a path crosses zone boundaries, introduces synchronisation, breaks the pure-function determinism story, requires substantially more complex code | ❌ unnecessary; our graphs are at most ~80K nodes |
+| **Network partitioning (geographic zones) + cross-zone messaging** | Saves memory if the graph were enormous (millions of nodes) | Workers must coordinate when a path crosses zone boundaries, introduces synchronisation, breaks the pure-function determinism story, requires substantially more complex code | ❌ unnecessary; our graphs top out around ~420K SCC nodes (~250 MB replicated per worker), well within the memory budget |
 | **C/Cython extension with shared graph + threads (releasing GIL)** | Could be 5–10× faster per worker; no graph duplication | Requires writing + maintaining native code; loses the cross-platform pure-Python guarantee; build-time complexity | ❌ not warranted yet, future Phase candidate |
 
 #### 2.3.5 The `spawn` vs `fork` choice
@@ -554,9 +554,9 @@ comfortably within the umbrella's parallel-on-one-node strategy. See
 
 Numbers go into:
 - `CHANGELOG.md` Phase 14 entry, in a measured-speedup table.
-- `doc/chapters/methods.md` §3.X, added as the engineering
+- The thesis methods chapter, added as the engineering
   contribution narrative (problem → measurement → fix → re-measurement).
-- `doc/chapters/results.md`, referenced if the speedup affects any
+- The thesis results chapter, referenced if the speedup affects any
   Chapter 5 figure (e.g., Fig 5.10 wall-vs-engine breakdown gains a
   Phase 14 column).
 

@@ -2,8 +2,7 @@
 
 **Purpose:** A consolidated reference for thesis writing. Captures every cross-engine comparison point developed during Version_4, paradigm spread, wallclock estimates, reproducibility, output fidelity, and "what question each engine answers" framing, across the five engines that appear anywhere in SimForge's lineage:
 
-- **Shipping:** SUMO microscopic, SUMO mesoscopic, MATSim
-- **Proposed (pending spike test):** DTALite
+- **Shipping:** SUMO microscopic, SUMO mesoscopic, MATSim, DTALite (spike test passed; adopted as the third primary engine in Version_5)
 - **Dropped:** LPSim, QarSUMO
 
 **How to use this doc:** Sections 2–7 provide the comparison tables. Section 8 is a "thesis-defense quote bank", phrasings you can lift directly into the final thesis when defending engine selection, paradigm spread, or the abandonment decisions. Section 9 cross-links the supporting docs.
@@ -145,7 +144,7 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.8 On the "two-engine framework" fallback
 
-> If the DTALite spike test fails (defined in `doc/engines/THIRD_ENGINE_OPTIONS.md` §4), SimForge ships as a 2-engine framework with three engine retrospectives in the methodology chapter. This is itself a defensible thesis contribution: the framework was designed to handle engine churn, three engines were systematically evaluated, and the framework's selection discipline produced honest answers in every case. Adapter code for LPSim and DTALite is retained in the repository, ready for reactivation when upstream conditions change.
+> (Historical contingency, written before the DTALite spike test passed.) If the DTALite spike test had failed (defined in `doc/engines/THIRD_ENGINE_OPTIONS.md` §4), SimForge would have shipped as a 2-engine framework with three engine retrospectives in the methodology chapter, itself a defensible thesis contribution: the framework was designed to handle engine churn, three engines were systematically evaluated, and the selection discipline produced honest answers in every case. In the event, the spike passed and DTALite shipped; the LPSim adapter code was removed in the Version_5 engine swap (`LPSIM_RETROSPECTIVE.md` is the surviving record).
 
 ## 9. Cross-references to supporting material
 

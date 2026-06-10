@@ -1,27 +1,47 @@
 # SimForge Test Suite
 
-**~639 tests** across **29 test files** covering adapters, metrics, validation,
+**668 tests** across **31 test files** covering adapters, metrics, validation,
 data integrity, end-to-end pipeline, the canonical SCC algorithm, the shared
 feasibility filter, the mode-aware benchmark analyser, the cross-engine
 fairness audit, OSM network fetching (mocked), demand generators, the
 three-function adapter contract, and real-binary engine smoke tests. The
 total scales with the number of bundled scenarios in `scenarios/` because
 `test_scenario_data_integrity.py` is parametrized over each one (currently
-180 = 36 × 5 bundles).
+180 = 36 × 5 bundles; the params for the two huge bundles, 200k and 500k, are
+marked `@slow` and skipped by default). With only the 3 git-tracked bundles
+the suite collects ~596 tests.
 
 Pytest configuration lives in `pyproject.toml` (`[tool.pytest.ini_options]`)
 with strict-marker enforcement, `testpaths = ["tests"]`, and `--tb=short`.
 Coverage thresholds are enforced by `pytest-cov` (≥70 % floor, currently
-**76 %**, see `[tool.coverage]` in `pyproject.toml`).  Shared
-scenario-discovery, hashing, and arm64-skip helpers live in
-`tests/conftest.py`.
+**76 %** measured on the full `--runslow` gate; the fast default tier alone
+covers ~60 % because the engine/BFS paths only execute under `--runslow`.
+See `[tool.coverage]` in `pyproject.toml`). Shared scenario-discovery,
+hashing, and arm64-skip helpers live in `tests/conftest.py`.
 
-The project ships without a hosted CI workflow, `python -m pytest` is the
-authoritative gate and is expected to pass before any merge. On Apple Silicon
+The project ships without a hosted test-CI workflow (the repo's only GitHub
+Action builds the container image), `python -m pytest` is the authoritative
+gate and is expected to pass before any merge. On Apple Silicon
 the SUMO-dependent tests skip individually via the `arm64 netconvert` segfault
 detector documented below, so the full suite stays green on a developer Mac.
 Mutation testing against the two cross-engine-fairness modules is documented
 in [`doc/MUTATION_BASELINE.md`](doc/MUTATION_BASELINE.md).
+
+Three invocation behaviours worth knowing:
+
+- **Run pytest from the repo root.** The suite resolves bundles, caches, and
+  the `tests._sticky_plugin` addopts entry relative to the root; from any
+  other working directory, collection fails at plugin import
+  (`No module named 'tests'`).
+- **Engines absent means skips, not failures.** Tests marked `requires_sumo`
+  or `requires_java` auto-skip when the binaries are unavailable. The probe
+  is venv-aware, so `.venv/bin/python -m pytest` works even without
+  `source .venv/bin/activate`.
+- **Redirected local output fills in at the end.** The sticky bar and the
+  per-file rows write to the controlling terminal (`/dev/tty`) so pytest's
+  capture cannot swallow them; redirect a local run to a file and the file
+  receives only the final summary. Batch systems without a tty (sbatch logs)
+  get every line as usual.
 
 ---
 
@@ -30,10 +50,18 @@ in [`doc/MUTATION_BASELINE.md`](doc/MUTATION_BASELINE.md).
 ```bash
 source .venv/bin/activate
 
-# Full suite (includes adapter sweeps and any available real-binary smoke).
-# ~3-4 min on arm64 (where SUMO sweeps skip individually due to the
-# netconvert segfault); ~22 s on Linux where SUMO actually runs.
+# Default suite: the fast unit tests (~30 s). The slow tests (real
+# engine runs + per-trip BFS routing, minutes each) are marked `@slow` and
+# skipped by default; the summary notes how many were deselected.
 python -m pytest
+
+# Full suite, including the slow engine/BFS tests. This is the pre-ship / CI
+# gate; it takes ~20-30 min (the MATSim prep sweep + canonical-routes BFS
+# dominate). Use it before shipping or after touching adapters/routing.
+python -m pytest --runslow
+
+# Only the slow tests (skip the fast unit suite).
+python -m pytest --runslow -m slow
 
 # Per-test ✓/✗/⊘ rows instead of the per-file rollup.
 python -m pytest -v
@@ -60,10 +88,12 @@ python -m pytest -m "not requires_sumo"   # skip tests needing the SUMO binary
 # automatically by setup_simforge.py; on a manual venv run
 # `pip install -r requirements-dev.txt` once before these commands.
 # Source/omit lists and the report format are configured in pyproject.toml.
-python -m pytest --cov --cov-report=term-missing
+# Measure against the FULL gate: the fast tier alone reads ~60 % because
+# the adapter/BFS-heavy paths only execute under --runslow.
+python -m pytest --runslow --cov --cov-report=term-missing
 
 # Enforce the 70 % coverage floor (same threshold pyproject.toml declares).
-python -m pytest --cov --cov-fail-under=70
+python -m pytest --runslow --cov --cov-fail-under=70
 
 # Parallel execution (pytest-xdist ships in requirements-dev.txt).
 python -m pytest -n auto
@@ -81,14 +111,19 @@ Registered in `pyproject.toml`. `--strict-markers` rejects unknown markers.
 
 | Marker            | Meaning                                                      |
 | ----------------- | ------------------------------------------------------------ |
+| `slow`           | Runs real engines (SUMO/MATSim/DTALite) or per-trip BFS routing; minutes each. **Skipped by default**; pass `--runslow` to include. |
 | `integration`    | Exercises multiple subsystems end-to-end                      |
 | `determinism`    | Verifies byte-identical adapter outputs across re-runs        |
 | `requires_sumo`  | Needs the SUMO `netconvert` / `sumo` binaries on PATH         |
 | `requires_java`  | Needs Java + the MATSim JAR (`lib/matsim-15.0/`)              |
 | `requires_gpu`   | Needs an NVIDIA GPU + a built LPSim binary (no CPU fallback). Preserved for the LPSim retrospective; no V5 tests carry it. |
 
-The `requires_*` markers are advisory today (no auto-skip plumbing yet), they
-let contributors filter explicitly with `-m "not requires_java"`.
+`slow` is the only marker with auto-skip plumbing: `tests/conftest.py` skips
+`@slow` tests unless `--runslow` is given, so the everyday `pytest` run stays
+fast (~30 s, this run 522 passed and 146 skipped) while `pytest --runslow` runs
+the full ~20-30 min gate (668 tests with all 5 bundles present). The `requires_*`
+markers are advisory (no auto-skip), they let
+contributors filter explicitly with `-m "not requires_java"`.
 
 ---
 
@@ -108,7 +143,7 @@ Validates the SUMO input bundle (`net.net.xml`, `routes.rou.xml`,
 missing geo projection). Includes an all-scenarios sweep that
 `pytest.skip`s when arm64 `netconvert` segfaults filter every candidate.
 
-### 3. `test_matsim_adapter.py`, MATSim Adapter (24 tests)
+### 3. `test_matsim_adapter.py`, MATSim Adapter (26 tests)
 
 Tests the MATSim adapter's helpers (`seconds_to_time_string`, `MATSimConfig`,
 vehicles XML, network XML, plans XML, config XML) and the full
@@ -197,7 +232,7 @@ multiple components, classic Cormen example, 5 000-node deep chain) plus
 `parse_network` (well-formed, self-loop drop, malformed XML rejection) and
 real bundled-network coverage (≥95 %).
 
-### 13. `test_feasibility.py`, Cross-engine feasibility filter (16 tests)
+### 13. `test_feasibility.py`, Cross-engine feasibility filter (19 tests)
 
 The shared SCC-based filter that makes SUMO and MATSim simulate the
 **same** trip subset (CHANGELOG 1.0.0 fix). Covers feasible-trip computation,
@@ -262,7 +297,7 @@ sample size (N=1 → no spread, N=2 / N=3 / N≥30 → t-table lookups),
 zero-variance and degenerate inputs, and the `ConfidenceInterval`
 dataclass fields. Same Student's-t convention as Chapter 5's tables.
 
-### 19. `test_parse_model_file.py`, ModelGen file parser (12 tests)
+### 19. `test_parse_model_file.py`, ModelGen file parser (27 tests)
 
 `pipeline/demand/parse_model_file.py`: parses the
 `<city>_model.txt` PUMS microdata files used by the census-driven
@@ -271,7 +306,7 @@ demand generator. Covers header detection, mode-code mapping
 fallback logic, and the per-city aggregate counts surfaced by
 `python help.py cities`.
 
-### 20. `test_visualization.py`, Visualization component (13 tests, visualization branch only)
+### 20. `test_visualization.py`, Visualization component (13 tests)
 
 `visualization/` is opt-in and not imported by main SimForge code
 paths, so its tests live on the `visualization` branch. The 13 tests
@@ -283,7 +318,7 @@ auto-skips when the Illinois Census tracts aren't cached locally
 (`is_state_cached("17")`), so the suite passes on a machine that hasn't
 yet run `python -m tools.download_census_tracts --all-bundled`.
 
-### 21. `test_audit_fairness.py`, Cross-engine fairness audit (29 tests)
+### 21. `test_audit_fairness.py`, Cross-engine fairness audit (40 tests)
 
 `evaluation/audit_fairness.py`: the post-benchmark Q1–Q4 audit script
 that proves every engine in a run directory was given the same problem
@@ -312,6 +347,68 @@ engine being added without the contract functions or a refactor that
 moves `run_<engine>` into a class method (the gap fixed in commit
 92a5b3d for SUMO).
 
+### 23. `test_turn_restrictions.py`, OSM turn restrictions (17 tests)
+
+Restriction parsing from `network.xml`, `build_forbidden_moves`
+(`no_*` forbids the named pair, `only_*` forbids every other exit),
+the state-aware BFS that routes around forbidden movements, a real-bundle
+load, and the DTALite `movement.csv` writer (one GMNS row per restriction,
+capacity 0; no file when a network has no restrictions).
+
+### 24. `test_vehicle_types.py`, Canonical vehicle type (19 tests)
+
+Pins the canonical car constants (length 5.0 m + minGap 2.5 m = effective
+7.5 m, maxSpeed 40 m/s, PCE 1.0) and the cross-engine equivalence: SUMO's
+`length + minGap` must equal MATSim's effective vehicle length, extracted
+from the generated XML of both adapters.
+
+### 25. `test_demand_composition.py`, Demand composition (7 tests)
+
+V5+ `purpose`-column tally (AM/PM peaks, chain legs, school chains),
+graceful `None` for pre-V5 bundles, and the report formatter.
+
+### 26. `test_canonical_routes.py`, Shared BFS routes (11 tests, `@slow`)
+
+The Phase 14 shared route computation: serial API, content-addressed JSONL
+cache (warm reuse, invalidation on demand byte changes), byte-identity
+against the legacy in-adapter BFS, byte-identity of SUMO routes.rou.xml and
+MATSim plans.xml with vs without precomputed routes, and parallel == serial
+determinism at 2 and 4 workers.
+
+### 27. `test_generate_scorecard.py`, Reproducibility scorecard (22 tests)
+
+R-band interpretation, Q1 agree/drift/N-A verdicts, per-cell R math
+(singletons excluded), the end-to-end markdown render on a synthetic run
+dir, and the CLI's results-JSON resolution error paths.
+
+### 28. `test_recover_partial_summary.py`, Recovery tool (6 tests)
+
+The harness cell-tape regex (success wall/engine seconds, failure messages,
+non-matching lines ignored, missing log file) feeding
+`tools/recover_partial_summary`.
+
+### 29. `test_run_benchmark.py`, Benchmark harness (22 tests)
+
+BenchmarkHarness unit coverage with monkeypatched adapters: explicit
+`--output` override, the `.prepared` sentinel prep cache (warm hit, cold
+write, manifest-hash invalidation), scoped-output collapse, hardlink
+mirroring, the global canonical-routes cache root + legacy migration, and
+per-cell failure isolation (unknown engine, missing scenario, corrupt
+signals all become failed cells, never exceptions).
+
+### 30. `test_runspec.py`, RunSpec schema (23 tests)
+
+`SimulationMode` aliases, `RunConfig` validation (repeats/timeout floors,
+the `seed_increment=False with repeats>1` rejection), `get_seeds`, and
+YAML loading round-trips with missing-key / unknown-engine / empty-runs
+errors.
+
+### 31. `test_run_cli.py`, run.py parity (3 tests)
+
+Pins run.py to the harness's correctness guarantees: failure isolation in
+`run_simulation` (unknown engine, missing scenario) and a source-inspection
+guard that engine timing uses `time.monotonic()`.
+
 ---
 
 ## Platform notes
@@ -334,30 +431,42 @@ scenarios are well below the threshold and never skip.
 | ---------------------- | ------- | ----------------------------------------------------------- |
 | SUMO Adapter           | 4       | File generation, determinism, geo projection, sweep         |
 | Adapter determinism    | 8       | Byte-identical SUMO/MATSim outputs across re-runs           |
-| MATSim Adapter         | 24      | Helpers, builders, prepare path, sweep                      |
+| MATSim Adapter         | 26      | Helpers, builders, prepare path, sweep                      |
 | DTALite Adapter        | 46      | Helpers, writers, demand-driven zoning, determinism, output parsing, end-to-end smoke |
 | Fidelity Metrics       | 21      | RMSE, GEH, KS, combined                                     |
 | Travel Time            | 2       | Tripinfo parser                                             |
 | Reproducibility        | 15      | R-score core, multi-KPI, thresholds                         |
 | Scalability            | 8       | Monotonic timer, throughput, comparison                     |
 | Validator              | 2       | Real-bundle pass + corruption fail                          |
-| Data Integrity         | 216     | 7 classes × every bundled scenario (parametrized)           |
+| Data Integrity         | 180     | 7 classes × every bundled scenario (parametrized; 36 × 5 bundles) |
 | E2E Pipeline           | 20      | 13 corruption modes, 3 robustness, 4 routing                |
 | SCC algorithm          | 14      | Iterative Kosaraju + bundled-network coverage               |
-| Feasibility filter     | 16      | Shared cross-engine trip filter                             |
+| Feasibility filter     | 19      | Shared cross-engine trip filter (mode-aware)                |
 | Benchmark analyser     | 24      | Mode-aware grouping + identity fallback + renderers         |
 | OSM fetch              | 20      | Mocked Overpass, bbox validation, cache pin                 |
 | Demand generators      | 21      | Synthetic generators + SCC restriction + seed               |
-| ModelGen parser        | 12      | PUMS microdata header / mode-code parsing                   |
+| ModelGen parser        | 27      | PUMS microdata parsing, JWTRNS mode codes, HBSchool helpers |
 | Confidence (95 % CI)   | 18      | Student's-t helper used by all per-cell summaries           |
 | Engine smoke           | 4       | Real-binary SUMO/MATSim/DTALite smoke + availability report |
-| Audit fairness         | 29      | HMS parser, per-engine TT extractors, 4-layout cell detector, orchestrator integration |
-| Visualization (opt-in) | 13      | Bundle / coverage loaders, CLI dry-run + render smoke (visualization branch only) |
-| **Total**              | **~477** | **~3-4 min** on arm64 (SUMO sweeps skip individually via the netconvert detector); **~22 s** on Linux where SUMO actually runs. Headline count assumes the **3 tracked bundles** (chicago_1k_car, nyc_10k_car, la_50k_car), every additional bundle in `scenarios/` adds 36 parametrized data-integrity tests, so generating all 5 standard tiers (`scripts/01..05`) lifts the count to ~549 with proportionally longer wall time (~14 min on M-series Mac). V5+ added `tests/test_turn_restrictions.py` (Phase 7), `tests/test_demand_composition.py` (Phase 10), `tests/test_vehicle_types.py` (Phase 11), and the `TestHBSchoolHelpers` class on `tests/test_parse_model_file.py` (Phase 9). |
+| Audit fairness         | 40      | HMS parser, per-engine TT extractors, layout detectors, orchestrator integration |
+| Turn restrictions      | 17      | OSM restriction parser, forbidden moves, state-aware BFS, movement.csv |
+| Vehicle types          | 19      | Canonical car constants + cross-engine equivalence          |
+| Demand composition     | 7       | V5+ `purpose` column tally, AM/PM split, chain legs         |
+| Canonical routes       | 11      | Shared parallel-BFS route cache, byte-identity vs legacy    |
+| Scorecard renderer     | 22      | R bands, Q1 verdicts, end-to-end markdown render            |
+| Recovery tool          | 6       | Harness cell-tape parsing for partial-summary recovery      |
+| Benchmark harness      | 22      | Prep cache, scoped output, routes-cache migration, failure isolation |
+| RunSpec schema         | 23      | Mode aliases, repeats/timeout/seed_increment guards, YAML   |
+| run.py parity          | 3       | Failure isolation + monotonic-timing pins on the quick runner |
+| Adapter contract       | 6       | Three-function contract regression across all engines       |
+| Visualization (opt-in) | 13      | Bundle / coverage loaders, CLI dry-run + render smoke       |
+| **Total**              | **668** | Default `pytest` runs the **fast** suite only (~30 s, this run 522 passed and 146 skipped): unit tests plus small-bundle integration, with the `@slow` engine / BFS-routing / huge-bundle (200k, 500k) tests deselected. `pytest --runslow` runs the **full** suite (~20-30 min, the pre-ship / CI gate); on Apple Silicon (arm64) 13 SUMO `netconvert` tests skip via the segfault detector and run on Linux, where the full sweep is far faster. The **668** headline assumes all **5 standard bundles** are present in `scenarios/` (chicago_1k_car, nyc_10k_car, la_50k_car, chicago_200k_car, nyc_500k_car); with only the **3 git-tracked bundles** the suite collects **~596** (each bundle adds ~36 parametrized data-integrity tests). V5+ added `tests/test_turn_restrictions.py` (Phase 7), `tests/test_demand_composition.py` (Phase 10), `tests/test_vehicle_types.py` (Phase 11), and the `TestHBSchoolHelpers` class on `tests/test_parse_model_file.py` (Phase 9). |
 
 Line coverage across `adapters`, `evaluation`, and `pipeline` sits at
-**~76 %** (pytest-cov + `branch = true`).  The coverage floor is **70 %**
-to leave headroom for ongoing refactoring; the uncovered lines are
-concentrated in the subprocess-invoking `run_matsim` path and the
-PUMS/modelgen parsers (tested instead by the all-scenarios adapter
-sweeps and the engine-smoke tests).
+**~76 %** on the full `--runslow` gate (pytest-cov + `branch = true`;
+re-measured 2026-06: 76.4 %). The fast default tier alone reads ~60 %
+because the engine/BFS code paths only execute under `--runslow`. The
+coverage floor is **70 %** to leave headroom for ongoing refactoring; the
+uncovered lines are concentrated in the subprocess-invoking `run_matsim`
+path and the PUMS/modelgen parsers (tested instead by the all-scenarios
+adapter sweeps and the engine-smoke tests).

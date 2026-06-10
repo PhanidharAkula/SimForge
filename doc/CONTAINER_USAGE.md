@@ -148,9 +148,11 @@ docker inspect ghcr.io/phanidharakula/simforge:latest --format='{{index .RepoDig
 singularity inspect simforge_latest.sif | grep -E 'Schema|Created|Digest'
 ```
 
-Compare the `sha256:...` digest against `lib/container/manifest.json`
-(thesis-tier benchmark runs pin a specific digest; see CHANGELOG
-Wave 2 entry).
+Compare the `sha256:...` digest against the GHCR package page for the
+pinned tag recorded in `lib/container/manifest.json` (the manifest pins
+the immutable commit-SHA tag, `phase-14-canonical-routes` / `db8d786`,
+rather than a literal digest string; thesis-tier benchmark runs used that
+tag, see the CHANGELOG Wave 2 entry).
 
 ---
 

@@ -157,7 +157,3 @@ top-level `<turn_restrictions>` block.
 
 - This document defines **v0** of the canonical network schema.
 - Future versions may extend attributes but should preserve backward compatibility with v0.
-
----
-
-Do you have any specific attributes or elements you would like me to detail further, or would you like an example of a full `network.xml` file?

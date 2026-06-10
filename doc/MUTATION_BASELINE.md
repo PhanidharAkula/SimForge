@@ -37,7 +37,12 @@ running the full 260-test suite per mutant would take over an hour.  The
 two targeted test files assert every observable contract of the two
 modules, so the coverage gap is small.
 
-## Baseline (2026-04-19)
+## Baseline (not yet executed)
+
+The mutmut harness is configured and scoped (above), but the baseline run
+has never been executed, so this table is intentionally unfilled. The two
+modules are instead guarded by their direct unit tests (`test_feasibility`,
+19 tests; `test_scc`, 14 tests) and the byte-identity determinism suite.
 
 | Module                              | Mutants generated | Killed | Survived | Score |
 | ----------------------------------- | ----------------- | ------ | -------- | ----- |
@@ -45,10 +50,10 @@ modules, so the coverage gap is small.
 | `pipeline/network/scc.py`           | TBD               | TBD    | TBD      | TBD   |
 | **Combined**                        | **TBD**           | TBD    | TBD      | TBD   |
 
-> Populate this table the first time mutmut is run against the `Version_2`
-> branch.  Re-run and update whenever either module changes.  Surviving
-> mutants should either be killed by a new test assertion or justified
-> here (e.g. equivalent mutants that don't change behaviour).
+> Populate this table the first time mutmut is run. Re-run and update
+> whenever either module changes. Surviving mutants should either be
+> killed by a new test assertion or justified here (e.g. equivalent
+> mutants that don't change behaviour).
 
 ## Surviving-mutant review checklist
 

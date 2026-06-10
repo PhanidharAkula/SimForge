@@ -228,12 +228,15 @@ python -m tools.generate_scorecard runs/benchmark_small
 
 ## Generating the Larger Tiers (Optional)
 
-The repo only commits the `chicago_1k_car` bundle. To recreate the 10K/50K/200K/500K tiers used for scalability discussion:
+The repo commits the `chicago_1k_car`, `nyc_10k_car`, and `la_50k_car`
+bundles; the 200K/500K tiers are not tracked (their network/signals files
+exceed GitHub's 100 MB limit). To recreate the untracked tiers, or to
+regenerate any tier from scratch:
 
 ```bash
 python scripts/02_nyc_10k_car.py     # 10K NYC car, 7–9 AM
-python scripts/03_la_50k_car.py # 50K LA car+transit+bike, 6–10 AM
-python scripts/04_chicago_200k_car.py    # 200K Chicago car+transit, 24 h
+python scripts/03_la_50k_car.py      # 50K LA car, 6–10 AM
+python scripts/04_chicago_200k_car.py    # 200K Chicago car, 24 h
 python scripts/05_nyc_500k_car.py       # 500K NYC car, 6–10 AM
 ```
 
@@ -269,6 +272,14 @@ The schedule-first census demand generator is **byte-reproducible across archite
 | `network.xml` | `aef23159dd9b0d96088ef84410fc2dea`    | `ebde743b57d330544f8e9dede8e61911`        | ⚠️ semantic-identical, serialization differs |
 
 The `network.xml` MD5 differs only because of **lxml-version-dependent XML serialization** (attribute ordering, float-precision rendering). The semantic content, node IDs, edge `from`/`to` pairs, lengths, lane counts, SCC membership, is identical, as evidenced by the two downstream artefacts being byte-equal: `signals.xml` and `demand.csv` reference network node IDs by string, so any drift in the underlying node set would have propagated and broken those matches.
+
+> **2026-06 update:** the main residual source of `network.xml` byte drift
+> was later traced to hash-seed-dependent ordering when reducing
+> osmnx merged-edge tag lists (`highway`, `maxspeed`, `lanes`, `name`) and
+> fixed with deterministic picks in
+> `pipeline/network/build_network_from_osm.py`. Same-machine regenerations
+> of a scenario are now byte-identical including `network.xml`; the
+> comparison recorded above predates that fix.
 
 What this means in practice: feeding either the Mac-generated or the Pitzer-generated `demand.csv` into a SUMO/MATSim simulation will produce the same engine inputs and (under the same engine version + seed) the same simulation outputs. The generation step is fully reproducible at the level the simulators care about.
 
@@ -387,7 +398,7 @@ Produces:
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 ```
 
-Renders Fig 5.1 – Fig 5.10 (PNG + PDF) into `runs/benchmark_small/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
+Renders Fig 5.1 – Fig 5.10 (PNG, 300 dpi) into `runs/benchmark_small/plots/`. See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for what each figure shows.
 
 ---
 
@@ -413,7 +424,7 @@ The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `472483
 
 The trip-count gap on SUMO is **engine-internal mobsim behaviour** (SUMO refuses congested edge insertions; MATSim's queue mobsim never refuses; DTALite assigns route paths to all OD pairs). It is the simulation outcome we want to *measure*, not an input asymmetry, every `feasibility_report.json` records `feasible_trips == total_trips`. Verified by Q1 of `audit_fairness` (PASS on all three scenarios).
 
-**Headline cross-engine alignment:** SUMO/MATSim mean-TT ratio is 0.869 (-13.1 %) at 1 K, 1.132 (+13.2 %) at 10 K, and **1.046 (+4.6 %) at 50 K**, alignment improves with scale (law of large numbers). See `doc/chapters/results.md` §5.3 for the discussion.
+**Headline cross-engine alignment:** SUMO/MATSim mean-TT ratio is 0.869 (-13.1 %) at 1 K, 1.132 (+13.2 %) at 10 K, and **1.046 (+4.6 %) at 50 K**, alignment improves with scale (law of large numbers). See the thesis results chapter §5.3 for the discussion.
 
 ---
 
@@ -422,7 +433,7 @@ The trip-count gap on SUMO is **engine-internal mobsim behaviour** (SUMO refuses
 | Problem                          | Solution                                                                                                |
 | -------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `MATSim ClassNotFoundException`  | The classpath includes everything in `libs/` automatically. Re-run `setup_simforge.py` to repair the JAR. |
-| `SUMO command not found`         | `brew install sumo` (macOS) or `apt-get install sumo` (Linux).                                           |
+| `SUMO command not found`         | SUMO ships in `requirements.lock` (the `eclipse-sumo` wheel): `uv pip install -r requirements.lock`, then `source .venv/bin/activate`. No brew/apt package needed.   |
 | `Java version too old`           | `brew install openjdk@17` (macOS) or `apt-get install openjdk-17-jdk` (Linux).                            |
 | Slow MATSim runs                 | MATSim has ~5 – 7 s JVM startup overhead per run; this dominates wall-clock for the 1K tier.              |
 | `FileNotFoundError: osm_data/illinois-*.osm.pbf` during generation | Run `python tools/download_osm.py` to fetch the hash-pinned PBFs.                      |
@@ -482,10 +493,10 @@ To reproduce exactly, use these versions.
 
 ```bibtex
 @mastersthesis{simforge2026,
-  author = {Dharakula, Phani},
+  author = {Akula, Phanidhar},
   title  = {SimForge: A Reproducible Cross-Simulator Benchmarking Framework
             for Urban Traffic Simulation},
-  school = {University of Texas at Austin},
+  school = {Miami University},
   year   = {2026}
 }
 ```

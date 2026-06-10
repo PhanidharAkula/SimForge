@@ -8,7 +8,7 @@
 4. [Scenario Data](#scenario-data)
 5. [Running Simulations](#running-simulations)
 6. [Understanding the Output](#understanding-the-output)
-7. [GPU Acceleration](#gpu-acceleration)
+7. [Third Engine, DTALite](#third-engine-dtalite-cpu-mesoscopic-dta)
 8. [HPC / Supercomputer](#hpc--supercomputer)
 9. [Command Reference](#command-reference)
 10. [Project Structure](#project-structure)
@@ -74,8 +74,12 @@ rm matsim-15.0-release.zip
 # Toolchain + dep + binary report, same output expected on any locked machine
 python tools/env_report.py
 
-# Run the test suite
+# Run the fast test suite (default, ~30 s; slow engine / BFS-routing /
+# huge-bundle 200k+500k tests are skipped)
 python -m pytest
+
+# Run the full suite (~20-30 min, the pre-ship / CI gate)
+python -m pytest --runslow
 ```
 
 `env_report.py` prints Python version, all 12 watched dep versions, SUMO/Java/MATSim binary status, and counts of OSM PBFs / ModelGen files / scenarios. It's the canonical cross-platform parity check (run it on any second machine and `diff` the outputs to verify they match).
@@ -129,13 +133,15 @@ The result is schema-identical to what the Overpass path returned, downstream ca
 
 ### Bundled Scenarios
 
-One small scenario is committed to the repo so the test suite and the default `run.py` invocation work out of the box:
+Three scenarios are committed to the repo so the test suite and the default `run.py` invocation work out of the box:
 
-| Scenario          | City    | Trips | Modes | Bundle size |
-| ----------------- | ------- | ----- | ----- | ----------- |
-| `chicago_1k_car`  | Chicago | 1,000 | car   | ~1 MB       |
+| Scenario          | City    | Trips  | Modes | Bundle size |
+| ----------------- | ------- | ------ | ----- | ----------- |
+| `chicago_1k_car`  | Chicago | 1,000  | car   | ~1 MB       |
+| `nyc_10k_car`     | NYC     | 10,000 | car   | ~36 MB      |
+| `la_50k_car`      | LA      | 50,000 | car   | ~140 MB     |
 
-Larger scenarios are not committed, generate them locally with the helper scripts below.
+The 200K/500K tiers are not committed (their network/signals files exceed GitHub's 100 MB limit), generate them locally with the helper scripts below.
 
 ### Generation Tiers
 
@@ -370,8 +376,8 @@ sbatch cluster/jobs/05_nyc_500k_car.sbatch       # or any of cluster/jobs/01..05
 | `python generate.py --preset <name>`                   | Generate a scenario from a preset         |
 | `python -m evaluation.analyze_benchmark <results.json>` | Print stats + coverage diagnostic         |
 | `python -m evaluation.generate_plots    <results.json>` | Render the 10 thesis figures              |
-| `tools/clean.sh [--all]`                             | Wipe regenerable caches                    |
-| `python -m pytest tests/ -v`                           | Run the test suite (~574 tests with all 5 bundles, ~502 with the 3 tracked) |
+| `python -m pytest`                                     | Fast suite, default (~30 s; slow tests skipped). Full suite (668 tests with all 5 bundles, ~596 with the 3 tracked, ~20-30 min): `python -m pytest --runslow` |
+| `tools/clean.sh [--all]`                               | Wipe regenerable caches (`--all` includes `cache/`) |
 
 ---
 
@@ -402,7 +408,7 @@ SimForge/
 ├── tools/                  # Operator utilities (clean.sh, download_osm.py)
 ├── runspecs/               # Benchmark YAML configurations
 ├── scenarios/              # Bundled canonical scenarios
-├── tests/                  # ~574 unit & integration tests
+├── tests/                  # 668 unit & integration tests across 31 files (~596 with the 3 tracked bundles); a `slow` marker gates the heavy tests, default `pytest` skips them (run with `--runslow`)
 ├── run.py                  # Convenience CLI
 ├── generate.py             # Scenario generator entry point
 ├── setup_simforge.py       # One-command bootstrap
@@ -417,7 +423,7 @@ SimForge/
 | Problem                | Solution                                                          |
 | ---------------------- | ----------------------------------------------------------------- |
 | `MATSim JAR not found`                          | Re-run `python setup_simforge.py`, or run the manual `curl` above                                     |
-| `SUMO not found`                                | `brew install sumo`                                                                                    |
+| `SUMO not found`                                | Comes from `requirements.lock` (the `eclipse-sumo` wheel): `uv pip install -r requirements.lock`, then `source .venv/bin/activate`              |
 | `Java not found`                                | `brew install openjdk@17`                                                                              |
 | `FileNotFoundError: osm_data/<state>.osm.pbf`   | Run `python tools/download_osm.py`, fetches + SHA-256-verifies every PBF in the manifest            |
 | `ImportError: osmium`                           | `pip install 'osmium>=4.0'` (not `pyrosm`; that package no longer builds on Python 3.13+)              |
