@@ -313,8 +313,19 @@ def _write_config_xml(
 
 
 def _write_manifest_xml(path: Path, scenario_id: str) -> None:
-    """Write canonical manifest.xml."""
-    root = etree.Element("manifest", version="0.1")
+    """Write canonical manifest.xml.
+
+    Each canonical <file> entry carries a sha256 of the file's bytes, so the
+    bundle is self-verifying: validate_bundle recomputes and compares them and
+    flags any post-generation tampering. generate_scenario calls this LAST,
+    after demand.csv exists, so all four canonical files get hashes; a file
+    absent at manifest-write time would be listed without one (validate_bundle
+    skips the check for those).
+    """
+    import hashlib
+
+    bundle_dir = path.parent
+    root = etree.Element("manifest", version="0.2")
     etree.SubElement(root, "scenario", id=scenario_id)
 
     cf = etree.SubElement(root, "canonical_files")
@@ -324,7 +335,11 @@ def _write_manifest_xml(path: Path, scenario_id: str) -> None:
         ("config", "config.xml"),
         ("signals", "signals.xml"),
     ]:
-        etree.SubElement(cf, "file", type=ftype, path=fname)
+        attrs = {"type": ftype, "path": fname}
+        fpath = bundle_dir / fname
+        if fpath.is_file():
+            attrs["sha256"] = hashlib.sha256(fpath.read_bytes()).hexdigest()
+        etree.SubElement(cf, "file", **attrs)
 
     etree.ElementTree(root).write(
         str(path), pretty_print=True, xml_declaration=True, encoding="UTF-8",
@@ -493,7 +508,28 @@ def generate_scenario(
     progress.start()
 
     # ---- 1. Network from OSM ----
-    if out.exists():
+    # Guard against a typo'd --output recursively wiping unrelated data. We
+    # only delete a pre-existing NON-EMPTY directory when it is clearly ours to
+    # delete: inside the project's scenarios/ tree, or a previously generated
+    # SimForge bundle (recognizable by its manifest.xml). An empty or
+    # nonexistent target is always safe.
+    if out.exists() and any(out.iterdir()):
+        scenarios_root = (project_root / "scenarios").resolve()
+        out_resolved = out.resolve()
+        is_under_scenarios = (
+            out_resolved == scenarios_root or scenarios_root in out_resolved.parents
+        )
+        looks_like_bundle = (out / "manifest.xml").is_file()
+        if not (is_under_scenarios or looks_like_bundle):
+            raise SystemExit(
+                f"Refusing to delete non-empty directory that is not a SimForge "
+                f"scenario bundle:\n    {out_resolved}\n"
+                f"  --output should point at scenarios/<id> or a previously "
+                f"generated bundle. Remove the directory yourself if you really "
+                f"do mean to overwrite it."
+            )
+        shutil.rmtree(out)
+    elif out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
 
@@ -534,7 +570,7 @@ def generate_scenario(
         else:
             note = f"fallback (PBF not found at osm_data/{pbf_path.name if pbf_path else '?'})"
         progress.print_above(f"           source: Overpass API ⚠ ({note})")
-        progress.print_above(f"                   NOT hash-pinned, bundle won't be byte-reproducible")
+        progress.print_above("                   NOT hash-pinned, bundle won't be byte-reproducible")
         effective_pbf = None
     else:
         size_mb = pbf_path.stat().st_size / 1e6
@@ -576,15 +612,19 @@ def generate_scenario(
                          f"({_fmt_dur(step_times['Signals'])})")
     progress.advance()
 
-    # ---- 3. Config / Manifest ----
-    progress.print_above("\n▶ Step 3/4: Config + manifest")
-    progress.set_label("Config + manifest")
+    # ---- 3. Config ----
+    # The manifest is deliberately NOT written here: it is written at the end
+    # of step 4, after demand.csv exists, so every canonical file (network,
+    # signals, config, demand) gets a sha256 attribute. Writing it here used
+    # to leave demand.csv unhashed, the one file self-verification most needs
+    # to cover.
+    progress.print_above("\n▶ Step 3/4: Config")
+    progress.set_label("Config")
     t_step = time.time()
     _write_config_xml(out / "config.xml", scenario_id, description,
                       start_time, end_time, seed)
-    _write_manifest_xml(out / "manifest.xml", scenario_id)
     step_times["Config"] = time.time() - t_step
-    progress.print_above(f"  ✓ config.xml + manifest.xml  ({_fmt_dur(step_times['Config'])})")
+    progress.print_above(f"  ✓ config.xml  ({_fmt_dur(step_times['Config'])})")
     progress.advance()
 
     # ---- 4. Demand ----
@@ -635,6 +675,11 @@ def generate_scenario(
             mode=modes[0] if len(modes) == 1 else "car",
         )
 
+    # Manifest last, now that all four canonical files exist on disk: every
+    # <file> entry (network, demand, config, signals) gets a sha256 attribute
+    # and the bundle is fully self-verifying.
+    _write_manifest_xml(out / "manifest.xml", scenario_id)
+
     step_times["Demand"] = time.time() - t_step
     elapsed = round(time.time() - t0, 1)
     strategy = dem.get("strategy", "synthetic")
@@ -649,6 +694,7 @@ def generate_scenario(
         demand_summary = f"{dem['trip_count']:,} trips"
     progress.print_above(f"  ✓ demand.csv: {demand_summary}  "
                          f"({_fmt_dur(step_times['Demand'])})")
+    progress.print_above("  ✓ manifest.xml: all 4 canonical files SHA-256 stamped")
     progress.advance()
     progress.stop()
 
@@ -676,6 +722,13 @@ def generate_scenario(
     print(f"    {'demand.csv':<{art_w}}  {dem['trip_count']:,} trips ({strategy})")
     print(f"    {'config.xml':<{art_w}}  {time_desc} simulation window, seed={seed}")
     print(f"    {'manifest.xml':<{art_w}}  SHA-256 checksummed\n")
+    # Flag a drastic shortfall (e.g. a degenerate/tiny network whose largest SCC
+    # cannot supply distinct OD pairs). A mild shortfall is normal when census
+    # demand is capped, so only warn below half the request or at zero.
+    if dem["trip_count"] == 0 or dem["trip_count"] < trips // 2:
+        print(f"  ⚠ Generated only {dem['trip_count']:,} of {trips:,} requested "
+              f"trips. The network may be too small or fragmented; check the "
+              f"scenario before benchmarking.\n")
     print("=" * 60 + "\n")
 
     # Save generation metadata (includes OSM provenance so any scenario can be
@@ -850,13 +903,25 @@ def main() -> None:
         show_list()
         return
 
+    # Parse --modes once: strip whitespace around tokens (so "car, transit"
+    # works like run.py does). Any empty token (--modes "", --modes ",", or
+    # --modes "car,,bike") is an explicit error, never a silent drop: a stray
+    # comma must not quietly launch a multi-minute generation with a mode
+    # list the user didn't intend.
+    cli_modes = None
+    if args.modes is not None:
+        cli_modes = [m.strip() for m in args.modes.split(",")]
+        if not cli_modes or any(not m for m in cli_modes):
+            print(f"Error: --modes contains an empty entry: {args.modes!r}. "
+                  f"Provide e.g. --modes car,transit.")
+            sys.exit(1)
+
     # Handle --preset (load defaults, then allow overrides)
     if args.preset:
         preset = PRESETS[args.preset]
         city = args.city or preset["city"]
         trips = args.trips if args.trips is not None else preset["trips"]
-        modes = (args.modes.split(",") if args.modes
-                 else preset["modes"])
+        modes = cli_modes if cli_modes is not None else preset["modes"]
         start_time = (args.start_time if args.start_time is not None
                       else preset["start_time"])
         end_time = (args.end_time if args.end_time is not None
@@ -874,7 +939,7 @@ def main() -> None:
 
         city = args.city
         trips = args.trips if args.trips is not None else 5_000
-        modes = args.modes.split(",") if args.modes else ["car"]
+        modes = cli_modes if cli_modes is not None else ["car"]
         # Default to the 7–8 AM rush-hour window used by the bundled scenario
         # so `generate.py --city chicago --trips 1000` reproduces chicago_1k_car
         # exactly (seed 42, radius 2 km, 25200–28800 s).
@@ -890,31 +955,53 @@ def main() -> None:
             print(f"Error: Invalid mode '{m}'. Valid modes: {', '.join(sorted(VALID_MODES))}")
             sys.exit(1)
 
+    if start_time < 0:
+        print(f"Error: --start-time ({start_time}) must be >= 0 (seconds from midnight)")
+        sys.exit(1)
+
+    if end_time > 86400:
+        print(f"Error: --end-time ({end_time}) must be <= 86400 (24h in seconds)")
+        sys.exit(1)
+
     if start_time >= end_time:
         print(f"Error: --start-time ({start_time}) must be < --end-time ({end_time})")
+        sys.exit(1)
+
+    if radius_km <= 0:
+        print(f"Error: --radius ({radius_km}) must be > 0 km")
         sys.exit(1)
 
     if trips < 1:
         print("Error: --trips must be >= 1")
         sys.exit(1)
 
-    # Run generation
-    generate_scenario(
-        city=city,
-        trips=trips,
-        modes=modes,
-        start_time=start_time,
-        end_time=end_time,
-        radius_km=radius_km,
-        seed=seed,
-        output_dir=args.output,
-        scenario_id=args.id,
-        synthetic=args.synthetic,
-        allow_oversample=args.allow_oversample,
-        allow_overpass=allow_overpass,
-        force_overpass=force_overpass,
-        verbose=args.verbose,
-    )
+    # Run generation. Deep pipeline errors (oversample guard, missing PBF,
+    # Overpass fetch failures) carry user-facing remediation text already;
+    # print them as clean errors instead of letting the traceback bury them.
+    try:
+        generate_scenario(
+            city=city,
+            trips=trips,
+            modes=modes,
+            start_time=start_time,
+            end_time=end_time,
+            radius_km=radius_km,
+            seed=seed,
+            output_dir=args.output,
+            scenario_id=args.id,
+            synthetic=args.synthetic,
+            allow_oversample=args.allow_oversample,
+            allow_overpass=allow_overpass,
+            force_overpass=force_overpass,
+            verbose=args.verbose,
+        )
+    except (ValueError, FileNotFoundError, RuntimeError) as e:
+        print(f"\nError: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("\nInterrupted (Ctrl-C); the partially written bundle is incomplete. "
+              "Re-run the same command to regenerate it.")
+        sys.exit(130)
 
 
 if __name__ == "__main__":

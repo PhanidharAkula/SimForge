@@ -17,6 +17,7 @@ Default repeats: 10
 
 import argparse
 import json
+import re
 import shutil
 import subprocess
 import sys
@@ -25,6 +26,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
+from adapters.common.engine_binaries import find_engine_binary
 from execution.cli_format import format_error_oneline as _format_error_oneline
 
 # =============================================================================
@@ -43,11 +45,16 @@ def get_scenarios() -> Dict[str, dict]:
         if scenario_path.is_dir() and (scenario_path / "manifest.xml").exists():
             name = scenario_path.name
             
-            # Parse trip count from name
-            import re
-            m = re.search(r'(\d+[km]?)', name)
-            if m:
-                trips = m.group(1).upper()
+            # Parse trip count from name. Anchor to the count token (a digit
+            # run immediately followed by a k/m magnitude suffix, e.g. 1k or
+            # 200k), not the first digit run anywhere. Take the last match so
+            # a city/year prefix in the name can't be mistaken for the count.
+            # The lookahead is needed because \b never fires between "k" and
+            # "_" (both word characters), which made every bundled name like
+            # chicago_1k_car show "?" trips.
+            matches = re.findall(r'(\d+[km])(?=_|$)', name)
+            if matches:
+                trips = matches[-1].upper()
             else:
                 trips = "?"
             
@@ -63,11 +70,18 @@ def get_scenarios() -> Dict[str, dict]:
 def check_engine_installed(engine: str) -> bool:
     """Check if an engine is installed."""
     if engine == "sumo":
-        return shutil.which("sumo") is not None
+        # Venv-aware probe: the eclipse-sumo wheel puts the binaries next to
+        # the interpreter, so an unactivated `.venv/bin/python run.py` must
+        # still find them. Prepare needs netconvert too, so require both.
+        return (find_engine_binary("sumo") is not None
+                and find_engine_binary("netconvert") is not None)
     elif engine == "matsim":
-        matsim_jar = Path("lib/matsim-15.0/matsim-15.0.jar")
+        # Use the adapter's own JAR discovery so detection here matches the
+        # runner. find_matsim_jar() checks MATSIM_HOME, lib/matsim-15.0/, and
+        # the standard install paths, returning None when nothing is found.
+        from adapters.matsim.matsim_adapter import find_matsim_jar
         java_ok = shutil.which("java") is not None
-        return matsim_jar.exists() and java_ok
+        return find_matsim_jar() is not None and java_ok
     elif engine == "dtalite":
         from adapters.dtalite import is_dtalite_available
         return is_dtalite_available()
@@ -147,7 +161,14 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
     
     native_dir = output_dir / "native_files"
     native_dir.mkdir(parents=True, exist_ok=True)
-    
+
+    # Remove stale outputs from a previous (possibly crashed) run before
+    # launching SUMO. Otherwise a crash that produces no new tripinfo.xml
+    # could leave the old file in place and we would parse stale metrics
+    # while reporting success.
+    (output_dir / "tripinfo.xml").unlink(missing_ok=True)
+    (output_dir / "statistics.xml").unlink(missing_ok=True)
+
     # Convert canonical to native SUMO format
     try:
         _summary = prepare_sumo_inputs(scenario_path, native_dir)
@@ -161,8 +182,16 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
     
     tripinfo_path = output_dir / "tripinfo.xml"
     
-    # Build SUMO command
-    sumo_cmd = ["sumo"]
+    # Build SUMO command. Resolve the binary venv-aware (PATH first, then the
+    # interpreter's own bin/) so unactivated invocations still find the
+    # eclipse-sumo wheel's executables.
+    sumo_bin = find_engine_binary("sumo")
+    if sumo_bin is None:
+        return {"status": "failed", "wall_time_s": 0,
+                "error": ("sumo binary not found. Install with: "
+                          "uv pip install -r requirements.lock "
+                          "(bundles eclipse-sumo), or activate the venv.")}
+    sumo_cmd = [sumo_bin]
     if mode == "meso":
         sumo_cmd.extend(["--mesosim", "true"])
     
@@ -174,8 +203,10 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
         "--statistic-output", str((output_dir / "statistics.xml").resolve()),
     ])
     
-    # Run SUMO
-    start_time = time.time()
+    # Run SUMO. Use a monotonic clock for the duration: time.time() is
+    # wall-clock and can jump backward/forward (NTP, laptop sleep), corrupting
+    # the engine-time the runtime table reports.
+    start_time = time.monotonic()
     try:
         proc_result = subprocess.run(
             sumo_cmd,
@@ -184,21 +215,25 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
             timeout=timeout,
             check=False,
         )
-        wall_time = time.time() - start_time
-        
-        # SUMO returns non-zero for warnings (e.g., code 100).
-        # Check for actual errors in stderr, not just return code.
-        has_error = False
+        wall_time = time.monotonic() - start_time
+
+        # SUMO exits non-zero on warnings (e.g. code 100) but still writes a
+        # usable tripinfo.xml in that case, so a non-zero exit is only a real
+        # failure when it crashed (signal exit) or produced no tripinfo. We must
+        # never report a crashed run as success.
         if proc_result.returncode != 0:
             error_lines = [l for l in (proc_result.stderr or "").split("\n")
                            if l.strip().startswith("Error:")]
-            if error_lines:
-                has_error = True
-        
-        if has_error and not tripinfo_path.exists():
-            return {"status": "failed", "wall_time_s": round(wall_time, 2),
-                    "error": proc_result.stderr[:500]}
-    
+            if proc_result.returncode < 0:
+                return {"status": "failed", "wall_time_s": round(wall_time, 2),
+                        "error": f"SUMO crashed with signal {-proc_result.returncode}"}
+            if error_lines or not tripinfo_path.exists():
+                msg = "\n".join(error_lines) if error_lines else (
+                    (proc_result.stderr or "")[:500]
+                    or f"SUMO exited with code {proc_result.returncode}")
+                return {"status": "failed", "wall_time_s": round(wall_time, 2),
+                        "error": msg}
+
     except subprocess.TimeoutExpired:
         return {"status": "failed", "error": f"Timeout after {timeout}s", "wall_time_s": timeout}
     except (OSError, subprocess.SubprocessError) as e:
@@ -206,6 +241,7 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
     
     # Parse travel time metrics from tripinfo.xml
     metrics = {}
+    metrics_error = None
     if tripinfo_path.exists():
         try:
             stats = parse_sumo_tripinfo(tripinfo_path)
@@ -214,15 +250,23 @@ def run_sumo(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeou
                 "mean": stats.mean_travel_time_s,
                 "p95": stats.p95_travel_time_s,
             }
-        except (ValueError, FileNotFoundError):
-            pass
-    
-    return {
+        except (ValueError, FileNotFoundError) as e:
+            # SUMO ran but its tripinfo.xml could not be parsed. Don't
+            # silently report success with empty metrics, surface the
+            # parse failure so downstream tools can flag the cell.
+            metrics_error = f"tripinfo parse failed: {e}"
+    else:
+        metrics_error = "tripinfo.xml not produced"
+
+    result = {
         "status": "success",
         "wall_time_s": round(wall_time, 2),
         "error": None,
         "metrics": metrics,
     }
+    if metrics_error is not None:
+        result["metrics_error"] = metrics_error
+    return result
 
 
 def run_matsim(scenario_path: Path, mode: str, seed: int, output_dir: Path, timeout: int) -> dict:
@@ -327,8 +371,14 @@ def run_simulation(scenario: str, engine: str, mode: str, seed: int,
         else:
             result = {"status": "failed", "error": f"Unknown engine: {engine}"}
         return result
-    except (OSError, RuntimeError, ValueError) as e:
-        return {"status": "failed", "error": str(e), "wall_time_s": 0}
+    except Exception as e:  # noqa: BLE001
+        # Any prep/run failure becomes a failed cell, never an uncaught
+        # exception that aborts the whole benchmark loop (the per-cell loop in
+        # main() has no outer guard). The narrow (OSError, RuntimeError,
+        # ValueError) tuple used to let xml.etree ParseError (a SyntaxError
+        # subclass) and KeyError/TypeError from a malformed bundle escape.
+        return {"status": "failed",
+                "error": f"{type(e).__name__}: {e}", "wall_time_s": 0}
 
 
 # =============================================================================
@@ -402,9 +452,16 @@ Examples:
         print("   python generate.py --preset chicago_1k_car")
         return 1
     
-    # Determine scenarios to run
-    if args.scenario:
+    # Determine scenarios to run. The checks distinguish "flag not given"
+    # (None: run everything) from "flag given but empty or malformed"
+    # (--scenario "" or "a,,b"): the latter must be an explicit error, never
+    # a silent fall-through that launches the full multi-day matrix.
+    if args.scenario is not None:
         scenarios = [s.strip() for s in args.scenario.split(",")]
+        if not scenarios or any(not s for s in scenarios):
+            print(f"❌ --scenario must be a non-empty comma-separated list, got: {args.scenario!r}")
+            print(f"   Available: {', '.join(scenarios_available.keys())}")
+            return 1
         for s in scenarios:
             if s not in scenarios_available:
                 print(f"❌ Unknown scenario: {s}")
@@ -412,10 +469,14 @@ Examples:
                 return 1
     else:
         scenarios = list(scenarios_available.keys())
-    
+
     # Determine engines to use
-    if args.engine:
+    if args.engine is not None:
         engines = [e.strip() for e in args.engine.split(",")]
+        if not engines or any(not e for e in engines):
+            print(f"❌ --engine must be a non-empty comma-separated list, got: {args.engine!r}")
+            print(f"   Available: {', '.join(ALL_ENGINES)}")
+            return 1
         for e in engines:
             if e not in ALL_ENGINES:
                 print(f"❌ Unknown engine: {e}")
@@ -426,14 +487,18 @@ Examples:
         engines = [e for e in engines if check_engine_installed(e)]
     else:
         engines = [e for e in ALL_ENGINES if check_engine_installed(e)]
-    
+
     if not engines:
         print("❌ No engines available. Install SUMO, MATSim, or DTALite.")
         return 1
-    
+
     # Determine modes to run
-    if args.mode:
+    if args.mode is not None:
         modes = [m.strip() for m in args.mode.split(",")]
+        if not modes or any(not m for m in modes):
+            print(f"❌ --mode must be a non-empty comma-separated list, got: {args.mode!r}")
+            print(f"   Available: {', '.join(ALL_MODES)}")
+            return 1
         for m in modes:
             if m not in ALL_MODES:
                 print(f"❌ Unknown mode: {m}")
@@ -506,7 +571,11 @@ Examples:
     # Setup output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_base = Path(args.output) if args.output else Path("runs") / f"benchmark_{timestamp}"
-    output_base.mkdir(parents=True, exist_ok=True)
+    try:
+        output_base.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        print(f"❌ Cannot create output directory {output_base}: {e}")
+        return 1
     
     print(f"\n  Output: {output_base}")
     print("\n" + "=" * 60)
@@ -546,6 +615,29 @@ Examples:
     bench_started_at = time.perf_counter()
     last_scenario = None
     cell_idx = 0
+
+    results_file = output_base / "benchmark_results.json"
+
+    def _save_partial():
+        # Checkpoint after every cell so a hard kill (Ctrl-C, SLURM timeout)
+        # still leaves a recoverable JSON, mirroring execution.run_benchmark.
+        comp = sum(1 for r in results if r.get("status") == "success")
+        with open(results_file, "w", encoding="utf-8") as f:
+            json.dump({
+                "timestamp": timestamp,
+                "matrix": {
+                    "scenarios": scenarios,
+                    "engines": engines,
+                    "modes": modes,
+                    "repeats": repeats,
+                },
+                "summary": {
+                    "total": total_runs,
+                    "completed": comp,
+                    "failed": len(results) - comp,
+                },
+                "results": results,
+            }, f, indent=2)
 
     for scenario, engine, mode in valid_cells:
         for rep in range(repeats):
@@ -592,6 +684,7 @@ Examples:
                 "engine_wall_s": engine_wall_s,    # engine subprocess only (thesis number)
             })
             results.append(result)
+            _save_partial()  # checkpoint after every cell
 
             ok = result["status"] == "success"
             if ok:
@@ -618,26 +711,10 @@ Examples:
 
     progress.stop()
     bench_wall = time.perf_counter() - bench_started_at
-    
-    # Save results
-    results_file = output_base / "benchmark_results.json"
-    with open(results_file, "w", encoding="utf-8") as f:
-        json.dump({
-            "timestamp": timestamp,
-            "matrix": {
-                "scenarios": scenarios,
-                "engines": engines,
-                "modes": modes,
-                "repeats": repeats,
-            },
-            "summary": {
-                "total": total_runs,
-                "completed": completed,
-                "failed": failed,
-            },
-            "results": results,
-        }, f, indent=2)
-    
+
+    # Final authoritative save (per-cell checkpoints already wrote partials).
+    _save_partial()
+
     # Final summary
     print("\n" + "=" * 60)
     print("  Summary")
@@ -690,4 +767,12 @@ Examples:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        # Ctrl-C mid-benchmark: the per-cell checkpoint already wrote every
+        # completed cell to benchmark_results.json in the output directory
+        # (printed at startup), so nothing is lost but the in-flight cell.
+        print("\n⚠ Interrupted (Ctrl-C). Completed cells are checkpointed in "
+              "benchmark_results.json under the run's output directory.")
+        sys.exit(130)

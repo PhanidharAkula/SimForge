@@ -51,6 +51,17 @@ class RunConfig:
             raise ValueError(f"repeats must be >= 1, got {self.repeats}")
         if self.timeout_s < 1:
             raise ValueError(f"timeout_s must be >= 1, got {self.timeout_s}")
+        if self.repeats > 1 and not self.seed_increment:
+            # Every repeat would run the same seed, so all reps write to one
+            # seed_<N> directory (overwriting each other) and the engine output
+            # is byte-identical across reps. The reproducibility analysis then
+            # reports a fabricated R=1.0 over samples that are not independent.
+            raise ValueError(
+                f"seed_increment=False with repeats={self.repeats} cannot produce "
+                f"independent repeats: all reps would reuse seed {self.seed}, collide "
+                f"in one run directory, and report a fabricated R=1.0. Use "
+                f"seed_increment=True for genuine repeats, or set repeats=1."
+            )
         # Sync mode and mesoscopic fields (mode takes precedence)
         if self.mode == SimulationMode.MESOSCOPIC:
             self.mesoscopic = True
@@ -73,8 +84,8 @@ class RunConfig:
 class RunSpec:
     """
     A run specification containing multiple run configurations.
-    
-    Typically loaded from a YAML or JSON file.
+
+    Loaded from a YAML file (see runspecs/ for examples).
     """
     name: str
     description: str = ""

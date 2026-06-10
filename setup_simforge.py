@@ -10,10 +10,12 @@ Usage:
     python setup_simforge.py
 """
 
+import argparse
 import sys
 import shutil
 import subprocess
 import platform
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -86,12 +88,18 @@ def check_java() -> bool:
 
 
 def check_sumo() -> bool:
-    """Check for SUMO traffic simulator."""
+    """Check for SUMO traffic simulator (pre-install probe).
+
+    This runs before the venv exists, so on a fresh machine SUMO is
+    expected to be absent here: step 4 installs it via requirements.lock
+    (the eclipse-sumo wheel). verify_installation() re-probes the venv
+    afterwards, and that post-install result is what the final summary
+    reports.
+    """
     sumo = shutil.which("sumo")
     if not sumo:
-        _warn("SUMO not found, SUMO engine will not work")
-        _warn("Install with: uv pip install -r requirements.lock  (canonical, bundles eclipse-sumo)")
-        _warn("       or:    pip install eclipse-sumo             (ad-hoc, same wheel)")
+        _warn("SUMO not on PATH yet, step 4 installs it via requirements.lock "
+              "(eclipse-sumo wheel)")
         return False
     result = _run([sumo, "--version"])
     first_line = result.stdout.strip().split("\n")[0]
@@ -137,15 +145,45 @@ def get_venv_python() -> str:
 
 
 def install_dependencies():
-    """Install Python packages from requirements.txt + requirements-dev.txt."""
+    """Install Python packages into the venv.
+
+    The canonical, reproducible path is the pinned lockfile installed with uv
+    (`uv pip install -r requirements.lock`, exactly what the container uses), so
+    we prefer that when uv is on PATH and fall back to pip otherwise. A
+    uv-created venv has no pip, so before the pip fallback we probe for it and
+    bootstrap with ensurepip, giving a clear message instead of an opaque
+    'No module named pip' failure.
+    """
     pip_python = get_venv_python()
-    subprocess.run(
-        [pip_python, "-m", "pip", "install", "--upgrade", "pip"],
-        capture_output=True, text=True, check=False,
-    )
-    print(f"  Installing from {REQUIREMENTS.name} ...")
+    lock = PROJECT_ROOT / "requirements.lock"
+    req_file = lock if lock.exists() else REQUIREMENTS
+
+    uv = shutil.which("uv")
+    if uv:
+        print(f"  Installing from {req_file.name} via uv (canonical) ...")
+        result = _run([uv, "pip", "install", "--python", pip_python,
+                       "-r", str(req_file)])
+        if result.returncode == 0:
+            _ok(f"Runtime dependencies installed (uv + {req_file.name})")
+            return _install_dev_dependencies(pip_python)
+        _warn("uv install failed; falling back to pip")
+        print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
+
+    # pip fallback: make sure the venv actually has pip first.
+    probe = _run([pip_python, "-m", "pip", "--version"])
+    if probe.returncode != 0:
+        print("  venv has no pip; bootstrapping with ensurepip ...")
+        ensure = _run([pip_python, "-m", "ensurepip", "--upgrade"])
+        if ensure.returncode != 0:
+            _fail("This venv has no pip and `ensurepip` failed.")
+            print("  Recreate it with `python -m venv .venv`, or use the "
+                  "canonical path: `uv pip install -r requirements.lock`.")
+            return False
+
+    _run([pip_python, "-m", "pip", "install", "--upgrade", "pip"])
+    print(f"  Installing from {req_file.name} ...")
     result = subprocess.run(
-        [pip_python, "-m", "pip", "install", "-r", str(REQUIREMENTS)],
+        [pip_python, "-m", "pip", "install", "-r", str(req_file)],
         capture_output=True, text=True, check=False,
     )
     if result.returncode != 0:
@@ -153,7 +191,11 @@ def install_dependencies():
         print(result.stderr[-500:] if result.stderr else result.stdout[-500:])
         return False
     _ok("Runtime dependencies installed")
+    return _install_dev_dependencies(pip_python)
 
+
+def _install_dev_dependencies(pip_python: str) -> bool:
+    """Install the optional dev tools (coverage, xdist, mutmut) via pip."""
     # Dev deps (coverage, mutation testing, parallel pytest) are required for
     # the documented `pytest -n auto` and `mutmut run` flows to work.
     if REQUIREMENTS_DEV.exists():
@@ -231,6 +273,19 @@ def verify_installation() -> dict:
     else:
         _warn("DTALite not available, `uv pip install path4gmns` (Mac: also brew install libomp)")
         checks["dtalite"] = False
+
+    # SUMO check, post-install: the eclipse-sumo wheel puts the sumo binary
+    # in the venv's bin/, which is not on PATH unless the venv is activated.
+    # Probe the venv directly so a successful install is never reported as
+    # "Missing: SUMO" in the final summary.
+    suffix = ".exe" if platform.system() == "Windows" else ""
+    venv_sumo = Path(pip_python).parent / f"sumo{suffix}"
+    if shutil.which("sumo") or venv_sumo.is_file():
+        _ok("SUMO (eclipse-sumo wheel) present in the environment")
+        checks["sumo"] = True
+    else:
+        _warn("SUMO not found in the venv, the sumo engine will not work")
+        checks["sumo"] = False
 
     # Engine check
     result = _run([pip_python, str(PROJECT_ROOT / "run.py"), "--list"])
@@ -311,6 +366,15 @@ def print_next_steps(has_java: bool, has_sumo: bool, has_libomp: bool = True):
 # ── Main ─────────────────────────────────────────────────────────────
 
 def main():
+    # Parse args so `--help`/`-h` prints usage and exits 0 instead of silently
+    # running the full 6-step environment setup, and unknown flags are rejected.
+    argparse.ArgumentParser(
+        description="Bootstrap a SimForge dev environment: check prerequisites, "
+                    "create the .venv, install dependencies (uv + "
+                    "requirements.lock when available), download MATSim, and "
+                    "verify the install. Takes no arguments.",
+    ).parse_args()
+
     total_steps = 6
     print(f"\n{BOLD}SimForge Setup{RESET}")
     print(f"Project root: {PROJECT_ROOT}\n")
@@ -346,10 +410,11 @@ def main():
 
     # 6. Verify
     _print_step(6, total_steps, "Verifying installation")
-    verify_installation()
+    checks = verify_installation()
 
-    # Done
-    print_next_steps(has_java, has_sumo, has_libomp)
+    # Done. SUMO availability uses the post-install venv probe: the step-2
+    # value predates the requirements.lock install that provides it.
+    print_next_steps(has_java, has_sumo or checks.get("sumo", False), has_libomp)
     return 0
 
 

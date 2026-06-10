@@ -628,7 +628,14 @@ class BenchmarkHarness:
             self._mirror_cache_to_run_dir(
                 cache_dir, run_dir, engine, seed, engine_options
             )
-        except (OSError, ValueError, RuntimeError) as e:
+        except Exception as e:
+            # Any adapter-prep failure becomes a failed cell, never an
+            # uncaught exception that aborts the whole benchmark. The common
+            # cases are OSError/ValueError/RuntimeError, but raw ET.parse calls
+            # in the adapters can surface xml.etree.ElementTree.ParseError (a
+            # SyntaxError subclass) and a malformed bundle can raise
+            # KeyError/TypeError; catching Exception keeps one bad cell from
+            # discarding every result collected so far in a long run.
             return RunResult(
                 scenario=scenario_id,
                 engine=engine,
@@ -638,7 +645,7 @@ class BenchmarkHarness:
                 status="failed",
                 runtime_s=0,
                 output_dir=run_dir,
-                error_message=f"Adapter failed: {e}"
+                error_message=f"Adapter failed: {type(e).__name__}: {e}"
             )
         
         # Find config file and run simulation based on engine
@@ -747,7 +754,15 @@ class BenchmarkHarness:
                     tripinfo_path = None
         
         # Determine status
-        status = "success" if success else ("timeout" if "timeout" in (error or "").lower() else "failed")
+        # Adapters report timeouts with either "timeout" or "timed out"; match
+        # both so a timed-out cell is never mislabeled as a generic failure.
+        _err_lower = (error or "").lower()
+        if success:
+            status = "success"
+        elif "timeout" in _err_lower or "timed out" in _err_lower:
+            status = "timeout"
+        else:
+            status = "failed"
 
         return RunResult(
             scenario=scenario_id,
@@ -775,7 +790,7 @@ class BenchmarkHarness:
         Execute a full benchmark from a runspec file.
 
         Args:
-            runspec_path: Path to runspec YAML/JSON
+            runspec_path: Path to the runspec YAML file
             scenario_filter: Only run scenarios matching this ID
             dry_run: If True, only validate and print what would run
             force_mesoscopic: If True, override runspec and use mesoscopic for all runs
@@ -801,6 +816,21 @@ class BenchmarkHarness:
         runs_to_execute = runspec.runs
         if scenario_filter:
             runs_to_execute = [r for r in runs_to_execute if r.scenario_id == scenario_filter]
+            if not runs_to_execute:
+                available = sorted({r.scenario_id for r in runspec.runs})
+                print(
+                    f"\n  No runs matched --scenario '{scenario_filter}'.\n"
+                    f"  Available scenario ids in this runspec: {', '.join(available)}\n"
+                )
+                return BenchmarkResult(
+                    runspec_name=runspec.name,
+                    started_at=started_at,
+                    completed_at=datetime.now(timezone.utc).isoformat(),
+                    total_runs=0,
+                    successful_runs=0,
+                    failed_runs=0,
+                    results=[],
+                )
 
         total_runs = sum(r.repeats for r in runs_to_execute)
         distinct_scenarios = list(dict.fromkeys(r.scenario_id for r in runs_to_execute))
@@ -903,6 +933,23 @@ class BenchmarkHarness:
         )
         progress.start()
 
+        # The aggregate JSON path is known up front so we can checkpoint
+        # partial results after every cell. A crash or interrupt partway
+        # through a long multi-cell run then leaves a recoverable JSON with
+        # everything completed so far, instead of losing the whole run.
+        results_path = self.output_base / f"benchmark_results_{runspec.name}.json"
+
+        def _save_partial() -> None:
+            BenchmarkResult(
+                runspec_name=runspec.name,
+                started_at=started_at,
+                completed_at=datetime.now(timezone.utc).isoformat(),
+                total_runs=total_runs,
+                successful_runs=sum(1 for r in results if r.status == "success"),
+                failed_runs=sum(1 for r in results if r.status != "success"),
+                results=results,
+            ).save(results_path)
+
         bench_started_at = time.perf_counter()
         last_scenario: Optional[str] = None
         cell_idx = 0
@@ -930,7 +977,8 @@ class BenchmarkHarness:
                         repeat_index=i,
                         status="failed",
                         runtime_s=0,
-                        output_dir=self.output_base / run_config.scenario_id,
+                        output_dir=self._scoped_base(run_config.scenario_id)
+                        / run_config.engine / mode_label / f"seed_{seed}",
                         error_message="Bundle validation failed",
                     ))
                     progress.print_above(
@@ -941,20 +989,38 @@ class BenchmarkHarness:
                         f"✗  FAIL  bundle validation failed"
                     )
                     progress.advance(ok=False)
+                    _save_partial()  # checkpoint after every cell
                     continue
 
                 progress.set_label(f"{run_config.scenario_id}/{run_config.engine}/{mode_label} seed={seed}")
                 cell_started_at = time.perf_counter()
-                result = self.run_single(
-                    scenario_id=run_config.scenario_id,
-                    scenario_path=scenario_path,
-                    engine=run_config.engine,
-                    seed=seed,
-                    repeat_index=i,
-                    timeout_s=run_config.timeout_s,
-                    engine_options=run_config.engine_options,
-                    mesoscopic=mesoscopic,
-                )
+                try:
+                    result = self.run_single(
+                        scenario_id=run_config.scenario_id,
+                        scenario_path=scenario_path,
+                        engine=run_config.engine,
+                        seed=seed,
+                        repeat_index=i,
+                        timeout_s=run_config.timeout_s,
+                        engine_options=run_config.engine_options,
+                        mesoscopic=mesoscopic,
+                    )
+                except Exception as e:  # noqa: BLE001
+                    # run_single already turns prep/run failures into failed
+                    # RunResults; this is a last-resort guard so an unforeseen
+                    # raise in one cell still can't abort the whole matrix.
+                    result = RunResult(
+                        scenario=run_config.scenario_id,
+                        engine=run_config.engine,
+                        mode=mode_label,
+                        seed=seed,
+                        repeat_index=i,
+                        status="failed",
+                        runtime_s=0,
+                        output_dir=self._scoped_base(run_config.scenario_id)
+                        / run_config.engine / mode_label / f"seed_{seed}",
+                        error_message=f"Cell crashed: {type(e).__name__}: {e}",
+                    )
                 elapsed = time.perf_counter() - cell_started_at
                 cell_wall_s = round(elapsed, 2)
                 engine_wall_s = round(result.runtime_s or 0.0, 2)
@@ -962,6 +1028,7 @@ class BenchmarkHarness:
                 result.cell_wall_s = cell_wall_s
                 result.engine_wall_s = engine_wall_s
                 results.append(result)
+                _save_partial()  # checkpoint after every cell
 
                 ok = result.status == "success"
                 if ok:
@@ -1000,7 +1067,8 @@ class BenchmarkHarness:
             results=results,
         )
 
-        results_path = self.output_base / f"benchmark_results_{runspec.name}.json"
+        # results_path was defined before the loop (used for per-cell
+        # checkpointing); this final save writes the authoritative complete run.
         benchmark_result.save(results_path)
 
         # Final summary, same look as run.py
@@ -1110,7 +1178,7 @@ def main():
     )
     parser.add_argument(
         "runspec", type=str,
-        help="Path to runspec YAML or JSON file"
+        help="Path to runspec YAML file (see runspecs/ for examples)"
     )
     parser.add_argument(
         "--scenario", "-s", type=str, default=None,
@@ -1148,13 +1216,26 @@ def main():
 
     harness = BenchmarkHarness(output_base=Path(args.output) if args.output else None)
 
-    result = harness.run_benchmark(
-        runspec_path=Path(args.runspec),
-        scenario_filter=args.scenario,
-        dry_run=args.dry_run,
-        force_mesoscopic=args.mesoscopic,
-        verbose=args.verbose,
-    )
+    # Runspec problems (missing file, bad YAML, unknown engine, invalid
+    # repeats/seed combinations) raise with remediation text already written
+    # for the user; print that text as a clean error instead of a traceback.
+    try:
+        result = harness.run_benchmark(
+            runspec_path=Path(args.runspec),
+            scenario_filter=args.scenario,
+            dry_run=args.dry_run,
+            force_mesoscopic=args.mesoscopic,
+            verbose=args.verbose,
+        )
+    except (FileNotFoundError, ValueError) as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    except KeyboardInterrupt:
+        # Ctrl-C mid-benchmark: the per-cell checkpoint already wrote every
+        # completed cell to benchmark_results_<runspec>.json.
+        print("\n⚠ Interrupted (Ctrl-C). Completed cells are checkpointed in "
+              "benchmark_results_<runspec>.json under the output directory.")
+        sys.exit(130)
     
     # Print reproducibility analysis if we have successful runs
     if result.successful_runs > 0:
@@ -1171,7 +1252,8 @@ def main():
         print("\n❌ Failed runs:")
         for r in result.results:
             if r.status != "success":
-                print(f"  • {r.scenario_id} seed={r.seed}: {r.error_message[:70]}...")
+                print(f"  • {r.scenario_id} seed={r.seed}: "
+                      f"{_format_error_oneline(r.error_message, max_len=70)}")
     
     # Exit with error code if any failures
     sys.exit(0 if result.failed_runs == 0 else 1)
