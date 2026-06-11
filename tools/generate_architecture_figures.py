@@ -167,8 +167,8 @@ def fig_1_1_simforge_overview(output_dir):
     container(ax, eval_x, 0.5, eval_w, 6.0, "Evaluation layer", color=C_EVAL)
     eval_items = [
         ("audit_fairness\n(Q1-Q5)", 4.95),
-        ("analyze_benchmark\n(Tables 5.1+5.2)", 3.65),
-        ("generate_plots\n(Figs 5.1-5.10)", 2.35),
+        ("analyze_benchmark\n(runtime + R tables)", 3.65),
+        ("generate_plots\n(benchmark figures)", 2.35),
         ("reproducibility_\nscorecard", 1.05),
     ]
     for text, y in eval_items:
@@ -214,7 +214,7 @@ def fig_3_1_three_layer_architecture(output_dir):
           "adapters/dtalite/\n(prepare +\nrun + parse)"]),
         ("EVALUATION LAYER", "(audit + metrics + scorecard)", 0.9, C_EVAL,
          ["evaluation/\naudit_fairness.py\n(Q1-Q5)",
-          "evaluation/\nanalyze_benchmark.py\n(Tables 5.1+5.2)",
+          "evaluation/\nanalyze_benchmark.py\n(runtime + R tables)",
           "evaluation/metrics/\n(R, fidelity,\nscalability, CI)",
           "evaluation/\ngenerate_plots.py +\ngenerate_scorecard"]),
     ]
@@ -300,7 +300,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
          "→ SCC sizes must match",
          7.1, C_OK, "MANDATORY", "#388e3c"),
         ("Q3 — Identical simulated-trip count target?",
-         "Count completed trips in each engine output\n"
+         "Count planned trips in each engine's native inputs\n"
          "→ all engines target the same |feasible|",
          5.7, C_OK, "MANDATORY", "#388e3c"),
         ("Q4 — Cross-engine mean travel-time spread",
@@ -453,7 +453,7 @@ def fig_6_1_paradigm_spread(output_dir):
     # --- LEFT: cross-engine ---
     ax = axes[0]
     tiers = ["chicago\n1K", "nyc\n10K", "la\n50K", "chicago\n200K", "nyc\n500K"]
-    ratios = [0.869, 0.945, 1.046, 0.645, 0.037]
+    ratios = [0.869, 1.132, 1.046, 0.645, 0.037]
     colors = ["#2196f3"] * 3 + ["#f44336"] * 2
 
     bars = ax.bar(range(len(tiers)), ratios, color=colors, edgecolor=C_BORDER,
@@ -467,9 +467,9 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.axhline(y=1.0, color="#999", linestyle="--", linewidth=1.0, alpha=0.7)
     ax.set_ylim(0, 1.55)
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
-    # "parity" label placed where there's empty space (above 50K bar, before
-    # the dashed line so it doesn't collide with bar value labels)
-    ax.text(0.05, 1.04, "parity (ratio = 1.0)", fontsize=8, color="#666",
+    # "parity" label placed where there's empty space (above the 200K bar,
+    # whose 0.645 top leaves the parity line clear of value labels)
+    ax.text(2.62, 1.04, "parity (ratio = 1.0)", fontsize=8, color="#666",
             ha="left", va="bottom")
     for bar, ratio in zip(bars, ratios):
         offset = 0.04 if ratio > 0.05 else 0.04
@@ -553,7 +553,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
         ("network.xml", "XML", [
             "<node id='n0' x=… y=…/>",
             "<link from='n0' to='n1'",
-            "      length= speed= lanes=/>",
+            "  length= speed_limit= lanes=/>",
             "<turn_restriction …/>",
         ]),
         ("demand.csv", "CSV", [
@@ -563,22 +563,22 @@ def fig_3_2_canonical_bundle_schema(output_dir):
             "  mode, purpose (V5+)",
         ]),
         ("signals.xml", "XML", [
-            "<junction id='n0'>",
-            "  <phase duration='30'",
-            "         state='Gr'/>",
-            "  <phase …/>  …",
+            "<junction id='tl_n0'",
+            "  node_id='n0' cycle…s='90'>",
+            "  <phase id='p1' duration_s=",
+            "   '40' state='G'><link_ref/>",
         ]),
         ("config.xml", "XML", [
-            "<horizon start='25200'",
-            "         end='36000'/>",
-            "<seed value='42'/>",
-            "<units length='m' speed='m/s'/>",
+            "<time start_time_s='25200'",
+            "  end_time_s='28800' …/>",
+            "<random seed='42' …/>",
+            "<units length='meters' …/>",
         ]),
         ("manifest.xml", "XML", [
-            "<file path='network.xml'",
-            "  sha256='abc…' size=… />",
-            "<file path='demand.csv'",
-            "  sha256='def…' …/>  …",
+            "<file type='network'",
+            "  path='network.xml'",
+            "  sha256='776407d9…'/>",
+            "<file type='demand' …/>  …",
         ]),
     ]
 
@@ -810,10 +810,10 @@ def fig_3_11_container_chain(output_dir):
     # Five horizontal stages
     stages = [
         ("Dockerfile\n(repo root)",
-         "python:3.13-slim-bookworm\n+ openjdk-17 + libgomp1\n+ uv: 36 lockfile pkgs\n  (incl eclipse-sumo 1.26.0)\n+ MATSim 15.0 JAR",
+         "python:3.13-slim-bookworm\n+ openjdk-17 + libgomp1\n+ uv: 36 lockfile pkgs\n+ eclipse-sumo 1.26.0\n+ MATSim 15.0 JAR",
          "#fce4ec"),
         ("GitHub Actions\n(build-container.yml)",
-         "On push to main or\nphase-14-canonical-routes\n→ docker build\n→ tag with git SHA",
+         "On push to release\n(source paths only;\ndoc-only changes skip)\n→ docker build\n→ tag with git SHA",
          "#fff3e0"),
         ("GHCR\n(container registry)",
          "ghcr.io/phanidharakula/\nsimforge:db8d786\n(immutable digest)\nlib/container/manifest.json",
