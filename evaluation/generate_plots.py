@@ -318,7 +318,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
         ax.legend(title='Engine', loc='upper right')
 
     axes[0].set_ylabel('Engine runtime (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.1: Engine Runtime by City, Engine, and Mode '
+    fig.suptitle('Engine Runtime by City, Engine, and Mode '
                  '(engine subprocess only; error bars: 95 % CI)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -396,7 +396,7 @@ def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics],
         cbar = plt.colorbar(im, ax=ax)
         cbar.set_label('Reproducibility Score (R)')
 
-    ax.set_title('Figure 5.2: Reproducibility Analysis\n'
+    ax.set_title('Reproducibility Analysis\n'
                  '(R = 1 − CV; grey = not run)',
                  fontweight='bold', pad=20)
     ax.set_xlabel('City', fontweight='bold')
@@ -451,7 +451,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
         ax.legend(title='Engine', loc='upper right')
 
     axes[0].set_ylabel('Mean Travel Time (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.3: Travel Time Comparison by Engine and Mode (error bars: 95 % CI)',
+    fig.suptitle('Travel Time Comparison by Engine and Mode (error bars: 95 % CI)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
     return _save("fig_5_3_travel_time_comparison", output_dir)
@@ -536,7 +536,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
         return None
 
     axes[0].set_ylabel('Speedup (× faster than MATSim)', fontweight='bold')
-    fig.suptitle('Figure 5.4: Speedup vs MATSim Baseline (within-mode)',
+    fig.suptitle('Speedup vs MATSim Baseline (within-mode)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
     return _save("fig_5_4_speedup_analysis", output_dir)
@@ -598,7 +598,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
         return None
 
     axes[0].set_ylabel('Engine runtime (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.5: Micro vs Meso Engine Runtime by Engine '
+    fig.suptitle('Micro vs Meso Engine Runtime by Engine '
                  '(engine subprocess only)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -645,7 +645,7 @@ def plot_runtime_variability(results_paths: list[Path],
         patch.set_alpha(0.7)
 
     ax.set_ylabel('Engine runtime (seconds)', fontweight='bold')
-    ax.set_title('Figure 5.6: Engine Runtime Variability by Engine × Mode\n'
+    ax.set_title('Engine Runtime Variability by Engine × Mode\n'
                  '(engine subprocess only; box = IQR, diamond = mean, line = median)',
                  fontweight='bold', pad=20)
     ax.grid(axis='y', alpha=0.3)
@@ -720,7 +720,7 @@ def plot_p95_travel_time(metrics: list[ScenarioMetrics],
                   title='Engine', loc='upper right')
 
     axes[0].set_ylabel('Travel Time (seconds)', fontweight='bold')
-    fig.suptitle('Figure 5.7: P95 Tail Latency vs Mean Travel Time\n'
+    fig.suptitle('P95 Tail Latency vs Mean Travel Time\n'
                  '(bar = P95, dash = mean)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -783,7 +783,7 @@ def plot_trip_count_parity(metrics: list[ScenarioMetrics],
 
     axes[0].set_ylabel('Completed Trips (avg over repeats)',
                        fontweight='bold')
-    fig.suptitle('Figure 5.8: Trip-Count Parity\n'
+    fig.suptitle('Trip-Count Parity\n'
                  '(every engine should complete the same N — '
                  'shows the SCC / feasibility filter is working)',
                  fontweight='bold', y=1.02)
@@ -874,7 +874,7 @@ def plot_demand_composition(metrics: list[ScenarioMetrics],
     ax.legend(title='Purpose (V5+ taxonomy)',
               loc='upper left', bbox_to_anchor=(1.02, 1.0))
 
-    fig.suptitle('Figure 5.9: Demand Composition by V5+ Trip Purpose\n'
+    fig.suptitle('Demand Composition by V5+ Trip Purpose\n'
                  '(HBW = home–work, HBSchool = home–school, '
                  '_chained = parent dropping kid en route)',
                  fontweight='bold', y=1.02)
@@ -961,7 +961,7 @@ def plot_wall_vs_engine(results_paths: list[Path],
     ax.grid(axis='y', alpha=0.3)
     ax.legend(loc='upper left')
 
-    fig.suptitle('Figure 5.10: Per-Cell Wall Time Breakdown — '
+    fig.suptitle('Per-Cell Wall Time Breakdown — '
                  'Engine Subprocess vs Adapter Prep\n'
                  '(adapter prep = per-trip BFS routing + canonical→engine conversion)',
                  fontweight='bold', y=1.02)
