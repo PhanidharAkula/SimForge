@@ -25,10 +25,10 @@ Add new entries to the TOP of section §3 below as work happens. The older secti
 | Engines shipping (Version_5) | 3 (SUMO, MATSim, DTALite) | `adapters/` |
 | Engines researched + ruled out | 4 (LPSim, QarSUMO, POLARIS, CityFlow) | `doc/engines/` |
 | Test suite | 668 tests across 31 test files (all 5 standard bundles present; ~596 with the 3 git-tracked bundles, data-integrity tests are parametrized per bundle). A `slow` marker gates the heavy tests: default `pytest` runs the FAST suite only (~30 s, this run 522 passed, 146 skipped, the everyday command), `pytest --runslow` runs the FULL suite (~20-30 min, the pre-ship / CI gate). On arm64 the full run skips 13 SUMO netconvert tests (the binary segfaults on large networks); they run on Linux. | §3.1 below |
-| Reproducibility ceiling | R = 1.0000 across N=5 on MATSim + DTALite at all converged scales; SUMO R = 0.95-0.99 (Good-Excellent) across all tiers | §3.4, §3.6 |
-| Fairness audit | Q1✓ Q2✓ Q3✓ on all 3 scenarios; Q4 paradigm-spread signal; Q5 demand-composition | §3.5, §3.6 |
-| Cross-engine TT alignment (post-Phase-12.5 verified, Pitzer jobs 47237978 + 47248311) | SUMO/MATSim mean-TT ratio: chicago_1k 0.869 (-13.1%), nyc_10k 1.132 (+13.2%), **la_50k 1.046 (+4.6%)**, alignment improves with scale (law of large numbers) | §3.5 |
-| DTALite UE / queue-mobsim divergence | DTALite/MATSim ratio ≈ 0.56-0.59 across converged scales; expected behaviour (equilibrium ignores transient congestion) | §3.5 |
+| Reproducibility ceiling | R = 1.0000 across N=5 on MATSim + DTALite at all converged scales; SUMO R = 0.95-0.99 (Good-Excellent) across all tiers | §3 below |
+| Fairness audit | Q1✓ Q2✓ Q3✓ on all 3 scenarios; Q4 paradigm-spread signal; Q5 demand-composition | §3 below |
+| Cross-engine TT alignment (post-Phase-12.5 verified, Pitzer jobs 47237978 + 47248311) | SUMO/MATSim mean-TT ratio: chicago_1k 0.869 (-13.1%), nyc_10k 1.132 (+13.2%), **la_50k 1.046 (+4.6%)**, alignment improves with scale (law of large numbers) | §3 below |
+| DTALite UE / queue-mobsim divergence | DTALite/MATSim ratio ≈ 0.56-0.59 across converged scales; expected behaviour (equilibrium ignores transient congestion) | §3 below |
 | Pitzer per-scenario wallclock (chicago_1k, all 4 engines × N=5) | ~12 min (cached) | §3 (2026-05-03 entry) |
 | Pitzer benchmark_small full wall (Phase 12 BFS-prep cache, Pitzer Skylake) | ~17-22 h (la_50k worker dominates; chicago + nyc finish in ~3 min and ~3 h respectively) | §3 (2026-05-03 entry) |
 | **Cardinal benchmark_large chicago_200k_car full wall (Phase 13 baseline, single-thread BFS)** | **141.87 h (job 9332478)** | §3 (2026-05-18 entry) |
@@ -360,7 +360,7 @@ The super-linear estimate accounts for car-following + lane-change interactions 
 |---|---|---|
 | ≤ 30 h | **GREEN** | Bump runspec `repeats: 5`, `timeout_s: actual + 20 % margin`, re-submit as 5-seed sbatch. Becomes Chapter 5 §5.4 extension. |
 | 30 – 48 h | **YELLOW** | 5-seed matrix needs 7-day wall + 5 parallel sbatchs. Doable but expensive in compute. Document the constraint, decide based on remaining Cardinal allocation. |
-| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as D-class deviation in the limitations appendix (parallel to D3 5M-tier dropped). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
+| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as a deviation in the limitations appendix (parallel to the dropped 5M-tier). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
 
 **Submission command** (on Cardinal, from `~/SimForge`):
 
