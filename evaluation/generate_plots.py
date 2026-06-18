@@ -315,7 +315,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
         ax.set_ylim(bottom=0)
         ax.margins(y=0.15)
         ax.grid(axis='y', alpha=0.3)
-        ax.legend(title='Engine', loc='upper right')
+        ax.legend(title='Engine', loc='upper left')
 
     axes[0].set_ylabel('Engine runtime (seconds)', fontweight='bold')
     fig.suptitle('Engine Runtime by City, Engine, and Mode '
@@ -448,7 +448,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
         ax.set_ylim(bottom=0)
         ax.margins(y=0.15)
         ax.grid(axis='y', alpha=0.3)
-        ax.legend(title='Engine', loc='upper right')
+        ax.legend(title='Engine', loc='upper left')
 
     axes[0].set_ylabel('Mean Travel Time (seconds)', fontweight='bold')
     fig.suptitle('Travel Time Comparison by Engine and Mode (error bars: 95 % CI)',
@@ -514,7 +514,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
                 h = bar.get_height()
                 if h > 0:
                     ax.text(bar.get_x() + bar.get_width() / 2, h,
-                            f'{h:.1f}×', ha='center', va='bottom', fontsize=9)
+                            f'{h:.2f}×', ha='center', va='bottom', fontsize=9)
                     plotted_any = True
                     max_h = max(max_h, h)
 
@@ -591,7 +591,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
         ax.set_ylim(bottom=0)
         ax.margins(y=0.15)
         ax.grid(axis='y', alpha=0.3)
-        ax.legend(title='Mode', loc='upper right')
+        ax.legend(title='Mode', loc='upper left')
 
     if not rendered:
         plt.close()
@@ -649,10 +649,11 @@ def plot_runtime_variability(results_paths: list[Path],
                  '(engine subprocess only; box = IQR, diamond = mean, line = median)',
                  fontweight='bold', pad=20)
     ax.grid(axis='y', alpha=0.3)
+    ax.set_ylim(top=ax.get_ylim()[1] * 1.10)
     for i, pair in enumerate(pairs):
         n = len(by_pair[pair])
-        ax.text(i + 1, ax.get_ylim()[1] * 0.95, f'n={n}',
-                ha='center', fontsize=9, color='gray')
+        ax.text(i + 1, ax.get_ylim()[1] * 0.97, f'n={n}',
+                ha='center', va='top', fontsize=9, color='gray')
 
     plt.tight_layout()
     return _save("fig_5_6_runtime_variability", output_dir)
@@ -779,7 +780,7 @@ def plot_trip_count_parity(metrics: list[ScenarioMetrics],
         ax.set_ylim(bottom=0)
         ax.margins(y=0.15)
         ax.grid(axis='y', alpha=0.3)
-        ax.legend(title='Engine', loc='lower right')
+        ax.legend(title='Engine', loc='upper left')
 
     axes[0].set_ylabel('Completed Trips (avg over repeats)',
                        fontweight='bold')

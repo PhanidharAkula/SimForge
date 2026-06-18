@@ -126,12 +126,16 @@ def fig_1_1_simforge_overview(output_dir):
         y = 4.5 - i * 0.85
         box(ax, 0.5, y, 2.2, 0.7, text, color="white", fontsize=8.5, radius=0.03)
 
-    # SCC + feasibility filter annotation (between bundle and adapters)
+    # SCC + feasibility filter annotation (between bundle and adapters),
+    # anchored to the bundle→adapter edges it annotates by a thin pointer
     ax.text(3.7, 6.4, "shared SCC +\nfeasibility filter",
             ha="center", va="center", fontsize=8.5, fontweight="bold",
             color="#c62828",
             bbox=dict(boxstyle="round,pad=0.4", facecolor=C_HIGHLIGHT,
                       edgecolor="#c62828", linewidth=1.0))
+    ax.annotate("", xy=(3.78, 5.12), xytext=(3.7, 6.02),
+                arrowprops=dict(arrowstyle="->", color="#c62828", lw=0.9,
+                                linestyle=(0, (4, 3))))
 
     # CENTER: three adapters
     adapter_x = 4.7
@@ -219,11 +223,10 @@ def fig_3_1_three_layer_architecture(output_dir):
           "evaluation/\ngenerate_plots.py +\ngenerate_scorecard"]),
     ]
 
-    # Reserve right column (x = 12.4 - 13.7) for inter-layer flow labels
+    # Layers span the full width; inter-layer flow labels sit beside the arrows
     layer_left = 0.3
-    layer_right = 12.1
+    layer_right = 13.7
     layer_w = layer_right - layer_left
-    label_x = 12.95
 
     for title, sub, y_bottom, color, modules in layer_specs:
         # Layer container
@@ -232,8 +235,8 @@ def fig_3_1_three_layer_architecture(output_dir):
         ax.text(layer_left + 0.25, y_bottom + LAYER_H - 0.30, title,
                 ha="left", va="center", fontsize=11, fontweight="bold",
                 color="#37474f")
-        ax.text(layer_left + 0.25 + 2.4, y_bottom + LAYER_H - 0.30, sub,
-                ha="left", va="center", fontsize=9.5, style="italic",
+        ax.text(layer_right - 0.25, y_bottom + LAYER_H - 0.30, sub,
+                ha="right", va="center", fontsize=9.5, style="italic",
                 color="#555")
         # Module boxes, placed below the title row, with margins
         n = len(modules)
@@ -252,15 +255,11 @@ def fig_3_1_three_layer_architecture(output_dir):
     # ADAPTER bottom = 3.7; EVALUATION top = 0.9 + 2.2 = 3.1; arrow 3.65 → 3.15
     arrow(ax, 6.0, 3.65, 6.0, 3.15, lw=2.2)
 
-    # Flow labels in dedicated right column
-    ax.text(label_x, 6.20, "canonical\nbundle\n(5 files)",
-            ha="center", va="center", fontsize=8.5, style="italic", color="#555",
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
-                      edgecolor="#999", linewidth=0.8))
-    ax.text(label_x, 3.40, "per-engine\noutputs +\nfeasibility report",
-            ha="center", va="center", fontsize=8.5, style="italic", color="#555",
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="white",
-                      edgecolor="#999", linewidth=0.8))
+    # Flow labels directly beside the arrows they annotate, inside the gaps
+    ax.text(6.35, 6.20, "canonical bundle (5 files)",
+            ha="left", va="center", fontsize=8.5, style="italic", color="#555")
+    ax.text(6.35, 3.40, "per-engine outputs + feasibility report",
+            ha="left", va="center", fontsize=8.5, style="italic", color="#555")
 
     # Bottom caption
     ax.text(7.0, 0.30,
@@ -285,7 +284,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
     ax.axis("off")
 
     # Top: input box
-    box(ax, 2.0, 10.0, 6.0, 0.85,
+    box(ax, 2.0, 9.75, 6.0, 0.85,
         "Run directory  <runs/.../scenario/engine/mode/seed_N/>",
         color="white", fontsize=10, fontweight="bold")
 
@@ -314,7 +313,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
     ]
 
     arrow_y_pairs = []
-    prev_bottom = 10.0  # bottom of Run-directory box
+    prev_bottom = 9.75  # bottom of Run-directory box
 
     for title, body, y, color, badge, badge_color in q_specs:
         h = 1.10
@@ -337,9 +336,9 @@ def fig_3_6_fairness_audit_flow(output_dir):
                 bbox=dict(boxstyle="round,pad=0.3", facecolor=badge_color,
                           edgecolor=badge_color))
 
-    # Bottom: output (with explicit gap above)
-    output_top_y = 1.0
-    output_bottom_y = 0.2
+    # Bottom: output (same gap above as between the run-directory box and Q1)
+    output_top_y = 1.65
+    output_bottom_y = 0.80
     box(ax, 2.0, output_bottom_y, 6.0, 0.85,
         "→ PASS / FAIL verdict  +  scorecard row",
         color="white", fontsize=10, fontweight="bold")
@@ -416,14 +415,14 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
         color="white", fontsize=8.5)
 
     # Two adapters consuming the shared dict
-    box(ax, 7.4, 5.05, 2.2, 0.7, "SUMO adapter",
+    box(ax, 7.4, 5.15, 2.2, 0.7, "SUMO adapter",
         color=C_ADAPTER, fontsize=9.5, fontweight="bold")
-    box(ax, 7.4, 4.20, 2.2, 0.7, "MATSim adapter",
+    box(ax, 7.4, 4.05, 2.2, 0.7, "MATSim adapter",
         color=C_ADAPTER, fontsize=9.5, fontweight="bold")
 
     arrow(ax, 2.15, 5.05, 2.6, 5.05, lw=1.5)
-    arrow(ax, 7.0, 5.30, 7.4, 5.40, lw=1.2, label="dict")
-    arrow(ax, 7.0, 4.80, 7.4, 4.55, lw=1.2, label="dict")
+    arrow(ax, 7.0, 5.35, 7.4, 5.50, lw=1.2, label="dict")
+    arrow(ax, 7.0, 4.75, 7.4, 4.40, lw=1.2, label="dict")
     arrow(ax, 4.8, 4.4, 4.8, 3.7, lw=1.0, color="#888")
 
     box(ax, 1.0, 0.6, 8.0, 1.4, "", color=C_OK)
@@ -468,8 +467,9 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.set_ylim(0, 1.55)
     ax.set_yticks([0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5])
     # "parity" label placed where there's empty space (above the 200K bar,
-    # whose 0.645 top leaves the parity line clear of value labels)
-    ax.text(2.62, 1.04, "parity (ratio = 1.0)", fontsize=8, color="#666",
+    # whose 0.645 top leaves the parity line clear of value labels and the
+    # annotation arrow)
+    ax.text(2.62, 1.04, "parity = 1.0", fontsize=8, color="#666",
             ha="left", va="bottom")
     for bar, ratio in zip(bars, ratios):
         offset = 0.04 if ratio > 0.05 else 0.04
@@ -504,8 +504,9 @@ def fig_6_1_paradigm_spread(output_dir):
                  fontsize=11, fontweight="bold", pad=10)
     ax.axhline(y=1.0, color="#999", linestyle="--", linewidth=1.0, alpha=0.7)
     ax.set_ylim(0, 2.3)
-    # "parity" label placed at left edge to avoid bar value-label collisions
-    ax.text(-0.45, 1.02, "parity (no gap)", fontsize=8, color="#666",
+    # "parity" label in the empty upper-left corner, clear of bars and the
+    # annotation arrow that crosses the parity line on this panel
+    ax.text(-0.45, 2.18, "dashed = parity", fontsize=8, color="#666",
             ha="left", va="bottom")
     for bar, ratio, d in zip(bars, ratios2, deltas):
         ax.text(bar.get_x() + bar.get_width() / 2, ratio + 0.05,
@@ -653,61 +654,68 @@ def fig_3_3_generation_pipeline(output_dir):
     ax.set_ylim(0, 8)
     ax.axis("off")
 
-    # LEFT column: data sources
+    # LEFT column: data sources (even 1.175 pitch)
     container(ax, 0.3, 0.7, 3.0, 6.5, "Data sources", color="#eceff1")
     sources = [
         ("OSM PBF\n(Geofabrik state extracts)", 6.3),
-        ("LandScan rasters\n(ORNL pop. density)", 5.2),
-        ("ACS PUMS 5-yr\n(US Census Bureau)", 4.1),
-        ("IPUMS PUMA\nshapefiles", 3.0),
+        ("LandScan rasters\n(ORNL pop. density)", 5.125),
+        ("ACS PUMS 5-yr\n(US Census Bureau)", 3.95),
+        ("IPUMS PUMA\nshapefiles", 2.775),
         ("ModelGen .txt\n(cityscape; Rao 2023)", 1.6),
     ]
     for label, y in sources:
         box(ax, 0.5, y - 0.40, 2.6, 0.80, label,
             color="white", fontsize=8.5, radius=0.03)
 
-    # CENTER column: pipeline stages
+    # CENTER column: pipeline stages (even 1.03 pitch, visible gap arrows)
     container(ax, 4.0, 0.7, 5.8, 6.5, "Pipeline stages", color=C_PIPELINE)
+    stage_ys = [6.45, 5.42, 4.39, 3.36, 2.33, 1.30]
     stages = [
-        ("pipeline/network/load_network_from_pbf.py\n(pyosmium bbox slice)", 6.4),
-        ("pipeline/network/build_network_from_osm.py\n(osmnx → GMNS graph)", 5.4),
-        ("pipeline/network/scc.py\n(Kosaraju largest-SCC filter)", 4.4),
-        ("pipeline/signals/build_signals_default.py\n(OSM has_signal='true' → phase tables)", 3.4),
-        ("pipeline/demand/parse_model_file.py\n(cityscape → buildings + persons + schedules)", 2.4),
-        ("pipeline/demand/generate_census_demand.py\n(schedule-first + gravity fallback)", 1.3),
+        ("pipeline/network/load_network_from_pbf.py\n(pyosmium bbox slice)", stage_ys[0]),
+        ("pipeline/network/build_network_from_osm.py\n(osmnx → GMNS graph)", stage_ys[1]),
+        ("pipeline/network/scc.py\n(Kosaraju largest-SCC filter)", stage_ys[2]),
+        ("pipeline/signals/build_signals_default.py\n(OSM has_signal='true' → phase tables)", stage_ys[3]),
+        ("pipeline/demand/parse_model_file.py\n(cityscape → buildings + persons + schedules)", stage_ys[4]),
+        ("pipeline/demand/generate_census_demand.py\n(schedule-first + gravity fallback)", stage_ys[5]),
     ]
     for label, y in stages:
-        box(ax, 4.2, y - 0.42, 5.4, 0.85, label,
-            color="white", fontsize=8.5, radius=0.03)
+        box(ax, 4.2, y - 0.375, 5.4, 0.75, label,
+            color="white", fontsize=8.2, radius=0.03)
 
-    # Inter-stage arrows in CENTER (vertical flow downward)
-    for y1, y2 in [(6.0, 5.85), (5.0, 4.85), (4.0, 3.85), (3.0, 2.85), (2.0, 1.75)]:
-        arrow(ax, 7.0, y1, 7.0, y2, lw=1.2, color="#999")
+    # Inter-stage arrows in CENTER (vertical flow downward, inside the gaps)
+    for y1, y2 in zip(stage_ys, stage_ys[1:]):
+        arrow(ax, 7.0, y1 - 0.40, 7.0, y2 + 0.42, lw=1.2, color="#999")
 
-    # RIGHT column: canonical bundle output
+    # RIGHT column: canonical bundle output (even 1.25 pitch)
     container(ax, 10.5, 0.7, 3.3, 6.5, "Canonical bundle\n(5 files)", color=C_BUNDLE)
     outs = [
         ("network.xml", 6.0),
-        ("demand.csv", 4.6),
-        ("signals.xml", 3.3),
-        ("config.xml", 2.0),
-        ("manifest.xml +\nSHA-256", 0.85),
+        ("demand.csv", 4.75),
+        ("signals.xml", 3.5),
+        ("config.xml", 2.25),
+        ("manifest.xml +\nSHA-256", 1.0),
     ]
     for name, y in outs:
         box(ax, 10.7, y - 0.30, 2.9, 0.60, name,
             color="white", fontsize=9, radius=0.03)
 
     # Arrows from data sources to relevant pipeline stages
-    arrow(ax, 3.10, 6.3, 4.20, 6.4, lw=0.8, color="#888")  # OSM PBF → load_network
-    arrow(ax, 3.10, 5.2, 4.20, 2.4, lw=0.6, color="#888")  # LandScan → parse_model
-    arrow(ax, 3.10, 4.1, 4.20, 2.4, lw=0.6, color="#888")  # ACS PUMS → parse_model
-    arrow(ax, 3.10, 3.0, 4.20, 2.4, lw=0.6, color="#888")  # IPUMS PUMA → parse_model
-    arrow(ax, 3.10, 1.6, 4.20, 2.4, lw=0.8, color="#888")  # ModelGen → parse_model
+    arrow(ax, 3.10, 6.3, 4.20, stage_ys[0], lw=0.8, color="#888")    # OSM PBF → load_network
+    arrow(ax, 3.10, 5.125, 4.20, stage_ys[4], lw=0.6, color="#888")  # LandScan → parse_model
+    arrow(ax, 3.10, 3.95, 4.20, stage_ys[4], lw=0.6, color="#888")   # ACS PUMS → parse_model
+    arrow(ax, 3.10, 2.775, 4.20, stage_ys[4], lw=0.6, color="#888")  # IPUMS PUMA → parse_model
+    arrow(ax, 3.10, 1.6, 4.20, stage_ys[4], lw=0.8, color="#888")    # ModelGen → parse_model
 
     # Arrows from pipeline stages to output files
-    arrow(ax, 9.6, 4.4, 10.7, 6.0, lw=0.8, color="#1976d2")  # SCC + network → network.xml
-    arrow(ax, 9.6, 1.3, 10.7, 4.6, lw=0.8, color="#1976d2")  # demand gen → demand.csv
-    arrow(ax, 9.6, 3.4, 10.7, 3.3, lw=0.8, color="#1976d2")  # signals → signals.xml
+    arrow(ax, 9.6, stage_ys[2], 10.7, 6.0, lw=0.8, color="#1976d2")   # SCC + network → network.xml
+    arrow(ax, 9.6, stage_ys[5], 10.7, 4.75, lw=0.8, color="#1976d2")  # demand gen → demand.csv
+    arrow(ax, 9.6, stage_ys[3], 10.7, 3.5, lw=0.8, color="#1976d2")   # signals → signals.xml
+
+    # Provenance note for the two orchestrator-written files
+    ax.text(12.15, 0.42,
+            "config.xml + manifest.xml are written by the generate.py orchestrator\n"
+            "(manifest stamped last, covering all four data files; §3.3.1)",
+            ha="center", va="center", fontsize=7.5, style="italic", color="#555")
 
     return save(fig, "fig_3_3_generation_pipeline", output_dir)
 
@@ -724,7 +732,7 @@ def fig_3_4_adapter_contract(output_dir):
     # xlim slightly wider than figsize-scaled to give the rightmost column
     # full rounded-corner + padding room (previously clipped DTALite column)
     ax.set_xlim(0, 16)
-    ax.set_ylim(0, 7)
+    ax.set_ylim(0, 6.6)
     ax.axis("off")
 
     engines = ["SUMO", "MATSim", "DTALite"]
@@ -826,9 +834,9 @@ def fig_3_11_container_chain(output_dir):
          "#c8e6c9"),
     ]
 
-    box_w = 2.55
-    gap = 0.18
-    start_x = 0.2
+    box_w = 2.66
+    gap = 0.13
+    start_x = 0.12
     for i, (title, body, color) in enumerate(stages):
         x = start_x + i * (box_w + gap)
         # Outer container
@@ -838,10 +846,10 @@ def fig_3_11_container_chain(output_dir):
                 ha="center", va="center", fontsize=10, fontweight="bold",
                 color=C_TEXT)
         # Body (white sub-box)
-        box(ax, x + 0.15, 1.20, box_w - 0.30, 2.95, "",
+        box(ax, x + 0.12, 1.20, box_w - 0.24, 2.95, "",
             color="white", radius=0.03)
         ax.text(x + box_w / 2, 2.65, body,
-                ha="center", va="center", fontsize=8.5, family="monospace",
+                ha="center", va="center", fontsize=8.2, family="monospace",
                 color="#333")
         # Arrow to next stage
         if i < len(stages) - 1:
@@ -887,18 +895,18 @@ def fig_6_2_reproducibility_regimes(output_dir):
         ("REGIME 2", "Same CPU architecture, cross-distribution",
          "Cardinal RHEL host venv (Adoptium OpenJDK 21) ↔\n"
          "Cardinal Debian container (apt OpenJDK 17)",
-         "20/20 cells byte-identical at chicago_200k + nyc_500k (§5.6.3.1)",
+         "20/20 cells byte-identical at chicago_200k + nyc_500k (§5.9.3)",
          "BIT-IDENTICAL", C_OK, "#1b5e20", 4.7),
         ("REGIME 3", "Cross-CPU-architecture",
          "Mac arm64 (Apple OpenJDK 17) ↔ Cardinal Sapphire Rapids x86_64",
          "MATSim 318.774 ↔ 318.77 s   |   DTALite 172.5605 ↔ 172.56 s\n"
-         "(matches to 4 sig figs; consistent with bit-identity, §5.6.3.2)",
+         "(matches to 4 sig figs; consistent with bit-identity, §5.9.4)",
          "≈ BIT-IDENTICAL", C_INFO, "#0d47a1", 3.0),
         ("REGIME 4", "Cross-code-version (time-separated)",
          "Pitzer Phase 12 (2026-05-02) ↔ Cardinal Phase 14.13 (2026-05-20)\n"
          "Phase 14 canonical_routes BFS replaces legacy per-adapter BFS",
          "MATSim 2.95 % shift   |   DTALite 0.24 % shift   "
-         "(§5.6.3 original measurement, reinterpreted in §5.6.3.3)",
+         "(§5.9 original measurement, reinterpreted in §5.9.5)",
          "0.2-3 % DRIFT", C_HIGHLIGHT, "#c62828", 1.3),
     ]
 
