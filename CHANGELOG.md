@@ -1548,7 +1548,7 @@ First end-to-end-correct release: SCC-aware demand, mode-aware analysis, fair cr
 
 ## [0.9.0], 2026-04-17
 
-Initial end-to-end stress test: the first comprehensive run-through of the full pipeline (generate → validate → benchmark → analyse → plot). Surfaced the silent failure modes that `[1.0.0]` subsequently fixed, plus four concrete bugs. Commit `d06cf0a`.
+Initial end-to-end stress test: the first comprehensive run-through of the full pipeline (generate → validate → benchmark → analyse → plot). Surfaced the silent failure modes that `[1.0.0]` subsequently fixed, plus four concrete bugs. Commit `6083a35`.
 
 ### Fixed
 
@@ -1571,13 +1571,13 @@ Foundation work prior to the first end-to-end stress test. Earlier per-commit de
 
 ### Added
 
-- **Comprehensive test suite** (`ae4dcb2`), now 184 tests across 11 files.
-- **OSC Pitzer cluster scripts**, 500K jobs, cluster guide, HPC pin updates (`be20205`, `7ac0bb5`, `45188be`).
-- **ModelGen integration** (`2315dde`), PUMS census microdata for population-weighted demand.
+- **Comprehensive test suite** (`cb0ae9c`), now 184 tests across 11 files.
+- **OSC Pitzer cluster scripts**, 500K jobs, cluster guide, HPC pin updates (`6c7149b`, `f6400f5`, `a6b9cf4`).
+- **ModelGen integration** (`a823ec2`), PUMS census microdata for population-weighted demand.
 
 ### Changed
 
-- **Thesis-defense documentation overhaul** (`e7e156d`, `6d98a7d`, `66f3d5f`), architecture, scenario generation, methods/experiments chapters.
+- **Thesis-defense documentation overhaul** (`0af1dc3`, `f9752e4`, `c86f52a`), architecture, scenario generation, methods/experiments chapters.
 
 ---
 

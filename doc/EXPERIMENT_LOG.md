@@ -539,7 +539,7 @@ All 4 fairness gates (Q1-Q4) PASS for SUMO + MATSim across all 3 scenarios. DTAL
 ### 2026-05-02, Phase 12 + 12.1: parallel-by-scenario + MATSim correctness landed
 
 **Phase:** Version_5 Phase 12 (sbatch correctness) + 12.1 (MATSim route format)
-**Commit:** `81ff0c5`
+**Commit:** `7ddd00e`
 **Job ID:** Triggered by Pitzer SLURM job 47236542 (benchmark_small.sbatch on 2026-05-02), which surfaced three runner bugs and one MATSim adapter bug all in the same session.
 
 **What changed:**
