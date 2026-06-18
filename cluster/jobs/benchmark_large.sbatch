@@ -82,7 +82,7 @@ cd ~/SimForge
 # ---------------------------------------------------------------------------
 # Set SIMFORGE_USE_CONTAINER=1 in the sbatch submit environment to run
 # the harness inside the Singularity-pulled SimForge container instead
-# of the host venv. Closes plan §1.10 Objective 3 / §1.11 C3 / §2.7.
+# of the host venv, for pinned-digest reproducible execution.
 #
 # Default (host venv):          sbatch cluster/jobs/benchmark_large.sbatch
 # Container mode (latest):      SIMFORGE_USE_CONTAINER=1 sbatch cluster/jobs/benchmark_large.sbatch

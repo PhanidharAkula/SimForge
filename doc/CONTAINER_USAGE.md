@@ -2,9 +2,8 @@
 
 The SimForge container packages Python 3.13 + uv-pinned dependencies +
 OpenJDK 17 + MATSim 15.0 + eclipse-sumo + path4gmns/DTALite + all
-SimForge source code into a single immutable image. Closes the
-plan §1.10 Objective 3 / §1.11 C3 / §2.7 / §4.2 container-execution
-commitments.
+SimForge source code into a single immutable image, giving pinned-digest,
+reproducible cross-engine execution.
 
 Images are built by GitHub Actions on every push and published to
 **`ghcr.io/phanidharakula/simforge`**.
@@ -54,7 +53,7 @@ singularity exec \
 | Layer | Contents |
 |---|---|
 | Base OS | Debian Bookworm (slim, ~150 MB) |
-| Java | OpenJDK 17 JRE headless (MATSim runtime; plan §1.10 Java 17+) |
+| Java | OpenJDK 17 JRE headless (MATSim runtime; Java 17+) |
 | System libs | `libgomp1` (OpenMP for DTALite), `libxml2`, `git`, `curl`, `ca-certificates`, `tini` |
 | Python | 3.13 from the official `python:3.13-slim-bookworm` |
 | Package manager | `uv` 0.5.18 (deterministic + fast) |
@@ -156,7 +155,7 @@ tag, see the CHANGELOG Wave 2 entry).
 
 ---
 
-## Reproducibility chain (plan §3.4 + §4.2 alignment)
+## Reproducibility chain
 
 A complete cross-machine SimForge reproduction now looks like:
 

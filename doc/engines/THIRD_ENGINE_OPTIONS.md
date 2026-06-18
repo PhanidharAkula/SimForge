@@ -88,7 +88,7 @@ DTALite shares **one** risk with LPSim (dormant C++ upstream) but **lacks the ot
 | MovSim            | Highway-segment focus; no multi-OD network support, wrong scope.                |
 | Eclipse Mosaic    | Co-simulation framework that wraps SUMO; not a standalone engine.                 |
 | TRANSIMS          | Last release ~2014; signal of definitive abandonment.                             |
-| Aimsun / Vissim / Paramics | Commercial licenses; ruled out at plan stage.                       |
+| Aimsun / Vissim / Paramics | Commercial licenses; ruled out during engine selection.                 |
 | Veins / Flow      | Wrap SUMO; not standalone engines.                                                |
 | SimMobility (MIT) | Heavy in-house Linux toolchain; integration cost > DTALite by ~5×.                |
 | AequilibraE       | Python library, not a discrete-event simulator, paradigm mismatch with SUMO/MATSim. |

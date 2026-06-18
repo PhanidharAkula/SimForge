@@ -1,8 +1,8 @@
 # SimForge Data Management
 
 This document describes how SimForge handles data sources, storage,
-access control, retention, and ethics. It corresponds to the
-commitments in Thesis Plan §3.6 ("Data Management and Ethics").
+access control, retention, and ethics. It documents
+SimForge's data-management and ethics posture.
 Licensing is documented separately in [`doc/LICENSING.md`](LICENSING.md).
 
 ---
@@ -36,13 +36,13 @@ Specifically:
 - **Network data** comes from OSM, which is itself a non-PII geographic
   database.
 
-The plan §3.6 commits to suppressing TAZ cells with fewer than 10
+SimForge suppresses TAZ cells with fewer than 10
 trips. Because SimForge ingests PUMS which has already applied this
 threshold upstream, no additional suppression is required. See
 `doc/MODELGEN_AND_MODES.md` for the empirical per-city counts.
 
-The plan also describes "uniform random jitter of ±60s to reduce
-residual re-identification risk" on departure timestamps. SimForge's
+A further departure-time safeguard, uniform random jitter of ±60s to
+reduce residual re-identification risk, would add nothing here. SimForge's
 PUMS-derived demand operates at PUMS's existing aggregate granularity
 (integer-minute JWMNP), so departure jitter would only smooth a
 visualization artefact (the "departure bursts" documented in
@@ -79,7 +79,7 @@ upstream sources.
 | Container images on GHCR | Same as code (indefinite) |
 
 The 12-month post-completion retention window for run results matches
-plan §3.6 and OSC's standard storage-allocation policy. After that
+OSC's standard storage-allocation policy. After that
 point, only the manifests, hashes, and the pinned container digest are
 retained, so re-execution remains possible but the prior run outputs
 are not held indefinitely.
@@ -96,8 +96,8 @@ are not held indefinitely.
   thesis Fig 5.9.
 - **Reproducibility-as-ethic.** SimForge's whole-stack hash pinning +
   byte-deterministic adapters + post-run `audit_fairness` make every
-  number in Chapter 5 independently verifiable. The plan's
-  reproducibility commitments (§2.7, §3.4, §4.2) are themselves an
+  number in Chapter 5 independently verifiable. SimForge's
+  reproducibility commitments are themselves an
   ethical posture: claims that can't be reproduced shouldn't drive
   policy.
 

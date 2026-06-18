@@ -1,10 +1,9 @@
 # SimForge, reproducible cross-simulator benchmarking framework
 # (SUMO + MATSim + DTALite, byte-deterministic adapters, Q1-Q5 fairness audit)
 #
-# Closes plan §1.10 Objective 3 (containerized execution),
-# §1.11 Contribution C3 (pinned-digest reproducibility),
-# §2.7 Reproducibility framework (OCI/Singularity),
-# §4.2 Software and Compute Environment.
+# Containerized execution with pinned-digest reproducibility: an
+# OCI/Singularity image bundling the full software and compute
+# environment.
 #
 # Build (local Docker, x86_64 target, Cardinal compatibility):
 #   docker buildx build --platform linux/amd64 -t simforge:latest .
@@ -39,7 +38,7 @@ FROM python:3.13-slim-bookworm
 # ---------------------------------------------------------------------------
 # System dependencies
 # ---------------------------------------------------------------------------
-# - openjdk-17-jre-headless: MATSim 15.0 runtime (plan §1.10 commits Java 17+)
+# - openjdk-17-jre-headless: MATSim 15.0 runtime (Java 17+)
 # - libgomp1:                OpenMP runtime for DTALite (path4gmns bundled binary)
 # - libxml2:                 lxml C bindings + SUMO netconvert output
 # - libx11-6 + libxext6 +

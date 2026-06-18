@@ -35,8 +35,7 @@ class ScenarioStats:
     avg_travel_time: float
     std_travel_time: float
     reproducibility_score: float
-    # 95 % CI half-widths on the mean. Plan §3.5 commits to reporting
-    # these on every KPI.
+    # 95 % CI half-widths on the mean, reported on every KPI.
     ci95_runtime: float = 0.0
     ci95_travel_time: float = 0.0
 

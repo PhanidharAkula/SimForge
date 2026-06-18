@@ -94,7 +94,7 @@ class ScenarioMetrics:
     std_travel_time: float
     p95_travel_time: float
     reproducibility: float
-    # 95 % confidence-interval half-widths on the mean (plan §3.5).
+    # 95 % confidence-interval half-widths on the mean.
     # These drive the error bars on every figure that previously used ±1σ.
     ci95_runtime: float = 0.0
     ci95_travel_time: float = 0.0

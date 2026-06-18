@@ -39,7 +39,7 @@ class TestTCritical:
             (2, 12.706),    # df = 1
             (3, 4.303),     # df = 2
             (5, 2.776),     # df = 4
-            (10, 2.262),    # df = 9, the plan's target N
+            (10, 2.262),    # df = 9, the target repeat count N=10
             (30, 2.045),    # df = 29, last tabulated entry
         ],
     )

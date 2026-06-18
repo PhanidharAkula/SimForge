@@ -32,7 +32,8 @@ If a directory is passed, the tool finds the single
 ``<run-dir>/reproducibility_scorecard.md`` and the path printed to
 stdout.
 
-Closes the Thesis Plan §3.4 / §4.2 reproducibility-artefact gap.
+Fills the reproducibility-artefact gap: provenance, environment, and a
+pass/warn/fail verdict in a single scorecard.
 """
 
 from __future__ import annotations

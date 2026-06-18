@@ -283,7 +283,7 @@ This is a well-known cross-platform reproducibility limit for non-trivial scient
 
 Both are reproducible WITHIN their context. Across contexts: 0.2-3 % drift. **Report all numbers from ONE context to keep apples-to-apples.** The container is now demonstrably **THE canonical reproducible target**, anyone who pulls the same digest gets bit-identical results across machines (Cardinal, AWS, Azure, a colleague's laptop). Host runs vary by host. Recommendation: use container numbers going forward for new measurements. Existing host-venv numbers remain valid for their own context and don't need re-running for thesis-defense purposes. The cross-platform finding is itself a Chapter 5 §5.6.3 result.
 
-**Wave 2 completes plan §1.11 C3** (pinned-digest reproducible execution pipeline). Combined with C1 (Wave 1: canonical schema + validators), C2 (3-engine deterministic adapters with documented rule-outs), and C4 (KPIs with CIs, audit, scorecard), **all four primary plan contributions are now empirically shipped**.
+**Wave 2 completes contribution C3** (pinned-digest reproducible execution pipeline). Combined with C1 (Wave 1: canonical schema + validators), C2 (3-engine deterministic adapters with documented rule-outs), and C4 (KPIs with CIs, audit, scorecard), **all four primary contributions are now empirically shipped**.
 
 **Iteration count.** Wave 2 needed 8 GHA build iterations + 1 Apptainer-pull-bug workaround. Documented in commits `f3b653d` (initial) → `a3aaed9` (eclipse-sumo) → `cd5039e` (sumolib test fix) → `780476f` (libX11) → `b2321e2` (diagnostic) → `4f0719e` (libGL) → `44e1270` (libatomic) → `a9ddec4` (MATSim JAR) → `db8d786` (MATSim URL correct) → `a8cc826` (manifest pin). The empirical lib-discovery loop is exactly why containerization was a Wave-2 deferred deliverable, per-host environment opacity is hard to anticipate. The result is now defensible and immutable.
 
@@ -360,7 +360,7 @@ The super-linear estimate accounts for car-following + lane-change interactions 
 |---|---|---|
 | ≤ 30 h | **GREEN** | Bump runspec `repeats: 5`, `timeout_s: actual + 20 % margin`, re-submit as 5-seed sbatch. Becomes Chapter 5 §5.4 extension. |
 | 30 – 48 h | **YELLOW** | 5-seed matrix needs 7-day wall + 5 parallel sbatchs. Doable but expensive in compute. Document the constraint, decide based on remaining Cardinal allocation. |
-| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as D-class deviation in the plan-deviations appendix (parallel to D3 5M-tier dropped). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
+| > 48 h (times out) | **RED** | Micro is not practical at 200K tier on current hardware. Document as D-class deviation in the limitations appendix (parallel to D3 5M-tier dropped). Ship the chicago_1k + nyc_10k micro data as the within-engine resolution finding instead. |
 
 **Submission command** (on Cardinal, from `~/SimForge`):
 
@@ -635,7 +635,7 @@ Audit Q1–Q4 results (post-SCC-fix interpretation):
 **Job ID:** 47116156
 **What changed:** First Pitzer benchmark_small run on Version_5, full 3 scenarios × 4 cells × N=5 = 60 runs via parallel-by-scenario sbatch.
 **Result:** Submitted 20:39 EDT. chicago_1k_car worker complete at 20:48 (8.6 min). nyc_10k_car worker on track for ~60 min total. la_50k_car worker stuck in BFS pre-routing for SUMO meso seed=42, projected ~25 hr per scenario, will likely SLURM-timeout at the 24 hr wall (SUMO microscopic at 50k trips is the known wall-time bottleneck per `cluster/jobs/benchmark_large.sbatch` header).
-**Decision / lesson:** Accept la_50k partial results; chicago + nyc give the headline thesis numbers. The SUMO BFS routing bottleneck (~17h per (engine, seed) at 200k trips) is a known limitation requiring route-caching to fix; tracked as future work in `todo.md`.
+**Decision / lesson:** Accept la_50k partial results; chicago + nyc give the headline thesis numbers. The SUMO BFS routing bottleneck (~17h per (engine, seed) at 200k trips) is a known limitation requiring route-caching to fix; tracked as future work.
 
 ### 2026-04-27, Mac local 18-cell smoke (chicago_1k + nyc_10k)
 

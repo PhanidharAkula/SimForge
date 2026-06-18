@@ -41,7 +41,7 @@ The dominant paradigms in academic traffic simulation, mapped to SimForge's matr
 
 ## 3. Wallclock estimates at SimForge scenario sizes
 
-Order-of-magnitude estimates from the plan-era planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k under Phase 14 + Wave 2). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate, see Chapter 6 §6.2.2.
+Order-of-magnitude estimates from the early planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k under Phase 14 + Wave 2). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate, see Chapter 6 §6.2.2.
 
 | Scenario | SUMO meso | SUMO micro | MATSim | DTALite (est.) | LPSim (would have been) |
 |---|---|---|---|---|---|
@@ -107,7 +107,7 @@ Each engine answers a *slightly different question* about the same scenario. Thi
 | Cross-engine agreement = some signal | Cross-engine agreement across **three paradigms** = much stronger signal |
 | No GMNS / open-standard adapter | GMNS adapter demonstrates SimForge handles community standards, not just engine-private formats |
 | Engine selection narrative is "the two engines that worked" | Engine selection narrative is "three paradigms validated through systematic ruling-out of two failures + one success" |
-| 2-engine matrix in results tables | 3-engine matrix, plan-promised count met |
+| 2-engine matrix in results tables | 3-engine matrix, the planned three-paradigm count met |
 | Reproducibility ceiling shared by 2 engines | Reproducibility ceiling shared by 3 engines, all R = 1.0 |
 
 ## 8. Thesis-defense quote bank
@@ -124,7 +124,7 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.3 On the QarSUMO drop
 
-> QarSUMO was listed in the original plan as a fifth engine but was dropped in Version_4 Phase A after a source-availability audit found no usable public distribution: `LLNL/QarSUMO` returns HTTP 404, `QarSUMO/QarSUMO` is an empty placeholder repository, and the cited Boulmakoul 2023 IEEE HPCS paper has not produced runnable code. The Version_3 SimForge harness ran a CPU-fallback path that was bit-identical to standard SUMO mesoscopic, contributing zero new comparison signal while occupying one fifth of the experimental matrix. The drop demonstrates the framework's selection discipline: when source is unavailable, the right answer is to remove the engine and document why, not to silently substitute.
+> QarSUMO was an early fifth-engine candidate but was dropped in Version_4 Phase A after a source-availability audit found no usable public distribution: `LLNL/QarSUMO` returns HTTP 404, `QarSUMO/QarSUMO` is an empty placeholder repository, and the cited Boulmakoul 2023 IEEE HPCS paper has not produced runnable code. The Version_3 SimForge harness ran a CPU-fallback path that was bit-identical to standard SUMO mesoscopic, contributing zero new comparison signal while occupying one fifth of the experimental matrix. The drop demonstrates the framework's selection discipline: when source is unavailable, the right answer is to remove the engine and document why, not to silently substitute.
 
 ### 8.4 On reproducibility (R-score)
 

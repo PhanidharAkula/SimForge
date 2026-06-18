@@ -66,8 +66,8 @@ The file format and per-line schema are documented in
 
 ### TAZ ≥10 trip suppression (upstream Census aggregation)
 
-Thesis Plan §3.6 commits SimForge to suppressing any TAZ cell with
-fewer than 10 trips, as a residual re-identification safeguard. In
+SimForge suppresses any TAZ cell with fewer than 10 trips, as a
+residual re-identification safeguard. In
 practice this suppression is **already enforced upstream by the US
 Census Bureau** as part of PUMS's Public Use threshold: PUMS records
 are released only for PUMAs of ≥100,000 population, and individual

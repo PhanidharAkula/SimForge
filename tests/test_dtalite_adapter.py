@@ -67,7 +67,7 @@ class TestToIntIndex:
 
 
 class TestDTALiteConfig:
-    def test_defaults_match_plan(self):
+    def test_defaults(self):
         cfg = DTALiteConfig()
         assert cfg.iterations == 5
         assert cfg.column_updating_iterations == 5

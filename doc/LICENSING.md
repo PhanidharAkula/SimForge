@@ -2,8 +2,8 @@
 
 This document declares the license under which each component of the
 SimForge artefact is distributed, and the upstream licenses that govern
-the third-party software and data SimForge consumes. It corresponds to
-the commitments in Thesis Plan §3.6 ("Data Management and Ethics").
+the third-party software and data SimForge consumes. It documents
+SimForge's data-management and ethics posture.
 
 ---
 

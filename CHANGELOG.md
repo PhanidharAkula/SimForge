@@ -84,7 +84,7 @@ End-to-end audit across every code surface (`adapters/`, `pipeline/`, `evaluatio
 
 ### Wave 2, Containerization shipped (2026-05-19)
 
-Closes the last open ~ deviation in `doc/DEVIATIONS.md` (D10), mapping to plan §1.10 Objective 3 + §1.11 C3 + §2.7 + §4.2: "All simulations execute within pinned-digest containers (OCI/Singularity)."
+Ships pinned-digest containerized execution: all simulations run within OCI/Singularity containers.
 
 **Files added:**
 
@@ -101,8 +101,6 @@ Closes the last open ~ deviation in `doc/DEVIATIONS.md` (D10), mapping to plan �
 **Files modified:**
 
 - **`cluster/jobs/benchmark_small.sbatch`** + **`benchmark_large.sbatch`**, opt-in container mode via `SIMFORGE_USE_CONTAINER=1` environment variable. When set, the sbatch pulls the SimForge container via Singularity (cached at `containers/simforge_<tag>.sif`) and runs the harness inside it instead of the host venv. `SIMFORGE_CONTAINER_TAG` optionally pins to a specific git SHA / tag (default: `phase-14-canonical-routes`). Default behavior unchanged (host venv), fully backward compatible.
-
-- **`doc/DEVIATIONS.md`** D10 promoted from ~ Deviated to ✓ Closed. At-a-glance scorecard updated: 15 closed / 10 deviated / 6 implementation-differs / 31 total.
 
 **Verification path:**
 
@@ -161,9 +159,8 @@ cache/canonical_routes/
 
 ### Documentation + sbatch hygiene pass (2026-05-19, post-Wave-1)
 
-Three groups of doc/operational changes landed after Wave 1, all documentation- or sbatch-only (no adapter / pipeline behaviour change).
+Two groups of doc/operational changes landed after Wave 1, all documentation- or sbatch-only (no adapter / pipeline behaviour change).
 
-- **`doc/DEVIATIONS.md`** (commit `caadceb`), 31-item audit of the December 2025 thesis plan vs the shipped codebase: 14 ✓ Closed, 11 ~ Deviated with rationale, 6 ≠ Implementation differs. Single reference for the defense Q&A and methods chapter.
 - **`doc/SIMULATION_PARADIGMS.md`** (commit `84ac87c`), 313-line canonical doc explaining macro/meso/micro: the three resolutions table, per-engine support matrix (SUMO meso+micro, MATSim/DTALite meso-only), why SimForge defaults to meso for cross-engine fairness, empirical cost ratios from benchmark_small (chicago_1k 1.3×, nyc_10k 1.7×), projections for SUMO micro at 200K/500K, defense Q&A pocket explanation. `doc/GLOSSARY.md` Mesoscopic + Microscopic entries cross-reference the long form.
 - **sbatch consolidation** (commit `503bcbf`), deleted the Phase 13.2 per-scenario fallback sbatchs (`benchmark_large_chicago_200k.sbatch`
   - `benchmark_large_nyc_500k.sbatch`); they were wall-margin insurance for nyc_500k's pre-Phase-14 ~225 h projection against Cardinal's 168 h cpu cap. Phase 14 collapsed nyc_500k cold-cache to ~22 h, so the umbrella `benchmark_large.sbatch` parallel-on-one-node strategy is comfortable. Reduced umbrella `--time=7-00:00:00` → `2-00:00:00` (2× margin over the ~22 h worst case). Updated both runspec headers (`benchmark_small.yaml`, `benchmark_large.yaml`) with Phase 14 wall budgets and the cross-engine cache-sharing narrative.
@@ -172,21 +169,21 @@ Three groups of doc/operational changes landed after Wave 1, all documentation- 
 
 End-to-end documentation sweep to align surface text with Phase 14 + Wave 1 reality. Findings + edits:
 
-- `README.md`: test count `~574 → ~626 tests` (4 occurrences across status table, project structure, run instructions, headline); added `tools/generate_scorecard.py` to the post-run pipeline description; added 4 docs to the Documentation table (`LICENSING.md`, `DATA_MANAGEMENT.md`, `DEVIATIONS.md`, `SIMULATION_PARADIGMS.md`, `EXPERIMENT_LOG.md`).
+- `README.md`: test count `~574 → ~626 tests` (4 occurrences across status table, project structure, run instructions, headline); added `tools/generate_scorecard.py` to the post-run pipeline description; added 4 docs to the Documentation table (`LICENSING.md`, `DATA_MANAGEMENT.md`, `SIMULATION_PARADIGMS.md`, `EXPERIMENT_LOG.md`).
 - `TESTING.md`: headline `~477 tests / 23 files → ~626 tests / 31 files`.
 - `doc/PHASE_14_DESIGN.md` §5 Measurement Plan: replaced the forward-looking re-submit-the-deleted-sbatchs steps with the actual measured Phase 14 walls (chicago_200k 7.14 h cold / 37 min warm; nyc_500k 22 h cold projected) and the umbrella-sbatch consolidation pointer.
 - `doc/REPRODUCING.md`: added optional step 6 documenting `python -m tools.generate_scorecard <run-dir>`.
 - `help.py` HELP_EVALUATION: added a REPRODUCIBILITY SCORECARD subsection after AUDIT CROSS-ENGINE FAIRNESS.
 - `doc/EXPERIMENT_LOG.md` §1 Headline numbers: updated test-suite count, added Phase 14 measured walls for chicago_200k_car, fixed the "engines researched + ruled out" count (3 → 4 names listed).
 
-### Wave 1, Reproducibility-artefact closure pass (2026-05-19)
+### Wave 1, Reproducibility and licensing artefacts (2026-05-19)
 
-Adds the artefacts the original thesis plan (§3.6, §3.4, §4.2) committed to but the codebase hadn't yet shipped. All five are documentation or one-shot summary tooling, no adapter or pipeline behaviour changes, no impact on benchmark numbers.
+Adds the reproducibility, licensing, and data-management artefacts the codebase had committed to but hadn't yet shipped. All five are documentation or one-shot summary tooling, no adapter or pipeline behaviour changes, no impact on benchmark numbers.
 
-- **`LICENSE`**, Apache 2.0 license text at repo root with "Copyright 2025-2026 Phanidhar Akula". Closes plan §3.6 open-source-licensing commitment.
+- **`LICENSE`**, Apache 2.0 license text at repo root with "Copyright 2025-2026 Phanidhar Akula".
 - **`doc/LICENSING.md`**, per-component license declaration: SimForge code (Apache 2.0), canonical bundles (CC BY 4.0), OSM derivatives (ODbL with share-alike obligation on `network.xml`), eclipse-sumo wheel (EPL 2.0), MATSim runtime JAR (per-release GPL/MIT/Apache), path4gmns/DTALite (Apache 2.0), PUMS (US Federal public domain), TIGER/Cartographic Boundary (US Federal public domain).
-- **`doc/DATA_MANAGEMENT.md`**, data-sources table, no-PII declaration (PUMS aggregation upstream + synthetic trip records with provenance), storage/access tiers (public GitHub + university-authenticated HPC), 12-month retention window for run outputs, end-to-end reproducibility chain. Closes plan §3.6 line-by-line.
-- **`doc/MODELGEN_AND_MODES.md` §1**, added TAZ ≥10 trip suppression paragraph documenting that the plan's re-identification safeguard is enforced upstream by US Census PUMS (≥10-person cell threshold) and inherited by SimForge, no additional filter needed at `demand.csv`-emit time.
+- **`doc/DATA_MANAGEMENT.md`**, data-sources table, no-PII declaration (PUMS aggregation upstream + synthetic trip records with provenance), storage/access tiers (public GitHub + university-authenticated HPC), 12-month retention window for run outputs, end-to-end reproducibility chain.
+- **`doc/MODELGEN_AND_MODES.md` §1**, added TAZ ≥10 trip suppression paragraph documenting that the re-identification safeguard is enforced upstream by US Census PUMS (≥10-person cell threshold) and inherited by SimForge, no additional filter needed at `demand.csv`-emit time.
 - **`tools/generate_scorecard.py` (NEW)**, one-shot reproducibility-scorecard emitter. Reads `benchmark_results_<runspec>.json` + each cell's `feasibility_report.json` + `osm_data/manifest.json` + per-scenario bundle hashes; writes `reproducibility_scorecard.md` covering provenance, environment, Q1 cross-engine byte-identity verdict, R = 1 − CV per (scenario, engine, mode) cell, and a pass/warn/fail overall rollup. Auto-emitted at the end of every `python -m execution.run_benchmark` run (guarded, scorecard failure never blocks the benchmark) alongside the existing `benchmark_results_*.json`. Test coverage: 22 tests in `tests/test_generate_scorecard.py`.
 
 ### Phase 14.12: MATSim adapter O(N²) link-find bottleneck (2026-05-18)
@@ -1428,11 +1425,11 @@ After exhaustive Pitzer debugging (~12 commits across two debugging sessions in 
 
 ### Changed (Phase B follow-on)
 
-- **N=5 across the matrix**, `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` all bumped from N=3/2 to N=5. The 95 % CI half-width shrinks ~3.5× vs N=3 (t-factor 2.776 vs 4.303 on top of √(5/3) variance reduction), which is the precision the plan §3.5 commitments need.
+- **N=5 across the matrix**, `stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml` all bumped from N=3/2 to N=5. The 95 % CI half-width shrinks ~3.5× vs N=3 (t-factor 2.776 vs 4.303 on top of √(5/3) variance reduction), which is the precision the 95 % CI targets need.
 
 ### Removed
 
-- **QarSUMO engine completely dropped** (Version_4 Phase A), the plan listed QarSUMO as a 5th engine, but as of the 2026-04-26 audit no usable public source exists: LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper cited in the plan hasn't materialised into runnable code. The CPU-fallback path that shipped through Version_3 was bit-identical to standard SUMO meso, contributing no new comparison signal. Removed: `adapters/qarsumo/` package, `tests/test_qarsumo_adapter.py` (10 tests), `cluster/jobs/build_qarsumo.sbatch`, all `qarsumo` runspec entries (`stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml`), engine registry membership in `execution/runspec.py` and `run.py`, dispatcher branches in `execution/run_benchmark.py`, plot/analyze engine tuples, and all doc references. The 3rd primary engine slot is now reserved for **LPSim** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU-accelerated, Docker shipped), see `todo.md` Phase B.
+- **QarSUMO engine completely dropped** (Version_4 Phase A), QarSUMO was an early 5th-engine candidate, but as of the 2026-04-26 audit no usable public source exists: LLNL/QarSUMO returns 404, QarSUMO/QarSUMO is an empty placeholder, and the Boulmakoul 2023 IEEE HPCS paper hasn't materialised into runnable code. The CPU-fallback path that shipped through Version_3 was bit-identical to standard SUMO meso, contributing no new comparison signal. Removed: `adapters/qarsumo/` package, `tests/test_qarsumo_adapter.py` (10 tests), `cluster/jobs/build_qarsumo.sbatch`, all `qarsumo` runspec entries (`stress_test.yaml`, `benchmark_small.yaml`, `benchmark_large.yaml`), engine registry membership in `execution/runspec.py` and `run.py`, dispatcher branches in `execution/run_benchmark.py`, plot/analyze engine tuples, and all doc references. The 3rd primary engine slot is now reserved for **LPSim** ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT, GPU-accelerated, Docker shipped).
 
 ### Changed
 
@@ -1443,8 +1440,7 @@ After exhaustive Pitzer debugging (~12 commits across two debugging sessions in 
 
 ### Added
 
-- **`todo.md`**, Version_4 roadmap with plan-vs-reality gap audit (engines, cities, loads, hardware, repeats, reproducibility, calibration, metrics, deliverables), advisor-approved scope adjustments, phased roadmap (A: foundation → B: LPSim → C: containers → D: optional → E: integration), and open questions for the next advisor meeting. Cross-references `a personal PDF` (December 2025) as the canonical source of truth.
-- **`evaluation/metrics/confidence.py`**, 95 % confidence intervals on the mean via Student's t-distribution. Hard-coded t-critical table (df 1–30) with normal-distribution Z=1.960 fallback for df > 30, no scipy dependency, math is auditable in the thesis appendix. Closes plan §3.5 commitment to "95 % CIs on every KPI". Tested in `tests/test_confidence.py` (11 tests covering edge cases and hand-computable references). Wired into:
+- **`evaluation/metrics/confidence.py`**, 95 % confidence intervals on the mean via Student's t-distribution. Hard-coded t-critical table (df 1–30) with normal-distribution Z=1.960 fallback for df > 30, no scipy dependency, math is auditable in the thesis appendix. Implements 95 % CIs on every KPI. Tested in `tests/test_confidence.py` (11 tests covering edge cases and hand-computable references). Wired into:
   - `evaluation/analyze_benchmark.py`, `ScenarioStats` gains `ci95_runtime` / `ci95_travel_time` fields; Tables 5.1 / 5.2 add a `95% CI` column alongside the existing `Std`; LaTeX and Markdown table generators render `mean ± half-width` instead of bare means.
   - `evaluation/generate_plots.py`, `ScenarioMetrics` gains the same fields; error bars in Figs 5.1 (runtime), 5.3 (travel time), and 5.6 (micro vs meso) now show 95 % CIs instead of ±1σ. Figure titles updated to flag the change.
 

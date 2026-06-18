@@ -222,7 +222,7 @@ chicago_200k_car meso peaked at 23 GB. Micro is expected at 50–115 GB
 3. **Skip nyc_500k_car SUMO micro** for the defense. It's a
    confirmatory data point (we already know micro is slower than
    meso) that would consume disproportionate compute. Document as a
-   D-class deviation in the thesis plan-deviations appendix if needed.
+   D-class deviation in the limitations appendix if needed.
 
 ---
 
@@ -248,7 +248,7 @@ meso:
 
 ## 8. Within-engine meso-vs-micro: the thesis story
 
-The plan (Chapter 5 implicit) wanted *fidelity vs reality*,
+The original aim (Chapter 5 implicit) was *fidelity vs reality*,
 how close each engine is to observed Chicago/NYC/LA traffic. Without
 observed ground truth, SimForge does the next-best thing in two
 directions:
@@ -304,7 +304,7 @@ on its own as a paradigm-divergence result.
   PCE / DTA entries link back to this doc for the long form.
 - `doc/ARCHITECTURE.md`, fairness contract, engine compatibility
   matrix.
-- the plan-deviations appendix, D1 (engine substitution), D6
+- the limitations appendix, D1 (engine substitution), D6
   (no grid-search calibration), D7 (vehicles/sec/core).
 - `doc/MODELGEN_AND_MODES.md`, the *other* meaning of "mode" in
   SimForge: travel mode (car/transit/bike/walk), not simulation

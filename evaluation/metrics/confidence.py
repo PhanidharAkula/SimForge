@@ -1,7 +1,7 @@
 """
 95% confidence intervals via the Student's t-distribution.
 
-The thesis plan (§3.5) commits to reporting **95 % CIs on every KPI**.
+Every KPI is reported with a **95 % CI on the mean**.
 SimForge already records mean and standard deviation per `(scenario, engine,
 mode)` cell across N stochastic repeats; this module turns those moments
 into the confidence interval that quantifies how much sampling noise the
