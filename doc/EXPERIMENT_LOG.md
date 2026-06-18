@@ -539,7 +539,7 @@ All 4 fairness gates (Q1-Q4) PASS for SUMO + MATSim across all 3 scenarios. DTAL
 ### 2026-05-02, Phase 12 + 12.1: parallel-by-scenario + MATSim correctness landed
 
 **Phase:** Version_5 Phase 12 (sbatch correctness) + 12.1 (MATSim route format)
-**Commit:** TBD (single push, this entry written before commit)
+**Commit:** `81ff0c5`
 **Job ID:** Triggered by Pitzer SLURM job 47236542 (benchmark_small.sbatch on 2026-05-02), which surfaced three runner bugs and one MATSim adapter bug all in the same session.
 
 **What changed:**
@@ -571,7 +571,7 @@ Cascade: `evaluation/audit_fairness.py` `_find_cell_dir` and `_discover_scenario
 
 **Phase:** Version_5 Phase 4 (post-landing fairness validation)
 **Commit:** `c31e087`
-**Job ID:** TBD (submitted alongside running 47116156)
+**Job ID:** Not recorded (submitted alongside Pitzer job 47116156)
 **What changed:** Added `ENGINE_SUPPORTED_MODES` to `run.py`. The CLI matrix expansion now skips (engine, mode) pairs the engine does not support, instead of silently re-running mesoscopic-only engines once per requested mode. `--engine sumo,matsim,dtalite --mode meso,micro` × N=3 reps × 2 scenarios is now 24 runs (8 valid cells × 3 reps), down from 36 in the naive product.
 **Result:** Pending.
 **Decision / lesson:** The naive Cartesian product wasted half the runtime on duplicated meso cells labelled as "micro". Even though the duplicated cells are valid additional reproducibility data, the resulting JSON had misleading column labels. The fix prints the skipped pairs in the startup banner so the operator can see why the cell count is smaller than the naive product.

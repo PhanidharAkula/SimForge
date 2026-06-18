@@ -37,23 +37,26 @@ running the full 260-test suite per mutant would take over an hour.  The
 two targeted test files assert every observable contract of the two
 modules, so the coverage gap is small.
 
-## Baseline (not yet executed)
+## Baseline (measured 2026-06-18)
 
-The mutmut harness is configured and scoped (above), but the baseline run
-has never been executed, so this table is intentionally unfilled. The two
-modules are instead guarded by their direct unit tests (`test_feasibility`,
-19 tests; `test_scc`, 14 tests) and the byte-identity determinism suite.
+Run with `mutmut run` (mutmut 2.5.1) and the configuration above, against
+the two targeted test files `test_feasibility` (19 tests) and `test_scc`
+(14 tests). Score is killed / mutants generated.
 
 | Module                              | Mutants generated | Killed | Survived | Score |
 | ----------------------------------- | ----------------- | ------ | -------- | ----- |
-| `adapters/common/feasibility.py`    | TBD               | TBD    | TBD      | TBD   |
-| `pipeline/network/scc.py`           | TBD               | TBD    | TBD      | TBD   |
-| **Combined**                        | **TBD**           | TBD    | TBD      | TBD   |
+| `adapters/common/feasibility.py`    | 140               | 108    | 32       | 77.1% |
+| `pipeline/network/scc.py`           | 62                | 51     | 11       | 82.3% |
+| **Combined**                        | **202**           | **159** | **43**  | **78.7%** |
 
-> Populate this table the first time mutmut is run. Re-run and update
-> whenever either module changes. Surviving mutants should either be
-> killed by a new test assertion or justified here (e.g. equivalent
-> mutants that don't change behaviour).
+`scc.py`'s 51 includes one mutant caught by timeout (an induced infinite
+loop) rather than by a failing assertion; `feasibility.py` had none. The 43
+surviving mutants mark assertions worth strengthening (or equivalent
+mutants worth justifying); review them with the checklist below.
+
+> Re-run and update this table whenever either module changes. Surviving
+> mutants should either be killed by a new test assertion or justified here
+> (e.g. equivalent mutants that don't change behaviour).
 
 ## Surviving-mutant review checklist
 
