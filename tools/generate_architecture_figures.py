@@ -290,23 +290,23 @@ def fig_3_6_fairness_audit_flow(output_dir):
 
     # Q1-Q5 stacked
     q_specs = [
-        ("Q1 — Byte-identical feasibility verdict?",
+        ("Q1: Byte-identical feasibility verdict?",
          "Compare feasibility_report.json across all engines\n"
          "→ feasible_trip_ids set must be byte-equal",
          8.5, C_OK, "MANDATORY", "#388e3c"),
-        ("Q2 — Byte-identical SCC network?",
+        ("Q2: Byte-identical SCC network?",
          "Compare adapter-emitted network node + link counts\n"
          "→ SCC sizes must match",
          7.1, C_OK, "MANDATORY", "#388e3c"),
-        ("Q3 — Identical simulated-trip count target?",
+        ("Q3: Identical simulated-trip count target?",
          "Count planned trips in each engine's native inputs\n"
          "→ all engines target the same |feasible|",
          5.7, C_OK, "MANDATORY", "#388e3c"),
-        ("Q4 — Cross-engine mean travel-time spread",
+        ("Q4: Cross-engine mean travel-time spread",
          "Compute per-engine mean TT + report spread\n"
          "→ INTERPRETIVE: paradigm-divergence signal",
          4.3, C_INFO, "INFORMATIONAL", "#1976d2"),
-        ("Q5 — Demand composition (V5+)",
+        ("Q5: Demand composition (V5+)",
          "Tally trip purposes from demand.csv\n"
          "→ INFORMATIONAL: HBW + HBSchool breakdown",
          2.9, C_INFO, "INFORMATIONAL", "#1976d2"),
@@ -356,9 +356,9 @@ def fig_3_6_fairness_audit_flow(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_8_phase14_bfs_dedup(output_dir):
+def fig_3_8_bfs_dedup(output_dir):
     fig, axes = plt.subplots(1, 2, figsize=(15, 6.5))
-    fig.suptitle("Phase 14 canonical_routes BFS deduplication  "
+    fig.suptitle("Canonical-routes BFS deduplication  "
                  "(chicago_200k_car: 141.87 h → 7.14 h cold-vs-cold, ~20×)",
                  fontsize=12, fontweight="bold", y=0.97)
 
@@ -370,7 +370,7 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
 
     # --- BEFORE (left) ---
     ax = axes[0]
-    ax.text(5.0, 6.55, "BEFORE Phase 14  (Phase 12 / 13)",
+    ax.text(5.0, 6.55, "BEFORE: per-adapter BFS",
             ha="center", va="center", fontsize=12, fontweight="bold",
             color="#c62828")
 
@@ -379,10 +379,10 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
 
     # Two adapter rows with own BFS
     box(ax, 2.6, 4.4, 7.0, 1.3,
-        "SUMO adapter\n200K trips × BFS @ 1.5 s/trip  ≈  82 h",
+        "SUMO adapter\n200K trips × BFS @ ~1.2 s/trip  ≈  68 h",
         color=C_ADAPTER, fontsize=9.5)
     box(ax, 2.6, 2.6, 7.0, 1.3,
-        "MATSim adapter\n200K trips × BFS @ 1.5 s/trip  ≈  82 h",
+        "MATSim adapter\n200K trips × BFS @ ~1.2 s/trip  ≈  68 h",
         color=C_ADAPTER, fontsize=9.5)
 
     arrow(ax, 2.15, 5.4, 2.6, 5.05, lw=1.5)
@@ -390,14 +390,14 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
 
     box(ax, 1.0, 0.6, 8.0, 1.4, "", color=C_HIGHLIGHT)
     ax.text(5.0, 1.30,
-            "→ Total ~164 h adapter-prep wall  (96 % of run time)\n"
+            "→ Total ~136 h adapter-prep wall  (96 % of run time)\n"
             "    nyc_500k_car structurally infeasible (~600 h projected)",
             ha="center", va="center", fontsize=9.5, fontweight="bold",
             color="#c62828")
 
     # --- AFTER (right) ---
     ax = axes[1]
-    ax.text(5.0, 6.55, "AFTER Phase 14  (canonical_routes shared BFS)",
+    ax.text(5.0, 6.55, "AFTER: shared canonical_routes BFS",
             ha="center", va="center", fontsize=12, fontweight="bold",
             color="#1b5e20")
 
@@ -405,13 +405,13 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
         color=C_BUNDLE, fontsize=10, fontweight="bold")
 
     # Shared compute box (wider to fit text)
-    box(ax, 2.6, 4.4, 4.4, 1.3,
+    box(ax, 2.6, 4.4, 4.0, 1.3,
         "canonical_routes.\ncompute_canonical_routes()\nparallel BFS, 16 workers",
         color=C_HIGHLIGHT, fontsize=9.5, fontweight="bold")
 
     # Cache box below
-    box(ax, 2.6, 2.7, 4.4, 1.0,
-        "cache/canonical_routes/\n<hash>.jsonl  (Phase 14.13 global cache)",
+    box(ax, 2.6, 2.7, 4.0, 1.0,
+        "cache/canonical_routes/\n<hash>.jsonl  (global cache)",
         color="white", fontsize=8.5)
 
     # Two adapters consuming the shared dict
@@ -421,19 +421,19 @@ def fig_3_8_phase14_bfs_dedup(output_dir):
         color=C_ADAPTER, fontsize=9.5, fontweight="bold")
 
     arrow(ax, 2.15, 5.05, 2.6, 5.05, lw=1.5)
-    arrow(ax, 7.0, 5.35, 7.4, 5.50, lw=1.2, label="dict")
-    arrow(ax, 7.0, 4.75, 7.4, 4.40, lw=1.2, label="dict")
-    arrow(ax, 4.8, 4.4, 4.8, 3.7, lw=1.0, color="#888")
+    arrow(ax, 6.6, 5.35, 7.4, 5.50, lw=1.2, label="dict")
+    arrow(ax, 6.6, 4.75, 7.4, 4.40, lw=1.2, label="dict")
+    arrow(ax, 4.6, 4.4, 4.6, 3.7, lw=1.0, color="#888")
 
     box(ax, 1.0, 0.6, 8.0, 1.4, "", color=C_OK)
     ax.text(5.0, 1.30,
-            "→ Total ~7.14 h adapter-prep wall (cold)   ~37 min (warm-cache re-run, 228×)\n"
+            "→ Total ~7.14 h cold adapter-prep wall;  ~37 min warm re-run (228×)\n"
             "    nyc_500k_car feasible: 12 h 8 min on Cardinal",
             ha="center", va="center", fontsize=9.5, fontweight="bold",
             color="#1b5e20")
 
     plt.tight_layout(rect=(0, 0, 1, 0.94))
-    out = output_dir / "fig_3_8_phase14_bfs_dedup.png"
+    out = output_dir / "fig_3_8_bfs_dedup.png"
     fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.2, facecolor="white")
     plt.close(fig)
     return out
@@ -460,7 +460,7 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.set_xticks(range(len(tiers)))
     ax.set_xticklabels(tiers, fontsize=9)
     ax.set_ylabel("SUMO meso / MATSim meso  mean-TT ratio", fontsize=10)
-    ax.set_title("§6.2.2 — Cross-engine paradigm spread\n"
+    ax.set_title("§6.2.2: Cross-engine paradigm spread\n"
                  "(SUMO insertion-refusal ↔ MATSim queue-hold)",
                  fontsize=11, fontweight="bold", pad=10)
     ax.axhline(y=1.0, color="#999", linestyle="--", linewidth=1.0, alpha=0.7)
@@ -499,15 +499,15 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.set_xticks(range(len(tiers2)))
     ax.set_xticklabels(tiers2, fontsize=9)
     ax.set_ylabel("SUMO micro / SUMO meso  mean-TT ratio", fontsize=10)
-    ax.set_title("§6.2.4 — Within-engine paradigm spread\n"
+    ax.set_title("§6.2.4: Within-engine paradigm spread\n"
                  "(SUMO micro ↔ SUMO meso mobsim resolution)",
                  fontsize=11, fontweight="bold", pad=10)
     ax.axhline(y=1.0, color="#999", linestyle="--", linewidth=1.0, alpha=0.7)
     ax.set_ylim(0, 2.3)
     # "parity" label in the empty upper-left corner, clear of bars and the
     # annotation arrow that crosses the parity line on this panel
-    ax.text(-0.45, 2.18, "dashed = parity", fontsize=8, color="#666",
-            ha="left", va="bottom")
+    ax.text(0.0, 2.05, "dashed = parity", fontsize=8, color="#666",
+            ha="center", va="center")
     for bar, ratio, d in zip(bars, ratios2, deltas):
         ax.text(bar.get_x() + bar.get_width() / 2, ratio + 0.05,
                 f"{ratio:.3f}  ({d})", ha="center", va="bottom", fontsize=8.5,
@@ -542,11 +542,11 @@ def fig_6_1_paradigm_spread(output_dir):
 
 
 def fig_3_2_canonical_bundle_schema(output_dir):
-    fig, ax = plt.subplots(figsize=(14, 7))
+    fig, ax = plt.subplots(figsize=(14, 7.5))
     fig.suptitle("Canonical scenario bundle: 5-file simulator-agnostic schema",
                  fontsize=13, fontweight="bold", y=0.97)
     ax.set_xlim(0, 14)
-    ax.set_ylim(0, 7)
+    ax.set_ylim(0, 7.5)
     ax.axis("off")
 
     # Five file boxes laid out in a row across the top
@@ -600,7 +600,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
         box(ax, x, by, bw, bh - 0.7, "", color="white")
         for j, line in enumerate(lines):
             ax.text(x + 0.13, by + bh - 1.05 - j * 0.45, line,
-                    ha="left", va="top", fontsize=8, family="monospace",
+                    ha="left", va="top", fontsize=7.5, family="monospace",
                     color="#333")
 
     # Caption box at top noting the manifest verification.
@@ -610,8 +610,8 @@ def fig_3_2_canonical_bundle_schema(output_dir):
     # arrows. The textual caption + the per-file `<file path=... sha256=...>`
     # entries shown inside manifest.xml's content box convey the same point
     # without the visual confusion.)
-    ax.text(7.0, 6.75,
-            "manifest.xml hash-verifies the other 4 files (SHA-256) at validate_bundle time — "
+    ax.text(7.0, 7.15,
+            "manifest.xml hash-verifies the other 4 files (SHA-256) at validate_bundle time;\n"
             "see the <file path=... sha256=.../> entries inside manifest.xml above.",
             ha="center", va="center", fontsize=9.5, color="#c62828",
             style="italic",
@@ -667,9 +667,9 @@ def fig_3_3_generation_pipeline(output_dir):
         box(ax, 0.5, y - 0.40, 2.6, 0.80, label,
             color="white", fontsize=8.5, radius=0.03)
 
-    # CENTER column: pipeline stages (even 1.03 pitch, visible gap arrows)
-    container(ax, 4.0, 0.7, 5.8, 6.5, "Pipeline stages", color=C_PIPELINE)
-    stage_ys = [6.45, 5.42, 4.39, 3.36, 2.33, 1.30]
+    # CENTER column: pipeline stages (even 1.0 pitch; title clearance + visible gaps)
+    container(ax, 4.0, 0.7, 5.8, 6.5, "Pipeline modules", color=C_PIPELINE)
+    stage_ys = [6.25, 5.26, 4.27, 3.28, 2.29, 1.30]
     stages = [
         ("pipeline/network/load_network_from_pbf.py\n(pyosmium bbox slice)", stage_ys[0]),
         ("pipeline/network/build_network_from_osm.py\n(osmnx → GMNS graph)", stage_ys[1]),
@@ -679,24 +679,24 @@ def fig_3_3_generation_pipeline(output_dir):
         ("pipeline/demand/generate_census_demand.py\n(schedule-first + gravity fallback)", stage_ys[5]),
     ]
     for label, y in stages:
-        box(ax, 4.2, y - 0.375, 5.4, 0.75, label,
+        box(ax, 4.2, y - 0.35, 5.4, 0.70, label,
             color="white", fontsize=8.2, radius=0.03)
 
     # Inter-stage arrows in CENTER (vertical flow downward, inside the gaps)
     for y1, y2 in zip(stage_ys, stage_ys[1:]):
         arrow(ax, 7.0, y1 - 0.40, 7.0, y2 + 0.42, lw=1.2, color="#999")
 
-    # RIGHT column: canonical bundle output (even 1.25 pitch)
+    # RIGHT column: canonical bundle output (even 1.1 pitch; all 5 fit inside)
     container(ax, 10.5, 0.7, 3.3, 6.5, "Canonical bundle\n(5 files)", color=C_BUNDLE)
     outs = [
-        ("network.xml", 6.0),
-        ("demand.csv", 4.75),
-        ("signals.xml", 3.5),
-        ("config.xml", 2.25),
-        ("manifest.xml +\nSHA-256", 1.0),
+        ("network.xml", 5.8),
+        ("demand.csv", 4.7),
+        ("signals.xml", 3.6),
+        ("config.xml", 2.5),
+        ("manifest.xml +\nSHA-256", 1.4),
     ]
     for name, y in outs:
-        box(ax, 10.7, y - 0.30, 2.9, 0.60, name,
+        box(ax, 10.7, y - 0.35, 2.9, 0.70, name,
             color="white", fontsize=9, radius=0.03)
 
     # Arrows from data sources to relevant pipeline stages
@@ -707,13 +707,13 @@ def fig_3_3_generation_pipeline(output_dir):
     arrow(ax, 3.10, 1.6, 4.20, stage_ys[4], lw=0.8, color="#888")    # ModelGen → parse_model
 
     # Arrows from pipeline stages to output files
-    arrow(ax, 9.6, stage_ys[2], 10.7, 6.0, lw=0.8, color="#1976d2")   # SCC + network → network.xml
-    arrow(ax, 9.6, stage_ys[5], 10.7, 4.75, lw=0.8, color="#1976d2")  # demand gen → demand.csv
-    arrow(ax, 9.6, stage_ys[3], 10.7, 3.5, lw=0.8, color="#1976d2")   # signals → signals.xml
+    arrow(ax, 9.6, stage_ys[2], 10.7, 5.8, lw=0.8, color="#1976d2")   # SCC + network → network.xml
+    arrow(ax, 9.6, stage_ys[5], 10.7, 4.7, lw=0.8, color="#1976d2")   # demand gen → demand.csv
+    arrow(ax, 9.6, stage_ys[3], 10.7, 3.6, lw=0.8, color="#1976d2")   # signals → signals.xml
 
     # Provenance note for the two orchestrator-written files
-    ax.text(12.15, 0.42,
-            "config.xml + manifest.xml are written by the generate.py orchestrator\n"
+    ax.text(7.0, 0.42,
+            "config.xml + manifest.xml are written by the generate.py orchestrator "
             "(manifest stamped last, covering all four data files; §3.3.1)",
             ha="center", va="center", fontsize=7.5, style="italic", color="#555")
 
@@ -808,7 +808,7 @@ def fig_3_4_adapter_contract(output_dir):
 
 def fig_3_11_container_chain(output_dir):
     fig, ax = plt.subplots(figsize=(14, 6))
-    fig.suptitle("Wave 2 pinned-digest container distribution chain: "
+    fig.suptitle("Pinned-digest container distribution chain: "
                  "Dockerfile → GHA → GHCR → Apptainer → SBATCH",
                  fontsize=12.5, fontweight="bold", y=0.97)
     ax.set_xlim(0, 14)
@@ -821,13 +821,13 @@ def fig_3_11_container_chain(output_dir):
          "python:3.13-slim-bookworm\n+ openjdk-17 + libgomp1\n+ uv: 36 lockfile pkgs\n+ eclipse-sumo 1.26.0\n+ MATSim 15.0 JAR",
          "#fce4ec"),
         ("GitHub Actions\n(build-container.yml)",
-         "On push to release\n(source paths only;\ndoc-only changes skip)\n→ docker build\n→ tag with git SHA",
+         "On push to release\n(source paths only;\ndoc-only changes skip)\n→ docker build\n→ tag + push image",
          "#fff3e0"),
         ("GHCR\n(container registry)",
-         "ghcr.io/phanidharakula/\nsimforge:db8d786\n(immutable digest)\nlib/container/manifest.json",
+         "ghcr.io/phanidharakula/\nsimforge\n(immutable digest)\nlib/container/manifest.json",
          "#e3f2fd"),
         ("Apptainer pull\n(on Cardinal)",
-         "apptainer pull \\\n  simforge_db8d786.sif \\\n  docker://...:db8d786\n(SHA-tag workaround for\n1.4.5 progress bar bug)",
+         "apptainer pull \\\n  simforge.sif \\\n  docker://...:<sha>\n(SHA-tag workaround for\n1.4.5 progress bar bug)",
          "#f1f8e9"),
         ("SBATCH wrapper\n(opt-in)",
          "SIMFORGE_USE_CONTAINER=1 \\\nsbatch cluster/jobs/\n  benchmark_large.sbatch\n→ bit-identical x86_64\n  reproduction",
@@ -849,7 +849,7 @@ def fig_3_11_container_chain(output_dir):
         box(ax, x + 0.12, 1.20, box_w - 0.24, 2.95, "",
             color="white", radius=0.03)
         ax.text(x + box_w / 2, 2.65, body,
-                ha="center", va="center", fontsize=8.2, family="monospace",
+                ha="center", va="center", fontsize=7.6, family="monospace",
                 color="#333")
         # Arrow to next stage
         if i < len(stages) - 1:
@@ -865,7 +865,7 @@ def fig_3_11_container_chain(output_dir):
 
     # Bottom note
     ax.text(7.0, 0.45,
-            "Thesis-canonical image pinned at lib/container/manifest.json (db8d786, 2026-05-19, verified Cardinal). "
+            "Thesis-canonical image pinned at lib/container/manifest.json (verified on Cardinal). "
             "See Chapter 3 §3.11 + doc/CONTAINER_USAGE.md.",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
 
@@ -889,7 +889,7 @@ def fig_6_2_reproducibility_regimes(output_dir):
     # 4 horizontal rows, each a regime
     regimes = [
         ("REGIME 1", "Within single execution context",
-         "Re-runs on same machine, same git SHA, same fixed seed",
+         "Re-runs on same machine, same code version, same fixed seed",
          "R = 1.0000  (MATSim + DTALite; SUMO R ≥ 0.95 due to Krauss-σ)",
          "BIT-IDENTICAL", C_OK, "#1b5e20", 6.4),
         ("REGIME 2", "Same CPU architecture, cross-distribution",
@@ -903,8 +903,8 @@ def fig_6_2_reproducibility_regimes(output_dir):
          "(matches to 4 sig figs; consistent with bit-identity, §5.9.4)",
          "≈ BIT-IDENTICAL", C_INFO, "#0d47a1", 3.0),
         ("REGIME 4", "Cross-code-version (time-separated)",
-         "Pitzer Phase 12 (2026-05-02) ↔ Cardinal Phase 14.13 (2026-05-20)\n"
-         "Phase 14 canonical_routes BFS replaces legacy per-adapter BFS",
+         "Two time-separated code versions (same engine version pins)\n"
+         "shared canonical_routes BFS replaces earlier per-adapter BFS",
          "MATSim 2.95 % shift   |   DTALite 0.24 % shift   "
          "(§5.9 original measurement, reinterpreted in §5.9.5)",
          "0.2-3 % DRIFT", C_HIGHLIGHT, "#c62828", 1.3),
@@ -1092,8 +1092,8 @@ def main():
         ("F4 Scenario generation pipeline", fig_3_3_generation_pipeline),
         ("F5 Adapter contract (3 × 3)", fig_3_4_adapter_contract),
         ("F6 Fairness audit Q1-Q5 flow", fig_3_6_fairness_audit_flow),
-        ("F7 Phase 14 BFS dedup", fig_3_8_phase14_bfs_dedup),
-        ("F8 Wave 2 container chain", fig_3_11_container_chain),
+        ("F7 BFS dedup", fig_3_8_bfs_dedup),
+        ("F8 container chain", fig_3_11_container_chain),
         ("F9 Two paradigm spread phenomena", fig_6_1_paradigm_spread),
         ("F10 Four reproducibility regimes", fig_6_2_reproducibility_regimes),
         ("F11 Parallel-BFS worker pool", fig_3_8b_parallel_bfs_workers),

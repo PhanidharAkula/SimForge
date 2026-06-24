@@ -475,7 +475,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
         if any(m.engine == 'matsim' and m.mode == mode for m in metrics)
     ]
     if not eligible_modes:
-        print("    (skipped — no MATSim baseline)")
+        print("    (skipped: no MATSim baseline)")
         return None
 
     fig, axes = plt.subplots(1, len(eligible_modes),
@@ -532,7 +532,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
 
     if not plotted_any:
         plt.close()
-        print("    (skipped — no comparable engine/MATSim pairs in any mode)")
+        print("    (skipped: no comparable engine/MATSim pairs in any mode)")
         return None
 
     axes[0].set_ylabel('Speedup (× faster than MATSim)', fontweight='bold')
@@ -556,7 +556,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
     modes = sorted({m.mode for m in metrics})
 
     if len(modes) < 2:
-        print("    (skipped — only one mode in results)")
+        print("    (skipped: only one mode in results)")
         return None
 
     fig, axes = plt.subplots(1, len(engines),
@@ -670,7 +670,7 @@ def plot_p95_travel_time(metrics: list[ScenarioMetrics],
 
     has_p95 = [m for m in metrics if m.p95_travel_time > 0]
     if not has_p95:
-        print("    (skipped — no P95 data)")
+        print("    (skipped: no P95 data)")
         return None
 
     cities = sorted({m.city for m in has_p95})
@@ -785,7 +785,7 @@ def plot_trip_count_parity(metrics: list[ScenarioMetrics],
     axes[0].set_ylabel('Completed Trips (avg over repeats)',
                        fontweight='bold')
     fig.suptitle('Trip-Count Parity\n'
-                 '(every engine should complete the same N — '
+                 '(every engine should complete the same N; '
                  'shows the SCC / feasibility filter is working)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -819,10 +819,10 @@ _PURPOSE_COLORS = {
 
 def plot_demand_composition(metrics: list[ScenarioMetrics],
                             output_dir: Path) -> Optional[Path]:
-    """V5+ trip-purpose breakdown per scenario. Stacked-bar version of the
+    """Trip-purpose breakdown per scenario. Stacked-bar version of the
     DEMAND COMPOSITION text table that audit_fairness Q5 / analyze_benchmark
-    print. Pre-V5 bundles (no `purpose` column) are silently skipped; if no
-    scenario has V5+ data, the whole figure is omitted.
+    print. Bundles with no `purpose` column are silently skipped; if no
+    scenario has purpose data, the whole figure is omitted.
     """
     _require_matplotlib()
     setup_style()
@@ -839,7 +839,7 @@ def plot_demand_composition(metrics: list[ScenarioMetrics],
             rows.append((sc, comp))
 
     if not rows:
-        print("    (skipped — no V5+ purpose data on any bundle)")
+        print("    (skipped: no purpose data on any bundle)")
         return None
 
     fig, ax = plt.subplots(figsize=(max(8, 1.6 * len(rows) + 4), 6))
@@ -872,11 +872,11 @@ def plot_demand_composition(metrics: list[ScenarioMetrics],
     ax.margins(y=0.10)
     ax.set_ylabel('Trip count', fontweight='bold')
     ax.grid(axis='y', alpha=0.3)
-    ax.legend(title='Purpose (V5+ taxonomy)',
+    ax.legend(title='Purpose',
               loc='upper left', bbox_to_anchor=(1.02, 1.0))
 
-    fig.suptitle('Demand Composition by V5+ Trip Purpose\n'
-                 '(HBW = home–work, HBSchool = home–school, '
+    fig.suptitle('Demand Composition by Trip Purpose\n'
+                 '(HBW = home-work, HBSchool = home-school, '
                  '_chained = parent dropping kid en route)',
                  fontweight='bold', y=1.02)
     plt.tight_layout()
@@ -920,7 +920,7 @@ def plot_wall_vs_engine(results_paths: list[Path],
             slot["engine"].append(float(eng))
 
     if not by_cell:
-        print("    (skipped — no cell_wall_s / engine_wall_s fields; "
+        print("    (skipped: no cell_wall_s / engine_wall_s fields; "
               "regenerate runs under Phase 11.6+)")
         return None
 
@@ -962,7 +962,7 @@ def plot_wall_vs_engine(results_paths: list[Path],
     ax.grid(axis='y', alpha=0.3)
     ax.legend(loc='upper left')
 
-    fig.suptitle('Per-Cell Wall Time Breakdown — '
+    fig.suptitle('Per-Cell Wall Time Breakdown: '
                  'Engine Subprocess vs Adapter Prep\n'
                  '(adapter prep = per-trip BFS routing + canonical→engine conversion)',
                  fontweight='bold', y=1.02)
