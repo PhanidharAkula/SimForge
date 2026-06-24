@@ -121,19 +121,23 @@ def compute_ks_statistic(
     n = len(distribution_a)
     m = len(distribution_b)
     
-    # Combine and sort all unique values
-    all_values = sorted(set(distribution_a) | set(distribution_b))
-    
-    # Compute ECDFs
-    def ecdf(data: List[float], x: float) -> float:
-        """Empirical CDF: proportion of data <= x"""
-        return sum(1 for d in data if d <= x) / len(data)
-    
-    # Find maximum difference
+    # Largest gap between the two empirical CDFs, via a single merge pass over
+    # the sorted samples (O((n+m) log(n+m))). At each distinct value x, advance
+    # both pointers past every entry <= x, so i/n and j/m are the two ECDFs at x.
+    a = sorted(distribution_a)
+    b = sorted(distribution_b)
+    i = j = 0
     ks_stat = 0.0
-    for x in all_values:
-        diff = abs(ecdf(distribution_a, x) - ecdf(distribution_b, x))
-        ks_stat = max(ks_stat, diff)
+    while i < n or j < m:
+        if j >= m or (i < n and a[i] <= b[j]):
+            x = a[i]
+        else:
+            x = b[j]
+        while i < n and a[i] <= x:
+            i += 1
+        while j < m and b[j] <= x:
+            j += 1
+        ks_stat = max(ks_stat, abs(i / n - j / m))
     
     # Critical value at α = 0.05 (two-sample test)
     # D_critical = c(α) * sqrt((n+m)/(n*m)) where c(0.05) ≈ 1.36
