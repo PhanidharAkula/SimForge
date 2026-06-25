@@ -259,6 +259,15 @@ def _city_label(city: str) -> str:
     return city.replace('_', ' ').title()
 
 
+def _city_size(city: str) -> int:
+    """Sort key: trip-count tier (1k, 10k, 50k, ...) parsed from the scenario id,
+    so plots read small-to-large by scale rather than alphabetically by city."""
+    for seg in city.split('_'):
+        if seg.endswith('k') and seg[:-1].isdigit():
+            return int(seg[:-1])
+    return 0
+
+
 def _save(name: str, output_dir: Path) -> Path:
     """Save the current figure as PNG (300 dpi), return its path.
 
@@ -280,7 +289,7 @@ def plot_runtime_comparison(metrics: list[ScenarioMetrics],
     _require_matplotlib()
     setup_style()
 
-    cities = sorted({m.city for m in metrics})
+    cities = sorted({m.city for m in metrics}, key=_city_size)
     modes = sorted({m.mode for m in metrics})
 
     fig, axes = plt.subplots(1, len(modes),
@@ -334,7 +343,7 @@ def plot_reproducibility_heatmap(metrics: list[ScenarioMetrics],
     _require_matplotlib()
     setup_style()
 
-    cities = sorted({m.city for m in metrics})
+    cities = sorted({m.city for m in metrics}, key=_city_size)
     rows = sorted({(m.engine, m.mode) for m in metrics})
 
     nan = float('nan')
@@ -414,7 +423,7 @@ def plot_travel_time_comparison(metrics: list[ScenarioMetrics],
     _require_matplotlib()
     setup_style()
 
-    cities = sorted({m.city for m in metrics})
+    cities = sorted({m.city for m in metrics}, key=_city_size)
     modes = sorted({m.mode for m in metrics})
 
     fig, axes = plt.subplots(1, len(modes),
@@ -466,7 +475,7 @@ def plot_speedup_analysis(metrics: list[ScenarioMetrics],
     _require_matplotlib()
     setup_style()
 
-    cities = sorted({m.city for m in metrics})
+    cities = sorted({m.city for m in metrics}, key=_city_size)
     modes = sorted({m.mode for m in metrics})
 
     # Restrict to modes where MATSim has a baseline run
@@ -552,7 +561,7 @@ def plot_micro_vs_meso(metrics: list[ScenarioMetrics],
     setup_style()
 
     engines = sorted({m.engine for m in metrics})
-    cities = sorted({m.city for m in metrics})
+    cities = sorted({m.city for m in metrics}, key=_city_size)
     modes = sorted({m.mode for m in metrics})
 
     if len(modes) < 2:
@@ -673,7 +682,7 @@ def plot_p95_travel_time(metrics: list[ScenarioMetrics],
         print("    (skipped: no P95 data)")
         return None
 
-    cities = sorted({m.city for m in has_p95})
+    cities = sorted({m.city for m in has_p95}, key=_city_size)
     modes = sorted({m.mode for m in has_p95})
 
     fig, axes = plt.subplots(1, len(modes),
@@ -740,7 +749,7 @@ def plot_trip_count_parity(metrics: list[ScenarioMetrics],
     if not metrics:
         return None
 
-    cities = sorted({m.city for m in metrics})
+    cities = sorted({m.city for m in metrics}, key=_city_size)
     modes = sorted({m.mode for m in metrics})
 
     fig, axes = plt.subplots(1, len(modes),
@@ -831,7 +840,7 @@ def plot_demand_composition(metrics: list[ScenarioMetrics],
         find_canonical_demand, read_demand_composition,
     )
 
-    scenarios = sorted({m.city for m in metrics})
+    scenarios = sorted({m.city for m in metrics}, key=_city_size)
     rows: list[tuple[str, dict]] = []
     for sc in scenarios:
         comp = read_demand_composition(find_canonical_demand(sc))
@@ -924,7 +933,7 @@ def plot_wall_vs_engine(results_paths: list[Path],
               "regenerate runs under Phase 11.6+)")
         return None
 
-    cells = sorted(by_cell.keys())
+    cells = sorted(by_cell.keys(), key=lambda c: (_city_size(c[0]), c[1], c[2]))
     engine_means = [statistics.mean(by_cell[c]["engine"]) for c in cells]
     cell_means = [statistics.mean(by_cell[c]["cell"]) for c in cells]
     prep_means = [max(0.0, w - e) for w, e in zip(cell_means, engine_means)]

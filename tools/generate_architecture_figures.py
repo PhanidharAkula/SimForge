@@ -306,7 +306,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
          "Compute per-engine mean TT + report spread\n"
          "→ INTERPRETIVE: paradigm-divergence signal",
          4.3, C_INFO, "INFORMATIONAL", "#1976d2"),
-        ("Q5: Demand composition (V5+)",
+        ("Q5: Demand composition",
          "Tally trip purposes from demand.csv\n"
          "→ INFORMATIONAL: HBW + HBSchool breakdown",
          2.9, C_INFO, "INFORMATIONAL", "#1976d2"),
@@ -452,7 +452,7 @@ def fig_6_1_paradigm_spread(output_dir):
     # --- LEFT: cross-engine ---
     ax = axes[0]
     tiers = ["chicago\n1K", "nyc\n10K", "la\n50K", "chicago\n200K", "nyc\n500K"]
-    ratios = [0.869, 1.132, 1.046, 0.645, 0.037]
+    ratios = [0.869, 1.164, 1.027, 0.645, 0.037]
     colors = ["#2196f3"] * 3 + ["#f44336"] * 2
 
     bars = ax.bar(range(len(tiers)), ratios, color=colors, edgecolor=C_BORDER,
@@ -490,8 +490,8 @@ def fig_6_1_paradigm_spread(output_dir):
     # --- RIGHT: within-engine ---
     ax = axes[1]
     tiers2 = ["chicago\n1K", "nyc\n10K", "chicago\n200K"]
-    ratios2 = [1.272, 1.729, 1.078]
-    deltas = ["+27.2 %", "+72.9 %", "+7.8 %"]
+    ratios2 = [1.279, 1.729, 1.078]
+    deltas = ["+27.9 %", "+72.9 %", "+7.8 %"]
     colors2 = ["#ff9800", "#ff5722", "#4caf50"]
 
     bars = ax.bar(range(len(tiers2)), ratios2, color=colors2, edgecolor=C_BORDER,
@@ -561,7 +561,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
             "trip_id, origin_node_id,",
             "  destination_node_id,",
             "  departure_time_s,",
-            "  mode, purpose (V5+)",
+            "  mode, purpose",
         ]),
         ("signals.xml", "XML", [
             "<junction id='tl_n0'",
@@ -866,7 +866,7 @@ def fig_3_11_container_chain(output_dir):
     # Bottom note
     ax.text(7.0, 0.45,
             "Thesis-canonical image pinned at lib/container/manifest.json (verified on Cardinal). "
-            "See Chapter 3 §3.11 + doc/CONTAINER_USAGE.md.",
+            "See Chapter 3 §3.11.",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
 
     return save(fig, "fig_3_11_container_chain", output_dir)
