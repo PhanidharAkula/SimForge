@@ -176,7 +176,7 @@ PROJECT STRUCTURE (alphabetical, repo root):
   canonical/          Canonical bundle schema spec (canonical/schema/)
   cluster/            HPC cluster integration (Pitzer SLURM sbatches)
   doc/                Architecture, reproduction guide, experiment log,
-                      engine retrospectives
+                      engine evaluations
   evaluation/         Metrics, analysis, fairness audit, plot generation
   execution/          Benchmark harness (runspec-driven, run_benchmark.py)
   lib/                Third-party JARs (matsim-15.0/) + version pins
@@ -478,7 +478,7 @@ SUPPORTED SIMULATORS:
   PT-module wiring required for true multi-modal simulation.
 
   LPSim, POLARIS, and QarSUMO are documented as evaluated-and-rejected
-  in doc/engines/LPSIM_RETROSPECTIVE.md, doc/engines/THIRD_ENGINE_OPTIONS.md,
+  in doc/engines/LPSIM_EVALUATION.md, doc/engines/THIRD_ENGINE_OPTIONS.md,
   and doc/engines/ENGINE_COMPARISON.md (QarSUMO's record lives in the
   latter two plus the CHANGELOG entry).
 
@@ -536,14 +536,14 @@ HELP_SCHEMA = """
 
 5 canonical files per scenario bundle, plus one metadata sidecar:
 
-1. network.xml              -- Directed road graph from OSM. V5+ also
+1. network.xml              -- Directed road graph from OSM. Also
                                carries `has_signal="true"` on traffic-signal
                                nodes and a top-level
                                <turn_restrictions> block extracted from
                                OSM `type=restriction via=node` relations.
 2. demand.csv               -- Trip-level OD: trip_id, origin_node_id,
                                destination_node_id, departure_time_s, mode.
-                               V5+ adds two informational columns:
+                               Two informational columns are also present:
                                `dest_source` (schedule|gravity provenance)
                                and `purpose` (HBW_AM/PM, HBSchool_AM/PM,
                                HBW_*_chained, 4-step taxonomy). Adapters
@@ -563,7 +563,7 @@ HELP_SCHEMA = """
 6. generation_metadata.json -- Per-step source / parameter / hash trail
                                (generator version, seed, OSM source, demand
                                source, modelgen city stats, SCC drop counts,
-                               V5+ demand_provenance block with schedule-
+                               demand_provenance block with schedule-
                                vs-gravity split + per-reason fallback counts.
                                Chain-leg counts come from the demand.csv
                                `purpose` column, not this block.)
@@ -584,10 +584,10 @@ ANALYZE BENCHMARK:
   Produces:
     Summary, engine-level aggregates (success rate, avg runtime, R)
     Coverage diagnostic, flags low-sample (n<3), asymmetric, silently-failed cells
-    Demand Composition, per-scenario V5+ trip-purpose breakdown
+    Demand Composition, per-scenario trip-purpose breakdown
                             (HBW_AM/PM, HBSchool_AM/PM, HBW_*_chained)
                             from each bundle's canonical demand.csv;
-                            silently omitted for pre-V5 bundles missing
+                            silently omitted for bundles missing
                             the `purpose` column.
     Table 5.1, Runtime comparison (engine x city x mode)
     Table 5.2, Reproducibility analysis (Avg TT, 95 % CI, Std, R-Score, rating)
@@ -606,9 +606,9 @@ AUDIT CROSS-ENGINE FAIRNESS:
     Q2, same network across engines (SCC node + link counts match)
     Q3, same trip count actually simulated (per-engine output count)
     Q4, cross-engine travel-time spread (mean / P95 / pairwise ratios)
-    Q5, demand composition (V5+ trip-purpose breakdown)
+    Q5, demand composition (trip-purpose breakdown)
          informational, not a fairness gate. Reads the canonical bundle's
-         demand.csv `purpose` column; pre-V5 bundles emit a one-line
+         demand.csv `purpose` column; bundles missing it emit a one-line
          skip and the section is omitted from output.
 
   Auto-detects four output layouts (run.py flat, run_benchmark nested,
@@ -646,7 +646,7 @@ GENERATE THESIS PLOTS:
     Fig 5.6, Engine runtime variability (boxplot)
     Fig 5.7, P95 tail latency comparison
     Fig 5.8, Trip-count parity (engine-internal drop reasons)
-    Fig 5.9, Demand composition (V5+ trip-purpose taxonomy: HBW + HBSchool
+    Fig 5.9, Demand composition (trip-purpose taxonomy: HBW + HBSchool
                + chains; reads canonical demand.csv `purpose` column)
     Fig 5.10, Per-cell wall time breakdown (engine subprocess
                vs adapter prep; needs cell_wall_s / engine_wall_s in JSON)
@@ -655,9 +655,9 @@ GENERATE THESIS PLOTS:
   Use --clean to delete old plots before regenerating.
 
   Fig 5.9 / 5.10 are auto-skipped when their data isn't available:
-  Fig 5.9 needs at least one bundle with a V5+ `purpose` column on
-  demand.csv; Fig 5.10 needs results saved by run.py / run_benchmark.py
-  versions that write `cell_wall_s` and `engine_wall_s`.
+  Fig 5.9 needs at least one bundle with a `purpose` column on
+  demand.csv; Fig 5.10 needs results that carry `cell_wall_s` and
+  `engine_wall_s`.
 
 EXAMPLES (using the canonical small-tier runspec):
   python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
@@ -823,7 +823,7 @@ MARKERS (registered in pyproject.toml; --strict-markers enforced):
   requires_java   Needs Java 17+ and the MATSim JAR
   requires_gpu    Needs an NVIDIA GPU (registered for future GPU engine
                   work; no test currently uses it, LPSim was the
-                  original consumer, see doc/engines/LPSIM_RETROSPECTIVE.md)
+                  original consumer, see doc/engines/LPSIM_EVALUATION.md)
 
   Filter examples:
     python -m pytest -m determinism
@@ -842,15 +842,15 @@ TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
                                         + _discover_modes + synthetic-run-dir test
   test_canonical_routes.py        (11)  Shared parallel-BFS route cache
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
-  test_demand_composition.py      (7)   V5+ `purpose` column tally,
+  test_demand_composition.py      (7)   `purpose` column tally,
                                         AM/PM peak split, chain-leg counter,
-                                        pre-V5 graceful no-op
+                                        missing-column graceful no-op
   test_demand_generators.py       (21)  Uniform / gravity / peak-hour
   test_dtalite_adapter.py         (46)  DTALite adapter writers, settings,
                                         demand-driven zoning, end-to-end smoke
   test_engine_smoke.py            (4)   Real-binary SUMO/MATSim/DTALite [skip-on-miss]
   test_feasibility.py             (19)  Shared cross-engine trip filter
-                                        + mode-aware feasibility (V5)
+                                        + mode-aware feasibility
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
   test_generate_scorecard.py      (22)  Scorecard renderer (tools/generate_scorecard)
   test_matsim_adapter.py          (26)  MATSim helpers + end-to-end + sweep,
@@ -859,7 +859,7 @@ TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
                                         TESTING.md §3 for the -k escape)
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
-  test_parse_model_file.py        (27)  ModelGen file parser + V5
+  test_parse_model_file.py        (27)  ModelGen file parser +
                                         JWTRNS mapping + HBSchool helpers
                                         + AM_PURPOSES/PM_PURPOSES disjointness
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
@@ -883,11 +883,11 @@ TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
                                           3 tracked → 108 tests (3×36)
                                           5 generated → 180 tests (5×36)
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep
-  test_turn_restrictions.py       (17)  V5+ OSM restriction parser,
+  test_turn_restrictions.py       (17)  OSM restriction parser,
                                         forbidden-move builder, state-aware
                                         BFS, DTALite movement.csv writer
   test_validator.py               (2)   Bundle pass + corruption fail
-  test_vehicle_types.py           (19)  V5+ canonical car constants,
+  test_vehicle_types.py           (19)  canonical car constants,
                                         SUMO/MATSim XML emission, cross-engine
                                         equivalence (length+gap == effective)
   test_visualization.py           (13)  Visualization component (loaders, coverage, CLI)

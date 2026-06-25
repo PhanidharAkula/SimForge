@@ -45,9 +45,9 @@ The canonical schema is the lingua franca of SimForge. Every scenario is express
 
 | File           | Schema        | Role                                                            | Key Design Decision                                        |
 | -------------- | ------------- | --------------------------------------------------------------- | ---------------------------------------------------------- |
-| `network.xml`  | `network_v0`  | Directed graph (nodes + links + V5+ `<turn_restrictions>`)      | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability. V5+ adds `has_signal` per node and a `<turn_restrictions>` block. |
-| `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode + V5+ `purpose`/`dest_source`) | CSV for ease of analysis; departure in seconds. V5+ provenance columns are informational (adapters ignore). |
-| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers at OSM-tagged nodes (V5+)        | Simplified to common denominator across all simulators. V5+ signal placement is OSM-grounded (`has_signal="true"` only). |
+| `network.xml`  | `network_v0`  | Directed graph (nodes + links + `<turn_restrictions>`)      | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability. Includes `has_signal` per node and a `<turn_restrictions>` block. |
+| `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode + `purpose`/`dest_source`) | CSV for ease of analysis; departure in seconds. Provenance columns are informational (adapters ignore). |
+| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers at OSM-tagged nodes        | Simplified to common denominator across all simulators. Signal placement is OSM-grounded (`has_signal="true"` only). |
 | `config.xml`   | `config_v0`   | Scenario metadata + parameters                                  | Engine-agnostic parameters only                            |
 | `manifest.xml` | `manifest_v0` | SHA-256 hashes for all canonical files (v0.2)                   | Hash-based integrity verification                          |
 
@@ -64,26 +64,26 @@ Five-stage pipeline from raw data to validated bundle:
 ```
 Stage 1: Network        pipeline/network/build_network_from_osm.py
                         pipeline/network/load_network_from_pbf.py
-                        pipeline/network/turn_restrictions.py (V5+)
+                        pipeline/network/turn_restrictions.py
          OSM PBF (hash-pinned) → single-pass pyosmium scan extracts
          (a) ways for the road graph,
-         (b) `highway=traffic_signals` node tags for V5+ signal placement,
-         (c) `type=restriction via=node` relations for V5+ turn restrictions.
+         (b) `highway=traffic_signals` node tags for signal placement,
+         (c) `type=restriction via=node` relations for turn restrictions.
          → canonical network.xml (with `has_signal` + `<turn_restrictions>`)
          (Overpass API retained as fallback for cities without a committed PBF)
 
 Stage 2: Signals        pipeline/signals/build_signals_default.py
-         (V5+ OSM-grounded placement) Reads canonical
+         OSM-grounded placement: reads canonical
          `<node has_signal="true">` set → emits a fixed-time 2-phase 90 s
-         controller per OSM-tagged node → signals.xml. Pre-V5 bundles fall
-         back to the legacy `degree ≥ 4` heuristic with a runtime WARNING.
+         controller per OSM-tagged node → signals.xml. Bundles without the
+         attribute fall back to the legacy `degree ≥ 4` heuristic with a
+         runtime WARNING.
 
 Stage 3: Demand         pipeline/demand/generate_census_demand.py
-         ModelGen data → cityscape JWTRNS mapping (V5+ corrected codes) →
-         peak-aware AM/PM split (V5+) → schedule path
-         (real PUMS workplace + parent-with-kid HBSchool chains, V5+) +
-         gravity fallback → per-person empirical departures (V5+) →
-         demand.csv with V5+ `purpose` and `dest_source` provenance columns
+         ModelGen data → cityscape JWTRNS mapping → peak-aware AM/PM split
+         → schedule path (real PUMS workplace + parent-with-kid HBSchool
+         chains) + gravity fallback → per-person empirical departures →
+         demand.csv with `purpose` and `dest_source` provenance columns
          (fallback)     pipeline/demand/generate_synthetic_demand.py
          No ModelGen → uniform random sampling → demand.csv
 
@@ -115,7 +115,7 @@ parse_model_file.py ──▶ ModelData(buildings, households, persons)
     │                  Census worker pool (PUMS: JWMNP, JWTRNS)
     │                         │
     │                         ▼
-    │                  Schedule path (V5+): real PUMS workplace from
+    │                  Schedule path: real PUMS workplace from
     │                  cityscape `schedule[0]` + HBSchool chains for
     │                  parent-with-kid pairs; fallback to gravity for
     │                  the remaining budget.
@@ -124,9 +124,9 @@ parse_model_file.py ──▶ ModelData(buildings, households, persons)
     │                  Gravity fallback: P(dest) ∝ degree × Gaussian(distance|target_km)
     │                         │
     │                         ▼
-    │                  Per-person departure (V5+):
+    │                  Per-person departure:
     │                    arrival_s − commute_min × 60
-    │                  AM/PM peak split when horizon spans both (V5+)
+    │                  AM/PM peak split when horizon spans both
     │                         │
     ▼                         ▼
 network.xml ◀──────── demand.csv (with `purpose` + `dest_source`)
@@ -166,7 +166,7 @@ Each adapter translates the canonical bundle into simulator-specific input forma
 
 **MATSim adapter** translates demand trips into activity-based plans (home → work) with `lastIteration=0` to ensure single-pass execution (fair comparison with SUMO's single-pass simulation).
 
-**DTALite adapter** translates the canonical bundle into the GMNS open standard (`node.csv`, `link.csv`, `demand.csv`) plus `settings.csv` (sections format read by the C++ binary) and `settings.yml` (YAML mirror read by the path4gmns Python wrapper). DTALite runs via the `path4gmns.DTALiteClassic` Python entry point, which dlopens the bundled platform-specific binary (`DTALiteMM_arm.dylib` / `_x86.dylib` / `.so` / `.dll`) and invokes mode 1 (path-based UE). When path4gmns is not installed the adapter raises a clean failure with the install command (`uv pip install path4gmns`). See [`doc/engines/`](engines/) for the full retrospective on LPSim (the GPU comparator that previously occupied this slot, abandoned in Version_5).
+**DTALite adapter** translates the canonical bundle into the GMNS open standard (`node.csv`, `link.csv`, `demand.csv`) plus `settings.csv` (sections format read by the C++ binary) and `settings.yml` (YAML mirror read by the path4gmns Python wrapper). DTALite runs via the `path4gmns.DTALiteClassic` Python entry point, which dlopens the bundled platform-specific binary (`DTALiteMM_arm.dylib` / `_x86.dylib` / `.so` / `.dll`) and invokes mode 1 (path-based UE). When path4gmns is not installed the adapter raises a clean failure with the install command (`uv pip install path4gmns`). See [`doc/engines/`](engines/) for the full retrospective on LPSim (the GPU comparator that previously occupied this slot, abandoned).
 
 ### 2.4 Execution Harness
 
@@ -400,10 +400,10 @@ User: python generate.py --city chicago --trips 1000 --seed 42
 [5] Parse ModelGen (chicago_model.txt → buildings/households/persons)
         │ → buildings restricted to SCC; non-SCC residential dropped
         ▼
-[6] Generate demand (V5+: schedule path + gravity fallback on SCC subgraph;
+[6] Generate demand (schedule path + gravity fallback on SCC subgraph;
     cityscape JWTRNS mapping; per-person empirical departures from JWMNP;
     AM/PM peak split + HBSchool chains where horizon and demographics fit)
-        │ → demand.csv (1,000 trips, V5+ `purpose` + `dest_source`)
+        │ → demand.csv (1,000 trips, `purpose` + `dest_source`)
         ▼
 [7] Write manifest (SHA-256 hashes of all four canonical files;
     config.xml was already written before the demand step)
@@ -426,7 +426,7 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
         │ → on a correctly-generated bundle the filter is a no-op (defence in depth)
         ▼
 [3] SUMO adapter: parse network.xml → state-aware BFS route each trip
-    (V5+ turn-restriction routing: avoids forbidden movements per
+    (turn-restriction routing: avoids forbidden movements per
     `<turn_restrictions>`, falls back to plain BFS when no
     restriction-respecting path exists)
     → write SUMO files
@@ -456,7 +456,7 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
 | Direct N↔N      | N(N-1) = 6      | Quadratic   |
 | Canonical (hub) | N = 3           | Linear      |
 
-(SimForge ships 3 adapters in Version_5: SUMO, MATSim, DTALite.)
+(SimForge ships 3 adapters: SUMO, MATSim, DTALite.)
 
 ### 5.2 Why BFS at Conversion Time?
 

@@ -159,7 +159,7 @@ SimForge/
 │   ├── matsim/             # Activity-based simulator
 │   └── dtalite/            # CPU mesoscopic Dynamic Traffic Assignment (path4gmns)
 ├── canonical/schema/       # Schema documentation (v0)
-├── doc/                    # Engineering docs (architecture, reproduction, Pitzer, engine retrospectives)
+├── doc/                    # Engineering docs (architecture, reproduction, Pitzer, engine evaluations)
 ├── evaluation/             # Metrics, analysis, plot generation
 │   └── metrics/            # Fidelity, scalability, reproducibility
 ├── execution/              # Benchmark harness & runners
@@ -218,7 +218,7 @@ SimForge/
 | MATSim  | MATSim 15                        | Activity-based, single iteration               | network.xml, plans.xml, config.xml                    |
 | DTALite | path4gmns 0.10+ (DTALiteClassic) | CPU mesoscopic Dynamic Traffic Assignment (UE) | node.csv + link.csv + demand.csv + settings.{csv,yml} |
 
-LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the retrospectives in [`doc/engines/`](doc/engines/).
+LPSim, POLARIS, and QarSUMO were evaluated and rejected, see the engine evaluations in [`doc/engines/`](doc/engines/).
 
 > **DTALite ships inside `path4gmns`.** Pip-installable, CPU-only, runs on Mac (arm64/x86_64), Linux x86_64, and Windows. The pinned version is in [`lib/dtalite/manifest.json`](lib/dtalite/manifest.json). On macOS the bundled binary needs OpenMP: `brew install libomp`.
 
@@ -262,13 +262,13 @@ Data Sources → Generation Pipeline → Canonical Bundle → Adapter Layer → 
 
 **Key design decisions:**
 
-- **State-aware BFS routing at conversion time** (V5+), deterministic, version-independent routes that respect OSM-extracted turn restrictions
+- **State-aware BFS routing at conversion time**, deterministic, engine-independent routes that respect OSM-extracted turn restrictions
 - **MATSim `lastIteration=0`**, single-pass execution for fair cross-simulator comparison
 - **SHA-256 manifest**, integrity verification before every simulation run
-- **Census-calibrated demand**, population-weighted origins, real commute times, V5+ per-person empirical departures from PUMS JWMNP (~70–72 % realism after Phases 5-10)
-- **OSM-grounded signal placement** (V5+), signals only at nodes carrying `highway=traffic_signals`, replacing the pre-V5 `degree ≥ 4` heuristic
-- **Modelgen-grounded trip purposes** (V5+), HBW (AM + PM) commutes plus parent-with-kid HBSchool chains derived from cityscape `schedule[0,1]` + AGEP + OSM `building.kind`; six-purpose taxonomy on `demand.csv`
-- **Cross-engine vehicle parameter alignment** (V11+), single canonical car description in `adapters/common/vehicle_types.py` consumed by all three adapters; SUMO `length+minGap` ≡ MATSim effective `length` ≡ DTALite PCE 1.0, regression-pinned by `tests/test_vehicle_types.py`
+- **Census-calibrated demand**, population-weighted origins, real commute times, per-person empirical departures from PUMS JWMNP (~70–72 % realism)
+- **OSM-grounded signal placement**, signals only at nodes carrying `highway=traffic_signals`, rather than a `degree ≥ 4` heuristic
+- **Modelgen-grounded trip purposes**, HBW (AM + PM) commutes plus parent-with-kid HBSchool chains derived from cityscape `schedule[0,1]` + AGEP + OSM `building.kind`; six-purpose taxonomy on `demand.csv`
+- **Cross-engine vehicle parameter alignment**, single canonical car description in `adapters/common/vehicle_types.py` consumed by all three adapters; SUMO `length+minGap` ≡ MATSim effective `length` ≡ DTALite PCE 1.0, regression-pinned by `tests/test_vehicle_types.py`
 
 For detailed architecture documentation, see [doc/ARCHITECTURE.md](doc/ARCHITECTURE.md).
 
@@ -322,7 +322,7 @@ symmetry).
 | [doc/EXPERIMENT_LOG.md](doc/EXPERIMENT_LOG.md)             | Chronological measurement journal                                                                                                                                                                                                                              |
 | [doc/CONTAINER_USAGE.md](doc/CONTAINER_USAGE.md)           | Docker / Singularity (GHCR) container workflow                                                                                                                                                                                                                 |
 | [doc/MODELGEN_AND_MODES.md](doc/MODELGEN_AND_MODES.md)     | Census ModelGen provenance + travel-mode handling                                                                                                                                                                                                              |
-| [doc/engines/](doc/engines/)                               | Engine comparison + LPSim/QarSUMO retrospectives                                                                                                                                                                                                               |
+| [doc/engines/](doc/engines/)                               | Engine comparison + LPSim/QarSUMO evaluations                                                                                                                                                                                                                  |
 | [canonical/schema/](canonical/schema/)                     | Schema specifications (v0)                                                                                                                                                                                                                                     |
 | `adapters/*/MAPPING.md`                                    | Per-adapter field mapping rules                                                                                                                                                                                                                                |
 | [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types)                                                                                                                                                                                                                 |

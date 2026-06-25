@@ -5,7 +5,7 @@ DTALite is an open-source C++ mesoscopic dynamic-traffic-assignment engine,
 shipped as a bundled binary inside the `path4gmns` Python package
 (https://github.com/jdlph/Path4GMNS). It took the third-engine slot in the
 Version_5 matrix once LPSim was abandoned (the story is in
-`doc/engines/LPSIM_RETROSPECTIVE.md`).
+`doc/engines/LPSIM_EVALUATION.md`).
 
 It speaks GMNS (the General Modeling Network Specification):
 

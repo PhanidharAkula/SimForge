@@ -252,7 +252,7 @@ Each trip's BFS output is a pure function of four inputs:
 4. `forbidden_moves` (built from `network.xml`'s `<turn_restrictions>` block, same per worker)
 
 All four inputs are bit-identical across workers and across runs
-(network.xml is hash-pinned per the V5 manifest; demand.csv has the
+(network.xml is hash-pinned per the bundle manifest; demand.csv has the
 same hash). Therefore `shortest_path_with_restrictions(origin=..., dest=..., adjacency=..., edge_lookup=..., forbidden_moves=...)`
 returns the same `path_nodes` list regardless of which worker called
 it or whether one or sixteen workers are running.

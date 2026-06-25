@@ -38,12 +38,12 @@ that produced the published numbers.
 | Evaluation + plot rendering         | Works  | Pure Python (matplotlib in venv)                                   |
 | Bundle validation + SHA-256 hashing | Works  | Pure Python                                                        |
 
-After the LPSim removal in Version_5, **the entire SimForge matrix is CPU-only**
+With the GPU-engine candidate (LPSim) ruled out, **the entire SimForge matrix is CPU-only**
 and reproduces from a developer Mac. Pitzer is now reserved purely for the
 larger trip tiers (50k–500k) where SUMO microscopic + MATSim wall time
 exceeds laptop patience, none of the three engines requires GPU or
-specialised hardware. See [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md)
-for the GPU-engine abandonment narrative.
+specialised hardware. See [`doc/engines/LPSIM_EVALUATION.md`](engines/LPSIM_EVALUATION.md)
+for the GPU-engine assessment.
 
 > **Container-mode execution (optional).** The host-venv install
 > path documented in §4 below remains the default. For bit-identical
@@ -341,10 +341,10 @@ measured 3 h 52 m runtime (see budgets below).
 
 The `nyc_500k_car` row is **measured** on JobID 47063986 (Pitzer `cpu`,
 8 cores, 64 GB, NYC @ 20 km radius, `new-york-2026-04-22.osm.pbf`,
-`scripts/05_nyc_500k_car.py`), pre-schedule-first pipeline. The
-schedule-first generator (V5+, current) finishes the same scenario
-in 10-15 min wall on Pitzer; the 4 h budget here is the historical
-gravity-only baseline, kept for sbatch `--time` sizing headroom.
+`scripts/05_nyc_500k_car.py`) with a gravity-only demand sampler. The
+schedule-first generator finishes the same scenario
+in 10-15 min wall on Pitzer; the 4 h budget here is the gravity-only
+baseline, kept for sbatch `--time` sizing headroom.
 The smaller tier rows are pre-measurement estimates that assume a mid-size
 US city (~50k SCC nodes); demand-gen scales as O(trips × SCC destination
 nodes), so any tier pointed at a larger graph will run proportionally longer.
@@ -396,7 +396,7 @@ python -m evaluation.generate_plots    runs/benchmark_small/benchmark_results_be
 
 ### DTALite on Pitzer (CPU)
 
-DTALite (the third primary engine in Version_5) is bundled inside the
+DTALite (the third primary engine) is bundled inside the
 [`path4gmns`](https://github.com/jdlph/Path4GMNS) Python package and
 ships in `requirements.lock`. After `uv pip install -r requirements.lock`
 in the Pitzer venv, DTALite is ready, no separate build step. The
@@ -404,18 +404,17 @@ bundled binary on Linux x86_64 (`DTALiteMM.so` inside path4gmns/bin/)
 links against standard `libgomp` only and works against Pitzer's
 `module load openjdk/21.0.3_9` toolchain (no CUDA, no Apptainer needed).
 
-> **Historical note.** Versions 1–4 reserved this slot for LPSim
-> (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was
-> abandoned in Version_5, the bundled `LivingCity` binary crashed on
-> networks larger than a few-K nodes, and an in-container source rebuild
-> against the V100's sm_70 arch SIGSEGV'd at first kernel launch. The
-> full integration narrative (12+ commits across two debugging sessions,
-> with Boost 1.59 sed-patches, CUDA toolchain reconciliation, and CUDA
-> arch overrides) is in [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
-> The `cluster/jobs/build_lpsim.sbatch`, `smoke_lpsim.sbatch`, and
-> `diag_lpsim.sbatch` jobs were removed in Version_5; the GPU partition
-> (`--partition=gpu --gres=gpu:v100:1`) is no longer required for any
-> SimForge engine and the benchmark sbatches now request `--partition=cpu`.
+> **Note on the GPU-engine candidate.** LPSim (GPU mesoscopic) was
+> evaluated for this slot and ruled out. After exhaustive Pitzer
+> debugging, the bundled `LivingCity` binary crashed on networks larger
+> than a few-K nodes, and an in-container source rebuild against the
+> V100's sm_70 arch SIGSEGV'd at first kernel launch. The full
+> integration narrative (the debugging trail, with Boost 1.59
+> sed-patches, CUDA toolchain reconciliation, and CUDA arch overrides) is
+> in [`doc/engines/LPSIM_EVALUATION.md`](engines/LPSIM_EVALUATION.md).
+> No GPU build/smoke/diag jobs are needed: the GPU partition
+> (`--partition=gpu --gres=gpu:v100:1`) is not required for any
+> SimForge engine and the benchmark sbatches request `--partition=cpu`.
 
 ---
 

@@ -272,7 +272,7 @@ For a tour of every figure produced by `generate_plots.py`, see [doc/RESULTS_GUI
 
 DTALite is the third primary engine, replacing the GPU-based LPSim that
 was attempted-and-abandoned in Version_4 (see
-[`doc/engines/LPSIM_RETROSPECTIVE.md`](doc/engines/LPSIM_RETROSPECTIVE.md)
+[`doc/engines/LPSIM_EVALUATION.md`](doc/engines/LPSIM_EVALUATION.md)
 and [`doc/engines/THIRD_ENGINE_OPTIONS.md`](doc/engines/THIRD_ENGINE_OPTIONS.md)
 for the full selection rationale).
 

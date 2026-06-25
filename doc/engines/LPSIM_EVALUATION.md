@@ -1,14 +1,14 @@
-# LPSim Integration, Retrospective
+# LPSim Integration Evaluation
 
-**Status:** Adapter implemented and tested; engine integration **abandoned** in Version_4 after exhaustive Pitzer debugging.
+**Status:** Adapter implemented and tested; LPSim evaluated as a third-engine candidate and **ruled out** after exhaustive Pitzer debugging.
 **Decision date:** 2026-04-27.
-**Code disposition:** the `adapters/lpsim/` package, its unit tests, `lib/lpsim/manifest.json`, the build/smoke/diag sbatch jobs, and `adapters/lpsim/MAPPING.md` were all removed in the Version_5 engine swap (see CHANGELOG, "Engine swap: LPSim out, DTALite in"). This retrospective is the surviving record; the deleted code remains reachable in git history before the swap commit.
+**Code disposition:** the `adapters/lpsim/` package, its unit tests, `lib/lpsim/manifest.json`, the build/smoke/diag sbatch jobs, and `adapters/lpsim/MAPPING.md` are not part of the shipped framework once LPSim was ruled out. This evaluation is the surviving record of the integration attempt.
 
 ---
 
 ## 1. Why LPSim was chosen
 
-LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT-licensed) is a GPU-accelerated mesoscopic traffic simulator built on the UC Berkeley B18 traffic-flow model. It was selected to fill the **GPU comparator slot** in SimForge's three-engine matrix after QarSUMO was dropped in Version_4 Phase A.
+LPSim ([Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim), MIT-licensed) is a GPU-accelerated mesoscopic traffic simulator built on the UC Berkeley B18 traffic-flow model. It was evaluated to fill the **GPU comparator slot** in SimForge's engine matrix after QarSUMO was ruled out at the source-availability stage.
 
 The choice was defensible on five grounds:
 
@@ -87,13 +87,13 @@ The crash occurs **inside the simulation kernel entry** before any per-tick outp
 - The first kernel launch (likely, the print "Starting simulation ..." emits then SIGSEGV with no stderr)
 - A CUDA driver / runtime context creation
 
-The diagnostic `cluster/jobs/diag_lpsim.sbatch` was prepared to test the rebuilt binary against the container's bundled `berkeley_2018` sample (with no SimForge inputs in the loop) to isolate "is the engine fundamentally broken on this CUDA/GPU combo?" from "are our inputs malformed?". It was not run before the abandonment decision, see §5.
+The diagnostic `cluster/jobs/diag_lpsim.sbatch` was prepared to test the rebuilt binary against the container's bundled `berkeley_2018` sample (with no SimForge inputs in the loop) to isolate "is the engine fundamentally broken on this CUDA/GPU combo?" from "are our inputs malformed?". It was not run before the decision to rule LPSim out, see §5.
 
-## 4. Why the abandonment decision
+## 4. Why LPSim was ruled out
 
 Three converging factors:
 
-1. **Time budget.** Twelve commits of incremental fixes spread across two debugging sessions, all chasing failure modes that originate inside the LPSim engine rather than in SimForge code. The marginal cost of the next fix is bounded only by what the upstream codebase will reveal.
+1. **Time budget.** A long sequence of incremental fixes, all chasing failure modes that originate inside the LPSim engine rather than in SimForge code. The marginal cost of the next fix is bounded only by what the upstream codebase will reveal.
 2. **Upstream signals.** The repo is largely abandoned (last commit on the pinned SHA is from 2024; missing source files; broken `LivingCity.pro` against current toolchains; no CI; no released versions). Fixing kernel-level bugs in a defunct GPU codebase is outside the scope of a Master's thesis on **benchmarking infrastructure**, not on engine internals.
 3. **Diminishing thesis return.** Even if LPSim worked, the determinism limitation (atomicAdd reductions are not bit-deterministic) would force a separate "GPU non-determinism" footnote in every results table, weakening the cross-engine reproducibility story SimForge was built to demonstrate.
 
@@ -110,13 +110,11 @@ In thesis terms: **SimForge is the framework that survives the engine's failure.
 ## 6. References
 
 *(Snapshot of the artifacts as they existed at the 2026-04-27 decision; the
-adapter, tests, manifest, and sbatch jobs were removed in the Version_5
-engine swap, see the Code disposition note at the top. The thesis chapter
-drafts later moved out of the repo.)*
+adapter, tests, manifest, and sbatch jobs are not part of the shipped
+framework once LPSim was ruled out, see the Code disposition note at the top.)*
 
-- **Phase B integration commits:** `fe118b5` (initial adapter), `b060818`–`466d0a6` (schema fixes), `1359b9e`–`6fdaba1` (in-container source rebuild path), `99a7354`–`27371ad` (Pitzer landing).
 - **Manifest:** `lib/lpsim/manifest.json`, pinned `git_sha` and `docker_image:tag`.
 - **Test suite:** `tests/test_lpsim_adapter.py` (45 tests, all passing).
-- **Methods chapter:** `doc/chapters/methods.md` §3.4.4 (LPSim adapter description; supersede the "fills the GPU comparator slot" claim with a forward-pointer to this retrospective).
+- **Methods chapter:** `doc/chapters/methods.md` §3.4.4 (LPSim adapter description; supersede the "fills the GPU comparator slot" claim with a forward-pointer to this evaluation).
 - **Glossary:** `doc/GLOSSARY.md` "LPSim" entry, keep, but flag as deferred per this doc.
 - **Upstream repo:** [Xuan-1998/LPSim](https://github.com/Xuan-1998/LPSim) (pinned SHA `452067ee831e6ecb4c906bae96fb77fdf71fa92e`).

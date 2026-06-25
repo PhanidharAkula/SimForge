@@ -681,13 +681,13 @@ Audit Q1–Q4 results (post-SCC-fix interpretation):
 **Job ID:** N/A
 **What changed:** Atomic LPSim removal: `adapters/lpsim/` package deleted, 39 lpsim tests deleted, `lib/lpsim/manifest.json` deleted, 3 lpsim sbatches deleted, all `engine: lpsim` runspec entries swapped for `engine: dtalite`, registry membership pruned in `execution/runspec.py` + `execution/run_benchmark.py` + `run.py`, evaluation tuples updated, env_report swapped, help.py swapped.
 **Result:** Branch `Version_5_dtalite` created from `Version_4`; LPSim removal committed; ready for Phase 2 DTALite adapter implementation.
-**Decision / lesson:** Adapter pattern's "remove an engine in one commit" claim from `LPSIM_RETROSPECTIVE.md` §5 was actually verified, 1 package deletion + 1 test file deletion + 1 sbatch deletion + 3 registry edits across the harness + runspec yaml updates + cluster sbatch partition switch. Total commit: 24 file changes, mostly deletions.
+**Decision / lesson:** Adapter pattern's "remove an engine in one commit" claim from `LPSIM_EVALUATION.md` §5 was actually verified, 1 package deletion + 1 test file deletion + 1 sbatch deletion + 3 registry edits across the harness + runspec yaml updates + cluster sbatch partition switch. Total commit: 24 file changes, mostly deletions.
 
 ---
 
 ## 4. Frozen historical: Version_4 Phase B (LPSim integration attempt, ABANDONED)
 
-This section is the day-by-day commit-level chronology of the LPSim integration that ran from 2026-04-26 through 2026-04-27 across two debugging sessions. The narrative summary lives in [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md), this section is the raw timeline for thesis-appendix evidence.
+This section is the day-by-day commit-level chronology of the LPSim integration that ran from 2026-04-26 through 2026-04-27 across two debugging sessions. The narrative summary lives in [`doc/engines/LPSIM_EVALUATION.md`](engines/LPSIM_EVALUATION.md), this section is the raw timeline for thesis-appendix evidence.
 
 ### 2026-04-27, LPSim abandoned (~12 commits later)
 
@@ -722,7 +722,7 @@ This section is the day-by-day commit-level chronology of the LPSim integration 
 | `27371ad` | Add diag_lpsim.sbatch to isolate binary vs input failure | Diagnostic ready, never run |
 | `4ce0df7` | **Version_5 Phase 1: remove LPSim, prepare engine slots for DTALite** | Abandonment committed |
 
-**Cost:** ~12 commits across ~6 hours of active debugging across two sessions. Net engineering output: zero working LPSim cells, three retrospective docs (`LPSIM_RETROSPECTIVE.md`, `THIRD_ENGINE_OPTIONS.md`, `ENGINE_COMPARISON.md`), and a fully-functional adapter that can reactivate when upstream patches the GPU bug.
+**Cost:** ~12 commits across ~6 hours of active debugging across two sessions. Net engineering output: zero working LPSim cells, three retrospective docs (`LPSIM_EVALUATION.md`, `THIRD_ENGINE_OPTIONS.md`, `ENGINE_COMPARISON.md`), and a fully-functional adapter that can reactivate when upstream patches the GPU bug.
 
 ---
 

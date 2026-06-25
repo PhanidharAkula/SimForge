@@ -1,7 +1,7 @@
 # Third-Engine Selection, Deep Research & Recommendation
 
-**Status:** Decided. DTALite was adopted (2026-04-28, Version_5 engine swap) and shipped as the third primary engine; this document is preserved as the selection record.
-**Context:** LPSim integration was abandoned 2026-04-27 (see `LPSIM_RETROSPECTIVE.md`). SimForge needs a working third engine to maintain the cross-simulator benchmarking premise without repeating the LPSim or QarSUMO failure modes.
+**Status:** Decided. DTALite was adopted (2026-04-28) and shipped as the third primary engine; this document is preserved as the selection record.
+**Context:** LPSim was ruled out 2026-04-27 (see `LPSIM_EVALUATION.md`). SimForge needs a working third engine to maintain the cross-simulator benchmarking premise without repeating the LPSim or QarSUMO failure modes.
 **Research date:** 2026-04-27, three deep-research passes against live GitHub state, recent issues (last 12 months), recent papers (2023–2025), and direct compatibility checks for OSC Pitzer (RHEL 8, glibc 2.28, gcc 13.2 modules).
 **Decision criterion:** an engine that **will actually work after implementation**, not one that looks promising in marketing copy. The user has explicitly stated that another LPSim/QarSUMO-class failure is unacceptable.
 
@@ -129,11 +129,11 @@ pg.network_assignment(mode=0, gen=5, upd=5)  # link-based UE, 5 outer + 5 inner 
 **Fail conditions:** segfault, hang past 30 minutes, missing-output crash, or GMNS-converter complexity that exceeds 1 day.
 
 If pass → proceed to full adapter (3–5 days).
-If fail → document the spike result in this file, leave SimForge as a 2-engine framework, and frame the thesis defense around the three retrospectives (LPSim, QarSUMO, DTALite spike) as **proof that SimForge's adapter pattern handles engine churn cleanly**, three engines researched, two ruled out at criteria, one ruled out at spike, two delivered with full validation.
+If fail → document the spike result in this file, leave SimForge as a 2-engine framework, and frame the thesis defense around the three evaluations (LPSim, QarSUMO, DTALite spike) as **proof that SimForge's adapter pattern handles engine churn cleanly**, three engines researched, two ruled out at criteria, one ruled out at spike, two delivered with full validation.
 
 ## 5. Adaptability of SimForge to future simulators
 
-This question deserves an explicit answer in the thesis defense, especially in light of LPSim's abandonment. The answer:
+This question deserves an explicit answer in the thesis defense, especially in light of LPSim being ruled out. The answer:
 
 **SimForge's adapter pattern is engine-agnostic by construction.** Every engine integration follows the same three-function contract:
 
@@ -154,7 +154,7 @@ A new engine is added by:
 
 No core SimForge code needs to change. The harness, the canonical schema, the feasibility filter, the evaluation pipeline, and the plot generators are all engine-agnostic. **The framework's value is exactly that the engine is a plug-in.**
 
-The engines we ship are not the framework's *limit*. They are the framework's *demonstration*. **The thesis claim is that any reasonable traffic simulator can be added by following the documented adapter contract; the integrations we ship are the proof points.** LPSim's abandonment and QarSUMO's removal are *additional* evidence: the same adapter pattern that makes integration cheap (one package, one test file, one sbatch, three registry edits) also makes removal cheap when an engine cannot be honestly compared.
+The engines we ship are not the framework's *limit*. They are the framework's *demonstration*. **The thesis claim is that any reasonable traffic simulator can be added by following the documented adapter contract; the integrations we ship are the proof points.** Ruling out LPSim and QarSUMO is *additional* evidence: the same adapter pattern that makes integration cheap (one package, one test file, one sbatch, three registry edits) also makes removal cheap when an engine cannot be honestly compared.
 
 ## 6. References
 
@@ -166,4 +166,4 @@ The engines we ship are not the framework's *limit*. They are the framework's *d
 - **POLARIS:** [vms.taps.anl.gov/tools/polaris](https://vms.taps.anl.gov/tools/polaris/) (license-gated)
 
 ### Companion docs
-- `LPSIM_RETROSPECTIVE.md`
+- `LPSIM_EVALUATION.md`

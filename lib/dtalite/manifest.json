@@ -17,6 +17,6 @@
       "macos": "brew install libomp"
     },
     "pinned_at": "2026-04-27",
-    "notes": "Adopted in Version_5 after LPSim was abandoned. See doc/engines/THIRD_ENGINE_OPTIONS.md for the selection rationale and doc/engines/LPSIM_RETROSPECTIVE.md for the LPSim abandonment story."
+    "notes": "Adopted in Version_5 after LPSim was abandoned. See doc/engines/THIRD_ENGINE_OPTIONS.md for the selection rationale and doc/engines/LPSIM_EVALUATION.md for the LPSim abandonment story."
   }
 }

@@ -16,7 +16,7 @@ This guide explains how to reproduce all experiments from the SimForge thesis us
 
 - 16+ GB RAM
 - 50+ GB disk space
-- (No GPU required, all three primary engines (SUMO, MATSim, DTALite) are CPU-only after the LPSim removal in Version_5)
+- (No GPU required, all three primary engines (SUMO, MATSim, DTALite) are CPU-only)
 
 ### Software Requirements
 
@@ -130,7 +130,7 @@ ls lib/matsim-15.0/matsim-15.0.jar            # should exist
 
 ### DTALite (CPU)
 
-DTALite is the 3rd primary engine in Version_5: CPU mesoscopic Dynamic Traffic Assignment, Apache 2.0 licensed, bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS).
+DTALite is the 3rd primary engine: CPU mesoscopic Dynamic Traffic Assignment, Apache 2.0 licensed, bundled inside [`path4gmns`](https://github.com/jdlph/Path4GMNS).
 
 **Pinned for reproducibility** in [`lib/dtalite/manifest.json`](../lib/dtalite/manifest.json):
 
@@ -155,28 +155,28 @@ brew install libomp
 
 The pinned version also lives in `requirements.lock` so a fresh `uv pip sync requirements.lock` brings it in. The adapter at `adapters/dtalite/` auto-detects the bundled binary via `is_dtalite_available()`. With path4gmns not installed, every `dtalite` cell records a clean failure with the install command, there is no silent fallback.
 
-> Versions 1–4 reserved this slot for LPSim (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was abandoned in Version_5, the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
+> LPSim (GPU mesoscopic) was evaluated for this slot and ruled out after exhaustive Pitzer debugging: the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_EVALUATION.md`](engines/LPSIM_EVALUATION.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
 
-### V5 realism upgrades (affect bundle hashes)
+### Realism upgrades (affect bundle hashes)
 
-Beyond the engine swap, Version_5 ships a sequence of demand- and
+The framework ships a sequence of demand- and
 network-generation realism upgrades. Each modifies the *generated*
 bundle and is reflected in `manifest.xml`'s SHA-256:
 
 | Upgrade | What changed | File(s) |
 |---|---|---|
-| JWTRNS code mapping | Fixed using cityscape Schedule-generator branch (6 of 12 codes were wrong pre-V5: e.g., bus → transit, walk → walk, WFH → excluded). Corrects ~30-40 % drift in eligible commuter pool size on Chicago. | `pipeline/demand/parse_model_file.py` |
+| JWTRNS code mapping | Aligned with the cityscape Schedule-generator branch (6 of 12 codes were corrected: e.g., bus → transit, walk → walk, WFH → excluded). Corrects ~30-40 % drift in eligible commuter pool size on Chicago. | `pipeline/demand/parse_model_file.py` |
 | OSM-grounded signal placement | `network.xml` `<node has_signal="true">` set populated from real `highway=traffic_signals` OSM tags. signals.xml signalizes only those (was: every `degree ≥ 4` node, ~85 %). Empirical drop: chicago 85 → 2.8 %; LA 85 → 1.4 %. | `pipeline/network/load_network_from_pbf.py`, `pipeline/signals/build_signals_default.py` |
 | OSM turn restrictions | New `<turn_restrictions>` block in `network.xml`. SUMO + MATSim adapters enforce via state-aware BFS pre-routing; DTALite emits sibling `movement.csv` (path4gmns 0.10.0 doesn't ingest, documented asymmetry). | `pipeline/network/turn_restrictions.py`, all three adapters |
-| PUMS-grounded departure times | Per-person departures: `departure = arrival_s − commute_min × 60`. Replaces V4 Gaussian peak. | `pipeline/demand/generate_census_demand.py` |
+| PUMS-grounded departure times | Per-person departures: `departure = arrival_s − commute_min × 60`. Replaces the earlier Gaussian peak. | `pipeline/demand/generate_census_demand.py` |
 | PM HBW return trips | Read cityscape `schedule[1]` (work → home @ 17:00). | same |
 | HBSchool_AM chains | Parents with AGEP<18 dependents emit 2-row `home → school + school → work`. | same |
 | HBSchool_PM chains | Symmetric `work → school + school → home`. | same |
 | Audit-tooling wiring | `evaluation/demand_composition.py` (new), demand-fairness section in `audit_fairness`, demand-composition table in `analyze_benchmark`. | `evaluation/` |
 
 The committed `chicago_1k_car/`, `nyc_10k_car/`, and `la_50k_car/`
-bundles are V5+ (regenerated 2026-04-30 onwards), their hashes will
-not match a V4 `generate.py` run. The two largest tiers
+bundles carry the realism upgrades above (regenerated 2026-04-30 onwards), their hashes will
+not match a bundle produced before those upgrades. The two largest tiers
 (`chicago_200k_car/`, `nyc_500k_car/`) are gitignored and must be
 regenerated locally or on Pitzer/Cardinal with the current code path
 before benchmarking; see `scripts/04_chicago_200k_car.py` and
@@ -209,7 +209,7 @@ python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_be
 
 # 4. Audit cross-engine fairness (Q1: same trip set, Q2: same network,
 #    Q3: same trip count, Q4: paradigm-spread travel-time ratios,
-#    Q5: V5+ demand composition / trip-purpose breakdown)
+#    Q5: demand composition / trip-purpose breakdown)
 python -m evaluation.audit_fairness runs/benchmark_small
 
 # 5. Render the 10 thesis figures
@@ -259,7 +259,7 @@ cd ~/SimForge && source .venv/bin/activate
 sbatch jobs/gen_nyc_500k.sbatch        # template in doc/PITZER.md §7
 ```
 
-> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix at scale**, see [doc/PITZER.md §1](PITZER.md). The full Version_5 matrix is CPU-only; the GPU partition is no longer required since LPSim was removed. The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
+> **When to use Pitzer for generation.** With the schedule-first hybrid in place, the per-trip cost of demand generation is O(1) instead of O(network nodes), and the dominant cost shifts back to network extraction (PBF slice + osmnx parse). On a Pitzer `cpu` node those two steps are ~3× slower than an M4 Pro Mac due to per-core clock and shared-filesystem latency, so **generate locally on a modern laptop and reserve Pitzer for the parallel benchmark matrix at scale**, see [doc/PITZER.md §1](PITZER.md). The full benchmark matrix is CPU-only; no GPU partition is required. The `rsync` recipe above remains the right way to seed Pitzer with the OSM PBFs and ModelGen files when you do regenerate there.
 
 ### Cross-Platform Reproducibility (Verified)
 
@@ -462,7 +462,7 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 | Fig 5.6  | Engine runtime variability (boxplot per cell)              |
 | Fig 5.7  | P95 tail-latency analysis                                  |
 | Fig 5.8  | Trip-count parity (validates SCC/feasibility filter)       |
-| Fig 5.9  | Demand composition, V5+ trip-purpose stacked bar           |
+| Fig 5.9  | Demand composition, trip-purpose stacked bar               |
 | Fig 5.10 | Wall vs engine breakdown (requires wall/engine split in result files) |
 
 See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for each figure's full interpretation.
@@ -475,7 +475,7 @@ This thesis was produced with:
 
 | Component | Version |
 | --------- | ------- |
-| SimForge  | Version_5 (DTALite + demand/network realism work, see `CHANGELOG.md`) |
+| SimForge  | DTALite + demand/network realism work (see `CHANGELOG.md`) |
 | Python    | 3.13.2  |
 | SUMO      | 1.26.0 (`eclipse-sumo` wheel via `requirements.lock`) |
 | MATSim    | 15.0    |

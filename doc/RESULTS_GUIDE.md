@@ -15,7 +15,7 @@ RunSpec ──► run_benchmark ──► runs/<name>/benchmark_results_<name>.j
             │                         │                         │
             ▼                         ▼                         ▼
    Tables 5.1, 5.2 + Coverage     Q1–Q4 PASS/WARN/FAIL    Figures 5.1 – 5.10
-   + Demand Composition (V5+)     + Q5 Demand composition  (PNG in plots/)
+   + Demand Composition           + Q5 Demand composition  (PNG in plots/)
    (LaTeX + Markdown)             across all engines
             │                         │                         │
             └─────────────────────────┼─────────────────────────┘
@@ -31,7 +31,7 @@ reports a fifth informational breakdown on each scenario:
   - **Q2: same network** (SCC-filtered nodes/links match across adapters)
   - **Q3: same trip count simulated** (per-engine simulated count = feasibility target)
   - **Q4: cross-engine travel-time spread** (mean / P95 + pairwise ratios, this is the paradigm-spread signal)
-  - **Q5: demand composition** (V5+ trip-purpose breakdown), informational, not a fairness gate. Shows total / AM peak / PM peak / school-related percentages and the per-purpose row count, sourced from the canonical bundle's `demand.csv`. Pre-V5 bundles missing the `purpose` column emit a one-line `(no V5+ purpose column at <path>, skipping)` and the section is omitted.
+  - **Q5: demand composition** (trip-purpose breakdown), informational, not a fairness gate. Shows total / AM peak / PM peak / school-related percentages and the per-purpose row count, sourced from the canonical bundle's `demand.csv`. Bundles missing the `purpose` column emit a one-line `(no purpose column at <path>, skipping)` and the section is omitted.
 
 See `evaluation/audit_fairness.py` docstring for invocation and `doc/EXPERIMENT_LOG.md` §3 for measured Q1–Q4 results from the canonical Pitzer runs.
 
@@ -208,7 +208,7 @@ python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_be
 | ------------------------ | ---------------------------------------------------------------------------------- | ------------------------- |
 | **Summary**              | Engine-level aggregates (success rate, avg runtime, avg R-score)                   | §5.0 Discussion           |
 | **Coverage diagnostic**  | Flags low-sample (`n < 3`) cells, asymmetric coverage across scenarios, fully-failed cells | §5.3 Methodology notes    |
-| **Demand Composition** (V5+) | One row per scenario showing total / AM peak / PM peak / school-related counts (V5+ purpose taxonomy). Read from `scenarios/<name>/demand.csv`'s `purpose` column. Pre-V5 bundles silently omit the section. | §5.6 Demand realism appendix |
+| **Demand Composition** | One row per scenario showing total / AM peak / PM peak / school-related counts (purpose taxonomy). Read from `scenarios/<name>/demand.csv`'s `purpose` column. Bundles without the column silently omit the section. | §5.6 Demand realism appendix |
 | **Table 5.1**            | Runtime per `(scenario, engine, mode)` (mean, std, min, max)                       | §5.1 Runtime Performance  |
 | **Table 5.2**            | Reproducibility per `(scenario, engine, mode)` (avg TT, std TT, R-score, rating)   | §5.2 Reproducibility      |
 | **LaTeX**                | Copy-pasteable `\begin{table}` blocks                                              | Appendix / Chapter 5      |
@@ -244,7 +244,7 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 ```
 
-Renders **10 figures** (PNG, 300 dpi) into `<results-dir>/plots/` (or `--output` if specified). Two of them, Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine), are auto-skipped when their data isn't available, so the figure count drops to 8 on pre-V5 bundles or pre-Phase-11.6 result files.
+Renders **10 figures** (PNG, 300 dpi) into `<results-dir>/plots/` (or `--output` if specified). Two of them, Fig 5.9 (Demand composition) and Fig 5.10 (Wall vs engine), are auto-skipped when their data isn't available, so the figure count drops to 8 on bundles without a `purpose` column or result files without the per-cell wall fields.
 
 #### Generated figures
 
@@ -258,7 +258,7 @@ Renders **10 figures** (PNG, 300 dpi) into `<results-dir>/plots/` (or `--output`
 | **Fig 5.6**  | Boxplot              | **Engine** runtime variability per `(engine, mode)`              | Tail-behaviour discussion           |
 | **Fig 5.7**  | Scatter / dual-bar   | P95 tail latency vs mean travel time, faceted by mode            | Worst-case behaviour                |
 | **Fig 5.8**  | Trip-count parity    | Completed trips per `(engine, mode)`                             | Validates SCC/feasibility filter, every engine is shown to receive the same N |
-| **Fig 5.9**  | Stacked bar          | Per-scenario V5+ trip-purpose composition (HBW_AM/PM, HBSchool_AM/PM, chains) read from canonical `demand.csv` | Demand-realism evidence (Phases 5–10) |
+| **Fig 5.9**  | Stacked bar          | Per-scenario trip-purpose composition (HBW_AM/PM, HBSchool_AM/PM, chains) read from canonical `demand.csv` | Demand-realism evidence |
 | **Fig 5.10** | Stacked bar          | Per-cell wall time breakdown, engine subprocess vs adapter prep + parse (`cell_wall_s − engine_wall_s`); skipped on pre-Phase-11.6 result files | Methodological footnote: where time actually goes |
 
 ### 4.3 Mode Comparison
@@ -306,7 +306,7 @@ python -m visualization.generate_maps --scenario chicago_1k_car \
 
 | Map | Inputs | Engine specificity | Use in thesis |
 |---|---|---|---|
-| `od_origins` / `od_destinations` | Bundle + cached US Census tracts + TIGER roads |, (cross-engine, demand only) | §3.3 demand realism, proves the V5+ Phase 9c PM-chain mechanism produces symmetric metro-scale demand |
+| `od_origins` / `od_destinations` | Bundle + cached US Census tracts + TIGER roads |, (cross-engine, demand only) | §3.3 demand realism, proves the PM-chain mechanism produces symmetric metro-scale demand |
 | `link_load` | Per-cell engine output | per `(engine, mode)` | §5.0 cross-engine sanity, SUMO ≈ MATSim, DTALite distinct (same data as `route_diversity`, different framing) |
 | `congestion` | DTALite `link_performance.csv` | DTALite only | §5.0, visualizes UE equilibrium link-level congestion |
 | `travel_time` | Per-cell engine output + bundle | per `(engine, mode)` | §5.2, choropleth of mean travel time by origin tract |
@@ -396,7 +396,7 @@ Seven sections (each one side-by-side table with scenarios as columns):
 
 Auto-paginates when the terminal isn't wide enough, each section
 splits into pages of N scenarios with a `(scenarios X–Y of N)` page
-suffix. Pre-V5 bundles missing the `purpose` column gracefully render
+suffix. Bundles missing the `purpose` column gracefully render
 the demand totals subsection only.
 
 This complements `audit_fairness` Q5 and `analyze_benchmark`'s demand
@@ -443,7 +443,7 @@ Located in `evaluation/metrics/`:
    - Micro is more accurate at the edges (P95) but pays an order-of-magnitude runtime cost vs meso
 
 5. **Demand realism** (Fig 5.9, audit_fairness Q5)
-   - Per-scenario stacked bar makes the V5+ trip-purpose composition visible at a glance, HBW dominates, HBSchool + chain legs are the parent-with-school-age-dependent share.
+   - Per-scenario stacked bar makes the trip-purpose composition visible at a glance, HBW dominates, HBSchool + chain legs are the parent-with-school-age-dependent share.
    - Pairs with the MODELGEN_AND_MODES.md text and Phase 9 in CHANGELOG to back the "we use real demand, not a uniform OD matrix" claim.
 
 6. **Methodological footnote** (Fig 5.10)
@@ -457,7 +457,7 @@ Located in `evaluation/metrics/`:
 | Canonical schema enables fair comparison       | Same scenario runs on all engines with identical demand (Fig 5.8) |
 | Mesoscopic mode is much faster than micro      | Fig 5.5 (within-engine), `compare_modes.py` speedup ratio         |
 | Results are reproducible                       | R-scores ≥ 0.997 across seeds (Table 5.2, Fig 5.2)                |
-| Demand is realistic, not a uniform OD matrix   | Fig 5.9 V5+ trip-purpose composition (HBW + HBSchool + chains)    |
+| Demand is realistic, not a uniform OD matrix   | Fig 5.9 trip-purpose composition (HBW + HBSchool + chains)    |
 | Engine times are comparable across simulators  | Fig 5.10 isolates engine subprocess from adapter prep             |
 | Framework scales to large scenarios            | Scalability metrics from HPC runs (200K, 500K tiers)              |
 | Three-paradigm cross-engine validation         | DTALite (DTA equilibrium) vs MATSim (queue-based agent) vs SUMO (microscopic / meso queue) on chicago_200k and nyc_500k tiers |
@@ -471,7 +471,7 @@ Located in `evaluation/metrics/`:
 - **Microscopic mode**: Order-of-magnitude slower than meso for the same trip count.
 - **DTALite**: Requires `path4gmns` from `requirements.lock`. On macOS the bundled binary needs `brew install libomp` for the OpenMP runtime. The adapter does not silently fall back, when path4gmns is not installed, every `dtalite` cell records a clean failure with the install command.
 - **DTALite determinism**: Fully deterministic, UE algorithm with fixed iteration order, no atomic reductions, no GPU non-determinism. R = 1.0 expected, matching SUMO meso and MATSim with `lastIteration=0`.
-- **LPSim** (historical): Was the third primary engine in Versions 1–4, abandoned in Version_5 after the bundled GPU binary crashed on networks > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md).
+- **LPSim** (not shipped): Was evaluated as a third-engine candidate and ruled out after the bundled GPU binary crashed on networks > a few-K nodes and a from-source rebuild SIGSEGV'd at first kernel launch. Full evaluation: [`doc/engines/LPSIM_EVALUATION.md`](engines/LPSIM_EVALUATION.md).
 
 ---
 

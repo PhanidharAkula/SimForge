@@ -67,7 +67,7 @@ DTALite's binary reads its assignment configuration from **two files**:
 
 1. **`settings.csv`**: the section-formatted CSV the C++ binary reads. SimForge writes:
    - `[assignment]`: assignment_mode=ue, iteration counts, UE convergence
-   - `[agent_type]`: single auto agent (cars only, `p` = passenger). PCE pulled from `adapters/common/vehicle_types.CAR_PCE` (V11+; was a magic literal `1` pre-V11). DTALite has no per-vehicle length parameter, link capacity expresses the storage equivalent of SUMO's `length + minGap` and MATSim's effective length, and `PCE = 1.0` keeps that equivalent. See `CHANGELOG.md` Phase 11.
+   - `[agent_type]`: single auto agent (cars only, `p` = passenger). PCE pulled from `adapters/common/vehicle_types.CAR_PCE`. DTALite has no per-vehicle length parameter, link capacity expresses the storage equivalent of SUMO's `length + minGap` and MATSim's effective length, and `PCE = 1.0` keeps that equivalent.
    - `[link_type]`: Highway/Expressway, type_code=f
    - `[demand_period]`: single AM period (default 0700-0800, controlled by `DTALiteConfig`)
    - `[demand_file_list]`: points at demand.csv
@@ -151,8 +151,8 @@ The YAML format used by path4gmns 0.10.0 differs from earlier versions; the writ
 1. **Per-trip departure times are not preserved.** DTALite's demand layer is OD-matrix-based; departures are distributed uniformly within the period window. This is the cleanest cross-engine difference for DTALite (SUMO and MATSim simulate per-trip departure times faithfully).
 2. **Single mode: car only.** SimForge's bike/walk/transit modes are dropped at the demand writer. (Path4GMNS supports multi-modal via `agents:` but the cross-engine harness currently only runs car demand.)
 3. **20k+ node networks need demand-driven zoning** to keep runtime sub-minute. Already enforced by `prepare_dtalite_inputs`.
-4. **Turn restrictions emitted but not enforced.** V5+ Phase 7 writes a sibling `movement.csv` (GMNS-derived: `mvmt_id, node_id, ib_link_id, ob_link_id, type, penalty, capacity, ctrl_type, geometry, osm_restriction`) alongside `node.csv`/`link.csv`/`demand.csv`. Each canonical `<turn_restriction>` becomes one forbidden movement row with `capacity = 0` and `penalty = 99999`. **path4gmns 0.10.0 does not natively ingest movement.csv**, so DTALite's UE assignment may still cross forbidden movements. SUMO and MATSim adapters enforce restrictions via state-aware BFS pre-routing, this is a documented cross-engine asymmetry. The movement.csv is a documentary artefact for future engine versions and downstream tooling. See `pipeline/network/turn_restrictions.py` module docstring and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
-5. **V5+ `purpose` and `dest_source` columns dropped.** The DTALite `demand.csv` has only three columns (`o_zone_id`, `d_zone_id`, `volume`), the canonical-bundle `purpose` / `dest_source` provenance is lost in the OD aggregation. `evaluation/audit_fairness.py` Q5 reads from the canonical bundle's `demand.csv`, not the DTALite cell copy, so this is not a reporting gap, but consumers reading the DTALite cell directly will not see the purpose taxonomy.
+4. **Turn restrictions emitted but not enforced.** The adapter writes a sibling `movement.csv` (GMNS-derived: `mvmt_id, node_id, ib_link_id, ob_link_id, type, penalty, capacity, ctrl_type, geometry, osm_restriction`) alongside `node.csv`/`link.csv`/`demand.csv`. Each canonical `<turn_restriction>` becomes one forbidden movement row with `capacity = 0` and `penalty = 99999`. **path4gmns 0.10.0 does not natively ingest movement.csv**, so DTALite's UE assignment may still cross forbidden movements. SUMO and MATSim adapters enforce restrictions via state-aware BFS pre-routing, this is a documented cross-engine asymmetry. The movement.csv is a documentary artefact for future engine versions and downstream tooling. See `pipeline/network/turn_restrictions.py` module docstring and `doc/MODELGEN_AND_MODES.md` §"Cross-engine asymmetry".
+5. **Canonical `purpose` and `dest_source` columns dropped.** The DTALite `demand.csv` has only three columns (`o_zone_id`, `d_zone_id`, `volume`), the canonical-bundle `purpose` / `dest_source` provenance is lost in the OD aggregation. `evaluation/audit_fairness.py` Q5 reads from the canonical bundle's `demand.csv`, not the DTALite cell copy, so this is not a reporting gap, but consumers reading the DTALite cell directly will not see the purpose taxonomy.
 
 ---
 
@@ -161,5 +161,5 @@ The YAML format used by path4gmns 0.10.0 differs from earlier versions; the writ
 - **path4gmns:** [jdlph/Path4GMNS](https://github.com/jdlph/Path4GMNS), Python wrapper, actively maintained
 - **DTALite C++:** [asu-trans-ai-lab/DTALite](https://github.com/asu-trans-ai-lab/DTALite), upstream (dormant)
 - **GMNS spec:** [zephyr-data-specs/GMNS](https://github.com/zephyr-data-specs/GMNS), published data standard
-- **SimForge engine retrospectives:** `doc/engines/{LPSIM,QARSUMO}_RETROSPECTIVE.md`, `doc/engines/THIRD_ENGINE_OPTIONS.md`
+- **SimForge engine evaluations:** `doc/engines/{LPSIM,QARSUMO}_EVALUATION.md`, `doc/engines/THIRD_ENGINE_OPTIONS.md`
 - **Cross-engine comparison reference:** `doc/engines/ENGINE_COMPARISON.md`

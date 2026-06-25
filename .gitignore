@@ -74,7 +74,7 @@ osm_data/*.osm.pbf
 lib/*
 # DTALite version pin needs to be tracked, same role osm_data/manifest.json
 # plays for PBFs. (LPSim manifest was deleted in Version_5; see
-# doc/engines/LPSIM_RETROSPECTIVE.md.)
+# doc/engines/LPSIM_EVALUATION.md.)
 !lib/dtalite/
 lib/dtalite/*
 !lib/dtalite/manifest.json

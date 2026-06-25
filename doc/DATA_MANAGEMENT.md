@@ -15,7 +15,7 @@ data is used at any stage of the pipeline.
 
 | Source | Role | License | Provenance recorded in |
 |---|---|---|---|
-| **OpenStreetMap** (hash-pinned Geofabrik state-level PBF snapshots) | Road network topology, OSM `highway=traffic_signals` for signal placement, OSM `type=restriction via=node` relations for V5+ turn restrictions | ODbL v1.0 | `osm_data/manifest.json` (SHA-256 per PBF) + per-scenario `manifest.xml` (extraction date + bbox) |
+| **OpenStreetMap** (hash-pinned Geofabrik state-level PBF snapshots) | Road network topology, OSM `highway=traffic_signals` for signal placement, OSM `type=restriction via=node` relations for turn restrictions | ODbL v1.0 | `osm_data/manifest.json` (SHA-256 per PBF) + per-scenario `manifest.xml` (extraction date + bbox) |
 | **US Census PUMS microdata** (via cityscape's ModelGen `<city>_model.txt`) | Aggregate population synthesis: households, persons, building locations, JWMNP commute times, JWTRNS mode codes | US Federal public domain (17 U.S.C. § 105) | `doc/MODELGEN_AND_MODES.md` §1 + per-scenario `manifest.xml` |
 | **US Census TIGER/Line Cartographic Boundary** (CB 2024 tracts + PRISECROADS) | Visualization-only: choropleth tract polygons + roads basemap on the `visualization` branch | US Federal public domain | `tools/download_census_tracts.py` + `tools/download_tiger_roads.py` README headers |
 
@@ -90,7 +90,7 @@ are not held indefinitely.
   aggregate data; no human-subjects research is conducted.
 - **No animal subjects, no clinical data, no sensitive populations.**
 - **Synthetic data labeling.** All generated trip records carry a
-  `dest_source` provenance column (V5+) marking each row as either
+  `dest_source` provenance column marking each row as either
   `schedule` (cityscape PUMS-derived) or `gravity` (synthetic gravity
   fallback). This is the audit-trail used by `audit_fairness` Q5 and
   thesis Fig 5.9.
