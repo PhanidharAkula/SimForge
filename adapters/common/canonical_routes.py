@@ -1,25 +1,25 @@
-"""Shared canonical-routes BFS (Phase 14).
+"""Shared canonical-routes BFS.
 
 For every feasible trip, both the SUMO and MATSim adapters need its
 shortest path through the canonical network, honoring OSM turn
-restrictions when the V5+ Phase 7 metadata is there. Before Phase 14 each
+restrictions when the turn-restriction metadata is there. Previously each
 adapter ran its own copy of that same BFS over the same network. This
 module does it once: compute the routes per ``(scenario,
 feasible_trip_set)``, cache them to a JSONL file keyed by content hash,
 and hand both adapters the same `Dict[trip_id, List[node_id]]`.
 
 The byte-identity rule (an adapter's route XML must match what it produced
-before Phase 14) is pinned by
+before this shared module) is pinned by
 ``tests/test_canonical_routes.py::TestByteIdentityVsLegacy``.
-``doc/PHASE_14_DESIGN.md`` has the design rationale, the cache-key
-derivation, and the Phase 14.x sub-commit plan.
+``doc/CANONICAL_ROUTES_DESIGN.md`` has the design rationale and the cache-key
+derivation.
 
-This file is Phase 14.5: serial and parallel BFS plus the JSONL cache.
+This module provides serial and parallel BFS plus the JSONL cache.
 Pass ``workers > 1`` and it fans out to a ``multiprocessing.Pool``; the
 parallel output is byte-identical to the serial output at any worker count
 (TestParallelDeterminism pins that).
 
-How the parallelism works (full detail in doc/PHASE_14_DESIGN.md §2.3):
+How the parallelism works (full detail in doc/CANONICAL_ROUTES_DESIGN.md §2.3):
 
   This is task parallelism over trips, not data parallelism over the
   network. Every worker gets the whole graph; only the trip list is split
@@ -52,7 +52,7 @@ How the parallelism works (full detail in doc/PHASE_14_DESIGN.md §2.3):
       and rebuilds its state in ``_init_worker(network_path)``, ~1-2 s at
       startup, which is nothing next to the multi-hour BFS it then runs.
 
-  doc/PHASE_14_DESIGN.md §2.3 has the diagram, the alternatives we turned
+  doc/CANONICAL_ROUTES_DESIGN.md §2.3 has the diagram, the alternatives we turned
   down (threads/GIL, shared_memory, partitioning the network), and the
   measured per-worker efficiency on Cardinal.
 """
@@ -88,9 +88,9 @@ _CACHE_SCHEMA_VERSION = 1
 
 # Minimum wall-clock seconds between progress emissions. Rate-limit by
 # time, not trip count, so the heartbeat is meaningful at any hardware
-# speed. 60 s is a defense-presentable cadence: for a ~4 h chicago_200k
-# Phase 14 run that's ~240 progress lines, one per minute; for a ~25 h
-# nyc_500k Phase 14 run that's ~1,500 lines. Both readable; both
+# speed. 60 s is a readable cadence: for a ~4 h chicago_200k
+# run that's ~240 progress lines, one per minute; for a ~25 h
+# nyc_500k run that's ~1,500 lines. Both readable; both
 # tight enough that the operator sees the job is alive.
 _PROGRESS_INTERVAL_S = 60.0
 
@@ -257,7 +257,7 @@ def _cache_key(
 
     Any change to network topology, demand bytes, or the feasibility
     filter changes the key and forces a re-computation. The schema
-    version is included so a future Phase 14.x can invalidate the
+    version is included so a future schema change can invalidate the
     whole cache namespace by bumping ``_CACHE_SCHEMA_VERSION``.
     """
     h = hashlib.sha256()

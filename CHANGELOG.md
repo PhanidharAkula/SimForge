@@ -171,7 +171,7 @@ End-to-end documentation sweep to align surface text with Phase 14 + Wave 1 real
 
 - `README.md`: test count `~574 → ~626 tests` (4 occurrences across status table, project structure, run instructions, headline); added `tools/generate_scorecard.py` to the post-run pipeline description; added 4 docs to the Documentation table (`LICENSING.md`, `DATA_MANAGEMENT.md`, `SIMULATION_PARADIGMS.md`, `EXPERIMENT_LOG.md`).
 - `TESTING.md`: headline `~477 tests / 23 files → ~626 tests / 31 files`.
-- `doc/PHASE_14_DESIGN.md` §5 Measurement Plan: replaced the forward-looking re-submit-the-deleted-sbatchs steps with the actual measured Phase 14 walls (chicago_200k 7.14 h cold / 37 min warm; nyc_500k 22 h cold projected) and the umbrella-sbatch consolidation pointer.
+- `doc/CANONICAL_ROUTES_DESIGN.md` §5 Measurement Plan: replaced the forward-looking re-submit-the-deleted-sbatchs steps with the actual measured Phase 14 walls (chicago_200k 7.14 h cold / 37 min warm; nyc_500k 22 h cold projected) and the umbrella-sbatch consolidation pointer.
 - `doc/REPRODUCING.md`: added optional step 6 documenting `python -m tools.generate_scorecard <run-dir>`.
 - `help.py` HELP_EVALUATION: added a REPRODUCIBILITY SCORECARD subsection after AUDIT CROSS-ENGINE FAIRNESS.
 - `doc/EXPERIMENT_LOG.md` §1 Headline numbers: updated test-suite count, added Phase 14 measured walls for chicago_200k_car, fixed the "engines researched + ruled out" count (3 → 4 names listed).
@@ -397,7 +397,7 @@ The nyc_500k wall-bust risk that cancelled benchmark job 9332482 on 2026-05-12 i
 
 #### Sub-commits
 
-**14.0, design + contract tests.** `doc/PHASE_14_DESIGN.md` records the motivation, API, cache format, parallel strategy, determinism invariants, and per-commit plan. `tests/test_canonical_routes.py` pins 9 contract tests; all skip at this commit (module doesn't exist yet) so each subsequent commit unblocks a subset.
+**14.0, design + contract tests.** `doc/CANONICAL_ROUTES_DESIGN.md` records the motivation, API, cache format, parallel strategy, determinism invariants, and per-commit plan. `tests/test_canonical_routes.py` pins 9 contract tests; all skip at this commit (module doesn't exist yet) so each subsequent commit unblocks a subset.
 
 **14.1, serial canonical_routes module + JSONL cache.** `adapters/common/canonical_routes.py` (446 lines): runs state-aware BFS over the SCC-filtered network, returns `Dict[trip_id, List[node_id]]`. JSONL cache content-addressed by SHA-256(network || demand || sorted feasible_trip_ids); header line records expected count for truncation detection; atomic write via temp file + os.replace. `TestSerialAPI` (4 tests), `TestCache` (2 tests), `TestByteIdentityVsLegacy` (1 test) all pass on this commit. The byte-identity test is the load-bearing invariant, proves the new BFS produces paths byte-identical to the legacy inline BFS, per trip_id.
 
@@ -446,7 +446,7 @@ Expected combined effect on Cardinal cold prep:
 
 **Files added (this commit, 14.0):**
 
-- `doc/PHASE_14_DESIGN.md`, full design (motivation, module API, cache format, parallel strategy, determinism invariants, risk + safety, measurement plan, implementation breakdown by sub-commit).
+- `doc/CANONICAL_ROUTES_DESIGN.md`, full design (motivation, module API, cache format, parallel strategy, determinism invariants, risk + safety, measurement plan, implementation breakdown by sub-commit).
 - `tests/test_canonical_routes.py`, 9 contract tests pinning the API before implementation lands. All tests skip on this commit with reason "Phase 14 in progress" because `adapters.common.canonical_routes` doesn't exist yet. Each subsequent Phase 14.x commit unblocks a subset.
 
 **Determinism invariant (load-bearing).** The byte-identity guard `TestByteIdentityVsLegacy::test_byte_identical_to_legacy_inline_bfs` pins the contract that the new shared BFS produces paths byte- identical to the legacy in-adapter BFS, per trip_id. This is what preserves `audit_fairness` Q1/Q3 across the refactor.

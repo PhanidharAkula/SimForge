@@ -47,7 +47,7 @@ The canonical schema is the lingua franca of SimForge. Every scenario is express
 | -------------- | ------------- | --------------------------------------------------------------- | ---------------------------------------------------------- |
 | `network.xml`  | `network_v0`  | Directed graph (nodes + links + V5+ `<turn_restrictions>`)      | IDs are `node_<osm_id>` / `link_<osm_id>` for traceability. V5+ adds `has_signal` per node and a `<turn_restrictions>` block. |
 | `demand.csv`   | `demand_v0`   | Trip table (origin, dest, depart, mode + V5+ `purpose`/`dest_source`) | CSV for ease of analysis; departure in seconds. V5+ provenance columns are informational (adapters ignore). |
-| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers at OSM-tagged nodes (V5+)        | Simplified to common denominator across all simulators. V5+ Phase 6: placement is OSM-grounded (`has_signal="true"` only). |
+| `signals.xml`  | `signals_v0`  | Fixed-time 2-phase controllers at OSM-tagged nodes (V5+)        | Simplified to common denominator across all simulators. V5+ signal placement is OSM-grounded (`has_signal="true"` only). |
 | `config.xml`   | `config_v0`   | Scenario metadata + parameters                                  | Engine-agnostic parameters only                            |
 | `manifest.xml` | `manifest_v0` | SHA-256 hashes for all canonical files (v0.2)                   | Hash-based integrity verification                          |
 
@@ -73,18 +73,17 @@ Stage 1: Network        pipeline/network/build_network_from_osm.py
          (Overpass API retained as fallback for cities without a committed PBF)
 
 Stage 2: Signals        pipeline/signals/build_signals_default.py
-         (V5+ Phase 6) Reads canonical `<node has_signal="true">` set →
-         emits a fixed-time 2-phase 90 s controller per OSM-tagged node →
-         signals.xml. Pre-V5 bundles fall back to the legacy `degree ≥ 4`
-         heuristic with a runtime WARNING.
+         (V5+ OSM-grounded placement) Reads canonical
+         `<node has_signal="true">` set → emits a fixed-time 2-phase 90 s
+         controller per OSM-tagged node → signals.xml. Pre-V5 bundles fall
+         back to the legacy `degree ≥ 4` heuristic with a runtime WARNING.
 
 Stage 3: Demand         pipeline/demand/generate_census_demand.py
-         ModelGen data → cityscape JWTRNS mapping (V5+ Phase 5 fix) →
-         peak-aware AM/PM split (V5+ Phase 9a) → schedule path
-         (real PUMS workplace + parent-with-kid HBSchool chains, V5+
-         Phase 9b/9c) + gravity fallback → per-person empirical
-         departures (V5+ Phase 8) → demand.csv with V5+ `purpose` and
-         `dest_source` provenance columns
+         ModelGen data → cityscape JWTRNS mapping (V5+ corrected codes) →
+         peak-aware AM/PM split (V5+) → schedule path
+         (real PUMS workplace + parent-with-kid HBSchool chains, V5+) +
+         gravity fallback → per-person empirical departures (V5+) →
+         demand.csv with V5+ `purpose` and `dest_source` provenance columns
          (fallback)     pipeline/demand/generate_synthetic_demand.py
          No ModelGen → uniform random sampling → demand.csv
 
@@ -118,16 +117,16 @@ parse_model_file.py ──▶ ModelData(buildings, households, persons)
     │                         ▼
     │                  Schedule path (V5+): real PUMS workplace from
     │                  cityscape `schedule[0]` + HBSchool chains for
-    │                  parent-with-kid pairs (Phase 9b/c); fallback
-    │                  to gravity for the remaining budget.
+    │                  parent-with-kid pairs; fallback to gravity for
+    │                  the remaining budget.
     │                         │
     │                         ▼
     │                  Gravity fallback: P(dest) ∝ degree × Gaussian(distance|target_km)
     │                         │
     │                         ▼
-    │                  Per-person departure (V5+ Phase 8):
+    │                  Per-person departure (V5+):
     │                    arrival_s − commute_min × 60
-    │                  AM/PM peak split when horizon spans both (V5+ Phase 9a)
+    │                  AM/PM peak split when horizon spans both (V5+)
     │                         │
     ▼                         ▼
 network.xml ◀──────── demand.csv (with `purpose` + `dest_source`)
@@ -228,7 +227,7 @@ Three metric families, each in a dedicated module:
 | Reproducibility | `metrics/reproducibility.py` | R-index, CV, multi-KPI                | Consistency         |
 | Travel Time     | `metrics/travel_time.py`     | Mean, P95, completion rate            | Per-run extraction  |
 
-### 2.6 Visualization Component (Phase 13, opt-in)
+### 2.6 Visualization Component (opt-in)
 
 Standalone, opt-in module under `visualization/`. Generates geographic
 maps from canonical bundles and benchmark results. Lives on the
@@ -245,8 +244,7 @@ runs/<runspec>/ ───┘                                      │
                                                           │
         ┌─────────────────────────────────────────────────┼─────────────────────────────────────┐
         ▼                                                 ▼                                     ▼
-   Phase A maps                                     Phase B maps                          Phase C maps
-   (bundle only)                                  (per-engine cell)                    (cross-engine / event)
+   Bundle-only maps                                Per-engine-cell maps                  Cross-engine / event maps
         │                                                 │                                     │
         ▼                                                 ▼                                     ▼
   od_choropleth.py                               link_load.py                           route_diversity.py
@@ -258,14 +256,14 @@ runs/<runspec>/ ───┘                                      │
 
 Seven map types are shipped:
 
-| Map | Phase | Inputs | Engine specificity |
+| Map | Family | Inputs | Engine specificity |
 |---|---|---|---|
-| `od_origins` / `od_destinations` | A | Bundle (`network.xml` + `demand.csv`) + cached US Census tracts + TIGER roads |, (cross-engine) |
-| `link_load` | B | Per-cell engine output | per `(engine, mode)` |
-| `congestion` | B | DTALite `link_performance.csv` | DTALite only (needs link mean speed) |
-| `travel_time` | B | Per-cell engine output + bundle | per `(engine, mode)` |
-| `route_diversity` | C | Cell output from ≥ 2 engines | cross-engine |
-| `animated_flow` | C | MATSim `output_events.xml.gz` | MATSim only |
+| `od_origins` / `od_destinations` | bundle-only | Bundle (`network.xml` + `demand.csv`) + cached US Census tracts + TIGER roads |, (cross-engine) |
+| `link_load` | per-cell | Per-cell engine output | per `(engine, mode)` |
+| `congestion` | per-cell | DTALite `link_performance.csv` | DTALite only (needs link mean speed) |
+| `travel_time` | per-cell | Per-cell engine output + bundle | per `(engine, mode)` |
+| `route_diversity` | cross-engine | Cell output from ≥ 2 engines | cross-engine |
+| `animated_flow` | cross-engine | MATSim `output_events.xml.gz` | MATSim only |
 
 **Data flow per map type:**
 
@@ -428,8 +426,9 @@ User: python run.py --scenario chicago_1k_car --engine sumo --mode meso --seed 4
         │ → on a correctly-generated bundle the filter is a no-op (defence in depth)
         ▼
 [3] SUMO adapter: parse network.xml → state-aware BFS route each trip
-    (V5+ Phase 7: avoids forbidden movements per `<turn_restrictions>`,
-    falls back to plain BFS when no restriction-respecting path exists)
+    (V5+ turn-restriction routing: avoids forbidden movements per
+    `<turn_restrictions>`, falls back to plain BFS when no
+    restriction-respecting path exists)
     → write SUMO files
         │ → runs/<name>/chicago_1k_car/sumo/seed_42/{.net.xml, .rou.xml, .sumocfg}
         ▼
@@ -545,7 +544,7 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 ┌─────────────────────────────────────────────────┐
 │  GitHub                                           │
 │  Branch: release (single public branch)           │
-│  + GitHub Actions auto-build → GHCR (Wave 2)      │
+│  + GitHub Actions auto-build → GHCR                │
 └───────────────────┬──────────────────────────────┘
                     │ git clone           │ apptainer pull
                     ▼                     ▼
@@ -562,4 +561,4 @@ The `test_adapter_determinism.py` module runs each adapter twice with the same i
 └──────────────────────────────────────────────────┘
 ```
 
-The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development, only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring) and [doc/CONTAINER_USAGE.md](CONTAINER_USAGE.md) for the Wave 2 container-mode opt-in.
+The HPC box uses the same code path and the same `osm_data/manifest.json` hashes as local development, only the job-submission wrapping is cluster-specific. See [doc/PITZER.md](PITZER.md) for the full Pitzer workflow (accounts, modules, rsync, sbatch templates, job monitoring) and [doc/CONTAINER_USAGE.md](CONTAINER_USAGE.md) for the container-mode opt-in.

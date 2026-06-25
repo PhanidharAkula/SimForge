@@ -159,7 +159,7 @@ same scenario).
 
 ## 5. Empirical cost ratios from benchmark_small
 
-From the Wave 1 scorecard on `runs/benchmark_small/` (5 seeds each):
+From the scorecard on `runs/benchmark_small/` (5 seeds each):
 
 | Scenario | Trips | SUMO meso `engine_wall` | SUMO micro `engine_wall` | Micro / Meso |
 |---|---:|---:|---:|---:|
@@ -188,7 +188,7 @@ that MATSim and DTALite achieve at `lastIteration=0`.
 
 ## 6. Scaling SUMO micro to the large tier
 
-Phase 14 (canonical-routes deduplication + parallel BFS + MATSim
+The canonical-routes BFS deduplication (shared parallel BFS + MATSim
 O(N)→O(1) link-find) collapsed the BFS *prep* cost. The engine
 runtime is unchanged, it scales the same way it always did:
 
@@ -206,8 +206,8 @@ because congestion is light; 200K on chicago's network is
 medium-density, 500K on NYC is high-density.
 
 **Memory.** SUMO micro tracks per-vehicle state (lane position,
-speed, acceleration), typically 2–5× the RAM of meso. Phase 13
-chicago_200k_car meso peaked at 23 GB. Micro is expected at 50–115 GB
+speed, acceleration), typically 2–5× the RAM of meso. The measured
+chicago_200k_car meso run peaked at 23 GB. Micro is expected at 50–115 GB
 (fits Cardinal's 192 GB nodes). nyc_500k_car micro could push 150–300 GB
 (may require a fat-node allocation or it OOMs).
 
@@ -255,7 +255,7 @@ directions:
 
 - **Across engines (Q4)**: how much do SUMO meso, MATSim meso, and
   DTALite disagree on the same canonical bundle? → paradigm divergence
-  finding (the 0.645 SUMO/MATSim TT ratio on chicago_200k Phase 14).
+  finding (the 0.645 SUMO/MATSim TT ratio on chicago_200k).
 - **Within SUMO (meso vs micro)**: how much does the meso queue model
   under- or over-estimate trip time relative to its micro
   counterpart on the *same* scenario? → resolution-fidelity finding.

@@ -480,7 +480,7 @@ SUPPORTED SIMULATORS:
   LPSim, POLARIS, and QarSUMO are documented as evaluated-and-rejected
   in doc/engines/LPSIM_RETROSPECTIVE.md, doc/engines/THIRD_ENGINE_OPTIONS.md,
   and doc/engines/ENGINE_COMPARISON.md (QarSUMO's record lives in the
-  latter two plus the CHANGELOG Version_4 Phase A entry).
+  latter two plus the CHANGELOG entry).
 
 ADAPTER CLI:
   python -m adapters.sumo.cli    <scenario_path> <output_dir>                  # convert only
@@ -538,19 +538,17 @@ HELP_SCHEMA = """
 
 1. network.xml              -- Directed road graph from OSM. V5+ also
                                carries `has_signal="true"` on traffic-signal
-                               nodes (Phase 6) and a top-level
+                               nodes and a top-level
                                <turn_restrictions> block extracted from
-                               OSM `type=restriction via=node` relations
-                               (Phase 7).
+                               OSM `type=restriction via=node` relations.
 2. demand.csv               -- Trip-level OD: trip_id, origin_node_id,
                                destination_node_id, departure_time_s, mode.
                                V5+ adds two informational columns:
                                `dest_source` (schedule|gravity provenance)
                                and `purpose` (HBW_AM/PM, HBSchool_AM/PM,
-                               HBW_*_chained, 4-step taxonomy from
-                               Phase 9). Adapters consume the canonical
-                               5-column subset by name and ignore the
-                               provenance columns.
+                               HBW_*_chained, 4-step taxonomy). Adapters
+                               consume the canonical 5-column subset by name
+                               and ignore the provenance columns.
 3. signals.xml              -- Fixed-time traffic signal phases at every
                                OSM-tagged `highway=traffic_signals` node
                                in the bbox (1.4-4.8% of nodes, chicago
@@ -617,7 +615,7 @@ AUDIT CROSS-ENGINE FAIRNESS:
   parallel-by-scenario sbatch nested, per-scenario worker dir). Use this
   before claiming any cross-engine number in the thesis.
 
-REPRODUCIBILITY SCORECARD (Wave 1+):
+REPRODUCIBILITY SCORECARD:
   python -m tools.generate_scorecard <run-dir>
 
   Emits reproducibility_scorecard.md, one-shot Markdown digest of
@@ -650,7 +648,7 @@ GENERATE THESIS PLOTS:
     Fig 5.8, Trip-count parity (engine-internal drop reasons)
     Fig 5.9, Demand composition (V5+ trip-purpose taxonomy: HBW + HBSchool
                + chains; reads canonical demand.csv `purpose` column)
-    Fig 5.10, Per-cell wall time breakdown (Phase 11.6+: engine subprocess
+    Fig 5.10, Per-cell wall time breakdown (engine subprocess
                vs adapter prep; needs cell_wall_s / engine_wall_s in JSON)
 
   Default output: plots/ next to the results JSON file.
@@ -659,7 +657,7 @@ GENERATE THESIS PLOTS:
   Fig 5.9 / 5.10 are auto-skipped when their data isn't available:
   Fig 5.9 needs at least one bundle with a V5+ `purpose` column on
   demand.csv; Fig 5.10 needs results saved by run.py / run_benchmark.py
-  Phase 11.6+ (which write `cell_wall_s` and `engine_wall_s`).
+  versions that write `cell_wall_s` and `engine_wall_s`.
 
 EXAMPLES (using the canonical small-tier runspec):
   python -m evaluation.analyze_benchmark runs/benchmark_small/benchmark_results_benchmark_small.json --latex --markdown
@@ -699,7 +697,7 @@ BUILT-IN RUNSPECS:
   benchmark_large.yaml   chicago_200k_car + nyc_500k_car, mesoscopic only,
                          2 engines (SUMO + MATSim; DTALite is excluded at
                          this tier, its bundled binary caps at 4 OpenMP
-                         threads, see doc/EXPERIMENT_LOG.md Phase 12.5/12.7)
+                         threads, see doc/EXPERIMENT_LOG.md)
                          x 2 scenarios x 5 reps = 20 runs. Per-run timeout
                          3600 s for 200K, 7200 s for 500K (HPC tier, submit
                          via cluster/jobs/benchmark_large.sbatch; bundles
@@ -734,7 +732,7 @@ tier, or run it on HPC via cluster/jobs/benchmark_small.sbatch:
   python -m evaluation.audit_fairness runs/benchmark_small
   python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json --output doc/figures
 
-OUTPUT SHAPE (Phase 12+):
+OUTPUT SHAPE:
   runs/<runspec_name>/<scenario_id>/                 # one dir per scenario
     benchmark_results_<runspec_name>.json            # canonical result schema
     <engine>/<mode>/seed_<N>/                        # per-cell engine artefacts
@@ -744,16 +742,16 @@ OUTPUT SHAPE (Phase 12+):
       .prepared                                      # SHA-256 of bundle manifest
       <prepared inputs hardlinked into cells>
 
-  Phase 12 added the `<mode>` segment in per-cell paths so SUMO meso and
-  SUMO micro can't overwrite each other's tripinfo.xml. Phase 12.2
-  collapsed the otherwise-doubly-nested `<scenario>/<scenario>/` that
+  The `<mode>` segment in per-cell paths keeps SUMO meso and SUMO micro
+  from overwriting each other's tripinfo.xml. The layout collapses the
+  otherwise-doubly-nested `<scenario>/<scenario>/` that
   parallel-by-scenario sbatch produced. The `.cache/` dir holds
   prepare_*_inputs output once per (scenario, engine); per-cell dirs
   receive hardlinks rather than re-running BFS. The cache invalidates
   automatically when the bundle's manifest.xml SHA changes, no manual
   `rm -rf .cache` needed when you regenerate a scenario.
 
-  Pre-Phase-12.2 runs may have a doubly-nested
+  Older runs may have a doubly-nested
   `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/` layout; audit_fairness
   recognises that as Layout C (back-compat).
 
@@ -838,13 +836,13 @@ TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
   test_adapter_contract.py        (6)   Three-function adapter contract regression
   test_adapter_determinism.py     (8)   Byte-identical re-runs @determinism
   test_analyze_benchmark.py       (24)  Mode-aware grouping + all renderers
-                                        (incl. Phase 10 demand composition table)
+                                        (incl. demand composition table)
   test_audit_fairness.py          (40)  Q1-Q5 audit helpers + 5-layout detector
-                                        (Phase 12+ mode-segmented + back-compat)
+                                        (mode-segmented + back-compat)
                                         + _discover_modes + synthetic-run-dir test
-  test_canonical_routes.py        (11)  Phase 14 shared parallel-BFS route cache
+  test_canonical_routes.py        (11)  Shared parallel-BFS route cache
   test_confidence.py              (18)  Student's-t 95 % CI core + edge cases
-  test_demand_composition.py      (7)   V5+ Phase 10, `purpose` column tally,
+  test_demand_composition.py      (7)   V5+ `purpose` column tally,
                                         AM/PM peak split, chain-leg counter,
                                         pre-V5 graceful no-op
   test_demand_generators.py       (21)  Uniform / gravity / peak-hour
@@ -856,13 +854,13 @@ TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
   test_fidelity_metrics.py        (21)  RMSE / GEH / KS / combined
   test_generate_scorecard.py      (22)  Scorecard renderer (tools/generate_scorecard)
   test_matsim_adapter.py          (26)  MATSim helpers + end-to-end + sweep,
-                                        + Phase 12.1 route-text format pin
+                                        + route-text format pin
                                         (~10 min on M-series Mac, see
                                         TESTING.md §3 for the -k escape)
   test_metrics_travel_time.py     (2)   tripinfo.xml parser
   test_osm_fetch.py               (20)  Mocked Overpass/osmnx pipeline
-  test_parse_model_file.py        (27)  ModelGen file parser + V5 Phase 5
-                                        JWTRNS mapping + Phase 9 HBSchool helpers
+  test_parse_model_file.py        (27)  ModelGen file parser + V5
+                                        JWTRNS mapping + HBSchool helpers
                                         + AM_PURPOSES/PM_PURPOSES disjointness
   test_pipeline_e2e.py            (20)  13 corruption + 3 robustness + 4 routing
   test_recover_partial_summary.py (6)   Partial-summary recovery from interrupted runs
@@ -885,11 +883,11 @@ TEST FILES (31 files / 668 tests with all 5 bundles in scenarios/;
                                           3 tracked → 108 tests (3×36)
                                           5 generated → 180 tests (5×36)
   test_sumo_adapter.py            (4)   SUMO input bundle + sweep
-  test_turn_restrictions.py       (17)  V5+ Phase 7, OSM restriction parser,
+  test_turn_restrictions.py       (17)  V5+ OSM restriction parser,
                                         forbidden-move builder, state-aware
                                         BFS, DTALite movement.csv writer
   test_validator.py               (2)   Bundle pass + corruption fail
-  test_vehicle_types.py           (19)  V5+ Phase 11, canonical car constants,
+  test_vehicle_types.py           (19)  V5+ canonical car constants,
                                         SUMO/MATSim XML emission, cross-engine
                                         equivalence (length+gap == effective)
   test_visualization.py           (13)  Visualization component (loaders, coverage, CLI)
@@ -1068,7 +1066,7 @@ KEY CLI FLAGS:
   --output <dir>            default: visualization/output/<scenario>/
   --dry-run                 print the coverage matrix and exit
   --dpi <N>                 default 220 (statics and animations share this)
-  --engine sumo|matsim|dtalite  which engine's data to use for Phase B maps
+  --engine sumo|matsim|dtalite  which engine's data to use for per-engine maps
   --anim-mode particles|throughput  default particles
   --anim-fps <N>            default 30 (particles); throughput is fixed at 2
   --anim-sim-per-frame <s>  default 5.0; lower = slower motion, longer file
@@ -1097,7 +1095,7 @@ DATA SOURCES (cached locally, public-domain US gov):
   scenarios/<id>/network.xml + demand.csv
                   canonical bundle (provided by generate.py)
   runs/benchmark_*/<id>/<engine>/<mode>/seed_*/
-                  per-cell engine outputs (Phase B + C maps)
+                  per-cell engine outputs (per-engine + cross-engine maps)
 
 CROSS-ENGINE INTERPRETATION (full notes in visualization/README.md):
   - SUMO and MATSim link_load look identical, DTALite differs.

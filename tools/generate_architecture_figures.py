@@ -2,7 +2,7 @@
 
 These are NOT data plots (those live in evaluation/generate_plots.py).
 These are box-and-arrow conceptual diagrams: SimForge overview, three-layer
-architecture, fairness-audit flow, Phase 14 BFS deduplication, and the
+architecture, fairness-audit flow, canonical-routes BFS deduplication, and the
 two-paradigm-spread synthesis.
 
 Output: doc/figures/fig_{1_1,3_1,3_6,3_8,6_1}_*.png (300 dpi PNG).
@@ -352,7 +352,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F7: Phase 14 BFS deduplication
+# F7: canonical-routes BFS deduplication
 # -----------------------------------------------------------------------------
 
 
@@ -802,7 +802,7 @@ def fig_3_4_adapter_contract(output_dir):
 
 
 # -----------------------------------------------------------------------------
-# F8: Wave 2 container distribution chain (Methods §3.11)
+# F8: container distribution chain (Methods §3.11)
 # -----------------------------------------------------------------------------
 
 
@@ -952,7 +952,7 @@ def fig_6_2_reproducibility_regimes(output_dir):
 
 def fig_3_8b_parallel_bfs_workers(output_dir):
     fig, ax = plt.subplots(figsize=(15, 10))
-    fig.suptitle("Phase 14 canonical_routes parallel-BFS architecture: "
+    fig.suptitle("Canonical-routes parallel-BFS architecture: "
                  "task-parallel over trips, replicated SCC-graph per worker",
                  fontsize=12, fontweight="bold", y=0.975)
     ax.set_xlim(0, 15)
@@ -1071,7 +1071,7 @@ def fig_3_8b_parallel_bfs_workers(output_dir):
             "(pinned by tests/test_canonical_routes.py::TestParallelDeterminism)",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
     ax.text(7.5, 0.25,
-            "Content-addressable cache: cache/canonical_routes/canonical_routes_<sha256>.jsonl → warm re-runs hit instantly (Phase 14.13)",
+            "Content-addressable cache: cache/canonical_routes/canonical_routes_<sha256>.jsonl → warm re-runs hit instantly",
             ha="center", va="center", fontsize=9, style="italic", color="#1b5e20")
 
     return save(fig, "fig_3_8b_parallel_bfs_workers", output_dir)

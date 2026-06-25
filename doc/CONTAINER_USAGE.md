@@ -151,7 +151,7 @@ Compare the `sha256:...` digest against the GHCR package page for the
 pinned tag recorded in `lib/container/manifest.json` (the manifest pins
 the immutable commit-SHA tag, `phase-14-canonical-routes` / `db8d786`,
 rather than a literal digest string; thesis-tier benchmark runs used that
-tag, see the CHANGELOG Wave 2 entry).
+tag, see the CHANGELOG container-release entry).
 
 ---
 
@@ -169,7 +169,7 @@ A complete cross-machine SimForge reproduction now looks like:
 Every step is hash-verified end-to-end:
 - Container digest pins the execution environment
 - OSM manifest pins the network input
-- canonical_routes cache (Phase 14.13) is content-addressable
+- canonical_routes cache is content-addressable
 - Adapter outputs are byte-deterministic (determinism test marker)
 - Scorecard records every hash + version in `reproducibility_scorecard.md`
 
@@ -244,4 +244,4 @@ hosts (Cardinal works fine; arm64 Macs don't).
 - `doc/PITZER.md`, Cardinal-specific SLURM setup
 - `doc/LICENSING.md`, per-component license stack (Apache + EPL + GPL + ODbL + public domain)
 - `doc/DATA_MANAGEMENT.md`, data sources, retention, PII policy
-- `CHANGELOG.md`, Wave 2 entry for the container release
+- `CHANGELOG.md`, the container-release entry

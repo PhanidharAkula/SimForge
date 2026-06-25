@@ -7,15 +7,16 @@
 # per-runspec result JSON colliding (the harness names that JSON after
 # the runspec, not the scenario).
 #
-# Wall-clock budget (N=5 repeats, Phase 14 canonical_routes cache):
-#   Phase 14 collapsed the per-engine BFS pre-routing wall by computing
-#   one shared canonical_routes cache per scenario (multiprocessing.Pool,
-#   16 workers), consumed by both SUMO and MATSim adapters. la_50k SUMO+
-#   MATSim BFS was ~10-11 h per engine pre-Phase-14; Phase 14 reduces it
-#   to ~1-2 h shared across both. The new long pole at the small tier is
-#   DTALite la_50k_car. Phase 14 doesn't help DTALite (it finds its own
-#   routes via UE/SUE iteration, no pre-routed BFS), so the path4gmns
-#   4-thread cap still drives that worker:
+# Wall-clock budget (N=5 repeats, shared canonical-routes cache):
+#   The shared canonical-routes cache collapses the per-engine BFS
+#   pre-routing wall by computing one canonical_routes cache per scenario
+#   (multiprocessing.Pool, 16 workers), consumed by both SUMO and MATSim
+#   adapters. la_50k SUMO+MATSim BFS was ~10-11 h per engine with the old
+#   per-adapter BFS; the shared cache reduces it to ~1-2 h shared across
+#   both. The new long pole at the small tier is DTALite la_50k_car. The
+#   shared cache doesn't help DTALite (it finds its own routes via UE/SUE
+#   iteration, no pre-routed BFS), so the path4gmns 4-thread cap still
+#   drives that worker:
 #     chicago_1k_car worker:  ~10 min  (1K trips, small graph)
 #     nyc_10k_car   worker:  ~2-3 h   (SUMO micro × 5 is the pole here)
 #     la_50k_car    worker:  ~20-22 h (DTALite × 5 seeds × ~4 h each;
@@ -31,7 +32,7 @@
 #                            overhead + post-step analyzer fits comfortably.
 #                            DTALite uses OpenMP and benefits from the extra
 #                            cores via number_of_cpu_processors in settings.yml.
-#   --mem=128G             : Phase 12.4 bump from 64 G. Job 47237978 OOM-killed
+#   --mem=128G             : bumped from 64 G. Job 47237978 OOM-killed
 #                            at 67 G MaxRSS while DTALite was loading the
 #                            la_50k_car 50K-OD matrix into path4gmns's C++
 #                            side with all 3 parallel workers still resident.
@@ -71,15 +72,14 @@ set -euo pipefail
 # literal pattern. This matters for the RESULTS=(<base>/*/<glob>.json) line
 # below; without it, a missing-files case quietly passes the literal "*" path
 # to analyze_benchmark and the script looks like it "found 1 result" that
-# doesn't exist. That bit us in production on 2026-05-02 (see CHANGELOG
-# Phase 12).
+# doesn't exist. That bit us in production on 2026-05-02 (see the CHANGELOG).
 shopt -s nullglob
 
 mkdir -p logs                # defensive: SLURM silently fails if logs/ missing
 cd ~/SimForge
 
 # ---------------------------------------------------------------------------
-# Wave 2: opt-in pinned-digest container mode (see benchmark_large.sbatch
+# Opt-in pinned-digest container mode (see benchmark_large.sbatch
 # header + doc/CONTAINER_USAGE.md for full notes).
 # ---------------------------------------------------------------------------
 if [ "${SIMFORGE_USE_CONTAINER:-0}" = "1" ]; then

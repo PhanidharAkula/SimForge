@@ -45,7 +45,7 @@ exceeds laptop patience, none of the three engines requires GPU or
 specialised hardware. See [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md)
 for the GPU-engine abandonment narrative.
 
-> **Container-mode execution (Wave 2, optional).** The host-venv install
+> **Container-mode execution (optional).** The host-venv install
 > path documented in §4 below remains the default. For bit-identical
 > reproduction of the thesis numbers across machines, the SBATCH wrappers
 > in `cluster/jobs/` support an opt-in `SIMFORGE_USE_CONTAINER=1` mode that
@@ -382,7 +382,7 @@ Once the bundles exist, run the 4-cell canonical matrix (or a subset):
 #SBATCH --job-name=simforge-bench
 #SBATCH --nodes=1 --ntasks=1 --cpus-per-task=16
 #SBATCH --mem=96G
-#SBATCH --time=36:00:00   # benchmark_small canonical wall: la_50k worker dominates at ~21-23 h with Phase 12 BFS-prep cache; 36 h gives headroom
+#SBATCH --time=36:00:00   # benchmark_small canonical wall: la_50k worker dominates at ~21-23 h with the BFS-prep cache; 36 h gives headroom
 #SBATCH --output=%x-%j.out
 
 cd $HOME/SimForge
@@ -492,7 +492,7 @@ scancel --user=$USER                # all your jobs (be careful!)
 The thesis numbers come from running `runspecs/benchmark_small.yaml` on Pitzer
 with all three engines. After a successful benchmark job you should have:
 
-Phase 12+ layout (per-scenario JSON, mode-segmented per-cell paths,
+Canonical run layout (per-scenario JSON, mode-segmented per-cell paths,
 BFS-prep cache):
 
 ```
@@ -514,7 +514,7 @@ runs/benchmark_small/
     └── fig_5_{1..10}.{png,pdf}                   # 10 thesis figures
 ```
 
-(Pre-Phase-12.2 doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
+(The legacy doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
 is also still detected by `audit_fairness`, Layout C back-compat.)
 
 Copy the plots and `benchmark_results_*.json` back to your local machine for

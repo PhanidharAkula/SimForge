@@ -157,22 +157,22 @@ The pinned version also lives in `requirements.lock` so a fresh `uv pip sync req
 
 > Versions 1–4 reserved this slot for LPSim (GPU mesoscopic). After exhaustive Pitzer debugging, LPSim was abandoned in Version_5, the bundled `LivingCity` binary crashed on networks larger than a few-K nodes, and an in-container source rebuild SIGSEGV'd at first kernel launch. Full retrospective: [`doc/engines/LPSIM_RETROSPECTIVE.md`](engines/LPSIM_RETROSPECTIVE.md). Selection rationale for DTALite over the alternative third engines (CityFlow, POLARIS): [`doc/engines/THIRD_ENGINE_OPTIONS.md`](engines/THIRD_ENGINE_OPTIONS.md).
 
-### V5 realism phases (affect bundle hashes)
+### V5 realism upgrades (affect bundle hashes)
 
 Beyond the engine swap, Version_5 ships a sequence of demand- and
-network-generation realism upgrades. Each phase modifies the *generated*
+network-generation realism upgrades. Each modifies the *generated*
 bundle and is reflected in `manifest.xml`'s SHA-256:
 
-| Phase | What changed | File(s) |
+| Upgrade | What changed | File(s) |
 |---|---|---|
-| 5  | JWTRNS code mapping fixed using cityscape Schedule-generator branch (6 of 12 codes were wrong pre-V5: e.g., bus → transit, walk → walk, WFH → excluded). Corrects ~30-40 % drift in eligible commuter pool size on Chicago. | `pipeline/demand/parse_model_file.py` |
-| 6  | OSM-grounded signal placement: `network.xml` `<node has_signal="true">` set populated from real `highway=traffic_signals` OSM tags. signals.xml signalizes only those (was: every `degree ≥ 4` node, ~85 %). Empirical drop: chicago 85 → 2.8 %; LA 85 → 1.4 %. | `pipeline/network/load_network_from_pbf.py`, `pipeline/signals/build_signals_default.py` |
-| 7  | OSM turn restrictions: new `<turn_restrictions>` block in `network.xml`. SUMO + MATSim adapters enforce via state-aware BFS pre-routing; DTALite emits sibling `movement.csv` (path4gmns 0.10.0 doesn't ingest, documented asymmetry). | `pipeline/network/turn_restrictions.py`, all three adapters |
-| 8  | PUMS-grounded per-person departure times: `departure = arrival_s − commute_min × 60`. Replaces V4 Gaussian peak. | `pipeline/demand/generate_census_demand.py` |
-| 9a | PM HBW return trips read cityscape `schedule[1]` (work → home @ 17:00). | same |
-| 9b | HBSchool_AM chains: parents with AGEP<18 dependents emit 2-row `home → school + school → work`. | same |
-| 9c | HBSchool_PM chains: symmetric `work → school + school → home`. | same |
-| 10 | Audit-tooling wiring: `evaluation/demand_composition.py` (new), Q5 section in `audit_fairness`, demand-composition table in `analyze_benchmark`. | `evaluation/` |
+| JWTRNS code mapping | Fixed using cityscape Schedule-generator branch (6 of 12 codes were wrong pre-V5: e.g., bus → transit, walk → walk, WFH → excluded). Corrects ~30-40 % drift in eligible commuter pool size on Chicago. | `pipeline/demand/parse_model_file.py` |
+| OSM-grounded signal placement | `network.xml` `<node has_signal="true">` set populated from real `highway=traffic_signals` OSM tags. signals.xml signalizes only those (was: every `degree ≥ 4` node, ~85 %). Empirical drop: chicago 85 → 2.8 %; LA 85 → 1.4 %. | `pipeline/network/load_network_from_pbf.py`, `pipeline/signals/build_signals_default.py` |
+| OSM turn restrictions | New `<turn_restrictions>` block in `network.xml`. SUMO + MATSim adapters enforce via state-aware BFS pre-routing; DTALite emits sibling `movement.csv` (path4gmns 0.10.0 doesn't ingest, documented asymmetry). | `pipeline/network/turn_restrictions.py`, all three adapters |
+| PUMS-grounded departure times | Per-person departures: `departure = arrival_s − commute_min × 60`. Replaces V4 Gaussian peak. | `pipeline/demand/generate_census_demand.py` |
+| PM HBW return trips | Read cityscape `schedule[1]` (work → home @ 17:00). | same |
+| HBSchool_AM chains | Parents with AGEP<18 dependents emit 2-row `home → school + school → work`. | same |
+| HBSchool_PM chains | Symmetric `work → school + school → home`. | same |
+| Audit-tooling wiring | `evaluation/demand_composition.py` (new), demand-fairness section in `audit_fairness`, demand-composition table in `analyze_benchmark`. | `evaluation/` |
 
 The committed `chicago_1k_car/`, `nyc_10k_car/`, and `la_50k_car/`
 bundles are V5+ (regenerated 2026-04-30 onwards), their hashes will
@@ -215,7 +215,7 @@ python -m evaluation.audit_fairness runs/benchmark_small
 # 5. Render the 10 thesis figures
 python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_benchmark_small.json
 
-# 6. (Optional, Wave 1+) The reproducibility scorecard is auto-emitted by
+# 6. (Optional) The reproducibility scorecard is auto-emitted by
 #    run_benchmark next to benchmark_results_*.json. Regenerate manually if
 #    needed (e.g., from a run dir copied across hosts):
 python -m tools.generate_scorecard runs/benchmark_small
@@ -349,14 +349,14 @@ The Mac↔Pitzer empirical verification we ran on 2026-04-26: every dep version 
 
 ### Output Layout
 
-Phase 12+ layout (mode-segmented per-cell paths, scenario-scoped
+Current layout (mode-segmented per-cell paths, scenario-scoped
 benchmark-results JSON, BFS-prep cache):
 
 ```
 runs/benchmark_small/
 └── chicago_1k_car/
-    ├── benchmark_results_benchmark_small.json   # per-scenario JSON (Phase 12)
-    ├── .cache/                                   # BFS-prep cache (Phase 12)
+    ├── benchmark_results_benchmark_small.json   # per-scenario JSON
+    ├── .cache/                                   # BFS-prep cache
     │   ├── sumo/    .prepared (SHA-256 of bundle manifest) + prepared inputs
     │   ├── matsim/  .prepared + ...
     │   └── dtalite/ .prepared + ...
@@ -373,7 +373,7 @@ runs/benchmark_small/
     └── dtalite/meso/seed_<N>/
 ```
 
-(Pre-Phase-12.2 doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
+(The legacy doubly-nested layout `<scenario>/<scenario>/<engine>/<mode>/seed_<N>/`
 is also still detected by `audit_fairness`, Layout C back-compat.)
 
 `feasibility_report.json` is the audit trail proving every engine was fed the same trip set (see [CHANGELOG.md](../CHANGELOG.md), Addenda 1–2).
@@ -402,9 +402,9 @@ Renders Fig 5.1 – Fig 5.10 (PNG, 300 dpi) into `runs/benchmark_small/plots/`. 
 
 ---
 
-## Expected Results (Canonical 11-Cell Matrix, Pitzer Intel Xeon Skylake, post-Phase-12.5)
+## Expected Results (Canonical 11-Cell Matrix, Pitzer Intel Xeon Skylake)
 
-The canonical numbers come from Pitzer SLURM jobs `47237978` (initial) + `47248311` (post-Phase-12.4 re-queue) + `tools/recover_partial_summary.py` (Phase 12.5 synthesis for la_50k_car DTALite cells). See [CHANGELOG.md](../CHANGELOG.md) Phase 12 series for the diagnostic chain. Table 5.1 in the thesis results chapter is the canonical source; a compact summary here:
+The canonical numbers come from the Pitzer benchmark run plus `tools/recover_partial_summary.py` (synthesis for la_50k_car DTALite cells). See [CHANGELOG.md](../CHANGELOG.md) for the diagnostic chain. Table 5.1 in the thesis results chapter is the canonical source; a compact summary here:
 
 | Scenario | Engine | Mode | Trips completed | Avg TT (s) | Runtime (s) | R-Score |
 |---|---|---|---|---|---|---|
@@ -463,7 +463,7 @@ python -m evaluation.generate_plots runs/benchmark_small/benchmark_results_bench
 | Fig 5.7  | P95 tail-latency analysis                                  |
 | Fig 5.8  | Trip-count parity (validates SCC/feasibility filter)       |
 | Fig 5.9  | Demand composition, V5+ trip-purpose stacked bar           |
-| Fig 5.10 | Wall vs engine breakdown (Phase 11.6+ result files only)   |
+| Fig 5.10 | Wall vs engine breakdown (requires wall/engine split in result files) |
 
 See [doc/RESULTS_GUIDE.md](RESULTS_GUIDE.md) for each figure's full interpretation.
 
@@ -475,7 +475,7 @@ This thesis was produced with:
 
 | Component | Version |
 | --------- | ------- |
-| SimForge  | Version_5 (DTALite + Phases 5-10 realism work, see `CHANGELOG.md`) |
+| SimForge  | Version_5 (DTALite + demand/network realism work, see `CHANGELOG.md`) |
 | Python    | 3.13.2  |
 | SUMO      | 1.26.0 (`eclipse-sumo` wheel via `requirements.lock`) |
 | MATSim    | 15.0    |

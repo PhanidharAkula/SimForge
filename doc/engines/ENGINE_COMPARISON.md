@@ -22,7 +22,7 @@
 | **MATSim** | Shipping | Mesoscopic, queue-based with agent plan/replan | Java, JVM | GPL-2.0 |
 | **DTALite** | Proposed | Mesoscopic, Dynamic Traffic Assignment (equilibrium) | C++, OpenMP parallel | Apache 2.0 |
 | **LPSim** | Dropped (Version_4) | Mesoscopic, GPU-accelerated B18 traffic flow | C++/CUDA on V100 | MIT |
-| **QarSUMO** | Dropped (Version_4 Phase A) | (Was) GPU-accelerated parallel SUMO | (No usable source) | (N/A) |
+| **QarSUMO** | Dropped (Version_4) | (Was) GPU-accelerated parallel SUMO | (No usable source) | (N/A) |
 
 ## 2. Paradigm taxonomy
 
@@ -41,7 +41,7 @@ The dominant paradigms in academic traffic simulation, mapped to SimForge's matr
 
 ## 3. Wallclock estimates at SimForge scenario sizes
 
-Order-of-magnitude estimates from the early planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k under Phase 14 + Wave 2). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate, see Chapter 6 §6.2.2.
+Order-of-magnitude estimates from the early planning phase, retained here as the design-time time-budget table. **Measured numbers from the shipped framework** are reported in Chapter 5 §5.1 (small tier: chicago_1k + nyc_10k + la_50k) and §5.6.2 (large tier: chicago_200k + nyc_500k with canonical-routes BFS deduplication and container-mode execution). The measured cross-engine ratios diverge from the design-time estimates at saturation density (large tier) in ways the design phase did not anticipate, see Chapter 6 §6.2.2.
 
 | Scenario | SUMO meso | SUMO micro | MATSim | DTALite (est.) | LPSim (would have been) |
 |---|---|---|---|---|---|
@@ -120,11 +120,11 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ### 8.2 On the abandonment of LPSim
 
-> LPSim was selected in Version_4 Phase B as a GPU-accelerated mesoscopic comparator. After exhaustive integration work, 12 commits across two debugging sessions, including in-container source rebuild, CUDA toolchain reconciliation, Boost compatibility patches, and CUDA architecture target changes, the rebuilt binary continued to crash with SIGSEGV at first kernel launch on networks of 20,000 nodes or larger. The upstream codebase shows clear signs of abandonment: the pinned commit dates from 2024, the repository is missing source files referenced by its own build script, the build chain assumes Boost 1.59 against a modern g++ that has incompatible name-lookup semantics, and there is no continuous integration. We retain the LPSim adapter, test suite, manifest, and build pipeline in the repository as ready-to-reactivate code; the abandonment decision is documented in `doc/engines/LPSIM_RETROSPECTIVE.md` and is itself evidence that SimForge's adapter pattern handles engine churn cleanly.
+> LPSim was selected in Version_4 as a GPU-accelerated mesoscopic comparator. After exhaustive integration work, 12 commits across two debugging sessions, including in-container source rebuild, CUDA toolchain reconciliation, Boost compatibility patches, and CUDA architecture target changes, the rebuilt binary continued to crash with SIGSEGV at first kernel launch on networks of 20,000 nodes or larger. The upstream codebase shows clear signs of abandonment: the pinned commit dates from 2024, the repository is missing source files referenced by its own build script, the build chain assumes Boost 1.59 against a modern g++ that has incompatible name-lookup semantics, and there is no continuous integration. We retain the LPSim adapter, test suite, manifest, and build pipeline in the repository as ready-to-reactivate code; the abandonment decision is documented in `doc/engines/LPSIM_RETROSPECTIVE.md` and is itself evidence that SimForge's adapter pattern handles engine churn cleanly.
 
 ### 8.3 On the QarSUMO drop
 
-> QarSUMO was an early fifth-engine candidate but was dropped in Version_4 Phase A after a source-availability audit found no usable public distribution: `LLNL/QarSUMO` returns HTTP 404, `QarSUMO/QarSUMO` is an empty placeholder repository, and the cited Boulmakoul 2023 IEEE HPCS paper has not produced runnable code. The Version_3 SimForge harness ran a CPU-fallback path that was bit-identical to standard SUMO mesoscopic, contributing zero new comparison signal while occupying one fifth of the experimental matrix. The drop demonstrates the framework's selection discipline: when source is unavailable, the right answer is to remove the engine and document why, not to silently substitute.
+> QarSUMO was an early fifth-engine candidate but was dropped in Version_4 after a source-availability audit found no usable public distribution: `LLNL/QarSUMO` returns HTTP 404, `QarSUMO/QarSUMO` is an empty placeholder repository, and the cited Boulmakoul 2023 IEEE HPCS paper has not produced runnable code. The Version_3 SimForge harness ran a CPU-fallback path that was bit-identical to standard SUMO mesoscopic, contributing zero new comparison signal while occupying one fifth of the experimental matrix. The drop demonstrates the framework's selection discipline: when source is unavailable, the right answer is to remove the engine and document why, not to silently substitute.
 
 ### 8.4 On reproducibility (R-score)
 
@@ -148,7 +148,7 @@ Phrasings ready to lift directly into the final thesis. Adapt as needed.
 
 ## 9. Cross-references to supporting material
 
-- **CHANGELOG:** Version_5 unreleased section enumerates the LPSim removal and DTALite addition; SCC-fairness fixes and audit_fairness landings tracked separately under Phase 4.
+- **CHANGELOG:** Version_5 unreleased section enumerates the LPSim removal and DTALite addition; SCC-fairness fixes and audit_fairness landings tracked separately under the fairness-audit work.
 - **Glossary:** `doc/GLOSSARY.md`, DTALite entry under §D; LPSim entry rewritten as "abandoned".
 - **Experiment log:** `doc/EXPERIMENT_LOG.md`, chronological journal of every commit, job ID, and measured number; the source for any specific Q1–Q4 fairness audit result you want to cite.
 - **Fairness audit script:** `evaluation/audit_fairness.py`, invoke as `python -m evaluation.audit_fairness <run_dir>` to verify any benchmark run was actually fair across engines (Q1–Q4 PASS/WARN/FAIL report).
