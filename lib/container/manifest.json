@@ -16,6 +16,16 @@
       "verified_at": "2026-05-20T00:41:00-04:00",
       "verified_by": "apptainer 1.4.5; sumo --version → Eclipse SUMO sumo 1.26.0; java -version → openjdk 17.0.19; chicago_1k_car run inside container completed (20/20 cells)",
       "notes": "GHA build landed 2026-05-19 (eclipse-sumo manylinux dependency closure on Debian Bookworm slim; MATSim 15.0 release). See doc/CONTAINER_USAGE.md for full details. Used by SBATCHs when SIMFORGE_USE_CONTAINER=1 is set without a specific SIMFORGE_CONTAINER_TAG override."
+    },
+    "current_release": {
+      "tag": "c3355b4fef56c2d433ee817bc41b0dfe4ebd4885",
+      "short_tag": "c3355b4",
+      "git_sha": "c3355b4fef56c2d433ee817bc41b0dfe4ebd4885",
+      "git_sha_url": "https://github.com/PhanidharAkula/SimForge/commit/c3355b4fef56c2d433ee817bc41b0dfe4ebd4885",
+      "release": "v1.0.1",
+      "digest_sha256": "sha256:b7866dc24e3b71613ceacb8b5086faed07c212295d813ce39ffd9003896b12c3",
+      "pinned_at": "2026-06-27",
+      "notes": "Published v1.0.1 image (the release submitted to JOSS). Reproduce the published artifact by immutable digest: docker pull ghcr.io/phanidharakula/simforge@sha256:b7866dc24e3b71613ceacb8b5086faed07c212295d813ce39ffd9003896b12c3"
     }
   },
   "pull_commands": {
