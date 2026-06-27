@@ -10,8 +10,8 @@ authors:
 repository-code: "https://github.com/PhanidharAkula/SimForge"
 url: "https://github.com/PhanidharAkula/SimForge"
 license: Apache-2.0
-version: 1.0.0
-date-released: "2026-06-25"
+version: 1.0.1
+date-released: "2026-06-26"
 keywords:
   - traffic simulation
   - reproducibility
