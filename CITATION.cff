@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "SimForge: A Reproducible, Cross-Simulator Benchmarking Framework for Urban Traffic Simulation"
+type: software
+authors:
+  - given-names: Phanidhar
+    family-names: Akula
+    orcid: "https://orcid.org/0009-0002-1414-2934"
+    affiliation: "Department of Computer Science and Software Engineering, Miami University, Oxford, OH, USA"
+repository-code: "https://github.com/PhanidharAkula/SimForge"
+url: "https://github.com/PhanidharAkula/SimForge"
+license: Apache-2.0
+version: 1.0.0
+date-released: "2026-06-25"
+keywords:
+  - traffic simulation
+  - reproducibility
+  - benchmarking
+  - cross-simulator
+  - SUMO
+  - MATSim
+  - DTALite
+  - urban mobility
