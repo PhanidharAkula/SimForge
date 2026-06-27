@@ -132,3 +132,7 @@ Plan/
 # Defense slide deck and its generator kept local (not part of the
 # shipped software artefact; rebuild with: python presentation/deck.py).
 /presentation/
+
+# IEEE T-ITS research-paper manuscript kept local (synced to Overleaf
+# separately; not part of the shipped software artefact).
+/paper_ieee/
