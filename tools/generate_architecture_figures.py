@@ -460,7 +460,7 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.set_xticks(range(len(tiers)))
     ax.set_xticklabels(tiers, fontsize=9)
     ax.set_ylabel("SUMO meso / MATSim meso  mean-TT ratio", fontsize=10)
-    ax.set_title("§6.2.2: Cross-engine paradigm spread\n"
+    ax.set_title("Cross-engine paradigm spread\n"
                  "(SUMO insertion-refusal ↔ MATSim queue-hold)",
                  fontsize=11, fontweight="bold", pad=10)
     ax.axhline(y=1.0, color="#999", linestyle="--", linewidth=1.0, alpha=0.7)
@@ -499,7 +499,7 @@ def fig_6_1_paradigm_spread(output_dir):
     ax.set_xticks(range(len(tiers2)))
     ax.set_xticklabels(tiers2, fontsize=9)
     ax.set_ylabel("SUMO micro / SUMO meso  mean-TT ratio", fontsize=10)
-    ax.set_title("§6.2.4: Within-engine paradigm spread\n"
+    ax.set_title("Within-engine paradigm spread\n"
                  "(SUMO micro ↔ SUMO meso mobsim resolution)",
                  fontsize=11, fontweight="bold", pad=10)
     ax.axhline(y=1.0, color="#999", linestyle="--", linewidth=1.0, alpha=0.7)
