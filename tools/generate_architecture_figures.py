@@ -108,7 +108,7 @@ def save(fig, name, output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_1_1_simforge_overview(output_dir):
+def fig_simforge_overview(output_dir):
     fig, ax = plt.subplots(figsize=(14, 7))
     fig.suptitle("SimForge: a canonical-bundle → multi-adapter → fairness-audit framework",
                  fontsize=13, fontweight="bold", y=0.98)
@@ -187,7 +187,7 @@ def fig_1_1_simforge_overview(output_dir):
             "fairness-attributable cross-engine differences",
             ha="center", va="bottom", fontsize=9, style="italic", color="#555")
 
-    return save(fig, "fig_1_1_simforge_overview", output_dir)
+    return save(fig, "fig_simforge_overview", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -195,7 +195,7 @@ def fig_1_1_simforge_overview(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_1_three_layer_architecture(output_dir):
+def fig_three_layer_architecture(output_dir):
     fig, ax = plt.subplots(figsize=(14, 8.5))
     fig.suptitle("SimForge three-layer architecture: pipeline → adapters → evaluation",
                  fontsize=13, fontweight="bold", y=0.97)
@@ -267,7 +267,7 @@ def fig_3_1_three_layer_architecture(output_dir):
             "for new engines (prepare/run/parse contract; see §3.4).",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
 
-    return save(fig, "fig_3_1_three_layer_architecture", output_dir)
+    return save(fig, "fig_three_layer_architecture", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -275,7 +275,7 @@ def fig_3_1_three_layer_architecture(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_6_fairness_audit_flow(output_dir):
+def fig_fairness_audit_flow(output_dir):
     fig, ax = plt.subplots(figsize=(10, 11))
     fig.suptitle("Cross-engine fairness audit: Q1-Q5 verification flow",
                  fontsize=13, fontweight="bold", y=0.985)
@@ -348,7 +348,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
     for y_src, y_dst in arrow_y_pairs:
         arrow(ax, 5.0, y_src, 5.0, y_dst, lw=2.0)
 
-    return save(fig, "fig_3_6_fairness_audit_flow", output_dir)
+    return save(fig, "fig_fairness_audit_flow", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -356,7 +356,7 @@ def fig_3_6_fairness_audit_flow(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_8_bfs_dedup(output_dir):
+def fig_bfs_dedup(output_dir):
     fig, axes = plt.subplots(1, 2, figsize=(15, 6.5))
     fig.suptitle("Canonical-routes BFS deduplication  "
                  "(chicago_200k_car: 141.87 h → 7.14 h cold-vs-cold, ~20×)",
@@ -433,7 +433,7 @@ def fig_3_8_bfs_dedup(output_dir):
             color="#1b5e20")
 
     plt.tight_layout(rect=(0, 0, 1, 0.94))
-    out = output_dir / "fig_3_8_bfs_dedup.png"
+    out = output_dir / "fig_bfs_dedup.png"
     fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.2, facecolor="white")
     plt.close(fig)
     return out
@@ -444,7 +444,7 @@ def fig_3_8_bfs_dedup(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_6_1_paradigm_spread(output_dir):
+def fig_paradigm_spread(output_dir):
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     fig.suptitle("Two paradigm-spread phenomena from the same insertion-refusal vs queue-hold mechanism at network saturation",
                  fontsize=11.5, fontweight="bold", y=0.97)
@@ -530,7 +530,7 @@ def fig_6_1_paradigm_spread(output_dir):
              "origin-edge insertion-refusal dominates the dynamics for both mobsim paradigms (SUMO) and both resolutions (micro/meso).",
              ha="center", va="bottom", fontsize=9, style="italic", color="#555")
 
-    out = output_dir / "fig_6_1_paradigm_spread.png"
+    out = output_dir / "fig_paradigm_spread.png"
     fig.savefig(out, dpi=300, bbox_inches="tight", pad_inches=0.2, facecolor="white")
     plt.close(fig)
     return out
@@ -541,7 +541,7 @@ def fig_6_1_paradigm_spread(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_2_canonical_bundle_schema(output_dir):
+def fig_canonical_bundle_schema(output_dir):
     fig, ax = plt.subplots(figsize=(14, 7.5))
     fig.suptitle("Canonical scenario bundle: 5-file simulator-agnostic schema",
                  fontsize=13, fontweight="bold", y=0.97)
@@ -638,7 +638,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
             "see Chapter 3 §3.2 for full schema.",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
 
-    return save(fig, "fig_3_2_canonical_bundle_schema", output_dir)
+    return save(fig, "fig_canonical_bundle_schema", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -646,7 +646,7 @@ def fig_3_2_canonical_bundle_schema(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_3_generation_pipeline(output_dir):
+def fig_generation_pipeline(output_dir):
     fig, ax = plt.subplots(figsize=(14, 8))
     fig.suptitle("Scenario generation pipeline: data sources → SimForge transforms → canonical bundle",
                  fontsize=12.5, fontweight="bold", y=0.97)
@@ -717,7 +717,7 @@ def fig_3_3_generation_pipeline(output_dir):
             "(manifest stamped last, covering all four data files; §3.3.1)",
             ha="center", va="center", fontsize=7.5, style="italic", color="#555")
 
-    return save(fig, "fig_3_3_generation_pipeline", output_dir)
+    return save(fig, "fig_generation_pipeline", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -725,7 +725,7 @@ def fig_3_3_generation_pipeline(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_4_adapter_contract(output_dir):
+def fig_adapter_contract(output_dir):
     fig, ax = plt.subplots(figsize=(16, 7))
     fig.suptitle("Three-function adapter contract: uniform prepare / run / parse across all engines",
                  fontsize=12.5, fontweight="bold", y=0.97)
@@ -798,7 +798,7 @@ def fig_3_4_adapter_contract(output_dir):
             "Adding a 4th engine follows the same three-function template.",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
 
-    return save(fig, "fig_3_4_adapter_contract", output_dir)
+    return save(fig, "fig_adapter_contract", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -806,7 +806,7 @@ def fig_3_4_adapter_contract(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_11_container_chain(output_dir):
+def fig_container_chain(output_dir):
     fig, ax = plt.subplots(figsize=(14, 6))
     fig.suptitle("Pinned-digest container distribution chain: "
                  "Dockerfile → GHA → GHCR → Apptainer → SBATCH",
@@ -869,7 +869,7 @@ def fig_3_11_container_chain(output_dir):
             "See Chapter 3 §3.11.",
             ha="center", va="center", fontsize=9, style="italic", color="#555")
 
-    return save(fig, "fig_3_11_container_chain", output_dir)
+    return save(fig, "fig_container_chain", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -877,7 +877,7 @@ def fig_3_11_container_chain(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_6_2_reproducibility_regimes(output_dir):
+def fig_reproducibility_regimes(output_dir):
     fig, ax = plt.subplots(figsize=(14, 8))
     fig.suptitle("Four reproducibility regimes: cross-platform variability at fixed code is small; "
                  "cross-code-version variability is the dominant risk",
@@ -942,7 +942,7 @@ def fig_6_2_reproducibility_regimes(output_dir):
             "Cross-platform variability at fixed code is small; cross-code-version drift on the same platform is the real risk.",
             ha="center", va="center", fontsize=9.5, style="italic", color="#555")
 
-    return save(fig, "fig_6_2_reproducibility_regimes", output_dir)
+    return save(fig, "fig_reproducibility_regimes", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -950,7 +950,7 @@ def fig_6_2_reproducibility_regimes(output_dir):
 # -----------------------------------------------------------------------------
 
 
-def fig_3_8b_parallel_bfs_workers(output_dir):
+def fig_parallel_bfs_workers(output_dir):
     fig, ax = plt.subplots(figsize=(15, 10))
     fig.suptitle("Canonical-routes parallel-BFS architecture: "
                  "task-parallel over trips, replicated SCC-graph per worker",
@@ -1074,7 +1074,7 @@ def fig_3_8b_parallel_bfs_workers(output_dir):
             "Content-addressable cache: cache/canonical_routes/canonical_routes_<sha256>.jsonl → warm re-runs hit instantly",
             ha="center", va="center", fontsize=9, style="italic", color="#1b5e20")
 
-    return save(fig, "fig_3_8b_parallel_bfs_workers", output_dir)
+    return save(fig, "fig_parallel_bfs_workers", output_dir)
 
 
 # -----------------------------------------------------------------------------
@@ -1086,17 +1086,17 @@ def main():
     output_dir = Path(__file__).resolve().parents[1] / "doc" / "figures"
     print(f"Output dir: {output_dir}\n")
     fns = [
-        ("F1 SimForge at a glance", fig_1_1_simforge_overview),
-        ("F2 Three-layer architecture", fig_3_1_three_layer_architecture),
-        ("F3 Canonical 5-file bundle schema", fig_3_2_canonical_bundle_schema),
-        ("F4 Scenario generation pipeline", fig_3_3_generation_pipeline),
-        ("F5 Adapter contract (3 × 3)", fig_3_4_adapter_contract),
-        ("F6 Fairness audit Q1-Q5 flow", fig_3_6_fairness_audit_flow),
-        ("F7 BFS dedup", fig_3_8_bfs_dedup),
-        ("F8 container chain", fig_3_11_container_chain),
-        ("F9 Two paradigm spread phenomena", fig_6_1_paradigm_spread),
-        ("F10 Four reproducibility regimes", fig_6_2_reproducibility_regimes),
-        ("F11 Parallel-BFS worker pool", fig_3_8b_parallel_bfs_workers),
+        ("F1 SimForge at a glance", fig_simforge_overview),
+        ("F2 Three-layer architecture", fig_three_layer_architecture),
+        ("F3 Canonical 5-file bundle schema", fig_canonical_bundle_schema),
+        ("F4 Scenario generation pipeline", fig_generation_pipeline),
+        ("F5 Adapter contract (3 × 3)", fig_adapter_contract),
+        ("F6 Fairness audit Q1-Q5 flow", fig_fairness_audit_flow),
+        ("F7 BFS dedup", fig_bfs_dedup),
+        ("F8 container chain", fig_container_chain),
+        ("F9 Two paradigm spread phenomena", fig_paradigm_spread),
+        ("F10 Four reproducibility regimes", fig_reproducibility_regimes),
+        ("F11 Parallel-BFS worker pool", fig_parallel_bfs_workers),
     ]
     for label, fn in fns:
         out = fn(output_dir)

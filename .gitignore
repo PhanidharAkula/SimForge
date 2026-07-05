@@ -123,16 +123,11 @@ esm23.pdf
 simforge_thesis.zip
 Plan/
 
-# Thesis LaTeX source kept in the repo root for convenience (synced to
-# Overleaf separately); not part of the shipped software artefact. Both
-# casings listed because the filesystem is case-insensitive.
-/paper/
-/Paper/
-
-# Defense slide deck and its generator kept local (not part of the
-# shipped software artefact; rebuild with: python presentation/deck.py).
-/presentation/
-
-# IEEE T-ITS research-paper manuscript kept local (synced to Overleaf
-# separately; not part of the shipped software artefact).
-/paper_ieee/
+# Defense materials kept local under one folder, synced to Overleaf
+# separately; not part of the shipped software artefact:
+#   defense/paper/         thesis LaTeX source
+#   defense/paper_ieee/    IEEE T-ITS manuscript
+#   defense/presentation/  slide deck + generator (build: python defense/presentation/deck.py)
+# Both casings for the case-insensitive filesystem.
+/defense/
+/Defense/
