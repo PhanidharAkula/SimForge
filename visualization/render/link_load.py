@@ -100,6 +100,8 @@ def render_link_metric(
     import matplotlib  # lazy
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Arial", "Helvetica Neue", "Helvetica", "DejaVu Sans"]
     import numpy as np
     from matplotlib.collections import LineCollection
     from matplotlib.colors import LogNorm, Normalize
@@ -198,14 +200,14 @@ def render_link_metric(
 
         sm = plt.cm.ScalarMappable(cmap=cmap_obj, norm=norm)
         sm.set_array([])
-        cbar = fig.colorbar(sm, ax=ax, shrink=0.6, pad=0.015, fraction=0.04)
+        cbar = fig.colorbar(sm, ax=ax, shrink=0.72, pad=0.02, fraction=0.055)
         labels = {
             "volume": "vehicles per link",
             "speed_ratio": "speed / free-flow",
         }
-        cbar.set_label(labels.get(metric, metric), fontsize=10)
+        cbar.set_label(labels.get(metric, metric), fontsize=30, labelpad=22)
         cbar.outline.set_linewidth(0.5)
-        cbar.ax.tick_params(labelsize=9)
+        cbar.ax.tick_params(labelsize=26)
 
     bbox = network.bbox
     if bbox is not None:
@@ -222,13 +224,13 @@ def render_link_metric(
         kind = {"volume": "load",
                 "speed_ratio": "congestion"}.get(metric, metric)
         title = f"Link {kind}: {engine}  ·  {len(active_segs):,} active links"
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+    ax.set_title(title, fontsize=34, fontweight="bold", pad=14)
     fig.text(
         0.5, 0.015,
         f"SimForge  ·  {len(network.nodes):,} nodes  ·  "
         f"{len(network.links):,} links  ·  metric={metric}  ·  "
         f"engine={engine}  ·  norm={color_norm}",
-        ha="center", fontsize=7, color="#888",
+        ha="center", fontsize=18, color="#888",
     )
 
     fig.tight_layout(pad=0.8)

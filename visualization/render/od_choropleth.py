@@ -234,7 +234,7 @@ def render_od_choropleth(
     pad_y = (bbox[3] - bbox[1]) * 0.02
     ax.set_xlim(bbox[0] - pad_x, bbox[2] + pad_x)
     ax.set_ylim(bbox[1] - pad_y, bbox[3] + pad_y)
-    ax.set_aspect("equal", adjustable="datalim")
+    ax.set_aspect("equal", adjustable="box")
     ax.set_xticks([])
     ax.set_yticks([])
     for spine in ax.spines.values():
@@ -243,17 +243,17 @@ def render_od_choropleth(
     # Colorbar driven by the same cmap+norm.
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
-    cbar = fig.colorbar(sm, ax=ax, shrink=0.6, pad=0.015, fraction=0.04)
-    cbar.set_label(f"trips per tract ({side}s)", fontsize=10)
-    cbar.ax.tick_params(labelsize=9)
+    cbar = fig.colorbar(sm, ax=ax, shrink=0.72, pad=0.02, fraction=0.055)
+    cbar.set_label(f"trips per tract ({side}s)", fontsize=30, labelpad=22)
+    cbar.ax.tick_params(labelsize=26)
     cbar.outline.set_linewidth(0.5)
 
     if title is None:
         title = f"Trip {side} density by census tract  ·  N={demand.trip_count:,}"
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=12)
+    ax.set_title(title, fontsize=34, fontweight="bold", pad=22)
 
     fig.tight_layout(pad=0.8)
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, bbox_inches="tight", facecolor="white", dpi=dpi)
+    fig.savefig(output_path, bbox_inches="tight", pad_inches=0.28, facecolor="white", dpi=dpi)
     plt.close(fig)
     return output_path
