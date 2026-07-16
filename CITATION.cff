@@ -7,6 +7,7 @@ authors:
     family-names: Akula
     orcid: "https://orcid.org/0009-0002-1414-2934"
     affiliation: "Department of Computer Science and Software Engineering, Miami University, Oxford, OH, USA"
+doi: 10.5281/zenodo.21385983
 repository-code: "https://github.com/PhanidharAkula/SimForge"
 url: "https://github.com/PhanidharAkula/SimForge"
 license: Apache-2.0
