@@ -123,11 +123,18 @@ esm23.pdf
 simforge_thesis.zip
 Plan/
 
-# Defense materials kept local under one folder, synced to Overleaf
-# separately; not part of the shipped software artefact:
-#   defense/paper/         thesis LaTeX source
-#   defense/paper_ieee/    IEEE T-ITS manuscript
-#   defense/presentation/  slide deck + generator (build: python defense/presentation/deck.py)
-# Both casings for the case-insensitive filesystem.
+# Master's materials (proposal through defense and publications) kept local
+# under one folder, synced to Overleaf separately; not part of the shipped
+# software artefact:
+#   masters/proposal/       thesis proposal (source + presented records)
+#   masters/defense/        thesis LaTeX source + submitted records
+#   masters/paper_ieee/     IEEE T-ITS manuscript + submitted records
+#   masters/paper_joss/     JOSS submission record
+#   masters/presentation/   defense deck + generator (build: python masters/presentation/deck.py)
+#   masters/frontiers_cityscape/  CITYSCAPE Frontiers manuscript (group's, unpublished)
+#   masters/figures_generator/    figure sources + render.py
+# Both casings for the case-insensitive filesystem; old names kept as belt-and-braces.
+/masters/
+/Masters/
 /defense/
 /Defense/
