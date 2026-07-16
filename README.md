@@ -1,5 +1,8 @@
 # 🌉 SimForge
 
+[![DOI](https://zenodo.org/badge/1114820991.svg)](https://zenodo.org/badge/latestdoi/1114820991)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 **SimForge** is a reproducible, cross-simulator benchmarking framework for urban traffic simulation.
 
 It provides a **canonical data schema**, **validated scenario bundles**, **deterministic adapters** for multiple simulators, and a **unified execution harness** for fair performance comparison.
@@ -328,5 +331,11 @@ symmetry).
 | [visualization/README.md](visualization/README.md)         | Geographic visualization (opt-in, 7 map types)                                                                                                                                                                                                                 |
 | [CONTRIBUTING.md](CONTRIBUTING.md)                         | Contribution workflow and code style                                                                                                                                                                                                                           |
 | `python help.py`                                           | In-CLI help: curses TUI in a terminal, `python help.py <topic>` (overview / setup / generate / run / scripts / cities / modes / adapters / metrics / evaluation / schema / benchmark / tests / analyzer / visualization / troubleshooting) for paste-safe text |
+
+---
+
+## 📖 Citation
+
+If you use SimForge in your research, please cite it. Citation metadata ships in [CITATION.cff](CITATION.cff), so you can use GitHub's **"Cite this repository"** button (right sidebar) for BibTeX/APA. Tagged releases are archived on Zenodo (DOI badge above) and the full repository history is preserved in the [Software Heritage archive](https://archive.softwareheritage.org/browse/origin/?origin_url=https://github.com/PhanidharAkula/SimForge).
 
 ---
